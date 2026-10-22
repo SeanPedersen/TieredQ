@@ -1,0 +1,22 @@
+name: C++
+on: [push, pull_request]
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y liblapack-dev libblas-dev
+      - if: runner.os == 'macOS'
+        run: brew install libomp
+      - run: cmake -S . -B build -DTIEREDQ_TESTS=ON -DTIEREDQ_EXAMPLES=ON
+      - run: cmake --build build -j 3
+      - run: ctest --test-dir build --output-on-failure
+        env:
+          OMP_NUM_THREADS: 2
+      - run: ./build/tieredq_example
+        env:
+          OMP_NUM_THREADS: 2

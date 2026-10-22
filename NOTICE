@@ -1,0 +1,10 @@
+TieredQ was extracted from SeanPedersen/diskovec at a809456.
+The codec arithmetic and serialized v2 formats are preserved.
+
+src/tiered_rng.h adapts NumPy v2.3.3 SeedSequence, PCG64, bounded integer
+and normal sampling algorithms. src/detail/numpy_ziggurat.h contains
+NumPy v2.3.3 double-normal Ziggurat tables from
+numpy/random/src/distributions/ziggurat_constants.h.
+Retain LICENSE.numpy with source and binary distributions.
+NumPy is not a runtime dependency. LAPACK, BLAS and OpenMP implementations
+are supplied by the build environment under their respective licenses.

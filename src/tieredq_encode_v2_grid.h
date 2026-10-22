@@ -1,0 +1,188 @@
+// The fixed v2 grid: SIMD lanes are independent grid points, with ordered coordinate reductions.
+#pragma once
+#include "tieredq_encode_v2_matrix.h"
+#include <array>
+#include <cmath>
+#include <vector>
+
+namespace dv::tieredq_detail {
+constexpr size_t v2_grid_points=49,v2_grid_lanes=8;
+constexpr size_t v2_grid_storage=(v2_grid_points+v2_grid_lanes-1)/v2_grid_lanes*v2_grid_lanes;
+inline const std::array<double,v2_grid_storage>& v2_grid() {
+  static const auto grid=[] {
+    std::array<double,v2_grid_storage> values{};
+    for (size_t point=0;point<v2_grid_points;++point)
+      values[point]=std::pow(2.0,-1.0+2.0*double(point)/double(v2_grid_points-1));
+    std::fill(values.begin()+v2_grid_points,values.end(),values[v2_grid_points-1]);
+    return values;
+  }();
+  return grid;
+}
+// Strict comparison selects the lower code at a threshold, including repeated thresholds.
+inline unsigned v2_code(double value,const std::vector<double>& thresholds) {
+  unsigned code=0;
+  for (size_t step=(thresholds.size()+1)/2;step;step/=2) {
+    const unsigned probe=code+unsigned(step);
+    if (value>thresholds[probe-1]) code=probe;
+  }
+  return code;
+}
+template<class Model,class Work> void v2_grid_scalar(const Model& model,const Work& work,double* dots,double* norms) {
+  for (size_t point=0;point<v2_grid_points;++point) {
+    double dot=0,norm=0;
+    for (const auto& tier:model.tiers) for (size_t j=0;j<tier.dimensions;++j) {
+      const size_t r=tier.start+j;
+      const unsigned code=v2_code(work.z[r]*v2_grid()[point],work.thresholds[tier.bits]);
+      const double reconstructed=double(model.levels[tier.bits][code])*model.sigma[r];
+      dot+=work.v[r]*reconstructed; norm+=reconstructed*reconstructed;
+    }
+    dots[point]=dot; norms[point]=norm;
+  }
+}
+#ifdef DV_TIEREDQ_V2_X86
+template<unsigned Bits,class Model,class Work>
+__attribute__((target("avx512f"))) inline void v2_grid_small_avx512(
+    const Model& model,const Work& work,const TieredQTier& tier,__m512d grid,__m512d& dot,__m512d& norm) {
+  const double* levels=work.small_levels[Bits].data();
+  const auto& thresholds=work.thresholds[Bits];
+  const __m512d low=_mm512_loadu_pd(levels),high=_mm512_loadu_pd(levels+8);
+  for (size_t j=0;j<tier.dimensions;++j) {
+    const size_t r=tier.start+j;
+    const __m512d value=_mm512_mul_pd(_mm512_set1_pd(work.z[r]),grid);
+    __m512d level;
+    if constexpr (Bits==1) {
+      const __mmask8 greater=_mm512_cmp_pd_mask(value,_mm512_set1_pd(thresholds[0]),_CMP_GT_OQ);
+      level=_mm512_mask_blend_pd(greater,_mm512_set1_pd(levels[0]),_mm512_set1_pd(levels[1]));
+    } else {
+      __m512i code=_mm512_setzero_si512();
+      for (size_t t=0;t<(1u<<Bits)-1;++t) {
+        const __mmask8 greater=_mm512_cmp_pd_mask(value,_mm512_set1_pd(thresholds[t]),_CMP_GT_OQ);
+        code=_mm512_mask_add_epi64(code,greater,code,_mm512_set1_epi64(1));
+      }
+      if constexpr (Bits<4) level=_mm512_permutexvar_pd(code,low);
+      else level=_mm512_permutex2var_pd(low,code,high);
+    }
+    const __m512d reconstructed=_mm512_mul_pd(level,_mm512_set1_pd(model.sigma[r]));
+    dot=_mm512_add_pd(dot,_mm512_mul_pd(_mm512_set1_pd(work.v[r]),reconstructed));
+    norm=_mm512_add_pd(norm,_mm512_mul_pd(reconstructed,reconstructed));
+  }
+}
+template<unsigned Bits,class Model,class Work>
+__attribute__((target("avx512f"))) inline void v2_grid_wide_avx512(
+    const Model& model,const Work& work,const TieredQTier& tier,__m512d grid,__m512d& dot,__m512d& norm) {
+  const double* thresholds=work.thresholds[Bits].data();
+  constexpr size_t four_step=1u<<(Bits-3),eight_step=four_step/2,sixteen_step=eight_step/2;
+  const __m512d four=_mm512_setr_pd(thresholds[four_step-1],thresholds[3*four_step-1],
+      thresholds[5*four_step-1],thresholds[7*four_step-1],0,0,0,0);
+  const __m512d eight=_mm512_setr_pd(thresholds[eight_step-1],thresholds[3*eight_step-1],
+      thresholds[5*eight_step-1],thresholds[7*eight_step-1],thresholds[9*eight_step-1],
+      thresholds[11*eight_step-1],thresholds[13*eight_step-1],thresholds[15*eight_step-1]);
+  const __m512d low=_mm512_setr_pd(thresholds[sixteen_step-1],thresholds[3*sixteen_step-1],
+      thresholds[5*sixteen_step-1],thresholds[7*sixteen_step-1],thresholds[9*sixteen_step-1],
+      thresholds[11*sixteen_step-1],thresholds[13*sixteen_step-1],thresholds[15*sixteen_step-1]);
+  const __m512d high=_mm512_setr_pd(thresholds[17*sixteen_step-1],thresholds[19*sixteen_step-1],
+      thresholds[21*sixteen_step-1],thresholds[23*sixteen_step-1],thresholds[25*sixteen_step-1],
+      thresholds[27*sixteen_step-1],thresholds[29*sixteen_step-1],thresholds[31*sixteen_step-1]);
+  __m512 levels0{},levels1{},levels2{},levels3{};
+  if constexpr (Bits<=6) {
+    levels0=_mm512_loadu_ps(model.levels[Bits].data());
+    levels1=_mm512_loadu_ps(model.levels[Bits].data()+16);
+    if constexpr (Bits==6) {
+      levels2=_mm512_loadu_ps(model.levels[Bits].data()+32);
+      levels3=_mm512_loadu_ps(model.levels[Bits].data()+48);
+    }
+  }
+  for (size_t j=0;j<tier.dimensions;++j) {
+    const size_t r=tier.start+j;
+    const __m512d value=_mm512_mul_pd(_mm512_set1_pd(work.z[r]),grid);
+    __m512i code=_mm512_setzero_si512();
+    // The first five binary-search levels fit in registers; later levels retain exact gathers.
+#pragma GCC unroll 8
+    for (unsigned depth=0;depth<Bits;++depth) {
+      const size_t step=1u<<(Bits-1-depth);
+      const __m512i node=_mm512_srl_epi64(code,_mm_cvtsi32_si128(Bits-depth));
+      __m512d threshold;
+      if (depth==0) threshold=_mm512_set1_pd(thresholds[step-1]);
+      else if (depth==1) threshold=_mm512_mask_blend_pd(_mm512_cmp_epi64_mask(code,_mm512_setzero_si512(),_MM_CMPINT_GT),
+          _mm512_set1_pd(thresholds[step-1]),_mm512_set1_pd(thresholds[3*step-1]));
+      else if (depth==2) threshold=_mm512_permutexvar_pd(node,four);
+      else if (depth==3) threshold=_mm512_permutexvar_pd(node,eight);
+      else if (depth==4) threshold=_mm512_permutex2var_pd(low,node,high);
+      else threshold=_mm512_i64gather_pd(_mm512_add_epi64(code,_mm512_set1_epi64(step-1)),thresholds,sizeof(double));
+      const __mmask8 greater=_mm512_cmp_pd_mask(value,threshold,_CMP_GT_OQ);
+      code=_mm512_mask_add_epi64(code,greater,code,_mm512_set1_epi64(step));
+    }
+    __m512d level;
+    if constexpr (Bits<=6) {
+      const __m512i indices=_mm512_castsi256_si512(_mm512_cvtepi64_epi32(code));
+      __m512 values=_mm512_permutex2var_ps(levels0,indices,levels1);
+      if constexpr (Bits==6) {
+        const __m512 upper=_mm512_permutex2var_ps(levels2,indices,levels3);
+        values=_mm512_mask_blend_ps(_mm512_cmp_epi64_mask(code,_mm512_set1_epi64(32),_MM_CMPINT_GE),values,upper);
+      }
+      level=_mm512_cvtps_pd(_mm512_castps512_ps256(values));
+    } else level=_mm512_cvtps_pd(_mm512_i64gather_ps(code,model.levels[Bits].data(),sizeof(float)));
+    const __m512d reconstructed=_mm512_mul_pd(level,_mm512_set1_pd(model.sigma[r]));
+    dot=_mm512_add_pd(dot,_mm512_mul_pd(_mm512_set1_pd(work.v[r]),reconstructed));
+    norm=_mm512_add_pd(norm,_mm512_mul_pd(reconstructed,reconstructed));
+  }
+}
+template<class Model,class Work>
+__attribute__((target("avx512f"))) void v2_grid_avx512(const Model& model,const Work& work,double* dots,double* norms) {
+  constexpr size_t lanes=8;
+  for (size_t point=0;point<v2_grid_points;point+=lanes) {
+    const __m512d grid=_mm512_loadu_pd(v2_grid().data()+point);
+    __m512d dot=_mm512_setzero_pd(),norm=_mm512_setzero_pd();
+    for (const auto& tier:model.tiers) {
+      switch (tier.bits) {
+        case 1: v2_grid_small_avx512<1>(model,work,tier,grid,dot,norm); continue;
+        case 2: v2_grid_small_avx512<2>(model,work,tier,grid,dot,norm); continue;
+        case 3: v2_grid_small_avx512<3>(model,work,tier,grid,dot,norm); continue;
+        case 4: v2_grid_small_avx512<4>(model,work,tier,grid,dot,norm); continue;
+        case 5: v2_grid_wide_avx512<5>(model,work,tier,grid,dot,norm); continue;
+        case 6: v2_grid_wide_avx512<6>(model,work,tier,grid,dot,norm); continue;
+        case 7: v2_grid_wide_avx512<7>(model,work,tier,grid,dot,norm); continue;
+        case 8: v2_grid_wide_avx512<8>(model,work,tier,grid,dot,norm); continue;
+      }
+
+    }
+    _mm512_storeu_pd(dots+point,dot); _mm512_storeu_pd(norms+point,norm);
+  }
+}
+template<class Model,class Work>
+__attribute__((target("avx2"))) void v2_grid_avx2(const Model& model,const Work& work,double* dots,double* norms) {
+  constexpr size_t lanes=4;
+  for (size_t point=0;point<v2_grid_points;point+=lanes) {
+    const __m256d grid=_mm256_loadu_pd(v2_grid().data()+point);
+    __m256d dot=_mm256_setzero_pd(),norm=_mm256_setzero_pd();
+    for (const auto& tier:model.tiers) for (size_t j=0;j<tier.dimensions;++j) {
+      const size_t r=tier.start+j;
+      const __m256d value=_mm256_mul_pd(_mm256_set1_pd(work.z[r]),grid);
+      __m256d code=_mm256_setzero_pd();
+      const auto& thresholds=work.thresholds[tier.bits];
+      for (size_t step=(thresholds.size()+1)/2;step;step/=2) {
+        const __m128i probe=_mm256_cvttpd_epi32(_mm256_add_pd(code,_mm256_set1_pd(step-1)));
+        const __m256d threshold=_mm256_i32gather_pd(thresholds.data(),probe,sizeof(double));
+        const __m256d greater=_mm256_cmp_pd(value,threshold,_CMP_GT_OQ);
+        code=_mm256_add_pd(code,_mm256_and_pd(greater,_mm256_set1_pd(step)));
+      }
+      const __m256d level=_mm256_cvtps_pd(_mm_i32gather_ps(model.levels[tier.bits].data(),_mm256_cvttpd_epi32(code),sizeof(float)));
+      const __m256d reconstructed=_mm256_mul_pd(level,_mm256_set1_pd(model.sigma[r]));
+      dot=_mm256_add_pd(dot,_mm256_mul_pd(_mm256_set1_pd(work.v[r]),reconstructed));
+      norm=_mm256_add_pd(norm,_mm256_mul_pd(reconstructed,reconstructed));
+    }
+    _mm256_storeu_pd(dots+point,dot); _mm256_storeu_pd(norms+point,norm);
+  }
+}
+#endif
+template<class Model,class Work> void v2_grid_terms(const Model& model,const Work& work,double* dots,double* norms,
+                                                    TieredQKernel kernel=TieredQKernel::automatic) {
+  switch (v2_kernel(kernel)) {
+#ifdef DV_TIEREDQ_V2_X86
+    case TieredQKernel::avx512: return v2_grid_avx512(model,work,dots,norms);
+    case TieredQKernel::avx2: return v2_grid_avx2(model,work,dots,norms);
+#endif
+    default: return v2_grid_scalar(model,work,dots,norms);
+  }
+}
+} // namespace dv::tieredq_detail

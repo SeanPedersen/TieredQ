@@ -1,0 +1,6 @@
+Copyright (c) 2026 Sean Pedersen. All rights reserved.
+
+This private repository contains code extracted from DiskoVec commit
+a809456. No general permission to redistribute or sublicense the original
+project code is granted. NumPy-derived components are separately licensed
+under the terms in LICENSE.numpy.
