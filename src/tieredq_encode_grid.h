@@ -1,25 +1,25 @@
-// The fixed v2 grid: SIMD lanes are independent grid points, with ordered coordinate reductions.
+// The fixed grid: SIMD lanes are independent grid points, with ordered coordinate reductions.
 #pragma once
-#include "tieredq_encode_v2_matrix.h"
+#include "tieredq_encode_matrix.h"
 #include <array>
 #include <cmath>
 #include <vector>
 
 namespace dv::tieredq_detail {
-constexpr size_t v2_grid_points=49,v2_grid_lanes=8;
-constexpr size_t v2_grid_storage=(v2_grid_points+v2_grid_lanes-1)/v2_grid_lanes*v2_grid_lanes;
-inline const std::array<double,v2_grid_storage>& v2_grid() {
+constexpr size_t scale_grid_points=49,scale_grid_lanes=8;
+constexpr size_t scale_grid_storage=(scale_grid_points+scale_grid_lanes-1)/scale_grid_lanes*scale_grid_lanes;
+inline const std::array<double,scale_grid_storage>& scale_grid() {
   static const auto grid=[] {
-    std::array<double,v2_grid_storage> values{};
-    for (size_t point=0;point<v2_grid_points;++point)
-      values[point]=std::pow(2.0,-1.0+2.0*double(point)/double(v2_grid_points-1));
-    std::fill(values.begin()+v2_grid_points,values.end(),values[v2_grid_points-1]);
+    std::array<double,scale_grid_storage> values{};
+    for (size_t point=0;point<scale_grid_points;++point)
+      values[point]=std::pow(2.0,-1.0+2.0*double(point)/double(scale_grid_points-1));
+    std::fill(values.begin()+scale_grid_points,values.end(),values[scale_grid_points-1]);
     return values;
   }();
   return grid;
 }
 // Strict comparison selects the lower code at a threshold, including repeated thresholds.
-inline unsigned v2_code(double value,const std::vector<double>& thresholds) {
+inline unsigned quantize_code(double value,const std::vector<double>& thresholds) {
   unsigned code=0;
   for (size_t step=(thresholds.size()+1)/2;step;step/=2) {
     const unsigned probe=code+unsigned(step);
@@ -27,21 +27,21 @@ inline unsigned v2_code(double value,const std::vector<double>& thresholds) {
   }
   return code;
 }
-template<class Model,class Work> void v2_grid_scalar(const Model& model,const Work& work,double* dots,double* norms) {
-  for (size_t point=0;point<v2_grid_points;++point) {
+template<class Model,class Work> void scale_grid_scalar(const Model& model,const Work& work,double* dots,double* norms) {
+  for (size_t point=0;point<scale_grid_points;++point) {
     double dot=0,norm=0;
     for (const auto& tier:model.tiers) for (size_t j=0;j<tier.dimensions;++j) {
       const size_t r=tier.start+j;
-      const unsigned code=v2_code(work.z[r]*v2_grid()[point],work.thresholds[tier.bits]);
+      const unsigned code=quantize_code(work.z[r]*scale_grid()[point],work.thresholds[tier.bits]);
       const double reconstructed=double(model.levels[tier.bits][code])*model.sigma[r];
       dot+=work.v[r]*reconstructed; norm+=reconstructed*reconstructed;
     }
     dots[point]=dot; norms[point]=norm;
   }
 }
-#ifdef DV_TIEREDQ_V2_X86
+#ifdef TIEREDQ_ENCODING_X86
 template<unsigned Bits,class Model,class Work>
-__attribute__((target("avx512f"))) inline void v2_grid_small_avx512(
+__attribute__((target("avx512f"))) inline void scale_grid_small_avx512(
     const Model& model,const Work& work,const TieredQTier& tier,__m512d grid,__m512d& dot,__m512d& norm) {
   const double* levels=work.small_levels[Bits].data();
   const auto& thresholds=work.thresholds[Bits];
@@ -68,7 +68,7 @@ __attribute__((target("avx512f"))) inline void v2_grid_small_avx512(
   }
 }
 template<unsigned Bits,class Model,class Work>
-__attribute__((target("avx512f"))) inline void v2_grid_wide_avx512(
+__attribute__((target("avx512f"))) inline void scale_grid_wide_avx512(
     const Model& model,const Work& work,const TieredQTier& tier,__m512d grid,__m512d& dot,__m512d& norm) {
   const double* thresholds=work.thresholds[Bits].data();
   constexpr size_t four_step=1u<<(Bits-3),eight_step=four_step/2,sixteen_step=eight_step/2;
@@ -128,21 +128,21 @@ __attribute__((target("avx512f"))) inline void v2_grid_wide_avx512(
   }
 }
 template<class Model,class Work>
-__attribute__((target("avx512f"))) void v2_grid_avx512(const Model& model,const Work& work,double* dots,double* norms) {
+__attribute__((target("avx512f"))) void scale_grid_avx512(const Model& model,const Work& work,double* dots,double* norms) {
   constexpr size_t lanes=8;
-  for (size_t point=0;point<v2_grid_points;point+=lanes) {
-    const __m512d grid=_mm512_loadu_pd(v2_grid().data()+point);
+  for (size_t point=0;point<scale_grid_points;point+=lanes) {
+    const __m512d grid=_mm512_loadu_pd(scale_grid().data()+point);
     __m512d dot=_mm512_setzero_pd(),norm=_mm512_setzero_pd();
     for (const auto& tier:model.tiers) {
       switch (tier.bits) {
-        case 1: v2_grid_small_avx512<1>(model,work,tier,grid,dot,norm); continue;
-        case 2: v2_grid_small_avx512<2>(model,work,tier,grid,dot,norm); continue;
-        case 3: v2_grid_small_avx512<3>(model,work,tier,grid,dot,norm); continue;
-        case 4: v2_grid_small_avx512<4>(model,work,tier,grid,dot,norm); continue;
-        case 5: v2_grid_wide_avx512<5>(model,work,tier,grid,dot,norm); continue;
-        case 6: v2_grid_wide_avx512<6>(model,work,tier,grid,dot,norm); continue;
-        case 7: v2_grid_wide_avx512<7>(model,work,tier,grid,dot,norm); continue;
-        case 8: v2_grid_wide_avx512<8>(model,work,tier,grid,dot,norm); continue;
+        case 1: scale_grid_small_avx512<1>(model,work,tier,grid,dot,norm); continue;
+        case 2: scale_grid_small_avx512<2>(model,work,tier,grid,dot,norm); continue;
+        case 3: scale_grid_small_avx512<3>(model,work,tier,grid,dot,norm); continue;
+        case 4: scale_grid_small_avx512<4>(model,work,tier,grid,dot,norm); continue;
+        case 5: scale_grid_wide_avx512<5>(model,work,tier,grid,dot,norm); continue;
+        case 6: scale_grid_wide_avx512<6>(model,work,tier,grid,dot,norm); continue;
+        case 7: scale_grid_wide_avx512<7>(model,work,tier,grid,dot,norm); continue;
+        case 8: scale_grid_wide_avx512<8>(model,work,tier,grid,dot,norm); continue;
       }
 
     }
@@ -150,10 +150,10 @@ __attribute__((target("avx512f"))) void v2_grid_avx512(const Model& model,const 
   }
 }
 template<class Model,class Work>
-__attribute__((target("avx2"))) void v2_grid_avx2(const Model& model,const Work& work,double* dots,double* norms) {
+__attribute__((target("avx2"))) void scale_grid_avx2(const Model& model,const Work& work,double* dots,double* norms) {
   constexpr size_t lanes=4;
-  for (size_t point=0;point<v2_grid_points;point+=lanes) {
-    const __m256d grid=_mm256_loadu_pd(v2_grid().data()+point);
+  for (size_t point=0;point<scale_grid_points;point+=lanes) {
+    const __m256d grid=_mm256_loadu_pd(scale_grid().data()+point);
     __m256d dot=_mm256_setzero_pd(),norm=_mm256_setzero_pd();
     for (const auto& tier:model.tiers) for (size_t j=0;j<tier.dimensions;++j) {
       const size_t r=tier.start+j;
@@ -175,14 +175,14 @@ __attribute__((target("avx2"))) void v2_grid_avx2(const Model& model,const Work&
   }
 }
 #endif
-template<class Model,class Work> void v2_grid_terms(const Model& model,const Work& work,double* dots,double* norms,
+template<class Model,class Work> void scale_grid_terms(const Model& model,const Work& work,double* dots,double* norms,
                                                     TieredQKernel kernel=TieredQKernel::automatic) {
-  switch (v2_kernel(kernel)) {
-#ifdef DV_TIEREDQ_V2_X86
-    case TieredQKernel::avx512: return v2_grid_avx512(model,work,dots,norms);
-    case TieredQKernel::avx2: return v2_grid_avx2(model,work,dots,norms);
+  switch (encoding_kernel(kernel)) {
+#ifdef TIEREDQ_ENCODING_X86
+    case TieredQKernel::avx512: return scale_grid_avx512(model,work,dots,norms);
+    case TieredQKernel::avx2: return scale_grid_avx2(model,work,dots,norms);
 #endif
-    default: return v2_grid_scalar(model,work,dots,norms);
+    default: return scale_grid_scalar(model,work,dots,norms);
   }
 }
 } // namespace dv::tieredq_detail

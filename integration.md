@@ -11,8 +11,8 @@ paths. Dispatch is automatic; explicit kernels support diagnostics.
 TieredQ::train(config, sample, rows, seed) trains from contiguous row-major
 finite FP32 data with config.dimensions columns. Input pointers are borrowed
 only during calls. Configuration validates dimensions and budgets. Training
-uses LAPACK and optional OpenMP. Existing DV_TIEREDQ_V2_BLAS and
-DV_TIEREDQ_V2_BLAS_STAGE environment controls are preserved.
+uses LAPACK and optional OpenMP. TIEREDQ_BLAS and
+TIEREDQ_BLAS_STAGE select the optional training backend.
 
 encode returns owned bytes or writes count * bytes_per_vector() bytes to
 caller-owned storage. Each row contains code_bytes() packed code bytes and
@@ -45,7 +45,7 @@ mutation require external synchronization against readers/writers. Do not
 change process-wide BLAS/OpenMP/backend settings during calls. Internal OpenMP
 may add threads; set OMP_NUM_THREADS to control the budget.
 
-save/load validate checksums and preserve v2 formats. DiskoVec owns routing,
+save/load validate checksums and model/index layouts. DiskoVec owns routing,
 disk extents, filtering, journals, reranking and engine-level zero markers.
 Keep its zero-vector bypass based on input values, including under fast-math.
 
@@ -63,3 +63,11 @@ A checkout token for another repository does not grant access here. An
 authorized credential helper with an SSH-to-HTTPS Git insteadOf mapping is
 an alternative. Never embed tokens in CMake, URLs or build logs. Clean builds
 and DiskoVec source distributions require authentication or a local override.
+
+## Seeded training
+
+Training uses std::mt19937_64, std::normal_distribution and uniform sampling
+without replacement. A seed reproduces results within a fixed toolchain and
+backend configuration. Standard-library distribution algorithms and BLAS may
+vary across platforms; cross-toolchain trained-model byte identity is not a
+contract. Persist models when sharing trained results between environments.

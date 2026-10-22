@@ -45,7 +45,7 @@ struct TieredQQuery {
   // Generated coordinate weights let index scans reuse shared wide codebooks.
   // The public row scorer continues to consume lut directly.
   std::vector<float> weights;
-  // V2 FP32 grouped scan plan and its float tables; queries without them use the per-coordinate kernels.
+  // FP32 grouped scan plan and its float tables; queries without them use the per-coordinate kernels.
   std::vector<TieredQScanGroup> scan_groups;
   std::vector<float> scan_tables;
 };
@@ -103,8 +103,8 @@ class TieredQ {
   // Float half norms also supply query correction weights.
   TieredQPanels encode_panels_;
   std::vector<float> centroid_half_norms_;
-  // V2 retains FP64 centroid projections and half norms for residuals and correction.
-  std::vector<double> v2_centroid_projections_, v2_centroid_half_norms_;
+  // retains FP64 centroid projections and half norms for residuals and correction.
+  std::vector<double> centroid_projections_, exact_centroid_half_norms_;
   // Derived scan geometry (not serialized): window and shift per grouped FP32 lookup, built from tiers_.
   std::vector<tieredq_detail::ScanGroupPlan> scan_plan_;
   void prepare_encoder();

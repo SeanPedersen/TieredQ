@@ -53,7 +53,7 @@ __attribute__((target("avx512f"),always_inline)) inline __m512 level_tree(const 
   return level[0];
 }
 
-// V2 only. Windows stay inside each document's stride because metadata follows the code. Returns rows scored.
+// only. Windows stay inside each document's stride because metadata follows the code. Returns rows scored.
 template<int batches>
 __attribute__((target("avx512f,avx512bw,avx2,fma"))) size_t scan_grouped(const uint8_t* payload,size_t count,size_t stride,
     size_t code_bytes,const TieredQQuery& q,const Layout& layout,uint32_t centroids,

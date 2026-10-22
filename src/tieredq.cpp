@@ -1,7 +1,7 @@
 // TieredQ training, persistence, and shared scalar/SIMD scan kernels.
 #include "tieredq/tieredq.h"
 #include "tieredq_layout.h"
-#include "tieredq_encode_v2.h"
+#include "tieredq_encode.h"
 #include "tieredq_encode_float.h"
 #include "tieredq_profile.h"
 #include "tieredq_train_linalg.h"
@@ -10,7 +10,7 @@
 #include "tieredq_train_residuals.h"
 #include "tieredq_train_codebook.h"
 #include "tieredq_train_codebook_data.h"
-#include "tiered_rng.h"
+#include "training_rng.h"
 #include <algorithm>
 #include <array>
 #include <bit>
@@ -115,7 +115,7 @@ std::vector<double> covariance(const std::vector<double>& transposed, int d, siz
 }
 std::vector<float> rotation(int n, uint64_t seed, const tieredq_detail::TrainingLinalg& linalg, tieredq_detail::StageProfile* sink=nullptr) {
   tieredq_detail::StageProfile profile("tieredq_rotation_profile",sink);
-  tiered::NumpyRng rng(seed);
+  tieredq_detail::TrainingRng rng(seed);
   std::vector<double> a(product(n,n)), tau(n), signs(n);
   for (int r = 0; r < n; ++r) for (int c = 0; c < n; ++c) a[size_t(c)*n+r] = rng.normal();
   profile.mark("tier_rotation_random_fill");
@@ -361,7 +361,7 @@ TieredQ TieredQ::train(TieredQConfig config,const float* sample,size_t rows,uint
   tieredq_detail::StageProfile profile;
   const auto& linalg=tieredq_detail::TrainingLinalg::get();
   finite_rows(sample,product(rows,d)); TieredQ c; c.config_=config;
-  tiered::NumpyRng rng(seed); auto initial=rng.choice(rows,k);
+  tieredq_detail::TrainingRng rng(seed); auto initial=rng.choice(rows,k);
   c.centroids_.resize(product(k,d));
   for (unsigned j=0;j<k;++j) std::copy_n(sample+initial[j]*d,d,c.centroids_.data()+size_t(j)*d);
   std::vector<uint32_t> ids(rows);
@@ -412,7 +412,7 @@ TieredQ TieredQ::train(TieredQConfig config,const float* sample,size_t rows,uint
   tieredq_detail::dump_training_stage("eigenvectors.f64",cov);
   tieredq_detail::dump_training_stage("eigenvalues.f64",eigenvalues);
   c.levels_.resize(9); std::array<double,9> error{}; error[0]=1;
-  for (unsigned b=1;b<=8;++b) { c.levels_[b]=tieredq_detail::v2_codebooks()[b]; error[b]=tieredq_detail::distortion(c.levels_[b]); }
+  for (unsigned b=1;b<=8;++b) { c.levels_[b]=tieredq_detail::gaussian_codebooks()[b]; error[b]=tieredq_detail::distortion(c.levels_[b]); }
   std::vector<unsigned> bits(d,0);
   if (d==512 && config.code_bits==512) {
     std::fill_n(bits.begin(),64,4); std::fill_n(bits.begin()+64,64,2); std::fill_n(bits.begin()+128,128,1);
@@ -480,19 +480,19 @@ void TieredQ::prepare_encoder() {
   });
   const auto projection=pack_panels(d,m,[&](size_t j,size_t r) { return basis_[j*m+r]; });
   const std::vector<double> centers(centroids_.begin(),centroids_.end());
-  v2_centroid_projections_.resize(product(k,projection.padded_columns()));
-  tieredq_detail::v2_matrix(centers.data(),k,projection,v2_centroid_projections_.data());
-  v2_centroid_half_norms_=exact_half_norms(centroids_,k,d);
-  centroid_half_norms_.assign(v2_centroid_half_norms_.begin(),v2_centroid_half_norms_.end());
+  centroid_projections_.resize(product(k,projection.padded_columns()));
+  tieredq_detail::ordered_matrix(centers.data(),k,projection,centroid_projections_.data());
+  exact_centroid_half_norms_=exact_half_norms(centroids_,k,d);
+  centroid_half_norms_.assign(exact_centroid_half_norms_.begin(),exact_centroid_half_norms_.end());
   tieredq_detail::build_scan_plan(tiers_,scan_plan_);
 }
 // One fused GEMM yields the basis projection [0, m) and centroid dots [m, m+K) per row;
 // the residual projection is x*basis - c*basis.
 void TieredQ::encode_block(const float* rows,size_t count,uint8_t* out,float* corrections,tieredq_detail::StageProfile* profile) const {
   const Layout layout{code_bytes()};
-  const tieredq_detail::V2Model model{config_.dimensions,centroids_,mean_,sigma_,levels_,tiers_};
-  const tieredq_detail::V2Encoder encoder{encode_panels_,v2_centroid_projections_,v2_centroid_half_norms_};
-  tieredq_detail::encode_v2_block(model,encoder,layout,rows,count,out,corrections,TieredQKernel::automatic,profile);
+  const tieredq_detail::EncodingModel model{config_.dimensions,centroids_,mean_,sigma_,levels_,tiers_};
+  const tieredq_detail::EncoderState encoder{encode_panels_,centroid_projections_,exact_centroid_half_norms_};
+  tieredq_detail::encode_block(model,encoder,layout,rows,count,out,corrections,TieredQKernel::automatic,profile);
 }
 void TieredQ::encode_rows(const float* rows,size_t count,uint8_t* out,float* corrections) const {
   const size_t d=config_.dimensions,stride=bytes_per_vector(),blocks=(count+BLOCK_ROWS-1)/BLOCK_ROWS;
@@ -619,7 +619,7 @@ TieredQ TieredQ::deserialize(const std::vector<uint8_t>& data) {
   Reader r{data}; TieredQ c;
   c.config_.dimensions=r.u32(); c.config_.code_bits=r.u32(); c.config_.num_centroids=r.u32();
   const auto rotate=r.u32(); if (rotate>1) bad("invalid rotation flag"); c.config_.rotate_tiers=rotate;
-  if (r.u32()!=model_format) bad("unsupported codec recipe; rebuild the index with TieredQ v2");
+  if (r.u32()!=model_format) bad("unsupported codec format");
   c.config_.validate();
   auto cb=r.u32(),pb=r.u32(),nt=r.u32(); if (cb!=c.code_bytes() || nt==0 || nt>8) bad("invalid layout header");
   for (uint32_t i=0;i<nt;++i) c.tiers_.push_back({r.u32(),r.u32(),r.u32(),r.u32(),r.u32()});
@@ -700,7 +700,7 @@ size_t TieredQ::memory_bytes() const {
   n+=levels_.capacity()*sizeof(std::vector<float>);
   for (const auto& v:levels_) n+=v.capacity()*sizeof(float);
   n+=(encode_panels_.data.capacity()+centroid_half_norms_.capacity())*sizeof(float);
-  n+=(v2_centroid_projections_.capacity()+v2_centroid_half_norms_.capacity())*sizeof(double);
+  n+=(centroid_projections_.capacity()+exact_centroid_half_norms_.capacity())*sizeof(double);
   return n;
 }
 uint32_t TieredQ::model_id() const {

@@ -1,5 +1,5 @@
 // Independent FP32 matrix references, fused centroid ties, projected correction, and overflow fallback.
-#include "tieredq_encode_v2.h"
+#include "tieredq_encode.h"
 #include <bit>
 #include <random>
 #include <stdexcept>
@@ -43,7 +43,7 @@ void centroid_ties_and_correction() {
   const std::vector<float> basis{1,0, 0,1, 0,0};
   const std::vector<TieredQTier> tiers{{0,width,2,0,0}};
   std::vector<std::vector<float>> levels(9); levels[2]={-1.5f,-.5f,.5f,1.5f};
-  const V2Model model{dimensions,centers,mean,sigma,levels,tiers};
+  const EncodingModel model{dimensions,centers,mean,sigma,levels,tiers};
   TieredQPanels fused; fused.depth=dimensions; fused.columns=width+clusters;
   fused.data.resize(dimensions*fused.padded_columns());
   for (size_t j=0;j<dimensions;++j) {
@@ -51,7 +51,7 @@ void centroid_ties_and_correction() {
     for (size_t c=0;c<clusters;++c) fused.data[j*TieredQPanels::PANEL+width+c]=centers[c*dimensions+j];
   }
   const std::vector<double> projections{1,0, 1,0, -1,0},norms(clusters,.5);
-  const V2Encoder encoder{fused,projections,norms};
+  const EncoderState encoder{fused,projections,norms};
   const Layout layout{code_bytes};
   const std::vector<float> inputs{0,0,0, 1,0,0, -1,0,0, 1e-6f,.5f,0, -1e-6f,-.5f,0,
                                 .5f,std::nextafter(.5f,INFINITY),0, -.5f,std::nextafter(-.5f,-INFINITY),0};
@@ -59,7 +59,7 @@ void centroid_ties_and_correction() {
   for (auto kernel:{TieredQKernel::scalar,TieredQKernel::avx2,TieredQKernel::avx512}) {
     if (!TieredQ::kernel_available(kernel)) continue;
     std::vector<uint8_t> docs(count*stride);
-    encode_v2_block(model,encoder,layout,inputs.data(),count,docs.data(),nullptr,kernel);
+    encode_block(model,encoder,layout,inputs.data(),count,docs.data(),nullptr,kernel);
     for (size_t i=0;i<count;++i) {
       const auto* doc=docs.data()+i*stride;
       const size_t cid=doc[layout.centroid_offset()];
@@ -84,14 +84,14 @@ void overflowing_centroid_dot() {
   const std::vector<float> centers{1e20f},mean{0},sigma{1};
   const std::vector<TieredQTier> tiers{{0,1,1,0,0}};
   std::vector<std::vector<float>> levels(9); levels[1]={-1,1};
-  const V2Model model{1,centers,mean,sigma,levels,tiers};
+  const EncodingModel model{1,centers,mean,sigma,levels,tiers};
   TieredQPanels fused; fused.depth=1; fused.columns=2; fused.data.resize(fused.padded_columns());
   fused.data[0]=1; fused.data[1]=centers[0];
   const std::vector<double> projections{double(centers[0])},norms{double(centers[0])*centers[0]/2};
-  const V2Encoder encoder{fused,projections,norms};
+  const EncoderState encoder{fused,projections,norms};
   const Layout layout{1};
   std::vector<uint8_t> doc(1+layout.metadata_bytes());
-  encode_v2_block(model,encoder,layout,centers.data(),1,doc.data(),nullptr);
+  encode_block(model,encoder,layout,centers.data(),1,doc.data(),nullptr);
   require(layout.factor(doc.data())==0 && layout.correction(doc.data())==0,"finite zero residual after FP32 overflow");
 }
 }

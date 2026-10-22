@@ -1,4 +1,4 @@
-// Projected mean and variance with row-ordered reductions; v2 tiles columns for cache locality.
+// Projected mean and variance with row-ordered reductions; tiles columns for cache locality.
 #pragma once
 #include <algorithm>
 #include <array>

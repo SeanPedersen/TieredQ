@@ -1,7 +1,7 @@
-// Independent persisted-model references for v2 layout, binary16, reconstruction, and scans.
+// Independent persisted-model references for layout, binary16, reconstruction, and scans.
 #include "tieredq/tieredq.h"
 #include "tieredq_layout.h"
-#include "tieredq_encode_v2.h"
+#include "tieredq_encode.h"
 #include "tieredq_train_linalg.h"
 #include "tieredq_train_kmeans.h"
 #include "tieredq_train_stats.h"
@@ -21,7 +21,7 @@
 using namespace dv;
 namespace {
 void require(bool value,const char* message) { if (!value) throw std::runtime_error(message); }
-template<class F> void rejects(F run) { bool caught=false; try { run(); } catch (const std::exception&) { caught=true; } require(caught,"v2 expected rejection"); }
+template<class F> void rejects(F run) { bool caught=false; try { run(); } catch (const std::exception&) { caught=true; } require(caught,"expected rejection"); }
 struct Bytes {
   std::vector<uint8_t> data;
   void u32(uint32_t value) { for (unsigned i=0;i<4;++i) data.push_back(uint8_t(value>>(i*8))); }
@@ -96,14 +96,14 @@ void wide_grid_threshold_parity() {
     std::vector<std::vector<float>> levels(9);
     for (unsigned i=0;i<(1u<<bits);++i) levels[bits].push_back(float(i/3)-40);
     const std::vector<TieredQTier> tiers{{0,1,bits,0,0}};
-    const V2Model model{1,center,mean,sigma,levels,tiers};
-    V2Workspace work(model); work.v[0]=1;
+    const EncodingModel model{1,center,mean,sigma,levels,tiers};
+    EncodingWorkspace work(model); work.v[0]=1;
     for (double threshold:work.thresholds[bits]) for (double value:{std::nextafter(threshold,-INFINITY),threshold,std::nextafter(threshold,INFINITY)}) {
       work.z[0]=value;
-      std::array<double,v2_grid_storage> expected_dots{},expected_norms{},dots{},norms{};
-      v2_grid_terms(model,work,expected_dots.data(),expected_norms.data(),TieredQKernel::scalar);
-      v2_grid_terms(model,work,dots.data(),norms.data(),TieredQKernel::avx512);
-      for (size_t point=0;point<v2_grid_points;++point) {
+      std::array<double,scale_grid_storage> expected_dots{},expected_norms{},dots{},norms{};
+      scale_grid_terms(model,work,expected_dots.data(),expected_norms.data(),TieredQKernel::scalar);
+      scale_grid_terms(model,work,dots.data(),norms.data(),TieredQKernel::avx512);
+      for (size_t point=0;point<scale_grid_points;++point) {
         require(std::bit_cast<uint64_t>(dots[point])==std::bit_cast<uint64_t>(expected_dots[point]),"wide grid dot/threshold parity");
         require(std::bit_cast<uint64_t>(norms[point])==std::bit_cast<uint64_t>(expected_norms[point]),"wide grid norm/threshold parity");
       }
@@ -166,7 +166,7 @@ void encoder_boundaries() {
     }
   }
   for (unsigned bits=1;bits<=8;++bits) {
-    const auto& levels=tieredq_detail::v2_codebooks()[bits];
+    const auto& levels=tieredq_detail::gaussian_codebooks()[bits];
     require(levels.size()==size_t(1u<<bits),"canonical codebook length");
     require(std::is_sorted(levels.begin(),levels.end()),"canonical codebook order");
     require(tieredq_detail::distortion(levels)>0,"canonical codebook distortion");
@@ -180,16 +180,16 @@ void encoder_boundaries() {
     for (size_t i=0;i<thresholds.size();++i) thresholds[i]=double(i/2)-64;
     for (double threshold:thresholds) for (double value:{std::nextafter(threshold,-INFINITY),threshold,std::nextafter(threshold,INFINITY)}) {
       unsigned expected=0; while (expected<thresholds.size() && value>thresholds[expected]) ++expected;
-      require(v2_code(value,thresholds)==expected,"v2 exact threshold boundary");
+      require(quantize_code(value,thresholds)==expected,"exact threshold boundary");
     }
   }
   const std::vector<float> center{0},basis{1},mean{0},sigma{1};
   std::vector<std::vector<float>> levels(9); levels[2]={-1.5f,-.5f,.5f,1.5f};
   const std::vector<TieredQTier> tiers{{0,1,2,0,0}};
-  const V2Model model{1,center,mean,sigma,levels,tiers};
-  V2Workspace work(model); work.v[0]=1; work.z[0]=1;
-  require(v2_grid_search(model,1,work)==.5,"v2 first grid point dot on equal energies");
-  require(work.chosen_codes[0]==2,"v2 first grid point codes on equal energies");
+  const EncodingModel model{1,center,mean,sigma,levels,tiers};
+  EncodingWorkspace work(model); work.v[0]=1; work.z[0]=1;
+  require(scale_grid_search(model,1,work)==.5,"first grid point dot on equal energies");
+  require(work.chosen_codes[0]==2,"first grid point codes on equal energies");
 }
 void encoder_reductions() {
   using namespace tieredq_detail;
@@ -205,19 +205,19 @@ void encoder_reductions() {
     std::vector<double> actual(rows*stride);
     for (bool centroid:{false,true}) for (auto kernel:{TieredQKernel::scalar,TieredQKernel::avx2,TieredQKernel::avx512}) {
       if (!TieredQ::kernel_available(kernel)) continue;
-      if (centroid) v2_matrix<true>(input.data(),rows,panels,actual.data(),kernel);
-      else v2_matrix(input.data(),rows,panels,actual.data(),kernel);
+      if (centroid) ordered_matrix<true>(input.data(),rows,panels,actual.data(),kernel);
+      else ordered_matrix(input.data(),rows,panels,actual.data(),kernel);
       for (size_t i=0;i<rows;++i) for (size_t j=0;j<columns;++j) {
         double sum=0;
         for (size_t k=0;k<depth;++k) {
           const double b=transpose ? basis[j*m+k] : basis[k*m+j];
           sum+=centroid ? b*b/2-input[i*depth+k]*b : input[i*depth+k]*b;
         }
-        require(std::bit_cast<uint64_t>(actual[i*stride+j])==std::bit_cast<uint64_t>(sum),"v2 matrix reduction order");
+        require(std::bit_cast<uint64_t>(actual[i*stride+j])==std::bit_cast<uint64_t>(sum),"matrix reduction order");
       }
     }
     for (auto kernel:{TieredQKernel::avx2,TieredQKernel::avx512})
-      if (!TieredQ::kernel_available(kernel)) rejects([&]{v2_matrix(input.data(),rows,panels,actual.data(),kernel);});
+      if (!TieredQ::kernel_available(kernel)) rejects([&]{ordered_matrix(input.data(),rows,panels,actual.data(),kernel);});
   }
 }
 void grid_kernels() {
@@ -235,22 +235,22 @@ void grid_kernels() {
     const unsigned dimensions=bits==1 ? 9 : 8;
     tiers.push_back({rank,dimensions,bits,0,offset}); rank+=dimensions; offset+=dimensions*bits;
   }
-  const V2Model model{d,centers,mean,sigma,levels,tiers};
-  V2Workspace work(model);
+  const EncodingModel model{d,centers,mean,sigma,levels,tiers};
+  EncodingWorkspace work(model);
   for (const auto& tier:tiers) for (size_t j=0;j<tier.dimensions;++j) {
     const size_t r=tier.start+j; const auto& thresholds=work.thresholds[tier.bits];
     const double threshold=thresholds[j%thresholds.size()];
     work.z[r]=j%3==0 ? threshold : std::nextafter(threshold,j%3==1 ? -INFINITY : INFINITY);
     work.v[r]=normal(rng);
   }
-  std::array<double,v2_grid_storage> reference_dots{},reference_norms{},dots{},norms{};
-  v2_grid_terms(model,work,reference_dots.data(),reference_norms.data(),TieredQKernel::scalar);
+  std::array<double,scale_grid_storage> reference_dots{},reference_norms{},dots{},norms{};
+  scale_grid_terms(model,work,reference_dots.data(),reference_norms.data(),TieredQKernel::scalar);
   for (auto kernel:{TieredQKernel::scalar,TieredQKernel::avx2,TieredQKernel::avx512}) {
     if (!TieredQ::kernel_available(kernel)) continue;
-    v2_grid_terms(model,work,dots.data(),norms.data(),kernel);
-    for (size_t point=0;point<v2_grid_points;++point) {
-      require(std::bit_cast<uint64_t>(dots[point])==std::bit_cast<uint64_t>(reference_dots[point]),"v2 grid dot order/boundary");
-      require(std::bit_cast<uint64_t>(norms[point])==std::bit_cast<uint64_t>(reference_norms[point]),"v2 grid norm order/boundary");
+    scale_grid_terms(model,work,dots.data(),norms.data(),kernel);
+    for (size_t point=0;point<scale_grid_points;++point) {
+      require(std::bit_cast<uint64_t>(dots[point])==std::bit_cast<uint64_t>(reference_dots[point]),"grid dot order/boundary");
+      require(std::bit_cast<uint64_t>(norms[point])==std::bit_cast<uint64_t>(reference_norms[point]),"grid norm order/boundary");
     }
   }
 }
@@ -276,20 +276,20 @@ void half_tests() {
 void parity(const std::string& prefix,unsigned d,unsigned bits) {
   constexpr size_t rows=81;
   auto body=model(d,bits); persist(prefix,body.data); auto codec=TieredQ::load(prefix);
-  require(codec.metadata_bytes_per_vector()==5,"v2 metadata size");
-  codec.save(prefix+".roundtrip"); require(read_bytes(prefix)==read_bytes(prefix+".roundtrip"),"v2 model round trip");
+  require(codec.metadata_bytes_per_vector()==5,"metadata size");
+  codec.save(prefix+".roundtrip"); require(read_bytes(prefix)==read_bytes(prefix+".roundtrip"),"model round trip");
   std::mt19937 rng(42); std::normal_distribution<float> normal;
   std::vector<float> x(rows*d),q(d),decoded(rows*d),external(rows);
   for (auto& value:x) value=normal(rng); for (auto& value:q) value=normal(rng);
   auto codes=codec.encode(x.data(),rows); codec.decode(codes.data(),rows,decoded.data());
-  auto again=codes; codec.encode(x.data(),rows,again.data(),external.data()); require(again==codes,"v2 correction output changes codes");
+  auto again=codes; codec.encode(x.data(),rows,again.data(),external.data()); require(again==codes,"correction output changes codes");
   tieredq_detail::Layout layout{codec.code_bytes()};
   std::vector<uint8_t> planes(((rows+15)/16)*16*codec.bytes_per_vector()),unpacked(codes.size());
-  codec.pack(codes.data(),rows,planes.data()); codec.unpack(planes.data(),rows,unpacked.data()); require(codes==unpacked,"v2 pack/unpack");
+  codec.pack(codes.data(),rows,planes.data()); codec.unpack(planes.data(),rows,unpacked.data()); require(codes==unpacked,"pack/unpack");
   for (size_t i=0;i<rows;++i) {
     const auto* doc=codes.data()+i*codec.bytes_per_vector();
-    require(layout.half(doc,layout.correction_offset())==tieredq_detail::half_encode(2*(double(x[i*d])-decoded[i*d])),"v2 rounded correction reference");
-    require(external[i]==layout.correction(doc),"v2 correction output");
+    require(layout.half(doc,layout.correction_offset())==tieredq_detail::half_encode(2*(double(x[i*d])-decoded[i*d])),"rounded correction reference");
+    require(external[i]==layout.correction(doc),"correction output");
   }
   std::vector<float> reference(rows),scores(rows),scalar(rows),approx(rows);
   for (size_t i=0;i<rows;++i) {
@@ -301,15 +301,15 @@ void parity(const std::string& prefix,unsigned d,unsigned bits) {
   for (auto kernel:{TieredQKernel::scalar,TieredQKernel::avx2,TieredQKernel::avx512}) {
     if (!TieredQ::kernel_available(kernel)) continue;
     codec.score(codes.data(),rows,query,scores.data(),kernel);
-    for (size_t i=0;i<rows;++i) require(std::fabs(scores[i]-scalar[i])<.002f,"v2 row kernel parity");
+    for (size_t i=0;i<rows;++i) require(std::fabs(scores[i]-scalar[i])<.002f,"row kernel parity");
     codec.score_planes(planes.data(),rows,query,scores.data(),kernel);
-    for (size_t i=0;i<rows;++i) require(std::fabs(scores[i]-scalar[i])<.002f,"v2 plane kernel parity");
+    for (size_t i=0;i<rows;++i) require(std::fabs(scores[i]-scalar[i])<.002f,"plane kernel parity");
   }
-  for (size_t i=0;i<rows;++i) require(std::fabs(scalar[i]-reference[i])<.003f,"v2 independent score reference");
+  for (size_t i=0;i<rows;++i) require(std::fabs(scalar[i]-reference[i])<.003f,"independent score reference");
   TieredQIndex index(codec); index.add(x.data(),rows); index.save(prefix+".index");
   auto loaded=TieredQIndex::load(prefix+".index");
-  require(loaded.search(q.data(),rows).size()==rows,"v2 index load"); loaded.save(prefix+".index2");
-  require(read_bytes(prefix+".index")==read_bytes(prefix+".index2"),"v2 index bytes");
+  require(loaded.search(q.data(),rows).size()==rows,"index load"); loaded.save(prefix+".index2");
+  require(read_bytes(prefix+".index")==read_bytes(prefix+".index2"),"index bytes");
   auto corrupt=codes; corrupt[codec.code_bytes()]=1;
   persist(prefix+".bad",body.data,corrupt,rows,true); rejects([&]{TieredQIndex::load(prefix+".bad");});
   corrupt=codes; corrupt[layout.factor_offset()]=0; corrupt[layout.factor_offset()+1]=0x7c;
@@ -337,7 +337,7 @@ void parity(const std::string& prefix,unsigned d,unsigned bits) {
   }
   std::vector<float> huge(rows*d,1e10f); rejects([&]{codec.encode(huge.data(),rows);});
 }
-// Multi-tier v2 model: the grouped FP32 plane scan matches the scalar scorer, and its plan is validated.
+// Multi-tier model: the grouped FP32 plane scan matches the scalar scorer, and its plan is validated.
 void grouped_scan() {
   constexpr size_t d=64,rows=150,sample_rows=512;
   std::mt19937 rng(11); std::normal_distribution<float> normal;
@@ -349,7 +349,7 @@ void grouped_scan() {
   auto codes=codec.encode(sample.data(),rows);
   std::vector<uint8_t> planes(((rows+15)/16)*16*codec.bytes_per_vector()); codec.pack(codes.data(),rows,planes.data());
   auto query=codec.query(q.data());
-  require(!query.scan_groups.empty(),"v2 FP32 queries carry scan groups");
+  require(!query.scan_groups.empty(),"FP32 queries carry scan groups");
   bool straddles=false;
   for (const auto& g:query.scan_groups) straddles|=g.bit_offset%32+g.bits>32;
   require(straddles,"grouped scan exercises window-straddling groups");
@@ -396,23 +396,23 @@ void wide_dims_cap() {
   for (const auto& tier:capped6.tiers()) require(tier.bits<=6,"wide_dims=0 must cap at 6 bits");
 }
 void tieredq_encoder_tests();
-void tieredq_v2_tests(const std::string& prefix) {
+void tieredq_model_tests(const std::string& prefix) {
   half_tests(); encoder_boundaries(); encoder_reductions(); grid_kernels(); tieredq_encoder_tests();
-  parity(prefix+".v2",7,1); parity(prefix+".v2",16,4); parity(prefix+".v2",65,2);
-  for (unsigned bits:{3u,5u,6u,7u,8u}) parity(prefix+".v2",16,bits);
+  parity(prefix+".model",7,1); parity(prefix+".model",16,4); parity(prefix+".model",65,2);
+  for (unsigned bits:{3u,5u,6u,7u,8u}) parity(prefix+".model",16,bits);
   grouped_scan(); wide_dims_cap();
-  parity(prefix+".v2",3072,2); parity(prefix+".v2",3072,4);
+  parity(prefix+".model",3072,2); parity(prefix+".model",3072,4);
   std::vector<float> sample(128*16); std::mt19937 rng(7); std::normal_distribution<float> normal;
   for (auto& value:sample) value=normal(rng);
   auto trained=TieredQ::train(TieredQConfig{.dimensions=16,.code_bits=37,.num_centroids=4,.rotate_tiers=true},sample.data(),128,42);
   trained.save(prefix+".trained"); auto loaded=TieredQ::load(prefix+".trained");
-  require(trained.model_id()==loaded.model_id(),"v2 trained roundtrip");
-  require(loaded.config().rotate_tiers,"v2 training rotation flag");
+  require(trained.model_id()==loaded.model_id(),"trained roundtrip");
+  require(loaded.config().rotate_tiers,"training rotation flag");
   const size_t retained=trained.coded_dimensions();
   const size_t expected_bytes=8*4+trained.tiers().size()*5*4+4*8+4+9*8+4*(4*16+16*retained+2*retained+510);
-  require(trained.model_bytes()==expected_bytes,"v2 compact sections");
+  require(trained.model_bytes()==expected_bytes,"compact sections");
   const auto encoded=trained.encode(sample.data(),128);
-  require(encoded==loaded.encode(sample.data(),128),"v2 loaded encoder");
+  require(encoded==loaded.encode(sample.data(),128),"loaded encoder");
   std::vector<float> decoded(sample.size()); loaded.decode(encoded.data(),128,decoded.data());
   const auto bytes=read_bytes(prefix+".trained");
   const size_t centers_offset=80+8*4+trained.tiers().size()*5*4+8;
@@ -425,6 +425,6 @@ void tieredq_v2_tests(const std::string& prefix) {
       uint32_t value=0; for (size_t byte=0;byte<4;++byte) value|=uint32_t(bytes[offset+byte])<<(byte*8);
       correction+=(double(sample[row*16+j])-decoded[row*16+j])*std::bit_cast<float>(value);
     }
-    require(layout.half(doc,layout.correction_offset())==tieredq_detail::half_encode(correction),"v2 rotated correction uses decoded reconstruction");
+    require(layout.half(doc,layout.correction_offset())==tieredq_detail::half_encode(correction),"rotated correction uses decoded reconstruction");
   }
 }

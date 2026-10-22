@@ -54,12 +54,12 @@ class TrainingLinalg {
  private:
   static TrainingLinalg load() {
     TrainingLinalg result;
-    const char* path=std::getenv("DV_TIEREDQ_V2_BLAS");
+    const char* path=std::getenv("TIEREDQ_BLAS");
     if (!path || !*path) return result;
-    const char* stage=std::getenv("DV_TIEREDQ_V2_BLAS_STAGE");
+    const char* stage=std::getenv("TIEREDQ_BLAS_STAGE");
     const std::string selection=stage ? stage : "all";
     if (selection!="all" && selection!="covariance" && selection!="eigen" && selection!="qr")
-      throw std::runtime_error("TieredQ: v2 BLAS stage must be all, covariance, eigen or qr");
+      throw std::runtime_error("TieredQ: BLAS stage must be all, covariance, eigen or qr");
 #if defined(__unix__) || defined(__APPLE__)
     int flags=RTLD_NOW|RTLD_LOCAL;
 #ifdef RTLD_DEEPBIND
@@ -67,7 +67,7 @@ class TrainingLinalg {
 #endif
     // The backend must use LP64 Fortran integers. Keep it loaded for the cached function pointers.
     void* handle=dlopen(path,flags);
-    if (!handle) throw std::runtime_error(std::string("TieredQ: cannot load v2 BLAS: ")+dlerror());
+    if (!handle) throw std::runtime_error(std::string("TieredQ: cannot load BLAS: ")+dlerror());
     try {
       result.eigen=symbol<decltype(result.eigen)>(handle,"dsyevd_");
       result.qr=symbol<decltype(result.qr)>(handle,"dgeqrf_");
@@ -80,13 +80,13 @@ class TrainingLinalg {
     if (selection!="qr") { result.qr=&dgeqrf_; result.generate_q=&dorgqr_; }
     return result;
 #else
-    throw std::runtime_error("TieredQ: dynamic v2 BLAS is unavailable on this platform");
+    throw std::runtime_error("TieredQ: dynamic BLAS is unavailable on this platform");
 #endif
   }
 #if defined(__unix__) || defined(__APPLE__)
   template<class Function> static Function symbol(void* handle,const char* name) {
     auto value=reinterpret_cast<Function>(dlsym(handle,name));
-    if (!value) throw std::runtime_error(std::string("TieredQ: v2 BLAS is missing ")+name);
+    if (!value) throw std::runtime_error(std::string("TieredQ: BLAS is missing ")+name);
     return value;
   }
 #endif

@@ -1,4 +1,4 @@
-// Ordered double GEMM for v2: SIMD spans outputs, and each output visits depth in ascending order.
+// Ordered double GEMM with ordered reductions: SIMD spans outputs, and each output visits depth in ascending order.
 #pragma once
 #include "tieredq/tieredq.h"
 #include <algorithm>
@@ -6,23 +6,23 @@
 #include <stdexcept>
 #if defined(__x86_64__) || defined(__i386__)
 #include <immintrin.h>
-#define DV_TIEREDQ_V2_X86 1
+#define TIEREDQ_ENCODING_X86 1
 #endif
 
 namespace dv::tieredq_detail {
 // Resolves automatic to the best kernel this CPU runs; an explicit kernel the CPU lacks fails fast.
-inline TieredQKernel v2_kernel(TieredQKernel kernel) {
-#ifdef DV_TIEREDQ_V2_X86
+inline TieredQKernel encoding_kernel(TieredQKernel kernel) {
+#ifdef TIEREDQ_ENCODING_X86
   const bool avx512=__builtin_cpu_supports("avx512f"),avx2=__builtin_cpu_supports("avx2");
 #else
   const bool avx512=false,avx2=false;
 #endif
   if (kernel==TieredQKernel::automatic) return avx512 ? TieredQKernel::avx512 : avx2 ? TieredQKernel::avx2 : TieredQKernel::scalar;
   if ((kernel==TieredQKernel::avx512 && !avx512) || (kernel==TieredQKernel::avx2 && !avx2))
-    throw std::runtime_error("TieredQ: requested v2 encoder kernel is unavailable");
+    throw std::runtime_error("TieredQ: requested encoder kernel is unavailable");
   return kernel;
 }
-template<bool centroid=false> inline void v2_matrix_scalar(const double* input,size_t rows,const TieredQPanels& panels,double* output) {
+template<bool centroid=false> inline void ordered_matrix_scalar(const double* input,size_t rows,const TieredQPanels& panels,double* output) {
   constexpr size_t row_tile=4,column_tile=8,panel_width=TieredQPanels::PANEL;
   const size_t stride=panels.padded_columns();
   for (size_t panel=0;panel<stride;panel+=panel_width) for (size_t col=0;col<panel_width;col+=column_tile) {
@@ -45,9 +45,9 @@ template<bool centroid=false> inline void v2_matrix_scalar(const double* input,s
     }
   }
 }
-#ifdef DV_TIEREDQ_V2_X86
+#ifdef TIEREDQ_ENCODING_X86
 template<bool centroid=false>
-__attribute__((target("avx2"))) inline void v2_matrix_avx2(
+__attribute__((target("avx2"))) inline void ordered_matrix_avx2(
     const double* input,size_t rows,const TieredQPanels& panels,double* output) {
   constexpr size_t row_tile=4,column_tile=8,lanes=4,panel_width=TieredQPanels::PANEL;
   const size_t stride=panels.padded_columns();
@@ -78,7 +78,7 @@ __attribute__((target("avx2"))) inline void v2_matrix_avx2(
   }
 }
 template<bool centroid=false>
-__attribute__((target("avx512f"))) inline void v2_matrix_avx512(
+__attribute__((target("avx512f"))) inline void ordered_matrix_avx512(
     const double* input,size_t rows,const TieredQPanels& panels,double* output) {
   constexpr size_t row_tile=4,lanes=8,panel_width=TieredQPanels::PANEL;
   const size_t stride=panels.padded_columns();
@@ -106,15 +106,15 @@ __attribute__((target("avx512f"))) inline void v2_matrix_avx512(
   }
 }
 #endif
-template<bool centroid=false> inline void v2_matrix(const double* input,size_t rows,const TieredQPanels& panels,double* output,
+template<bool centroid=false> inline void ordered_matrix(const double* input,size_t rows,const TieredQPanels& panels,double* output,
                       TieredQKernel kernel=TieredQKernel::automatic) {
   if (!rows) return;
-  switch (v2_kernel(kernel)) {
-#ifdef DV_TIEREDQ_V2_X86
-    case TieredQKernel::avx512: return v2_matrix_avx512<centroid>(input,rows,panels,output);
-    case TieredQKernel::avx2: return v2_matrix_avx2<centroid>(input,rows,panels,output);
+  switch (encoding_kernel(kernel)) {
+#ifdef TIEREDQ_ENCODING_X86
+    case TieredQKernel::avx512: return ordered_matrix_avx512<centroid>(input,rows,panels,output);
+    case TieredQKernel::avx2: return ordered_matrix_avx2<centroid>(input,rows,panels,output);
 #endif
-    default: return v2_matrix_scalar<centroid>(input,rows,panels,output);
+    default: return ordered_matrix_scalar<centroid>(input,rows,panels,output);
   }
 }
 } // namespace dv::tieredq_detail

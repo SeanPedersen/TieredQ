@@ -1,9 +1,9 @@
-// Canonical v2 Gaussian codebooks: exact float outputs of the original Lloyd-Max recipe.
+// Canonical Gaussian codebooks: exact float outputs of the original Lloyd-Max recipe.
 #pragma once
 #include <array>
 #include <vector>
 namespace dv::tieredq_detail {
-inline const std::array<std::vector<float>,9>& v2_codebooks() {
+inline const std::array<std::vector<float>,9>& gaussian_codebooks() {
   static const std::array<std::vector<float>,9> books{{
     {},
     {-0.7978718280792236f, 0.7978972792625427f},

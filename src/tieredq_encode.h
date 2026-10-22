@@ -1,8 +1,8 @@
-// V2 encoding: fused FP32 assignment/projection, ordered quantization, projected FP64 correction.
+// encoding: fused FP32 assignment/projection, ordered quantization, projected FP64 correction.
 #pragma once
 #include "tieredq_layout.h"
 #include "tieredq_profile.h"
-#include "tieredq_encode_v2_grid.h"
+#include "tieredq_encode_grid.h"
 #include "tieredq_encode_float.h"
 #include <algorithm>
 #include <array>
@@ -10,7 +10,7 @@
 #include <vector>
 
 namespace dv::tieredq_detail {
-struct V2Model {
+struct EncodingModel {
   size_t dimensions;
   const std::vector<float>& centroids;
   const std::vector<float>& mean;
@@ -18,18 +18,18 @@ struct V2Model {
   const std::vector<std::vector<float>>& levels;
   const std::vector<TieredQTier>& tiers;
 };
-struct V2Encoder {
+struct EncoderState {
   const TieredQPanels& fused_panels;
   const std::vector<double>& centroid_projections;
   const std::vector<double>& half_norms;
   size_t projection_stride() const { return centroid_projections.size()/half_norms.size(); }
 };
-struct V2Workspace {
+struct EncodingWorkspace {
   std::vector<double> v, z, chosen;
   std::vector<uint32_t> chosen_codes;
   std::array<std::vector<double>,9> thresholds;
   std::array<std::array<double,16>,5> small_levels{};
-  explicit V2Workspace(const V2Model& model)
+  explicit EncodingWorkspace(const EncodingModel& model)
       : v(model.sigma.size()), z(v.size()), chosen(v.size()), chosen_codes(v.size()) {
     for (size_t b=1;b<model.levels.size();++b) {
       const auto& levels=model.levels[b];
@@ -39,26 +39,26 @@ struct V2Workspace {
     }
   }
 };
-inline double v2_grid_search(const V2Model& model,double rms,V2Workspace& work,
+inline double scale_grid_search(const EncodingModel& model,double rms,EncodingWorkspace& work,
                               TieredQKernel kernel=TieredQKernel::automatic) {
   for (auto& value:work.z) value/=rms;
-  std::array<double,v2_grid_storage> dots{},norms{};
-  v2_grid_terms(model,work,dots.data(),norms.data(),kernel);
+  std::array<double,scale_grid_storage> dots{},norms{};
+  scale_grid_terms(model,work,dots.data(),norms.data(),kernel);
   double best=-INFINITY; size_t best_point=0;
-  for (size_t point=0;point<v2_grid_points;++point) {
+  for (size_t point=0;point<scale_grid_points;++point) {
     const double energy=dots[point]*dots[point]/std::max(norms[point],1e-30);
     // Strict improvement retains the first grid point on ties.
     if (energy>best) { best=energy; best_point=point; }
   }
   for (const auto& tier:model.tiers) for (size_t j=0;j<tier.dimensions;++j) {
     const size_t r=tier.start+j;
-    const unsigned code=v2_code(work.z[r]*v2_grid()[best_point],work.thresholds[tier.bits]);
+    const unsigned code=quantize_code(work.z[r]*scale_grid()[best_point],work.thresholds[tier.bits]);
     work.chosen_codes[r]=code; work.chosen[r]=double(model.levels[tier.bits][code])*model.sigma[r];
   }
   return dots[best_point];
 }
-inline void v2_quantize_row(const V2Model& model,const Layout& layout,const double* projection,
-                             size_t cid,uint8_t* doc,V2Workspace& work,TieredQKernel kernel) {
+inline void quantize_row(const EncodingModel& model,const Layout& layout,const double* projection,
+                             size_t cid,uint8_t* doc,EncodingWorkspace& work,TieredQKernel kernel) {
   const size_t m=model.sigma.size();
   double square=0,numerator=0;
   for (size_t r=0;r<m;++r) {
@@ -67,7 +67,7 @@ inline void v2_quantize_row(const V2Model& model,const Layout& layout,const doub
     square+=work.z[r]*work.z[r]; numerator+=work.v[r]*work.v[r];
   }
   const double rms=std::sqrt(square/m)+1e-30;
-  const double best_dot=v2_grid_search(model,rms,work,kernel);
+  const double best_dot=scale_grid_search(model,rms,work,kernel);
   std::fill_n(doc,layout.code_bytes+layout.metadata_bytes(),0); doc[layout.centroid_offset()]=uint8_t(cid);
   for (const auto& tier:model.tiers) for (size_t j=0;j<tier.dimensions;++j)
     write_code(doc,tier.bit_offset+j*tier.bits,tier.bits,work.chosen_codes[tier.start+j]);
@@ -75,7 +75,7 @@ inline void v2_quantize_row(const V2Model& model,const Layout& layout,const doub
   const double factor=layout.factor(doc);
   for (size_t r=0;r<m;++r) work.chosen[r]=model.mean[r]+factor*work.chosen[r];
 }
-inline void encode_v2_block(const V2Model& model,const V2Encoder& encoder,const Layout& layout,const float* rows,size_t count,
+inline void encode_block(const EncodingModel& model,const EncoderState& encoder,const Layout& layout,const float* rows,size_t count,
                             uint8_t* output,float* corrections,TieredQKernel kernel=TieredQKernel::automatic, StageProfile* sink=nullptr) {
   StageProfile profile("tieredq_encode_worker_seconds",sink);
   const size_t d=model.dimensions,m=model.sigma.size(),stride=layout.code_bytes+layout.metadata_bytes();
@@ -88,10 +88,10 @@ inline void encode_v2_block(const V2Model& model,const V2Encoder& encoder,const 
   // Finite FP32 inputs can overflow a dot product; retain the FP64 range on that rare block.
   if (!std::all_of(dots.begin(),dots.end(),[](double value) { return std::isfinite(value); })) {
     const std::vector<double> input(rows,rows+count*d);
-    v2_matrix(input.data(),count,encoder.fused_panels,dots.data(),kernel);
+    ordered_matrix(input.data(),count,encoder.fused_panels,dots.data(),kernel);
   }
   profile.mark("assignment_projection");
-  V2Workspace work(model);
+  EncodingWorkspace work(model);
   for (size_t i=0;i<count;++i) {
     size_t cid=0; double best=INFINITY;
     for (size_t c=0;c<encoder.half_norms.size();++c) {
@@ -101,7 +101,7 @@ inline void encode_v2_block(const V2Model& model,const V2Encoder& encoder,const 
     const double* shift=encoder.centroid_projections.data()+cid*projection_stride;
     for (size_t r=0;r<m;++r) projected[r]=double(dots[i*fused_stride+r])-shift[r];
     uint8_t* doc=output+i*stride;
-    v2_quantize_row(model,layout,projected.data(),cid,doc,work,kernel);
+    quantize_row(model,layout,projected.data(),cid,doc,work,kernel);
     const float* center=model.centroids.data()+cid*d;
     double exact=0,decoded=0;
     for (size_t j=0;j<d;++j) exact+=(double(rows[i*d+j])-center[j])*center[j];

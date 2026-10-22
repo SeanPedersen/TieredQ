@@ -162,16 +162,16 @@ void wide_register_parity(unsigned bits) {
   }
 }
 // Unsupported recipes must fail explicitly rather than reinterpret old metadata.
-void reject_old_recipe(const std::string& prefix) {
-  auto fixture=std::filesystem::path(__FILE__).parent_path()/"fixtures/tieredq_codec_v2.codec";
+void reject_unsupported_format(const std::string& prefix) {
+  auto fixture=std::filesystem::path(__FILE__).parent_path()/"fixtures/tieredq_codec.codec";
   auto data=read(fixture.string());
   u32_at(data,80+4*4,1); fix_model_checksum(data);
   write(prefix+".old",data);
   rejects([&]{TieredQ::load(prefix+".old");});
   auto codec=TieredQ::load(fixture.string()); codec.save(prefix+".golden");
-  check(read(prefix+".golden")==read(fixture.string()),"v2 golden bytes changed");
+  check(read(prefix+".golden")==read(fixture.string()),"golden bytes changed");
 }
-void tieredq_v2_tests(const std::string& prefix);
+void tieredq_model_tests(const std::string& prefix);
 int main() {
   auto dir=std::filesystem::temp_directory_path()/("tieredq_test_"+std::to_string(getpid())); std::filesystem::create_directory(dir);
   try {
@@ -180,8 +180,8 @@ int main() {
     rejects([]{TieredQConfig{512,512,257}.validate();});
     check(TieredQConfig::target_bytes_per_vector(512,64).code_bits==512,"byte factory mismatch");
     auto prefix=(dir/"model").string();
-    reject_old_recipe(prefix);
-    tieredq_v2_tests(prefix);
+    reject_unsupported_format(prefix);
+    tieredq_model_tests(prefix);
     wide_register_parity(5); wide_register_parity(6);
     for(unsigned d:{1u,7u,65u,384u,511u,512u,768u,1024u,1536u}) exercise(d,std::min(257u,d*8),d<=65,prefix);
     for(unsigned bytes:{32u,48u,64u,96u,128u}) exercise(512,bytes*8,bytes==64,prefix);
