@@ -1,6 +1,9 @@
 // The fixed grid: SIMD lanes are independent grid points, with ordered coordinate reductions.
 #pragma once
 #include "tieredq_encode_matrix.h"
+#if defined(__aarch64__)
+#include <arm_neon.h>
+#endif
 #include <array>
 #include <cmath>
 #include <vector>
@@ -39,6 +42,46 @@ template<class Model,class Work> void scale_grid_scalar(const Model& model,const
     dots[point]=dot; norms[point]=norm;
   }
 }
+#if defined(__aarch64__)
+template<class Model,class Work> void scale_grid_point_scalar(const Model& model,const Work& work,size_t point,double& dot,double& norm) {
+  dot=0; norm=0;
+  for (const auto& tier:model.tiers) for (size_t j=0;j<tier.dimensions;++j) {
+    const size_t r=tier.start+j;
+    const unsigned code=quantize_code(work.z[r]*scale_grid()[point],work.thresholds[tier.bits]);
+    const double reconstructed=double(model.levels[tier.bits][code])*model.sigma[r];
+    dot+=work.v[r]*reconstructed; norm+=reconstructed*reconstructed;
+  }
+}
+// Two grid points per vector; each lane keeps the scalar coordinate order, so only FMA rounding differs.
+template<class Model,class Work> void scale_grid_neon(const Model& model,const Work& work,double* dots,double* norms) {
+  for (size_t point=0;point+1<scale_grid_points;point+=2) {
+    const float64x2_t grid=vld1q_f64(scale_grid().data()+point);
+    float64x2_t dot=vdupq_n_f64(0.0),norm=vdupq_n_f64(0.0);
+    for (const auto& tier:model.tiers) {
+      const auto& thresholds=work.thresholds[tier.bits];
+      const auto& levels=model.levels[tier.bits];
+      for (size_t j=0;j<tier.dimensions;++j) {
+        const size_t r=tier.start+j;
+        const float64x2_t value=vmulq_f64(vdupq_n_f64(work.z[r]),grid);
+        uint64x2_t code=vdupq_n_u64(0);
+        for (size_t step=(thresholds.size()+1)/2;step;step/=2) {
+          const size_t first=size_t(vgetq_lane_u64(code,0))+step-1;
+          const size_t second=size_t(vgetq_lane_u64(code,1))+step-1;
+          const float64x2_t threshold=vsetq_lane_f64(thresholds[second],vdupq_n_f64(thresholds[first]),1);
+          code=vaddq_u64(code,vandq_u64(vcgtq_f64(value,threshold),vdupq_n_u64(step)));
+        }
+        const size_t first=size_t(vgetq_lane_u64(code,0)),second=size_t(vgetq_lane_u64(code,1));
+        const float64x2_t level=vsetq_lane_f64(double(levels[second]),vdupq_n_f64(double(levels[first])),1);
+        const float64x2_t reconstructed=vmulq_f64(level,vdupq_n_f64(model.sigma[r]));
+        dot=vfmaq_f64(dot,vdupq_n_f64(work.v[r]),reconstructed);
+        norm=vfmaq_f64(norm,reconstructed,reconstructed);
+      }
+    }
+    vst1q_f64(dots+point,dot); vst1q_f64(norms+point,norm);
+  }
+  scale_grid_point_scalar(model,work,scale_grid_points-1,dots[scale_grid_points-1],norms[scale_grid_points-1]);
+}
+#endif
 #ifdef TIEREDQ_ENCODING_X86
 template<unsigned Bits,class Model,class Work>
 __attribute__((target("avx512f"))) inline void scale_grid_small_avx512(
@@ -178,6 +221,9 @@ __attribute__((target("avx2"))) void scale_grid_avx2(const Model& model,const Wo
 template<class Model,class Work> void scale_grid_terms(const Model& model,const Work& work,double* dots,double* norms,
                                                     TieredQKernel kernel=TieredQKernel::automatic) {
   switch (encoding_kernel(kernel)) {
+#if defined(__aarch64__)
+    case TieredQKernel::neon: return scale_grid_neon(model,work,dots,norms);
+#endif
 #ifdef TIEREDQ_ENCODING_X86
     case TieredQKernel::avx512: return scale_grid_avx512(model,work,dots,norms);
     case TieredQKernel::avx2: return scale_grid_avx2(model,work,dots,norms);

@@ -17,7 +17,14 @@ inline TieredQKernel encoding_kernel(TieredQKernel kernel) {
 #else
   const bool avx512=false,avx2=false;
 #endif
+#if defined(__aarch64__)
+  constexpr bool aarch64=true;
+#else
+  constexpr bool aarch64=false;
+#endif
   if (kernel==TieredQKernel::automatic) return avx512 ? TieredQKernel::avx512 : avx2 ? TieredQKernel::avx2 : TieredQKernel::scalar;
+  if (kernel==TieredQKernel::neon && !aarch64)
+    throw std::runtime_error("TieredQ: requested encoder kernel is unavailable");
   if ((kernel==TieredQKernel::avx512 && !avx512) || (kernel==TieredQKernel::avx2 && !avx2))
     throw std::runtime_error("TieredQ: requested encoder kernel is unavailable");
   return kernel;

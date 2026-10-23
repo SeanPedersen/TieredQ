@@ -8,6 +8,9 @@
 #include <immintrin.h>
 #define DV_TIEREDQ_FLOAT_X86 1
 #endif
+#if defined(__aarch64__)
+#include <arm_neon.h>
+#endif
 namespace dv::tieredq_detail {
 constexpr size_t float_panel_width=TieredQPanels::PANEL,float_tile_rows=8;
 inline void float_matrix_scalar(const float* a, size_t rows, size_t lda, const TieredQPanels& b, float* c, size_t ldc) {
@@ -69,10 +72,43 @@ __attribute__((target("avx2,fma"))) inline void float_matrix_avx2(const float* a
   }
 }
 #endif
+#if defined(__aarch64__)
+// Four rows x 24 columns per tile: 24 accumulators, six basis vectors and one broadcast fit the register file.
+constexpr size_t float_neon_rows=4,float_neon_columns=24;
+inline void float_matrix_neon(const float* a, size_t rows, size_t lda, const TieredQPanels& b, float* c, size_t ldc) {
+  for (size_t p=0;p<b.padded_columns()/float_panel_width;++p) {
+    const float* panel=b.data.data()+p*b.depth*float_panel_width;
+    for (size_t r0=0;r0<rows;r0+=float_neon_rows) {
+      const size_t valid=std::min(float_neon_rows,rows-r0);
+      const float* row[float_neon_rows];
+      for (size_t i=0;i<float_neon_rows;++i) row[i]=a+std::min(r0+i,rows-1)*lda;
+      for (size_t c0=0;c0<float_panel_width;c0+=float_neon_columns) {
+        float32x4_t acc[float_neon_rows][float_neon_columns/4];
+        for (auto& r:acc) for (auto& v:r) v=vdupq_n_f32(0.0f);
+        for (size_t k=0;k<b.depth;++k) {
+          const float* bk=panel+k*float_panel_width+c0;
+          float32x4_t basis[float_neon_columns/4];
+          for (size_t h=0;h<float_neon_columns/4;++h) basis[h]=vld1q_f32(bk+4*h);
+          for (size_t i=0;i<float_neon_rows;++i) {
+            const float32x4_t value=vdupq_n_f32(row[i][k]);
+            for (size_t h=0;h<float_neon_columns/4;++h) acc[i][h]=vfmaq_f32(acc[i][h],value,basis[h]);
+          }
+        }
+        for (size_t i=0;i<valid;++i) for (size_t h=0;h<float_neon_columns/4;++h)
+          vst1q_f32(c+(r0+i)*ldc+p*float_panel_width+c0+4*h,acc[i][h]);
+      }
+    }
+  }
+}
+#endif
 inline void float_matrix(const float* a, size_t rows, size_t lda, const TieredQPanels& b, float* c, size_t ldc,
                          TieredQKernel kernel=TieredQKernel::automatic) {
   if (!rows) return;
   if (kernel==TieredQKernel::scalar) return float_matrix_scalar(a,rows,lda,b,c,ldc);
+#if defined(__aarch64__)
+  if (kernel==TieredQKernel::neon) return float_matrix_neon(a,rows,lda,b,c,ldc);
+  if (kernel!=TieredQKernel::automatic) throw std::runtime_error("TieredQ: FP32 encoder kernel unavailable");
+#endif
 #ifdef DV_TIEREDQ_FLOAT_X86
   if (kernel==TieredQKernel::avx512 && __builtin_cpu_supports("avx512f"))
     return float_matrix_avx512(a,rows,lda,b,c,ldc);

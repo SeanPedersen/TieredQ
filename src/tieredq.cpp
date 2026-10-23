@@ -492,7 +492,8 @@ void TieredQ::encode_block(const float* rows,size_t count,uint8_t* out,float* co
   const Layout layout{code_bytes()};
   const tieredq_detail::EncodingModel model{config_.dimensions,centroids_,mean_,sigma_,levels_,tiers_};
   const tieredq_detail::EncoderState encoder{encode_panels_,centroid_projections_,exact_centroid_half_norms_};
-  tieredq_detail::encode_block(model,encoder,layout,rows,count,out,corrections,TieredQKernel::automatic,profile);
+  const TieredQKernel kernel=kernel_available(TieredQKernel::neon) ? TieredQKernel::neon : TieredQKernel::automatic;
+  tieredq_detail::encode_block(model,encoder,layout,rows,count,out,corrections,kernel,profile);
 }
 void TieredQ::encode_rows(const float* rows,size_t count,uint8_t* out,float* corrections) const {
   const size_t d=config_.dimensions,stride=bytes_per_vector(),blocks=(count+BLOCK_ROWS-1)/BLOCK_ROWS;

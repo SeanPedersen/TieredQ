@@ -21,7 +21,7 @@ void matrix_reference() {
   for (auto& value:panels.data) value=normal(rng);
   for (size_t count:{size_t(0),size_t(1),size_t(7),size_t(65)}) {
     std::vector<float> input(count*depth); for (auto& value:input) value=normal(rng);
-    for (auto kernel:{TieredQKernel::scalar,TieredQKernel::avx2,TieredQKernel::avx512}) {
+    for (auto kernel:{TieredQKernel::scalar,TieredQKernel::avx2,TieredQKernel::avx512,TieredQKernel::neon}) {
       if (!TieredQ::kernel_available(kernel)) continue;
       const size_t stride=panels.padded_columns();
       std::vector<float> output(count*stride+guard,123);
@@ -56,7 +56,7 @@ void centroid_ties_and_correction() {
   const std::vector<float> inputs{0,0,0, 1,0,0, -1,0,0, 1e-6f,.5f,0, -1e-6f,-.5f,0,
                                 .5f,std::nextafter(.5f,INFINITY),0, -.5f,std::nextafter(-.5f,-INFINITY),0};
   const size_t count=inputs.size()/dimensions,stride=code_bytes+layout.metadata_bytes();
-  for (auto kernel:{TieredQKernel::scalar,TieredQKernel::avx2,TieredQKernel::avx512}) {
+  for (auto kernel:{TieredQKernel::scalar,TieredQKernel::avx2,TieredQKernel::avx512,TieredQKernel::neon}) {
     if (!TieredQ::kernel_available(kernel)) continue;
     std::vector<uint8_t> docs(count*stride);
     encode_block(model,encoder,layout,inputs.data(),count,docs.data(),nullptr,kernel);
