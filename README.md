@@ -1,6 +1,6 @@
 # TieredQ: Variance-Aware Bit Allocation
 
-TieredQ is a new vector quantization algorithm that dynamically allocates bits per dimension instead of uniformly like RaBitQ or TurboQuant. TieredQ centers and rotates vectors into a PCA basis, then greedily allocates 0–8 bits per dimension to reduce quantization error. Other ANN indexes can use the
+TieredQ is a new vector quantization algorithm that dynamically allocates bits per dimension, providing a very high recall compression ratio (compared to RaBitQ or TurboQuant). TieredQ centers and rotates vectors into a PCA basis, then greedily allocates 0–8 bits per dimension to reduce quantization error. Other ANN indexes can use the
 codec directly.
 
 ## Install
