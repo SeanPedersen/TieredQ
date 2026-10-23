@@ -36,19 +36,43 @@ exhaustively, sorts descending score then ascending insertion ID for ties,
 and returns at most min(k, size()) hits. IDs are uint32. add appends borrowed
 FP32 rows and the index owns its resulting encoded storage.
 
-## Exact and optional fast scans
+## Exact and fast index storage
 
-`TieredQIndex::search` and `search_batch` retain the exact compressed FP32 scorer.
-`build_fast_scan()` creates an optional, approximate auxiliary cache; use
-`search_fast` or `search_batch_fast` to select it explicitly. Both modes evaluate
-every document without reranking. Score and ranking differences are expected in
-fast mode, and its memory cost depends on the model and CPU.
+Construct `dv::TieredQIndex(codec, true)` or Python
+`TieredQIndex(dimensions=d, code_bits=b, fast_mode=True)` to retain only the fast
+representation. The default constructor retains exact packed rows. `search` and
+`search_batch` honor this choice; fast-only indexes support appending and do not
+require cache rebuilding. C++ explicit exact-kernel overrides are rejected on a
+fast-only index. Mode selection is read-only (`fast_mode()` in C++, `fast_mode`
+in Python).
 
-`has_fast_scan()` reports whether a supported cache is present. Fast search falls
-back to exact search when it is absent. A nonempty successful `add()` invalidates
-the cache; rebuild it after appending. Empty and failed adds preserve it. Cache
-contents are derived and not persisted, so loaded indexes start without a fast
-cache. Exact search remains available after building the fast cache.
+`storage_bytes()` / Python `storage_bytes` accounts for allocated vector arrays,
+including capacity and padding, but excludes model/query projection data and
+search scratch. `bytes_per_vector()` / Python `bytes_per_vector` describes the
+selected unpadded row representation. On ARM, the fast representation uses int8
+levels even for narrow codebooks; x86 byte-lookup storage is used only for tiers
+of four bits or less. Fast-only does not imply a smaller encoding than exact.
+
+Exact files retain container kind 2. Fast-only files use kind 3 and a separately
+versioned payload containing representation kind, level quantization range,
+metadata arrays and packed lookup codes or int8 levels. No original packed rows
+are stored. Query projection and cache geometry are reconstructed from the
+persisted codec. Shapes, levels, centroid IDs, finiteness and trailing bytes are
+validated before search. Cross-platform loads preserve the saved representation;
+a portable scorer handles a representation unsupported by the local native
+kernel. Python warns once per index on load/first add when scalar fast scoring
+is selected; unsupported hardware gets a distinct warning that rebuilding will
+not enable SIMD. C++ callers can query `uses_scalar_fast_scan()` and
+`native_fast_scan_available()` and route diagnostics through their own logger.
+The same backend selector drives scoring and these diagnostics. Exact-mode
+auxiliary caches remain derived, unpersisted state.
+
+Optional auxiliary caching remains available on default exact-mode indexes: call
+`build_fast_scan()` then `search_fast` / `search_batch_fast`. This retains both
+representations, leaves configured search exact, and requires rebuilding after a
+nonempty append or load. Empty and failed appends preserve the optional cache.
+On fast-only indexes, `build_fast_scan()` is a no-op and `search_fast` matches
+configured search. `has_fast_scan` reports whether fast data is present.
 
 ## Ownership and concurrency
 
@@ -88,7 +112,7 @@ contract. Persist models when sharing trained results between environments.
 
 ## Python API
 
-TieredQIndex(dimensions, code_bits) is the only public class and the only
+TieredQIndex(dimensions, code_bits, *, fast_mode=False) is the only public class and the only
 configuration surface. The first non-empty add() trains the codec on that
 batch using min(256, rows // 2) centroids and seed 0, then stores the batch.
 It needs at least 2 rows; empty adds are no-ops. Later add(rows) calls only
@@ -97,12 +121,14 @@ encode. len(index) reports the count, and search(queries, k=10) returns
 2-D [queries, dimensions] array returns [queries, min(k, size)]. save(path)
 and TieredQIndex.load(path) persist the trained index.
 
-`search()` stays exact by default. `build_fast_scan()` prepares approximate
-search, the read-only `has_fast_scan` property reports availability, and
-`search_fast(queries, k=10)` uses the same input/output shapes as `search()`.
-Matrix inputs use the native fast batch path. Without a supported cache it falls
-back to exact search. Rebuild after a nonempty append or a load; cache construction
-and append hold the exclusive Python index lock against concurrent readers.
+`search()` uses the selected storage mode; the default is exact scoring.
+`fast_mode=True` owns only fast data, persists the mode, and stays ready after
+appends or load. The mode is read-only. On default exact indexes,
+`build_fast_scan()` prepares an optional auxiliary cache for `search_fast`.
+The read-only `has_fast_scan`, `bytes_per_vector` and `storage_bytes` properties
+report fast-data availability, unpadded representation stride and allocated
+vector-data storage. Native calls release the GIL; writes hold the exclusive
+Python index lock against concurrent readers.
 
 The advanced codec surface (encode/decode/score, Config, Query) is C++ only.
 Inputs must be CPU NumPy arrays of float32 with contiguous layout; read-only

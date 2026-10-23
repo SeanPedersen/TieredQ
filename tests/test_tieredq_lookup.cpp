@@ -10,6 +10,42 @@ namespace {
 using namespace dv;
 using namespace dv::tieredq_detail;
 void require(bool condition,const char* message) { if (!condition) throw std::runtime_error(message); }
+void wide_kernel_range_test() {
+  constexpr size_t dimensions=5,count=4097,code_bytes=4,stride=9;
+  constexpr int level_max=63;
+  const std::vector<TieredQTier> tiers{{0,dimensions,6,0,0}};
+  std::vector<std::vector<float>> levels(9);
+  levels[6].resize(64);
+  for (size_t code=0;code<levels[6].size();++code) levels[6][code]=(float(code)-31.5f)/31.5f;
+  std::vector<uint8_t> rows(count*stride,0);
+  const Layout layout{code_bytes};
+  for (size_t doc=0;doc<count;++doc) {
+    for (size_t rank=0;rank<dimensions;++rank)
+      write_code(rows.data()+doc*stride,rank*6,6,(doc+rank)%levels[6].size());
+    layout.store_half(rows.data()+doc*stride,layout.factor_offset(),1);
+  }
+  auto cache=build_fast_scan_cache(levels,tiers,dimensions,count,stride,code_bytes,1,level_max,rows.data());
+  TieredQQuery q;
+  q.weights={1,-1,0,.5f,-.25f}; q.centroid_scores={0};q.correction_weights={0};
+  const auto prepared=fast_scan_query_x86(*cache,q);
+  constexpr float sentinel=-123456;
+  for (size_t first=0;first<count;first+=lookup_block_docs) {
+    const size_t n=std::min(lookup_block_docs,count-first);
+    std::vector<float> scores(n+7,sentinel);
+    scan_fast_avx512_tile(*cache,&prepared,1,first,n,scores.data(),n);
+    for (size_t doc=0;doc<n;++doc) {
+      int dot=0;
+      for (size_t rank=0;rank<dimensions;++rank) {
+        const size_t code=(first+doc+rank)%levels[6].size();
+        const int level=std::lround(levels[6][code]/cache->level_scale[0]);
+        const int weight=std::lround(q.weights[rank]*cache->level_scale[0]/prepared.scale);
+        dot+=level*weight;
+      }
+      require(scores[doc]==float(dot)*prepared.scale,"wide range differs from scalar numerical-level dot");
+    }
+    require(std::all_of(scores.begin()+n,scores.end(),[](float x){return x==sentinel;}),"wide range overwrites tail");
+  }
+}
 void lookup_kernel_test(size_t count) {
   constexpr size_t dimensions=4, weights=40, centroids=2, code_bytes=19, stride=24;
   const std::vector<TieredQTier> tiers{{0,35,4,0,0},{35,5,1,0,140}};
@@ -72,6 +108,20 @@ void lookup_kernel_test(size_t count) {
     require(std::fabs(scores[d]-expected)<1e-5f,"byte-table kernel differs from scalar sum");
   }
   require(std::all_of(scores.begin()+count,scores.end(),[](float x){return x==sentinel;}),"byte-table tail store overflow");
+  for (size_t first=0;first<count;first+=lookup_block_docs) {
+    const size_t rows=std::min(lookup_block_docs,count-first);
+    std::vector<float> tile(rows+7,sentinel);
+    scan_fast_lookup_avx512_range(*cache,query,first,rows,tile.data());
+    require(std::equal(tile.begin(),tile.begin()+rows,scores.begin()+first),"lookup range changes scores");
+    require(std::all_of(tile.begin()+rows,tile.end(),[](float x){return x==sentinel;}),"lookup range overwrites tail");
+    constexpr size_t partial_rows=7;
+    if (rows>partial_rows) {
+      std::fill(tile.begin(),tile.end(),sentinel);
+      scan_fast_lookup_avx512_range(*cache,query,first,partial_rows,tile.data());
+      require(std::equal(tile.begin(),tile.begin()+partial_rows,scores.begin()+first),"partial lookup range changes scores");
+      require(std::all_of(tile.begin()+partial_rows,tile.end(),[](float x){return x==sentinel;}),"partial lookup range overwrites tail");
+    }
+  }
   std::fill(query.centroid_scores.begin(),query.centroid_scores.end(),0);
   std::fill(query.correction_weights.begin(),query.correction_weights.end(),0);
   std::fill(query.scales.begin(),query.scales.end(),1);
@@ -92,6 +142,7 @@ void lookup_kernel_test(size_t count) {
 void tieredq_lookup_tests() {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
   if (!fast_scan_available()) return;
-  for (size_t count:{1u,15u,16u,17u,63u,64u,65u,255u,256u,257u}) lookup_kernel_test(count);
+  wide_kernel_range_test();
+  for (size_t count:{1u,15u,16u,17u,63u,64u,65u,255u,256u,257u,511u,512u,4097u}) lookup_kernel_test(count);
 #endif
 }

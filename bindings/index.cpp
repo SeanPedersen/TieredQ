@@ -31,8 +31,8 @@ struct SearchResult {
 
 class PythonIndex {
  public:
-  PythonIndex(uint32_t dimensions, uint32_t code_bits)
-      : config_(dv::TieredQConfig::target_code_bits(dimensions, code_bits)) {}
+  PythonIndex(uint32_t dimensions, uint32_t code_bits, bool fast_mode = false)
+      : config_(dv::TieredQConfig::target_code_bits(dimensions, code_bits)), fast_mode_(fast_mode) {}
 
   size_t size() const {
     std::shared_lock lock(mutex_);
@@ -40,9 +40,14 @@ class PythonIndex {
   }
   uint32_t dimensions() const { return config_.dimensions; }
   uint32_t code_bits() const { return config_.code_bits; }
+  bool fast_mode() const { return fast_mode_; }
+  size_t storage_bytes() const {
+    std::shared_lock lock(mutex_);
+    return index_ ? index_->storage_bytes() : 0;
+  }
   size_t bytes_per_vector() const {
     std::shared_lock lock(mutex_);
-    return trained().codec().bytes_per_vector();
+    return trained().bytes_per_vector();
   }
   void add(Matrix rows) {
     require_width(rows.shape(1), config_.dimensions);
@@ -52,7 +57,7 @@ class PythonIndex {
       if (rows.shape(0) < 2)
         throw std::runtime_error("the first add() needs at least 2 rows to train");
       config_.num_centroids = auto_centroids(rows.shape(0));
-      index_.emplace(dv::TieredQ::train(config_, rows.data(), rows.shape(0), training_seed));
+      index_.emplace(dv::TieredQ::train(config_, rows.data(), rows.shape(0), training_seed), fast_mode_);
     }
     index_->add(rows.data(), rows.shape(0));
   }
@@ -63,6 +68,21 @@ class PythonIndex {
   bool has_fast_scan() const {
     std::shared_lock lock(mutex_);
     return index_ && index_->has_fast_scan();
+  }
+  bool uses_scalar_fast_scan() const {
+    std::shared_lock lock(mutex_);
+    return index_ && index_->uses_scalar_fast_scan();
+  }
+  void warn_if_scalar() {
+    if (scalar_warning_emitted_ || !uses_scalar_fast_scan()) return;
+    const char* message=dv::TieredQIndex::native_fast_scan_available()
+        ? "TieredQ fast search is using the portable scalar scorer because this index's representation has no compatible SIMD kernel on this CPU. Rebuild the index from the original vectors on this machine to use its native fast representation."
+        : "TieredQ fast search is using the portable scalar scorer because this CPU has no supported native fast kernel. Rebuilding on this CPU will not enable SIMD acceleration.";
+    scalar_warning_emitted_=true;
+    if (PyErr_WarnEx(PyExc_RuntimeWarning,message,1)<0) {
+      scalar_warning_emitted_=false;
+      throw nb::python_error();
+    }
   }
   SearchResult search(FloatArray queries, size_t k, SearchMode mode) const {
     const size_t rank = queries.ndim();
@@ -91,7 +111,7 @@ class PythonIndex {
 
  private:
   explicit PythonIndex(dv::TieredQIndex index)
-      : config_(index.codec().config()), index_(std::move(index)) {}
+      : config_(index.codec().config()), fast_mode_(index.fast_mode()), index_(std::move(index)) {}
   const dv::TieredQIndex& trained() const {
     if (!index_) throw std::runtime_error("add() at least 2 rows before searching");
     return *index_;
@@ -102,6 +122,8 @@ class PythonIndex {
   }
 
   dv::TieredQConfig config_;
+  bool fast_mode_;
+  bool scalar_warning_emitted_ = false;
   std::optional<dv::TieredQIndex> index_;
   mutable std::shared_mutex mutex_;
 };
@@ -117,16 +139,24 @@ nb::tuple search_result(const PythonIndex& index, FloatArray queries, size_t k, 
 
 void bind_index(nb::module_& module) {
   nb::class_<PythonIndex>(module, "TieredQIndex", "Trained exhaustive in-memory vector index.")
-      .def(nb::init<uint32_t, uint32_t>(), "dimensions"_a, "code_bits"_a)
+      .def(nb::init<uint32_t, uint32_t, bool>(), "dimensions"_a, "code_bits"_a, nb::kw_only(), "fast_mode"_a = false)
       .def("__len__", &PythonIndex::size, nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro("dimensions", &PythonIndex::dimensions)
       .def_prop_ro("code_bits", &PythonIndex::code_bits)
+      .def_prop_ro("fast_mode", &PythonIndex::fast_mode)
+      .def_prop_ro("storage_bytes", &PythonIndex::storage_bytes,
+                   "Allocated vector-data bytes, excluding shared models and query scratch.",
+                   nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro("bytes_per_vector", &PythonIndex::bytes_per_vector,
                    nb::call_guard<nb::gil_scoped_release>())
-      .def("add", &PythonIndex::add, "rows"_a.noconvert(),
-           nb::call_guard<nb::gil_scoped_release>())
+      .def_prop_ro("uses_scalar_fast_scan", &PythonIndex::uses_scalar_fast_scan,
+                   nb::call_guard<nb::gil_scoped_release>())
+      .def("add", [](PythonIndex& self,Matrix rows) {
+        { nb::gil_scoped_release release; self.add(rows); }
+        self.warn_if_scalar();
+      }, "rows"_a.noconvert())
       .def("search", [](const PythonIndex& self, FloatArray queries, size_t k) {
-        return search_result(self, queries, k, SearchMode::exact);
+        return search_result(self, queries, k, SearchMode::configured);
       }, "queries"_a.noconvert(), "k"_a = 10)
       .def("build_fast_scan", &PythonIndex::build_fast_scan,
            "Build the optional approximate full-scan cache; unsupported CPUs retain exact fallback.",
@@ -138,6 +168,11 @@ void bind_index(nb::module_& module) {
       }, "queries"_a.noconvert(), "k"_a = 10,
          "Approximate full scan; falls back to exact search when the cache is absent.")
       .def("save", &PythonIndex::save, "path"_a, nb::call_guard<nb::gil_scoped_release>())
-      .def_static("load", &PythonIndex::load, "path"_a, nb::call_guard<nb::gil_scoped_release>());
+      .def_static("load", [](const std::string& path) {
+        std::unique_ptr<PythonIndex> index;
+        { nb::gil_scoped_release release; index=PythonIndex::load(path); }
+        index->warn_if_scalar();
+        return index;
+      }, "path"_a);
 }
 }  // namespace tieredq_python

@@ -20,6 +20,9 @@ struct FastScanLookupCache {
   std::vector<std::vector<float>> levels;
   size_t pairs() const { return (groups.size()+lookup_pair_groups-1)/lookup_pair_groups; }
 };
+inline size_t fast_lookup_position(const FastScanLookupCache& cache,size_t doc,size_t group) {
+  return (doc/lookup_block_docs*cache.pairs()+group/lookup_pair_groups)*lookup_block_docs+doc%lookup_block_docs;
+}
 struct FastScanLookupQuery {
   std::vector<int8_t> tables;
   std::vector<float> scales, centroid_scores, correction_weights;
@@ -49,7 +52,7 @@ inline std::shared_ptr<FastScanCache> build_fast_lookup_cache(
     for (size_t g=0;g<lookup->groups.size();++g) {
       const auto& group=lookup->groups[g];
       const uint8_t code=uint8_t(read_code(row,group.bit,group.count*group.bits));
-      const size_t pos=(doc/lookup_block_docs*lookup->pairs()+g/lookup_pair_groups)*lookup_block_docs+doc%lookup_block_docs;
+      const size_t pos=fast_lookup_position(*lookup,doc,g);
       lookup->codes[pos]|=uint8_t(code<<(g%lookup_pair_groups*lookup_code_bits));
     }
   }

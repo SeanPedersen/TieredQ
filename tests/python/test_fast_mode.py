@@ -1,0 +1,224 @@
+"""Fast-only construction owns one representation and persists its search/append semantics."""
+from concurrent.futures import ThreadPoolExecutor
+
+import numpy as np
+import pytest
+
+from tieredq import TieredQIndex
+
+DIMENSIONS = 32
+INITIAL_ROWS = 257
+
+
+def assert_same(actual, expected):
+    for left, right in zip(actual, expected):
+        np.testing.assert_array_equal(left, right)
+
+
+@pytest.mark.parametrize("code_bits", [64, DIMENSIONS * 8])
+def test_fast_only_search_storage_append_and_roundtrip(code_bits, tmp_path):
+    rows = np.random.default_rng(13).normal(size=(INITIAL_ROWS * 2, DIMENSIONS)).astype(np.float32)
+    fast = TieredQIndex(dimensions=DIMENSIONS, code_bits=code_bits, fast_mode=True)
+    exact = TieredQIndex(dimensions=DIMENSIONS, code_bits=code_bits)
+    assert fast.fast_mode and not exact.fast_mode
+    assert fast.storage_bytes == 0
+    with pytest.raises(AttributeError):
+        fast.fast_mode = False
+    fast.add(rows[:INITIAL_ROWS])
+    exact.add(rows[:INITIAL_ROWS])
+    planes_bytes = exact.storage_bytes
+    exact.build_fast_scan()
+    if not exact.has_fast_scan:
+        pytest.skip("reference cache unavailable on this CPU")
+    assert fast.has_fast_scan
+    assert fast.storage_bytes == exact.storage_bytes - planes_bytes
+    before = fast.storage_bytes
+    fast.build_fast_scan()
+    assert fast.storage_bytes == before
+    queries = rows[:17]
+    for k in (0, 1, 10, len(fast) + 1):
+        assert_same(fast.search(queries, k=k), exact.search_fast(queries, k=k))
+        assert_same(fast.search(queries, k=k), fast.search_fast(queries, k=k))
+        assert_same(fast.search(queries[0], k=k), exact.search_fast(queries[0], k=k))
+    for name, index in (("exact", exact), ("fast", fast)):
+        path = str(tmp_path / f"{name}.tq")
+        index.save(path)
+        loaded = TieredQIndex.load(path)
+        assert loaded.fast_mode == index.fast_mode
+        assert_same(loaded.search(queries), index.search(queries))
+    path = str(tmp_path / "fast.tq")
+    loaded = TieredQIndex.load(path)
+    for index in (fast, loaded, exact):
+        index.add(rows[INITIAL_ROWS:])
+    exact.build_fast_scan()
+    assert loaded.has_fast_scan and fast.has_fast_scan
+    assert_same(fast.search(queries), exact.search_fast(queries))
+    assert_same(loaded.search(queries), fast.search(queries))
+    loaded.save(path)
+    assert_same(TieredQIndex.load(path).search(queries), fast.search(queries))
+
+
+def test_failed_append_empty_shapes_and_concurrent_calls():
+    rows = np.random.default_rng(31).normal(size=(INITIAL_ROWS, DIMENSIONS)).astype(np.float32)
+    index = TieredQIndex(dimensions=DIMENSIONS, code_bits=64, fast_mode=True)
+    index.add(rows)
+    expected = index.search(rows[:3])
+    storage = index.storage_bytes
+    index.add(rows[:0])
+    with pytest.raises(RuntimeError):
+        index.add(np.full_like(rows[:1], np.nan))
+    assert len(index) == INITIAL_ROWS and index.storage_bytes == storage
+    assert_same(index.search(rows[:3]), expected)
+    assert index.search(rows[:0])[0].shape == (0, 10)
+    invalid = rows[:17].copy()
+    invalid[-1, 0] = np.inf
+    with pytest.raises(RuntimeError, match="nonfinite"):
+        index.search(invalid)
+
+    def operation(task):
+        if task % 3 == 0:
+            index.add(rows[:1])
+        else:
+            scores, ids = index.search(rows[:3])
+            assert scores.shape == ids.shape == (3, 10)
+            assert np.isfinite(scores).all()
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        list(pool.map(operation, range(18)))
+    assert len(index) == INITIAL_ROWS + 6 and index.has_fast_scan
+
+
+def rewrite_payload_checksum(data):
+    import struct
+
+    payload_offset = struct.unpack_from("<Q", data, 32)[0]
+    value = 14695981039346656037
+    for byte in data[payload_offset:]:
+        value = ((value ^ byte) * 1099511628211) & ((1 << 64) - 1)
+    struct.pack_into("<Q", data, 64, value)
+
+
+@pytest.mark.parametrize("corruption", ["version", "kind", "level_max", "length", "nonfinite", "centroid", "level", "trailing"])
+def test_rejects_malformed_fast_only_files(tmp_path, corruption):
+    import struct
+
+    rows = np.random.default_rng(41).normal(size=(INITIAL_ROWS, DIMENSIONS)).astype(np.float32)
+    index = TieredQIndex(dimensions=DIMENSIONS, code_bits=DIMENSIONS * 8, fast_mode=True)
+    index.add(rows)
+    path = tmp_path / "index.tq"
+    index.save(str(path))
+    data = bytearray(path.read_bytes())
+    payload = struct.unpack_from("<Q", data, 32)[0]
+    padded = struct.unpack_from("<Q", data, payload + 12)[0]
+    if corruption == "version":
+        struct.pack_into("<I", data, payload, 999)
+    elif corruption == "kind":
+        struct.pack_into("<I", data, payload + 4, 999)
+    elif corruption == "level_max":
+        struct.pack_into("<I", data, payload + 8, 255)
+    elif corruption == "length":
+        struct.pack_into("<Q", data, payload + 12, padded + 1)
+    elif corruption == "nonfinite":
+        struct.pack_into("<f", data, payload + 20, np.nan)
+    elif corruption == "centroid":
+        data[payload + 36 + padded * 8] = 255
+    elif corruption == "level":
+        data[-1] = 128
+    else:
+        data.append(0)
+        struct.pack_into("<Q", data, 40, len(data) - payload)
+    rewrite_payload_checksum(data)
+    path.write_bytes(data)
+    with pytest.raises(RuntimeError):
+        TieredQIndex.load(str(path))
+
+
+def foreign_fast_file(tmp_path):
+    """Create a valid representation that the local native fast kernel cannot consume."""
+    import platform
+    import struct
+
+    dimensions, rows = 8, 32
+    arm = platform.machine().lower() in ("arm64", "aarch64")
+    vectors = np.random.default_rng(59).normal(size=(rows, dimensions)).astype(np.float32)
+    index = TieredQIndex(dimensions=dimensions, code_bits=1 if arm else dimensions * 8, fast_mode=True)
+    index.add(vectors)
+    path = tmp_path / "foreign.tq"
+    index.save(str(path))
+    data = bytearray(path.read_bytes())
+    payload = struct.unpack_from("<Q", data, 32)[0]
+    if arm:
+        # One one-bit coordinate forms one lookup group/pair, padded to 256 rows.
+        block_rows = 256
+        encoded = struct.pack("<III", 1, 1, 0)
+        encoded += struct.pack("<Q", block_rows) + struct.pack("<f", 1) * block_rows
+        encoded += struct.pack("<Q", block_rows) + bytes(block_rows * 4)
+        encoded += struct.pack("<Q", block_rows) + bytes(block_rows)
+        encoded += struct.pack("<Q", block_rows) + bytes(block_rows)
+        data[payload:] = encoded
+        struct.pack_into("<Q", data, 40, len(encoded))
+    else:
+        # The saved signed levels are valid inside the wider ARM quantization range.
+        struct.pack_into("<I", data, payload + 8, 127)
+    rewrite_payload_checksum(data)
+    path.write_bytes(data)
+    return path, vectors
+
+
+def test_scalar_warning_once_on_load_and_not_on_search_or_append(tmp_path):
+    import warnings
+
+    path, vectors = foreign_fast_file(tmp_path)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        index = TieredQIndex.load(str(path))
+        assert index.uses_scalar_fast_scan
+        expected = index.search(vectors[:3])
+        assert_same(index.search(vectors[:3]), expected)
+        index.add(vectors[:1])
+        index.search(vectors[:3])
+    assert len(caught) == 1
+    assert caught[0].category is RuntimeWarning
+    assert "scalar scorer" in str(caught[0].message)
+    assert "Rebuild" in str(caught[0].message)
+
+
+def test_scalar_warning_obeys_warning_as_error(tmp_path):
+    import warnings
+
+    path, _ = foreign_fast_file(tmp_path)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RuntimeWarning)
+        with pytest.raises(RuntimeWarning, match="scalar scorer"):
+            TieredQIndex.load(str(path))
+
+
+@pytest.mark.parametrize("fast_mode", [False, True])
+def test_native_and_exact_indexes_do_not_warn(tmp_path, fast_mode):
+    import warnings
+
+    vectors = np.random.default_rng(61).normal(size=(32, 8)).astype(np.float32)
+    index = TieredQIndex(dimensions=8, code_bits=16, fast_mode=fast_mode)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        index.add(vectors)
+        if index.uses_scalar_fast_scan:
+            pytest.skip("CPU has no native fast kernel")
+        path = str(tmp_path / "native.tq")
+        index.save(path)
+        loaded = TieredQIndex.load(path)
+        assert not loaded.uses_scalar_fast_scan
+        loaded.search(vectors[:1])
+    assert not caught
+
+
+def test_each_loaded_scalar_index_can_warn(tmp_path):
+    import warnings
+
+    path, _ = foreign_fast_file(tmp_path)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        first = TieredQIndex.load(str(path))
+        second = TieredQIndex.load(str(path))
+    assert first.uses_scalar_fast_scan and second.uses_scalar_fast_scan
+    assert len(caught) == 2

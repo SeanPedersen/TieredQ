@@ -267,6 +267,8 @@ void fast_scan_test(unsigned code_bits=384,unsigned max_bits=8) {
 void tieredq_model_tests(const std::string& prefix);
 void tieredq_neon_tests();
 void tieredq_lookup_tests();
+void tieredq_search_tests();
+void tieredq_fast_mode_tests();
 int main() {
   auto dir=std::filesystem::temp_directory_path()/("tieredq_test_"+std::to_string(getpid())); std::filesystem::create_directory(dir);
   try {
@@ -278,6 +280,8 @@ int main() {
     reject_unsupported_format(prefix);
     tieredq_model_tests(prefix);
     tieredq_neon_tests();
+    tieredq_search_tests();
+    tieredq_fast_mode_tests();
     fast_scan_test();
     fast_scan_test(128,4);
     tieredq_lookup_tests();

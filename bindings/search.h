@@ -4,7 +4,7 @@
 #include <algorithm>
 
 namespace tieredq_python {
-enum class SearchMode { exact, fast };
+enum class SearchMode { configured, fast };
 inline void search_rows(const dv::TieredQIndex& index, const float* queries,
                         size_t rows, size_t width, size_t k, float* scores,
                         uint32_t* ids, SearchMode mode) {

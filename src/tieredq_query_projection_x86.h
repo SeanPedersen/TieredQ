@@ -4,7 +4,9 @@
 #pragma once
 #include <algorithm>
 #include <cmath>
+#if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
 #include <immintrin.h>
+#endif
 #include <stdexcept>
 #include <vector>
 
@@ -40,8 +42,9 @@ inline FastQueryProjection build_fast_query_projection(size_t dimensions,
   }
   return map;
 }
+#if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
 __attribute__((target("avx512f")))
-inline std::vector<float> project_fast_query(const FastQueryProjection& map,const float* vector) {
+inline std::vector<float> project_fast_query_avx512(const FastQueryProjection& map,const float* vector) {
   if (!vector) throw std::runtime_error("TieredQ: null query data");
   for (size_t i=0;i<map.dimensions;++i)
     if (!std::isfinite(vector[i])) throw std::runtime_error("TieredQ: nonfinite query data");
@@ -53,6 +56,19 @@ inline std::vector<float> project_fast_query(const FastQueryProjection& map,cons
       sum=_mm512_add_ps(sum,_mm512_mul_ps(_mm512_set1_ps(vector[i]),_mm512_loadu_ps(panel+i*query_projection_lanes)));
     _mm512_storeu_ps(output.data()+col,sum);
   }
+  return output;
+}
+#endif
+inline std::vector<float> project_fast_query(const FastQueryProjection& map,const float* vector) {
+#if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
+  if (__builtin_cpu_supports("avx512f")) return project_fast_query_avx512(map,vector);
+#endif
+  if (!vector) throw std::runtime_error("TieredQ: null query data");
+  for (size_t i=0;i<map.dimensions;++i)
+    if (!std::isfinite(vector[i])) throw std::runtime_error("TieredQ: nonfinite query data");
+  std::vector<float> output(map.width,0);
+  for (size_t col=0;col<map.width;++col) for (size_t i=0;i<map.dimensions;++i)
+    output[col]+=vector[i]*map.panels[(col/query_projection_lanes*map.dimensions+i)*query_projection_lanes+col%query_projection_lanes];
   return output;
 }
 } // namespace dv::tieredq_detail

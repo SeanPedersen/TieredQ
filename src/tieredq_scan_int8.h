@@ -14,11 +14,12 @@
 namespace dv::tieredq_detail {
 constexpr size_t fast_scan_block_docs = 16;
 constexpr size_t fast_scan_quant_max = 127;
+constexpr int x86_fast_level_max=63,arm_fast_level_max=127;
 
 struct FastScanLookupCache;
 struct FastScanCache {
   size_t count = 0, dimensions = 0, groups = 0, blocks = 0;
-  std::shared_ptr<const FastScanLookupCache> lookup; // x86 query-specific byte tables for narrow tiers
+  std::shared_ptr<FastScanLookupCache> lookup; // x86 query-specific byte tables for narrow tiers
   int level_max = 127;
   std::vector<int8_t> levels;          // blocks * groups * 64 bytes
   std::vector<float> factor, correction;
@@ -26,6 +27,13 @@ struct FastScanCache {
   std::vector<float> level_scale;      // per tier
   std::vector<uint8_t> tier_of;        // per coded rank; 0xFF for group padding
 };
+
+inline size_t fast_level_position(size_t groups,size_t doc,size_t rank) {
+  constexpr size_t coordinates_per_group=4,vector_bytes=16,group_bytes=64;
+  const size_t lane=doc%fast_scan_block_docs;
+  return doc/fast_scan_block_docs*groups*group_bytes+rank/coordinates_per_group*group_bytes+
+      lane/coordinates_per_group*vector_bytes+lane%coordinates_per_group*coordinates_per_group+rank%coordinates_per_group;
+}
 
 inline uint32_t read_code(const uint8_t* doc, uint32_t offset, uint32_t bits) {
   uint32_t value = uint32_t(doc[offset/8]) >> (offset%8);
@@ -50,7 +58,6 @@ inline std::shared_ptr<FastScanCache> build_fast_scan_cache(
     const std::vector<std::vector<float>>& levels, const std::vector<TieredQTier>& tiers,
     size_t dimensions, size_t count, size_t stride, size_t code_bytes, size_t num_centroids,
     int level_max, const uint8_t* rows) {
-  if (!count) return {};
   auto cache = std::make_shared<FastScanCache>();
   cache->count = count; cache->dimensions = dimensions; cache->level_max = level_max;
   cache->groups = (dimensions + 3) / 4;
@@ -76,7 +83,6 @@ inline std::shared_ptr<FastScanCache> build_fast_scan_cache(
   build_fast_scan_metadata(*cache,padded,stride,code_bytes,num_centroids,rows);
   for (size_t doc=0; doc<count; ++doc) {
     const uint8_t* row = rows + doc*stride;
-    const size_t block = doc / fast_scan_block_docs, lane = doc % fast_scan_block_docs;
     for (size_t g=0; g<cache->groups; ++g) for (size_t c=0; c<4; ++c) {
       const size_t rank = g*4 + c;
       if (rank >= dimensions) continue;
@@ -84,7 +90,7 @@ inline std::shared_ptr<FastScanCache> build_fast_scan_cache(
       const auto& tier = tiers[ti];
       const size_t j = rank - tier.start;
       const uint8_t code = uint8_t(read_code(row, tier.bit_offset + j*tier.bits, tier.bits));
-      const size_t pos = block*cache->groups*64 + g*64 + (lane/4)*16 + (lane%4)*4 + c;
+      const size_t pos = fast_level_position(cache->groups,doc,rank);
       cache->levels[pos] = quantized[ti][code];
     }
   }

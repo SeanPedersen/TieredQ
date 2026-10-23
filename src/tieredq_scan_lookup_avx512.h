@@ -5,23 +5,25 @@
 
 namespace dv::tieredq_detail {
 __attribute__((target("avx512f,avx512bw")))
-inline void lookup_epilogue(const FastScanCache& c, const FastScanLookupQuery& q, size_t first, __m512 dot, float* out) {
+inline void lookup_epilogue(const FastScanCache& c, const FastScanLookupQuery& q, size_t first, __m512 dot, float* out, size_t output_first, size_t output_end) {
   const auto cid = _mm512_cvtepu8_epi32(_mm_loadu_si128(reinterpret_cast<const __m128i*>(c.centroid.data() + first)));
   auto score = _mm512_i32gather_ps(cid, q.centroid_scores.data(), sizeof(float));
   score = _mm512_add_ps(score, _mm512_mul_ps(_mm512_i32gather_ps(cid, q.correction_weights.data(), sizeof(float)), _mm512_loadu_ps(c.correction.data() + first)));
   score = _mm512_add_ps(score, _mm512_mul_ps(_mm512_loadu_ps(c.factor.data() + first), dot));
-  const size_t n = std::min(lookup_vector_docs, c.count - first);
-  _mm512_mask_storeu_ps(out + first, n == lookup_vector_docs ? 0xffff : (1u << n) - 1, score);
+  const size_t n = std::min(lookup_vector_docs, output_end - first);
+  _mm512_mask_storeu_ps(out + first - output_first, n == lookup_vector_docs ? 0xffff : (1u << n) - 1, score);
 }
+// first is aligned to lookup_block_docs; count may end within the final block.
 __attribute__((target("avx512f,avx512bw")))
-inline void scan_fast_lookup_avx512(const FastScanCache& c, const FastScanLookupQuery& q, float* out) {
+inline void scan_fast_lookup_avx512_range(const FastScanCache& c, const FastScanLookupQuery& q,
+    size_t first, size_t count, float* out) {
   const auto& lookup=*c.lookup;
   constexpr size_t chunks = lookup_block_docs / lookup_chunk_docs;
   const size_t pairs = lookup.pairs();
   const auto mask = _mm512_set1_epi8(lookup_table_entries-1), ones = _mm512_set1_epi8(1);
   const auto order0 = _mm512_setr_epi64(0,1,8,9,2,3,10,11);
   const auto order1 = _mm512_setr_epi64(4,5,12,13,6,7,14,15);
-  for (size_t b = 0; b < c.blocks; ++b) {
+  for (size_t b = first / lookup_block_docs; b < (first + count + lookup_block_docs - 1) / lookup_block_docs; ++b) {
     __m512 dots[chunks][4];
     for(size_t chunk=0;chunk<chunks;++chunk)for(auto& dot:dots[chunk])dot=_mm512_setzero_ps();
     const uint8_t* base = lookup.codes.data()+b*pairs*lookup_block_docs;
@@ -54,10 +56,15 @@ inline void scan_fast_lookup_avx512(const FastScanCache& c, const FastScanLookup
       }
     }
     for(size_t chunk=0;chunk<chunks;++chunk)for(size_t t=0;t<4;++t){
-      const size_t first=b*lookup_block_docs+chunk*lookup_chunk_docs+t*lookup_vector_docs;
-      if(first<c.count)lookup_epilogue(c,q,first,dots[chunk][t],out);
+      const size_t doc=b*lookup_block_docs+chunk*lookup_chunk_docs+t*lookup_vector_docs;
+      if(doc<first+count)lookup_epilogue(c,q,doc,dots[chunk][t],out,first,first+count);
     }
   }
+}
+
+__attribute__((target("avx512f,avx512bw")))
+inline void scan_fast_lookup_avx512(const FastScanCache& c, const FastScanLookupQuery& q, float* out) {
+  scan_fast_lookup_avx512_range(c,q,0,c.count,out);
 }
 
 } // namespace dv::tieredq_detail

@@ -125,47 +125,60 @@ class TieredQ {
 };
 class TieredQIndex {
  public:
-  explicit TieredQIndex(TieredQ codec) : codec_(std::move(codec)) {}
+  // Fast mode owns only its approximate search representation; the mode is persisted.
+  explicit TieredQIndex(TieredQ codec, bool fast_mode = false)
+      : codec_(std::move(codec)), fast_mode_(fast_mode) {}
   ~TieredQIndex();
   TieredQIndex(const TieredQIndex&) = default;
   TieredQIndex& operator=(const TieredQIndex&) = default;
   TieredQIndex(TieredQIndex&& other) noexcept
-      : codec_(std::move(other.codec_)), payload_(std::move(other.payload_)),
+      : codec_(std::move(other.codec_)), fast_mode_(other.fast_mode_), payload_(std::move(other.payload_)),
         fast_(std::move(other.fast_)), count_(std::exchange(other.count_,0)) {}
   TieredQIndex& operator=(TieredQIndex&& other) noexcept {
     if (this!=&other) {
-      codec_=std::move(other.codec_); payload_=std::move(other.payload_);
+      codec_=std::move(other.codec_); fast_mode_=other.fast_mode_; payload_=std::move(other.payload_);
       fast_=std::move(other.fast_); count_=std::exchange(other.count_,0);
     }
     return *this;
   }
   const TieredQ& codec() const { return codec_; }
   size_t size() const { return count_; }
-  size_t payload_bytes() const { return count_ * codec_.bytes_per_vector(); }
+  bool fast_mode() const { return fast_mode_; }
+  // Actual fast-data dispatch; false when no fast representation is present.
+  bool uses_scalar_fast_scan() const;
+  static bool native_fast_scan_available();
+  size_t payload_bytes() const;
+  // Allocated vector-data storage; excludes shared models, query state and top-k scratch.
+  size_t storage_bytes() const;
+  size_t bytes_per_vector() const;
   void add(const float* rows, size_t count);
   std::vector<TieredQHit> search(const float* query, size_t k,
                                 TieredQKernel kernel = TieredQKernel::automatic) const;
-  // Opt-in approximate full scan. ARM caches int8 levels; x86 AVX-512F/BW uses packed
-  // lookup codes for tiers up to four bits and int8 levels for wider tiers. Cache size
-  // depends on the model and includes padded metadata. Other CPUs use exact search.
-  // Call after add()/load() and before search_fast(). A nonempty add() invalidates it.
+  // Optional auxiliary cache for exact-mode indexes; fast-only indexes need no rebuild.
+  // ARM uses int8 levels; x86 uses compact lookups for tiers up to four bits.
+  // Successful nonempty appends invalidate only an exact-mode auxiliary cache.
+  // No supported native kernel leaves exact-mode indexes without this optional cache.
   void build_fast_scan();
   bool has_fast_scan() const { return fast_!=nullptr; }
-  // Full scan over the prepared cache. Falls back to exact search when the cache is absent.
+  // Full scan using fast data, or exact fallback when an exact-mode cache is absent.
   std::vector<TieredQHit> search_fast(const float* query, size_t k) const;
   // Batched search over rows x dimensions queries. Results are rows x min(k, size()) in
   // row-major order; the caller owns both output arrays. Runs OpenMP workers internally.
   void search_batch(const float* queries, size_t rows, size_t k,
                     float* scores, uint32_t* ids) const;
-  // Same contract as search_batch, using the prepared cache. Falls back to search_batch when the
-  // cache is absent or the platform kernel is unavailable.
+  // Same contract as search_batch, using fast data. A portable scorer handles saved
+  // representations unsupported by local native kernels; absent exact-mode caches fall back.
   void search_batch_fast(const float* queries, size_t rows, size_t k,
                          float* scores, uint32_t* ids) const;
   void save(const std::string& path) const;
   static TieredQIndex load(const std::string& path);
  private:
+  std::shared_ptr<tieredq_detail::FastScanCache> make_fast_storage(
+      const uint8_t* rows, size_t count, bool lookup, int level_max) const;
+  std::shared_ptr<tieredq_detail::FastScanCache> make_fast_storage(const uint8_t* rows, size_t count) const;
   TieredQ codec_;
-  // Packed byte planes across 16 documents; only the last block is padded.
+  bool fast_mode_ = false;
+  // Exact-mode planes across 16 documents; empty for fast-only indexes.
   std::vector<uint8_t> payload_;
   std::shared_ptr<tieredq_detail::FastScanCache> fast_;
   size_t count_ = 0;

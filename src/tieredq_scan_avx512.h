@@ -138,19 +138,4 @@ __attribute__((target("avx512f,avx512bw,avx2,fma"))) size_t scan_grouped(const u
   }
   return begin;
 }
-// Positions i < n with scores[i] > threshold, in order; returns how many were written to out.
-__attribute__((target("avx512f"))) inline size_t above_threshold(const float* scores,size_t n,float threshold,uint32_t* out) {
-  const __m512 limit=_mm512_set1_ps(threshold);
-  const __m512i step=_mm512_set1_epi32(int(block_docs));
-  __m512i positions=_mm512_setr_epi32(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15);
-  size_t found=0,i=0;
-  for (;i+block_docs<=n;i+=block_docs,positions=_mm512_add_epi32(positions,step)) {
-    const __mmask16 above=_mm512_cmp_ps_mask(_mm512_loadu_ps(scores+i),limit,_CMP_GT_OQ);
-    if (!above) continue;
-    _mm512_mask_compressstoreu_epi32(out+found,above,positions);
-    found+=size_t(__builtin_popcount(above));
-  }
-  for (;i<n;++i) if (scores[i]>threshold) out[found++]=uint32_t(i);
-  return found;
-}
 } // namespace dv::tieredq_detail
