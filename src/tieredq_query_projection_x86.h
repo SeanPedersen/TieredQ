@@ -42,12 +42,33 @@ inline FastQueryProjection build_fast_query_projection(size_t dimensions,
   }
   return map;
 }
-#if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
-__attribute__((target("avx512f")))
-inline std::vector<float> project_fast_query_avx512(const FastQueryProjection& map,const float* vector) {
+inline void validate_fast_query(const FastQueryProjection& map,const float* vector) {
   if (!vector) throw std::runtime_error("TieredQ: null query data");
   for (size_t i=0;i<map.dimensions;++i)
     if (!std::isfinite(vector[i])) throw std::runtime_error("TieredQ: nonfinite query data");
+}
+#if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
+__attribute__((target("avx2")))
+inline std::vector<float> project_fast_query_avx2(const FastQueryProjection& map,const float* vector) {
+  validate_fast_query(map,vector);
+  constexpr size_t lanes=8;
+  std::vector<float> output(map.width);
+  for (size_t col=0;col<map.width;col+=query_projection_lanes) {
+    const float* panel=map.panels.data()+col*map.dimensions;
+    auto low=_mm256_setzero_ps(),high=_mm256_setzero_ps();
+    for (size_t i=0;i<map.dimensions;++i) {
+      const auto value=_mm256_set1_ps(vector[i]);
+      low=_mm256_add_ps(low,_mm256_mul_ps(value,_mm256_loadu_ps(panel+i*query_projection_lanes)));
+      high=_mm256_add_ps(high,_mm256_mul_ps(value,_mm256_loadu_ps(panel+i*query_projection_lanes+lanes)));
+    }
+    _mm256_storeu_ps(output.data()+col,low);
+    _mm256_storeu_ps(output.data()+col+lanes,high);
+  }
+  return output;
+}
+__attribute__((target("avx512f")))
+inline std::vector<float> project_fast_query_avx512(const FastQueryProjection& map,const float* vector) {
+  validate_fast_query(map,vector);
   std::vector<float> output(map.width);
   for (size_t col=0;col<map.width;col+=query_projection_lanes) {
     const float* panel=map.panels.data()+col*map.dimensions;
@@ -62,10 +83,9 @@ inline std::vector<float> project_fast_query_avx512(const FastQueryProjection& m
 inline std::vector<float> project_fast_query(const FastQueryProjection& map,const float* vector) {
 #if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
   if (__builtin_cpu_supports("avx512f")) return project_fast_query_avx512(map,vector);
+  if (__builtin_cpu_supports("avx2")) return project_fast_query_avx2(map,vector);
 #endif
-  if (!vector) throw std::runtime_error("TieredQ: null query data");
-  for (size_t i=0;i<map.dimensions;++i)
-    if (!std::isfinite(vector[i])) throw std::runtime_error("TieredQ: nonfinite query data");
+  validate_fast_query(map,vector);
   std::vector<float> output(map.width,0);
   for (size_t col=0;col<map.width;++col) for (size_t i=0;i<map.dimensions;++i)
     output[col]+=vector[i]*map.panels[(col/query_projection_lanes*map.dimensions+i)*query_projection_lanes+col%query_projection_lanes];

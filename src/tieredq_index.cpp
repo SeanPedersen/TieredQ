@@ -11,6 +11,7 @@
 #if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
 #define DV_TIEREDQ_X86 1
 #include "tieredq_scan_int8_avx512.h"
+#include "tieredq_scan_int8_avx2.h"
 #endif
 #if defined(__aarch64__) || defined(_M_ARM64)
 #define DV_TIEREDQ_NEON 1
@@ -133,12 +134,15 @@ void fast_search(const tieredq_detail::FastScanCache& cache,const TieredQ& codec
   }
 #endif
 #ifdef DV_TIEREDQ_X86
-  if (backend==tieredq_detail::FastScanBackend::avx512) {
+  if (backend==tieredq_detail::FastScanBackend::avx512 || backend==tieredq_detail::FastScanBackend::avx2) {
     auto prepare=[&](const float* vector) { return tieredq_detail::fast_scan_query_x86(cache,codec,vector); };
     auto scan=[&](const auto* prepared,size_t count,size_t first,size_t documents,float* scores,size_t stride) {
-      tieredq_detail::scan_fast_avx512_tile(cache,prepared,count,first,documents,scores,stride);
+      if (backend==tieredq_detail::FastScanBackend::avx512)
+        tieredq_detail::scan_fast_avx512_tile(cache,prepared,count,first,documents,scores,stride);
+      else tieredq_detail::scan_fast_avx2_tile(cache,prepared,count,first,documents,scores,stride);
     };
-    const size_t query_tile=cache.lookup ? 1 : tieredq_detail::fast_scan_query_tile_x86;
+    const size_t query_tile=cache.lookup ? 1 : backend==tieredq_detail::FastScanBackend::avx512
+        ? tieredq_detail::fast_scan_query_tile_x86 : tieredq_detail::fast_scan_query_tile_avx2;
     auto prepared=prepare_search_queries(queries,rows,codec.config().dimensions,prepare);
     tieredq_detail::search_fast_tiles(prepared,cache.count,k,query_tile,scan,finish);
     return;

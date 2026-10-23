@@ -6,11 +6,12 @@
 #include <vector>
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
 #include "tieredq_scan_int8_avx512.h"
+#include "tieredq_scan_int8_avx2.h"
 namespace {
 using namespace dv;
 using namespace dv::tieredq_detail;
 void require(bool condition,const char* message) { if (!condition) throw std::runtime_error(message); }
-void wide_kernel_range_test() {
+void wide_kernel_range_test(bool avx512) {
   constexpr size_t dimensions=5,count=4097,code_bytes=4,stride=9;
   constexpr int level_max=63;
   const std::vector<TieredQTier> tiers{{0,dimensions,6,0,0}};
@@ -27,26 +28,42 @@ void wide_kernel_range_test() {
   auto cache=build_fast_scan_cache(levels,tiers,dimensions,count,stride,code_bytes,1,level_max,rows.data());
   TieredQQuery q;
   q.weights={1,-1,0,.5f,-.25f}; q.centroid_scores={0};q.correction_weights={0};
-  const auto prepared=fast_scan_query_x86(*cache,q);
+  std::vector<FastScanQueryX86> prepared;
+  std::vector<TieredQQuery> queries;
+  constexpr size_t query_rows=8,guard=7;
   constexpr float sentinel=-123456;
+  for (size_t row=0;row<query_rows;++row) {
+    auto next=q;
+    if (row%2) std::fill(next.weights.begin(),next.weights.end(),row%4==1 ? 1.f : -1.f);
+    prepared.push_back(fast_scan_query_x86(*cache,next));
+    queries.push_back(std::move(next));
+  }
   for (size_t first=0;first<count;first+=lookup_block_docs) {
-    const size_t n=std::min(lookup_block_docs,count-first);
-    std::vector<float> scores(n+7,sentinel);
-    scan_fast_avx512_tile(*cache,&prepared,1,first,n,scores.data(),n);
-    for (size_t doc=0;doc<n;++doc) {
-      int dot=0;
-      for (size_t rank=0;rank<dimensions;++rank) {
-        const size_t code=(first+doc+rank)%levels[6].size();
-        const int level=std::lround(levels[6][code]/cache->level_scale[0]);
-        const int weight=std::lround(q.weights[rank]*cache->level_scale[0]/prepared.scale);
-        dot+=level*weight;
+    const size_t remaining=std::min(lookup_block_docs,count-first);
+    for (size_t n:{std::min(remaining,guard),remaining}) for (size_t rows:{1u,3u,8u}) {
+      const size_t output_stride=n+guard;
+      std::vector<float> scores(rows*output_stride,sentinel);
+      if (avx512) scan_fast_avx512_tile(*cache,prepared.data(),rows,first,n,scores.data(),output_stride);
+      else scan_fast_avx2_tile(*cache,prepared.data(),rows,first,n,scores.data(),output_stride);
+      for (size_t row=0;row<rows;++row) {
+        for (size_t doc=0;doc<n;++doc) {
+          int dot=0;
+          for (size_t rank=0;rank<dimensions;++rank) {
+            const size_t code=(first+doc+rank)%levels[6].size();
+            const int level=std::lround(levels[6][code]/cache->level_scale[0]);
+            const int weight=std::lround(queries[row].weights[rank]*cache->level_scale[0]/prepared[row].scale);
+            dot+=level*weight;
+          }
+          require(scores[row*output_stride+doc]==float(dot)*prepared[row].scale,
+              "wide range differs from scalar numerical-level dot");
+        }
+        require(std::all_of(scores.begin()+row*output_stride+n,scores.begin()+(row+1)*output_stride,
+            [](float x){return x==sentinel;}),"wide range overwrites tail");
       }
-      require(scores[doc]==float(dot)*prepared.scale,"wide range differs from scalar numerical-level dot");
     }
-    require(std::all_of(scores.begin()+n,scores.end(),[](float x){return x==sentinel;}),"wide range overwrites tail");
   }
 }
-void lookup_kernel_test(size_t count) {
+void lookup_kernel_test(size_t count,bool avx512) {
   constexpr size_t dimensions=4, weights=40, centroids=2, code_bytes=19, stride=24;
   const std::vector<TieredQTier> tiers{{0,35,4,0,0},{35,5,1,0,140}};
   std::vector<std::vector<float>> levels(9);
@@ -88,9 +105,13 @@ void lookup_kernel_test(size_t count) {
     require(std::fabs(output[weights+cid]-dot-mean_correction)<1e-5f,"projected centroid score differs");
     require(std::fabs(output[weights+centroids+cid]-dot/(2*norms[cid]))<1e-5f,"projected centroid correction differs");
   }
+  auto scan=[&](const FastScanLookupQuery& q,size_t first,size_t n,float* out) {
+    if (avx512) scan_fast_lookup_avx512_range(*cache,q,first,n,out);
+    else scan_fast_lookup_avx2_range(*cache,q,first,n,out);
+  };
   constexpr float sentinel=12345;
   std::vector<float> scores(count+16,sentinel);
-  scan_fast_lookup_avx512(*cache,query,scores.data());
+  scan(query,0,count,scores.data());
   for (size_t d=0;d<count;++d) {
     float dot=0;
     const auto& groups=cache->lookup->groups;
@@ -111,13 +132,13 @@ void lookup_kernel_test(size_t count) {
   for (size_t first=0;first<count;first+=lookup_block_docs) {
     const size_t rows=std::min(lookup_block_docs,count-first);
     std::vector<float> tile(rows+7,sentinel);
-    scan_fast_lookup_avx512_range(*cache,query,first,rows,tile.data());
+    scan(query,first,rows,tile.data());
     require(std::equal(tile.begin(),tile.begin()+rows,scores.begin()+first),"lookup range changes scores");
     require(std::all_of(tile.begin()+rows,tile.end(),[](float x){return x==sentinel;}),"lookup range overwrites tail");
     constexpr size_t partial_rows=7;
     if (rows>partial_rows) {
       std::fill(tile.begin(),tile.end(),sentinel);
-      scan_fast_lookup_avx512_range(*cache,query,first,partial_rows,tile.data());
+      scan(query,first,partial_rows,tile.data());
       require(std::equal(tile.begin(),tile.begin()+partial_rows,scores.begin()+first),"partial lookup range changes scores");
       require(std::all_of(tile.begin()+partial_rows,tile.end(),[](float x){return x==sentinel;}),"partial lookup range overwrites tail");
     }
@@ -127,22 +148,27 @@ void lookup_kernel_test(size_t count) {
   std::fill(query.scales.begin(),query.scales.end(),1);
   for (int bound:{-lookup_quant_max,lookup_quant_max}) {
     std::fill_n(query.tables.begin(),cache->lookup->groups.size()*lookup_table_entries,int8_t(bound));
-    scan_fast_lookup_avx512(*cache,query,scores.data());
+    scan(query,0,count,scores.data());
     const float expected=float(bound)*cache->lookup->groups.size();
     require(std::all_of(scores.begin(),scores.begin()+count,[&](float score){return score==expected;}),"byte-table signed sum overflow");
   }
 
   const std::vector<float> zero(dimensions);
   const auto zero_query=prepare_fast_lookup_query(*cache->lookup,zero.data());
-  scan_fast_lookup_avx512(*cache,zero_query,scores.data());
+  scan(zero_query,0,count,scores.data());
   require(std::all_of(scores.begin(),scores.begin()+count,[](float x){return x==0;}),"zero byte-table query differs");
 }
 } // namespace
 #endif
 void tieredq_lookup_tests() {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-  if (!fast_scan_available()) return;
-  wide_kernel_range_test();
-  for (size_t count:{1u,15u,16u,17u,63u,64u,65u,255u,256u,257u,511u,512u,4097u}) lookup_kernel_test(count);
+  for (bool avx512:{false,true}) {
+    const bool available=avx512 ? (__builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512bw"))
+        : bool(__builtin_cpu_supports("avx2"));
+    if (!available) continue;
+    wide_kernel_range_test(avx512);
+    for (size_t count:{1u,7u,8u,9u,15u,16u,17u,31u,32u,33u,63u,64u,65u,255u,256u,257u,511u,512u,4097u})
+      lookup_kernel_test(count,avx512);
+  }
 #endif
 }

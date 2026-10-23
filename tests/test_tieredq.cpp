@@ -213,7 +213,8 @@ void fast_scan_test(unsigned code_bits=384,unsigned max_bits=8) {
 #if defined(__aarch64__) || defined(_M_ARM64)
   constexpr bool available=true;
 #elif (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
-  const bool available=__builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512bw");
+  const bool available=__builtin_cpu_supports("avx2") ||
+      (__builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512bw"));
 #else
   constexpr bool available=false;
 #endif
