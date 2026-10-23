@@ -10,7 +10,7 @@
 
 namespace dv {
 namespace tieredq_detail { class StageProfile; }
-enum class TieredQKernel { automatic, scalar, avx2, avx512 };
+enum class TieredQKernel { automatic, scalar, avx2, avx512, neon };
 struct TieredQConfig {
   uint32_t dimensions = 512;
   uint32_t code_bits = 512;
@@ -72,6 +72,7 @@ class TieredQ {
   uint32_t model_id() const;
   void decode(const uint8_t* payload, size_t count, float* rows) const;
   // Plane buffers contain ceil(count/16) complete blocks of 16 lanes.
+  // Automatic packed scoring selects NEON on AArch64; explicit NEON row scoring uses scalar.
   void pack(const uint8_t* rows, size_t count, uint8_t* planes) const;
   void unpack(const uint8_t* planes, size_t count, uint8_t* rows) const;
   // Scores always consume the correction embedded in each row.

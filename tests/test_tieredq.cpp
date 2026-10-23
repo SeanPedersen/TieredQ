@@ -112,7 +112,7 @@ void exercise(unsigned d,unsigned bits,bool rotate,const std::string& prefix) {
   check(a.size()==n && b.size()==n,"top-k size mismatch");
   const auto expected=ranked_plane_scores(codec,codes,lut,TieredQKernel::automatic);
   for(size_t i=0;i<n;++i) check(a[i].id==b[i].id && a[i].score==b[i].score && a[i].id==expected[i].id,"search parity failure");
-  for(auto kernel:{TieredQKernel::scalar,TieredQKernel::avx2,TieredQKernel::avx512}) {
+  for(auto kernel:{TieredQKernel::scalar,TieredQKernel::neon,TieredQKernel::avx2,TieredQKernel::avx512}) {
     if(!TieredQ::kernel_available(kernel)) continue;
     const auto kernel_expected=ranked_plane_scores(codec,codes,lut,kernel);
     for(size_t k:{1u,17u,100u,537u}) {
@@ -153,8 +153,23 @@ void wide_register_parity(unsigned bits) {
   auto codec=TieredQ::train(TieredQConfig{d,d*bits,1,false},sample.data(),2*d);
   check(codec.tiers().size()==1 && codec.tiers()[0].bits==bits,"uniform wide allocation failed");
   auto encoded=codec.encode(docs.data(),n);
+  if (TieredQ::kernel_available(TieredQKernel::neon)) {
+    const auto q=codec.query(query.data());
+    for (size_t count:{1u,15u,16u,17u,31u,32u,33u,97u}) {
+      std::vector<uint8_t> subset(encoded.begin(),encoded.begin()+count*codec.bytes_per_vector());
+      ranked_plane_scores(codec,subset,q,TieredQKernel::neon);
+    }
+    auto ungrouped=q; ungrouped.scan_groups.clear(); ungrouped.scan_tables.clear();
+    ranked_plane_scores(codec,encoded,ungrouped,TieredQKernel::neon);
+    auto corrupt=encoded;
+    corrupt[codec.code_bytes()]=255;
+    std::vector<uint8_t> planes((n+15)/16*16*codec.bytes_per_vector());
+    std::vector<float> scores(n);
+    codec.pack(corrupt.data(),n,planes.data());
+    rejects([&]{codec.score_planes(planes.data(),n,q,scores.data(),TieredQKernel::neon);});
+  }
   TieredQIndex index(codec); index.add(docs.data(),n);
-  for(auto kernel:{TieredQKernel::scalar,TieredQKernel::avx2,TieredQKernel::avx512}) {
+  for(auto kernel:{TieredQKernel::scalar,TieredQKernel::neon,TieredQKernel::avx2,TieredQKernel::avx512}) {
     if(!TieredQ::kernel_available(kernel)) continue;
     const auto expected=ranked_plane_scores(codec,encoded,codec.query(query.data()),kernel);
     auto hits=index.search(query.data(),n,kernel);
@@ -182,7 +197,7 @@ int main() {
     auto prefix=(dir/"model").string();
     reject_unsupported_format(prefix);
     tieredq_model_tests(prefix);
-    wide_register_parity(5); wide_register_parity(6);
+    for (unsigned bits=1;bits<=8;++bits) wide_register_parity(bits);
     for(unsigned d:{1u,7u,65u,384u,511u,512u,768u,1024u,1536u}) exercise(d,std::min(257u,d*8),d<=65,prefix);
     for(unsigned bytes:{32u,48u,64u,96u,128u}) exercise(512,bytes*8,bytes==64,prefix);
     exercise(768,512,true,prefix); exercise(768,1024,false,prefix);

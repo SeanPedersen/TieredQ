@@ -58,3 +58,12 @@ Include <tieredq/tieredq.h>, use find_package(TieredQ CONFIG REQUIRED), and link
 TieredQ::TieredQ. FetchContent works too. The example trains, searches, persists
 an index and reports timing. See [integration.md](integration.md) for layouts,
 threading, ownership and dependency setup.
+
+## ARM64 packed scans
+
+On AArch64, packed-plane scoring automatically uses NEON grouped FP32 table
+lookups. Row scoring and partial packed blocks retain the scalar reference.
+Code and model formats are unchanged. Grouped sums can differ slightly from
+coordinate-by-coordinate FP32 accumulation; this backend adds no quantization.
+See the [ARM benchmark results](https://github.com/SeanPedersen/TieredQ/issues/3#issuecomment-6355240929)
+for reproduction and limitations.
