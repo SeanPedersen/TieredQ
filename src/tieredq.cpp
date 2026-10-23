@@ -24,6 +24,8 @@
 #include <fstream>
 #include <limits>
 #include <numeric>
+#include <mutex>
+#include <omp.h>
 #include <queue>
 #include <stdexcept>
 #if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
@@ -38,6 +40,13 @@
 #define DV_TIEREDQ_NEON 1
 #endif
 #include "tieredq_scan_groups.h"
+#include "tieredq_scan_int8.h"
+#if defined(DV_TIEREDQ_NEON)
+#include "tieredq_scan_int8_neon.h"
+#endif
+#if defined(DV_TIEREDQ_X86)
+#include "tieredq_scan_int8_avx512.h"
+#endif
 namespace dv {
 namespace {
 using tieredq_detail::Layout;
@@ -345,6 +354,54 @@ size_t select_above(const float* scores,size_t n,float threshold,uint32_t* out) 
   size_t found=0;
   for (size_t i=0;i<n;++i) if (scores[i]>threshold) out[found++]=uint32_t(i);
   return found;
+}
+constexpr size_t selection_block = 256;
+bool better_hit(const TieredQHit& a,const TieredQHit& b) {
+  return a.score>b.score || (a.score==b.score && a.id<b.id);
+}
+// Incremental top-k over fixed-size score blocks; ids grow with the block base so ties keep
+// the lowest id exactly like the original search loop.
+class TopK {
+ public:
+  explicit TopK(size_t k) : k_(k) { hits_.reserve(k); }
+  void add(const float* scores,size_t n,size_t base) {
+    const size_t found=hits_.size()<k_ ? (std::iota(candidates_.begin(),candidates_.begin()+n,0u),n)
+                                       : select_above(scores,n,hits_.front().score,candidates_.data());
+    for (size_t c=0;c<found;++c) {
+      TieredQHit hit{scores[candidates_[c]],uint32_t(base+candidates_[c])};
+      if (hits_.size()<k_) { hits_.push_back(hit); std::push_heap(hits_.begin(),hits_.end(),better_hit); }
+      else if (better_hit(hit,hits_.front())) {
+        std::pop_heap(hits_.begin(),hits_.end(),better_hit); hits_.back()=hit; std::push_heap(hits_.begin(),hits_.end(),better_hit);
+      }
+    }
+  }
+  std::vector<TieredQHit> finish() { std::sort(hits_.begin(),hits_.end(),better_hit); return std::move(hits_); }
+ private:
+  size_t k_;
+  std::vector<TieredQHit> hits_;
+  std::array<uint32_t,selection_block> candidates_;
+};
+// Query preparation is shared by exact and fast batches; exceptions must leave the worker region safely.
+template<class Prepare>
+auto prepare_search_queries(const float* queries,size_t rows,size_t dimensions,Prepare prepare) {
+  using Prepared=decltype(prepare(queries));
+  std::vector<Prepared> prepared(rows);
+  if (!rows) return prepared;
+  std::exception_ptr failure; std::mutex failure_mutex;
+#pragma omp parallel for schedule(static) num_threads(std::min(rows,size_t(omp_get_max_threads()))) if(rows>1 && !omp_in_parallel())
+  for (size_t row=0;row<rows;++row) {
+    try { prepared[row]=prepare(queries+row*dimensions); }
+    catch (...) {
+      std::lock_guard<std::mutex> lock(failure_mutex);
+      if (!failure) failure=std::current_exception();
+    }
+  }
+  if (failure) std::rethrow_exception(failure);
+  return prepared;
+}
+bool same_scan_geometry(const TieredQQuery& a,const TieredQQuery& b) {
+  return a.scan_groups.size()==b.scan_groups.size() &&
+         std::equal(a.scan_groups.begin(),a.scan_groups.end(),b.scan_groups.begin(),tieredq_detail::same_group);
 }
 } // namespace
 TieredQConfig TieredQConfig::target_bytes(uint32_t d,uint32_t bytes) {
@@ -670,6 +727,55 @@ void TieredQ::score_planes(const uint8_t* block,size_t n,const TieredQQuery& q,f
       done+=rows;
     }
 }
+void TieredQ::score_planes_batch(const uint8_t* block,size_t n,const TieredQQuery* queries,
+    size_t query_count,float* scores,size_t score_stride,TieredQKernel kernel,bool validate_query) const {
+  const Layout layout{code_bytes()};
+  if (!n || !query_count) return;
+  if (!block || !queries || !scores) bad("null scoring buffer");
+  if (score_stride<n) bad("score stride shorter than count");
+  const size_t m=coded_dimensions();
+  for (size_t i=0;i<query_count;++i) {
+    const auto& q=queries[i];
+    layout.validate_weights(q.correction_weights.size(),config_.num_centroids);
+    if (q.weights.size()!=m) bad("query weight shape mismatch");
+    if (validate_query) score(nullptr,0,q,nullptr,TieredQKernel::scalar);
+    if (q.offsets.size()!=m || q.centroid_scores.size()!=config_.num_centroids) bad("query shape mismatch");
+  }
+  if (kernel==TieredQKernel::automatic)
+    kernel=kernel_available(TieredQKernel::avx512) ? TieredQKernel::avx512
+         : kernel_available(TieredQKernel::avx2) ? TieredQKernel::avx2
+         : kernel_available(TieredQKernel::neon) ? TieredQKernel::neon : TieredQKernel::scalar;
+  if (!kernel_available(kernel)) bad("requested scoring kernel is unavailable");
+  bool geometry=!queries[0].scan_groups.empty();
+  for (size_t i=1;i<query_count && geometry;++i) geometry=same_scan_geometry(queries[0],queries[i]);
+#ifdef DV_TIEREDQ_NEON
+  if (kernel==TieredQKernel::neon && geometry) {
+    const size_t stride=bytes_per_vector(), bulk=n/tieredq_detail::neon_block_docs*tieredq_detail::neon_block_docs;
+    size_t batched=0;
+    while (query_count-batched>=4) {
+      tieredq_detail::scan_neon_batch<4>(block,n,stride,queries+batched,layout,
+          config_.num_centroids,scores+batched*score_stride,score_stride);
+      batched+=4;
+    }
+    if (query_count-batched>=3) {
+      tieredq_detail::scan_neon_batch<3>(block,n,stride,queries+batched,layout,
+          config_.num_centroids,scores+batched*score_stride,score_stride);
+      batched+=3;
+    } else if (query_count-batched>=2) {
+      tieredq_detail::scan_neon_batch<2>(block,n,stride,queries+batched,layout,
+          config_.num_centroids,scores+batched*score_stride,score_stride);
+      batched+=2;
+    }
+    if (bulk<n) for (size_t i=0;i<batched;++i)
+      score_planes(block+bulk*stride,n-bulk,queries[i],scores+i*score_stride+bulk,kernel,false);
+    for (size_t i=batched;i<query_count;++i)
+      score_planes(block,n,queries[i],scores+i*score_stride,kernel,false);
+    return;
+  }
+#endif
+  for (size_t i=0;i<query_count;++i)
+    score_planes(block,n,queries[i],scores+i*score_stride,kernel,false);
+}
 void TieredQ::pack(const uint8_t* rows,size_t count,uint8_t* planes) const {
   const size_t stride=bytes_per_vector(), bytes=product((count+15)/16,16*stride);
   if (count && (!rows || !planes)) bad("null packing buffer");
@@ -725,26 +831,171 @@ void TieredQIndex::add(const float* rows,size_t count) {
     for (size_t byte=0;byte<stride;++byte) payload_[block+byte*16+lane]=encoded[i*stride+byte];
   }
   count_=total;
+  if (count) fast_.reset();
 }
 std::vector<TieredQHit> TieredQIndex::search(const float* vector,size_t k,TieredQKernel kernel) const {
   if (!k || !size()) return {};
-  auto q=codec_.query(vector); std::vector<TieredQHit> hits; k=std::min(k,size());
-  auto better=[](const TieredQHit& a,const TieredQHit& b) { return a.score>b.score || (a.score==b.score && a.id<b.id); };
-  hits.reserve(k); std::array<float,256> scores; std::array<uint32_t,256> candidates;
+  auto q=codec_.query(vector); k=std::min(k,size());
+  TopK top(k);
+  std::array<float,selection_block> scores;
   const size_t stride=codec_.bytes_per_vector();
   for (size_t begin=0;begin<size();begin+=scores.size()) {
-    size_t n=std::min(scores.size(),size()-begin);
+    const size_t n=std::min(scores.size(),size()-begin);
     codec_.score_planes(payload_.data()+begin*stride,n,q,scores.data(),kernel,false);
-    // Once the heap is full only scores above its current minimum can enter; ids grow, so ties never do.
-    const size_t found=hits.size()<k ? (std::iota(candidates.begin(),candidates.begin()+n,0u),n)
-                                     : select_above(scores.data(),n,hits.front().score,candidates.data());
-    for (size_t c=0;c<found;++c) {
-      TieredQHit h{scores[candidates[c]],uint32_t(begin+candidates[c])};
-      if (hits.size()<k) { hits.push_back(h); std::push_heap(hits.begin(),hits.end(),better); }
-      else if (better(h,hits.front())) { std::pop_heap(hits.begin(),hits.end(),better); hits.back()=h; std::push_heap(hits.begin(),hits.end(),better); }
+    top.add(scores.data(),n,begin);
+  }
+  return top.finish();
+}
+TieredQIndex::~TieredQIndex() = default;
+void TieredQIndex::build_fast_scan() {
+  fast_.reset();
+#if defined(DV_TIEREDQ_NEON) || defined(DV_TIEREDQ_X86)
+  if (!count_ || !tieredq_detail::fast_scan_available()) return;
+  const size_t stride=codec_.bytes_per_vector();
+  std::vector<uint8_t> rows(product(count_,stride));
+  for (size_t i=0;i<count_;++i) for (size_t byte=0;byte<stride;++byte)
+    rows[i*stride+byte]=payload_[(i/16)*16*stride+byte*16+i%16];
+#ifdef DV_TIEREDQ_X86
+  if (tieredq_detail::fast_lookup_supported(codec_.tiers_)) {
+    auto projection=tieredq_detail::build_fast_query_projection(codec_.config().dimensions,
+        codec_.basis_,codec_.sigma_,codec_.mean_,codec_.centroids_,codec_.centroid_half_norms_);
+    fast_=tieredq_detail::build_fast_lookup_cache(codec_.levels_,codec_.tiers_,std::move(projection),
+        count_,stride,codec_.code_bytes(),codec_.config().num_centroids,rows.data());
+    return;
+  }
+#endif
+  constexpr int level_max =
+#ifdef DV_TIEREDQ_NEON
+      127;
+#else
+      63;
+#endif
+  fast_=tieredq_detail::build_fast_scan_cache(codec_.levels_,codec_.tiers_,
+      codec_.coded_dimensions(),count_,stride,codec_.code_bytes(),
+      codec_.config().num_centroids,level_max,rows.data());
+#endif
+}
+std::vector<TieredQHit> TieredQIndex::search_fast(const float* vector,size_t k) const {
+  if (!k || !size()) return {};
+  if (!fast_) return search(vector,k);
+#if defined(DV_TIEREDQ_NEON)
+  auto q=codec_.query(vector); k=std::min(k,size());
+  auto prepared=tieredq_detail::fast_scan_query(*fast_,q);
+  std::vector<float> scores(count_);
+  tieredq_detail::scan_fast_neon(*fast_,prepared,scores.data());
+#elif defined(DV_TIEREDQ_X86)
+  k=std::min(k,size());
+  auto prepared=tieredq_detail::fast_scan_query_x86(*fast_,codec_,vector);
+  std::vector<float> scores(count_);
+  tieredq_detail::scan_fast_avx512(*fast_,prepared,scores.data());
+#else
+  return search(vector,k);
+#endif
+  TopK top(k);
+  for (size_t begin=0;begin<scores.size();begin+=selection_block)
+    top.add(scores.data()+begin,std::min(selection_block,scores.size()-begin),begin);
+  return top.finish();
+}
+void TieredQIndex::search_batch_fast(const float* queries,size_t rows,size_t k,
+    float* scores,uint32_t* ids) const {
+  if (!rows || !k || !size()) return;
+  if (!queries || !scores || !ids) bad("null search buffer");
+  if (!fast_) { search_batch(queries,rows,k,scores,ids); return; }
+#if defined(DV_TIEREDQ_NEON) || defined(DV_TIEREDQ_X86)
+  const size_t dimensions=codec_.config().dimensions,found=std::min(k,size());
+#ifdef DV_TIEREDQ_NEON
+  auto prepare=[&](const float* vector) { return tieredq_detail::fast_scan_query(*fast_,codec_.query(vector)); };
+#else
+  auto prepare=[&](const float* vector) { return tieredq_detail::fast_scan_query_x86(*fast_,codec_,vector); };
+#endif
+  auto prepared=prepare_search_queries(queries,rows,dimensions,prepare);
+  std::vector<float> all(product(rows,count_));
+#ifdef DV_TIEREDQ_NEON
+  tieredq_detail::scan_fast_neon_batch(*fast_,prepared,all.data());
+#else
+  tieredq_detail::scan_fast_avx512_batch(*fast_,prepared,all.data());
+#endif
+#pragma omp parallel for schedule(static) num_threads(std::min(rows,size_t(omp_get_max_threads()))) if(rows>1 && !omp_in_parallel())
+  for (size_t row=0;row<rows;++row) {
+    TopK top(found);
+    const float* row_scores=all.data()+row*count_;
+    for (size_t begin=0;begin<count_;begin+=selection_block)
+      top.add(row_scores+begin,std::min(selection_block,count_-begin),begin);
+    const auto hits=top.finish();
+    for (size_t hit=0;hit<hits.size();++hit) {
+      scores[row*found+hit]=hits[hit].score;
+      ids[row*found+hit]=hits[hit].id;
     }
   }
-  std::sort(hits.begin(),hits.end(),better); return hits;
+#else
+  search_batch(queries,rows,k,scores,ids);
+#endif
+}
+void TieredQIndex::search_batch(const float* queries,size_t rows,size_t k,
+    float* scores,uint32_t* ids) const {
+  if (!rows || !k || !size()) return;
+  if (!queries || !scores || !ids) bad("null search buffer");
+  const size_t dimensions=codec_.config().dimensions,stride=codec_.bytes_per_vector();
+  const size_t found=std::min(k,size());
+  const size_t available=std::max<size_t>(1,size_t(omp_get_max_threads()));
+  const size_t chunk=std::min<size_t>(4,rows),query_chunks=(rows+chunk-1)/chunk;
+  size_t segments=1;
+  if (rows>1 && query_chunks<2*available)
+    segments=std::min<size_t>(16,(2*available+query_chunks-1)/query_chunks);
+  const size_t total_blocks=(size()+selection_block-1)/selection_block;
+  size_t segment_blocks=(total_blocks+segments-1)/segments;
+  segments=(total_blocks+segment_blocks-1)/segment_blocks;
+  const size_t tasks=query_chunks*segments,workers=std::min(tasks,available);
+  auto prepared=prepare_search_queries(queries,rows,dimensions,
+      [&](const float* vector) { return codec_.query(vector); });
+  std::vector<float> partial_scores(tasks*chunk*found);
+  std::vector<uint32_t> partial_ids(tasks*chunk*found),partial_counts(tasks*chunk);
+  std::exception_ptr failure; std::mutex failure_mutex;
+#pragma omp parallel for schedule(dynamic) num_threads(workers) if(tasks>1 && !omp_in_parallel())
+  for (size_t task=0;task<tasks;++task) {
+    try {
+      const size_t first=(task/segments)*chunk,count=std::min(chunk,rows-first);
+      const size_t begin=std::min((task%segments)*segment_blocks*selection_block,size());
+      const size_t end=std::min(begin+segment_blocks*selection_block,size());
+      std::vector<TopK> heaps; heaps.reserve(count);
+      for (size_t i=0;i<count;++i) heaps.emplace_back(found);
+      std::vector<float> block_scores(count*selection_block);
+      for (size_t doc=begin;doc<end;doc+=selection_block) {
+        const size_t n=std::min(selection_block,end-doc);
+        codec_.score_planes_batch(payload_.data()+doc*stride,n,prepared.data()+first,count,
+                                  block_scores.data(),n,TieredQKernel::automatic,false);
+        for (size_t i=0;i<count;++i) heaps[i].add(block_scores.data()+i*n,n,doc);
+      }
+      for (size_t i=0;i<count;++i) {
+        const auto hits=heaps[i].finish();
+        const size_t offset=(task*chunk+i)*found;
+        for (size_t hit=0;hit<hits.size();++hit) {
+          partial_scores[offset+hit]=hits[hit].score;
+          partial_ids[offset+hit]=hits[hit].id;
+        }
+        partial_counts[task*chunk+i]=uint32_t(hits.size());
+      }
+    } catch (...) {
+      std::lock_guard<std::mutex> lock(failure_mutex);
+      if (!failure) failure=std::current_exception();
+    }
+  }
+  if (failure) std::rethrow_exception(failure);
+#pragma omp parallel for schedule(static) num_threads(std::min(rows,available)) if(rows>1 && !omp_in_parallel())
+  for (size_t row=0;row<rows;++row) {
+    const size_t chunk_index=row/chunk,local=row%chunk;
+    std::vector<TieredQHit> hits; hits.reserve(segments*found);
+    for (size_t segment=0;segment<segments;++segment) {
+      const size_t task=chunk_index*segments+segment,offset=(task*chunk+local)*found;
+      for (size_t hit=0;hit<partial_counts[task*chunk+local];++hit)
+        hits.push_back({partial_scores[offset+hit],partial_ids[offset+hit]});
+    }
+    std::sort(hits.begin(),hits.end(),better_hit);
+    for (size_t hit=0;hit<found;++hit) {
+      scores[row*found+hit]=hits[hit].score;
+      ids[row*found+hit]=hits[hit].id;
+    }
+  }
 }
 void TieredQIndex::save(const std::string& path) const {
   const size_t stride=codec_.bytes_per_vector();

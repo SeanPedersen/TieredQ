@@ -3,13 +3,14 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 #include <utility>
 #include "tieredq/detail/tieredq_scan_plan.h"
 
 namespace dv {
-namespace tieredq_detail { class StageProfile; }
+namespace tieredq_detail { class StageProfile; struct FastScanCache; }
 enum class TieredQKernel { automatic, scalar, avx2, avx512, neon };
 struct TieredQConfig {
   uint32_t dimensions = 512;
@@ -79,6 +80,12 @@ class TieredQ {
   void score_planes(const uint8_t* planes, size_t count, const TieredQQuery& query,
                     float* scores, TieredQKernel kernel = TieredQKernel::automatic,
                     bool validate_query = true) const;
+  // Batched score_planes: one pass over the plane block serves up to four queries.
+  // Query i writes scores[i * score_stride + doc]; score_stride must be at least count.
+  void score_planes_batch(const uint8_t* planes, size_t count, const TieredQQuery* queries,
+                          size_t query_count, float* scores, size_t score_stride,
+                          TieredQKernel kernel = TieredQKernel::automatic,
+                          bool validate_query = true) const;
   // Rows are contiguous finite float32 vectors; scores estimate inner products.
   std::vector<uint8_t> encode(const float* rows, size_t count) const;
   // Writes count * bytes_per_vector() bytes; parallel over row blocks outside OpenMP regions.
@@ -119,15 +126,16 @@ class TieredQ {
 class TieredQIndex {
  public:
   explicit TieredQIndex(TieredQ codec) : codec_(std::move(codec)) {}
+  ~TieredQIndex();
   TieredQIndex(const TieredQIndex&) = default;
   TieredQIndex& operator=(const TieredQIndex&) = default;
   TieredQIndex(TieredQIndex&& other) noexcept
       : codec_(std::move(other.codec_)), payload_(std::move(other.payload_)),
-        count_(std::exchange(other.count_,0)) {}
+        fast_(std::move(other.fast_)), count_(std::exchange(other.count_,0)) {}
   TieredQIndex& operator=(TieredQIndex&& other) noexcept {
     if (this!=&other) {
       codec_=std::move(other.codec_); payload_=std::move(other.payload_);
-      count_=std::exchange(other.count_,0);
+      fast_=std::move(other.fast_); count_=std::exchange(other.count_,0);
     }
     return *this;
   }
@@ -137,12 +145,29 @@ class TieredQIndex {
   void add(const float* rows, size_t count);
   std::vector<TieredQHit> search(const float* query, size_t k,
                                 TieredQKernel kernel = TieredQKernel::automatic) const;
+  // Opt-in approximate full scan. ARM caches int8 levels; x86 AVX-512F/BW uses packed
+  // lookup codes for tiers up to four bits and int8 levels for wider tiers. Cache size
+  // depends on the model and includes padded metadata. Other CPUs use exact search.
+  // Call after add()/load() and before search_fast(). A nonempty add() invalidates it.
+  void build_fast_scan();
+  bool has_fast_scan() const { return fast_!=nullptr; }
+  // Full scan over the prepared cache. Falls back to exact search when the cache is absent.
+  std::vector<TieredQHit> search_fast(const float* query, size_t k) const;
+  // Batched search over rows x dimensions queries. Results are rows x min(k, size()) in
+  // row-major order; the caller owns both output arrays. Runs OpenMP workers internally.
+  void search_batch(const float* queries, size_t rows, size_t k,
+                    float* scores, uint32_t* ids) const;
+  // Same contract as search_batch, using the prepared cache. Falls back to search_batch when the
+  // cache is absent or the platform kernel is unavailable.
+  void search_batch_fast(const float* queries, size_t rows, size_t k,
+                         float* scores, uint32_t* ids) const;
   void save(const std::string& path) const;
   static TieredQIndex load(const std::string& path);
  private:
   TieredQ codec_;
   // Packed byte planes across 16 documents; only the last block is padded.
   std::vector<uint8_t> payload_;
+  std::shared_ptr<tieredq_detail::FastScanCache> fast_;
   size_t count_ = 0;
 };
 } // namespace dv

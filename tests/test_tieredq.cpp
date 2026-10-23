@@ -172,6 +172,14 @@ void wide_register_parity(unsigned bits) {
     auto hits=index.search(query.data(),n,kernel);
     for(size_t i=0;i<n;++i) check(hits[i].id==expected[i].id && hits[i].score==expected[i].score,"wide search differs from full plane sort");
   }
+  const size_t found=std::min<size_t>(5,n),rows=std::min<size_t>(9,n);
+  std::vector<float> batch_scores(rows*found); std::vector<uint32_t> batch_ids(rows*found);
+  index.search_batch(docs.data(),rows,found,batch_scores.data(),batch_ids.data());
+  for(size_t row=0;row<rows;++row) {
+    const auto expected=index.search(docs.data()+row*d,found);
+    for(size_t hit=0;hit<found;++hit)
+      check(batch_ids[row*found+hit]==expected[hit].id && batch_scores[row*found+hit]==expected[hit].score,"batch search differs");
+  }
 }
 // Unsupported recipes must fail explicitly rather than reinterpret old metadata.
 void reject_unsupported_format(const std::string& prefix) {
@@ -183,8 +191,82 @@ void reject_unsupported_format(const std::string& prefix) {
   auto codec=TieredQ::load(fixture.string()); codec.save(prefix+".golden");
   check(read(prefix+".golden")==read(fixture.string()),"golden bytes changed");
 }
+void fast_scan_test(unsigned code_bits=384,unsigned max_bits=8) {
+  constexpr unsigned d=64; constexpr size_t n=257,k=10;
+  std::mt19937 rng(7); std::normal_distribution<float> normal;
+  std::vector<float> sample(512*d),docs(n*d),query(d);
+  for(auto& v:sample) v=normal(rng); for(auto& v:docs) v=normal(rng); for(auto& v:query) v=normal(rng);
+  auto codec=TieredQ::train(TieredQConfig{d,code_bits,16,false,max_bits},sample.data(),512);
+  TieredQIndex index(codec); index.add(docs.data(),n);
+  check(!index.has_fast_scan(),"fast scan unexpectedly present");
+  auto fallback=index.search_fast(query.data(),k),exact=index.search(query.data(),k);
+  check(fallback.size()==exact.size(),"fast fallback size mismatch");
+  for(size_t i=0;i<exact.size();++i)
+    check(fallback[i].id==exact[i].id && fallback[i].score==exact[i].score,"fast fallback differs");
+  const size_t rows=9,batch_k=5; std::vector<float> batch_scores(rows*batch_k),batch_exact(rows*batch_k);
+  std::vector<uint32_t> batch_ids(rows*batch_k),batch_ids_exact(rows*batch_k);
+  index.search_batch_fast(docs.data(),rows,batch_k,batch_scores.data(),batch_ids.data());
+  index.search_batch(docs.data(),rows,batch_k,batch_exact.data(),batch_ids_exact.data());
+  for(size_t i=0;i<rows*batch_k;++i)
+    check(batch_ids[i]==batch_ids_exact[i] && batch_scores[i]==batch_exact[i],"fast batch fallback differs");
+  index.build_fast_scan();
+#if defined(__aarch64__) || defined(_M_ARM64)
+  constexpr bool available=true;
+#elif (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
+  const bool available=__builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512bw");
+#else
+  constexpr bool available=false;
+#endif
+  check(index.has_fast_scan()==available,"fast scan availability differs from CPU support");
+  if (!available) return;
+  auto fast=index.search_fast(query.data(),k); exact=index.search(query.data(),k);
+  check(fast.size()==k,"fast scan result size mismatch");
+  size_t overlap=0;
+  for(size_t i=0;i<fast.size();++i) {
+    check(fast[i].id<n && std::isfinite(fast[i].score),"invalid fast scan hit");
+    for(size_t j=0;j<exact.size();++j) if(fast[i].id==exact[j].id) { ++overlap; break; }
+  }
+  check(overlap>=8,"fast scan recall too low");
+  index.search_batch_fast(docs.data(),rows,batch_k,batch_scores.data(),batch_ids.data());
+  for(size_t row=0;row<rows;++row) {
+    auto row_fast=index.search_fast(docs.data()+row*d,batch_k);
+    for(size_t i=0;i<batch_k;++i)
+      check(batch_ids[row*batch_k+i]==row_fast[i].id && batch_scores[row*batch_k+i]==row_fast[i].score,"fast batch differs from single search");
+    auto row_exact=index.search(docs.data()+row*d,batch_k);
+    size_t row_overlap=0;
+    for(size_t i=0;i<batch_k;++i) for(size_t j=0;j<row_exact.size();++j)
+      if(batch_ids[row*batch_k+i]==row_exact[j].id) { ++row_overlap; break; }
+    check(row_overlap>=4,"fast batch recall too low");
+  }
+  auto invalid=query; invalid[0]=INFINITY;
+  rejects([&]{index.search_fast(invalid.data(),k);});
+  rejects([&]{index.search_fast(nullptr,k);});
+  auto invalid_batch=docs; invalid_batch[0]=INFINITY;
+  rejects([&]{index.search_batch_fast(invalid_batch.data(),rows,batch_k,batch_scores.data(),batch_ids.data());});
+  rejects([&]{index.search_batch(invalid_batch.data(),rows,batch_k,batch_scores.data(),batch_ids.data());});
+  index.build_fast_scan();
+  auto again=index.search_fast(query.data(),k);
+  for(size_t i=0;i<k;++i) check(again[i].id==fast[i].id && again[i].score==fast[i].score,"fast rebuild changed results");
+  index.add(nullptr,0);
+  check(index.has_fast_scan(),"empty add invalidated fast scan");
+  index.add(docs.data(),rows);
+  check(!index.has_fast_scan(),"append retained stale fast scan");
+  const auto appended=index.search_fast(query.data(),k),appended_exact=index.search(query.data(),k);
+  for(size_t i=0;i<k;++i)
+    check(appended[i].id==appended_exact[i].id && appended[i].score==appended_exact[i].score,"fast fallback after append differs");
+  index.search_batch_fast(docs.data(),rows,batch_k,batch_scores.data(),batch_ids.data());
+  index.search_batch(docs.data(),rows,batch_k,batch_exact.data(),batch_ids_exact.data());
+  for(size_t i=0;i<rows*batch_k;++i)
+    check(batch_ids[i]==batch_ids_exact[i] && batch_scores[i]==batch_exact[i],"fast batch fallback after append differs");
+  index.build_fast_scan();
+  check(index.has_fast_scan(),"fast scan missing after append rebuild");
+  const auto rebuilt=index.search_fast(query.data(),index.size());
+  check(rebuilt.size()==index.size(),"rebuilt fast scan omitted appended documents");
+  check(std::any_of(rebuilt.begin(),rebuilt.end(),[&](const auto& hit){return hit.id>=n;}),"rebuilt fast scan has no appended hits");
+}
 void tieredq_model_tests(const std::string& prefix);
 void tieredq_neon_tests();
+void tieredq_lookup_tests();
 int main() {
   auto dir=std::filesystem::temp_directory_path()/("tieredq_test_"+std::to_string(getpid())); std::filesystem::create_directory(dir);
   try {
@@ -196,6 +278,9 @@ int main() {
     reject_unsupported_format(prefix);
     tieredq_model_tests(prefix);
     tieredq_neon_tests();
+    fast_scan_test();
+    fast_scan_test(128,4);
+    tieredq_lookup_tests();
     for (unsigned bits=1;bits<=8;++bits) wide_register_parity(bits);
     for(unsigned d:{1u,7u,65u,384u,511u,512u,768u,1024u,1536u}) exercise(d,std::min(257u,d*8),d<=65,prefix);
     for(unsigned bytes:{32u,48u,64u,96u,128u}) exercise(512,bytes*8,bytes==64,prefix);

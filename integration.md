@@ -36,12 +36,26 @@ exhaustively, sorts descending score then ascending insertion ID for ties,
 and returns at most min(k, size()) hits. IDs are uint32. add appends borrowed
 FP32 rows and the index owns its resulting encoded storage.
 
+## Exact and optional fast scans
+
+`TieredQIndex::search` and `search_batch` retain the exact compressed FP32 scorer.
+`build_fast_scan()` creates an optional, approximate auxiliary cache; use
+`search_fast` or `search_batch_fast` to select it explicitly. Both modes evaluate
+every document without reranking. Score and ranking differences are expected in
+fast mode, and its memory cost depends on the model and CPU.
+
+`has_fast_scan()` reports whether a supported cache is present. Fast search falls
+back to exact search when it is absent. A nonempty successful `add()` invalidates
+the cache; rebuild it after appending. Empty and failed adds preserve it. Cache
+contents are derived and not persisted, so loaded indexes start without a fast
+cache. Exact search remains available after building the fast cache.
+
 ## Ownership and concurrency
 
 Models and queries own their buffers. Const codec operations and index searches
 may run concurrently with independent query, scratch and output buffers.
-Never mutate queries during scoring. add, assignment, destruction and index
-mutation require external synchronization against readers/writers. Do not
+Never mutate queries during scoring. add, build_fast_scan, assignment, destruction
+and other index mutations require external synchronization against readers/writers. Do not
 change process-wide BLAS/OpenMP/backend settings during calls. Internal OpenMP
 may add threads; set OMP_NUM_THREADS to control the budget.
 
@@ -83,6 +97,13 @@ encode. len(index) reports the count, and search(queries, k=10) returns
 2-D [queries, dimensions] array returns [queries, min(k, size)]. save(path)
 and TieredQIndex.load(path) persist the trained index.
 
+`search()` stays exact by default. `build_fast_scan()` prepares approximate
+search, the read-only `has_fast_scan` property reports availability, and
+`search_fast(queries, k=10)` uses the same input/output shapes as `search()`.
+Matrix inputs use the native fast batch path. Without a supported cache it falls
+back to exact search. Rebuild after a nonempty append or a load; cache construction
+and append hold the exclusive Python index lock against concurrent readers.
+
 The advanced codec surface (encode/decode/score, Config, Query) is C++ only.
 Inputs must be CPU NumPy arrays of float32 with contiguous layout; read-only
 inputs are accepted. Shape/type errors raise exceptions; inputs are borrowed
@@ -90,7 +111,7 @@ during calls and must not be mutated concurrently. Outputs own their buffers
 and remain valid after the index is released. Native work releases the GIL.
 The index serializes writes against readers and permits concurrent searches.
 
-For development: uv sync --python 3.12 --dev, then uv run pytest -q.
+For development: uv sync --python 3.12 --dev --inexact, then uv run --no-sync pytest -q.
 Installation builds the extension locally; no package is published to PyPI.
 
 ## Bit allocation

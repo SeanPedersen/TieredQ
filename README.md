@@ -45,6 +45,30 @@ Inputs must be contiguous float32 NumPy arrays; use np.ascontiguousarray when
 needed. Outputs own their memory. The Python package uses NumPy for arrays;
 the C++ library has no Python or NumPy dependency.
 
+## Optional fast search
+
+`search()` uses the exact TieredQ FP32 scorer by default. To use the approximate
+full-scan kernel, build its auxiliary cache explicitly:
+
+```python
+index.build_fast_scan()
+print(index.has_fast_scan)  # False when the CPU has no supported fast kernel
+scores, ids = index.search_fast(vectors[:2], k=10)
+scores, ids = index.search(vectors[:2], k=10)  # exact remains available
+```
+
+Both methods accept one vector or a matrix and return the same shapes and dtypes.
+Fast search trades some score/ranking accuracy and extra memory for speed; it still
+scans every document without reranking. ARM uses int8 dot products. x86 AVX-512F/BW
+uses byte lookups for narrow tiers and int8 dot products for wider tiers.
+
+Without a cache, `search_fast()` falls back to exact search. A nonempty `add()`
+invalidates the cache; call `build_fast_scan()` again to restore the fast path.
+The cache is derived in memory and is not saved: rebuild it after `load()`.
+Use `has_fast_scan` to check whether the fast cache is active. Performance and
+ranking agreement depend on the data and hardware; see the
+[measurements](docs/glove200-fast-scan.md).
+
 ## C++
 
     cmake -S . -B build
@@ -69,8 +93,9 @@ for reproduction and limitations.
 
 ## Batch search throughput
 
-Python matrix queries run across OpenMP workers, with each worker searching one
-query at a time. Single-vector calls remain serial. Set `OMP_NUM_THREADS` before
-starting Python to control the worker limit; the useful count depends on CPU
-and memory bandwidth. Avoid multiplying that limit by application-level request
-concurrency. Results and score arithmetic match individual searches exactly.
+Python matrix queries use native batched search with a shared index and OpenMP
+workers; backends can reuse scan work across queries. Single-vector calls remain
+serial. Set `OMP_NUM_THREADS` before starting Python to control the worker limit;
+the useful count depends on CPU and memory bandwidth. Avoid multiplying that
+limit by application-level request concurrency. Batched results match individual
+searches using the same exact or fast mode.

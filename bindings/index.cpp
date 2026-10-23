@@ -56,7 +56,15 @@ class PythonIndex {
     }
     index_->add(rows.data(), rows.shape(0));
   }
-  SearchResult search(FloatArray queries, size_t k) const {
+  void build_fast_scan() {
+    std::unique_lock lock(mutex_);
+    trained().build_fast_scan();
+  }
+  bool has_fast_scan() const {
+    std::shared_lock lock(mutex_);
+    return index_ && index_->has_fast_scan();
+  }
+  SearchResult search(FloatArray queries, size_t k, SearchMode mode) const {
     const size_t rank = queries.ndim();
     if (rank != 1 && rank != 2)
       throw std::invalid_argument("queries must be a 1-D or 2-D float32 array");
@@ -70,7 +78,7 @@ class PythonIndex {
                         std::vector<uint32_t>(array_elements(rows, found), 0),
                         rank == 1 ? std::vector<size_t>{found} : std::vector<size_t>{rows, found}};
     search_rows(index, queries.data(), rows, width, k,
-                result.scores.data(), result.ids.data());
+                result.scores.data(), result.ids.data(), mode);
     return result;
   }
   void save(const std::string& path) const {
@@ -98,6 +106,15 @@ class PythonIndex {
   mutable std::shared_mutex mutex_;
 };
 
+namespace {
+nb::tuple search_result(const PythonIndex& index, FloatArray queries, size_t k, SearchMode mode) {
+  SearchResult result;
+  { nb::gil_scoped_release release; result = index.search(queries, k, mode); }
+  return nb::make_tuple(owned_array(std::move(result.scores), result.shape),
+                        owned_array(std::move(result.ids), result.shape));
+}
+}  // namespace
+
 void bind_index(nb::module_& module) {
   nb::class_<PythonIndex>(module, "TieredQIndex", "Trained exhaustive in-memory vector index.")
       .def(nb::init<uint32_t, uint32_t>(), "dimensions"_a, "code_bits"_a)
@@ -109,11 +126,17 @@ void bind_index(nb::module_& module) {
       .def("add", &PythonIndex::add, "rows"_a.noconvert(),
            nb::call_guard<nb::gil_scoped_release>())
       .def("search", [](const PythonIndex& self, FloatArray queries, size_t k) {
-        SearchResult result;
-        { nb::gil_scoped_release release; result = self.search(queries, k); }
-        return nb::make_tuple(owned_array(std::move(result.scores), result.shape),
-                              owned_array(std::move(result.ids), result.shape));
+        return search_result(self, queries, k, SearchMode::exact);
       }, "queries"_a.noconvert(), "k"_a = 10)
+      .def("build_fast_scan", &PythonIndex::build_fast_scan,
+           "Build the optional approximate full-scan cache; unsupported CPUs retain exact fallback.",
+           nb::call_guard<nb::gil_scoped_release>())
+      .def_prop_ro("has_fast_scan", &PythonIndex::has_fast_scan,
+                   nb::call_guard<nb::gil_scoped_release>())
+      .def("search_fast", [](const PythonIndex& self, FloatArray queries, size_t k) {
+        return search_result(self, queries, k, SearchMode::fast);
+      }, "queries"_a.noconvert(), "k"_a = 10,
+         "Approximate full scan; falls back to exact search when the cache is absent.")
       .def("save", &PythonIndex::save, "path"_a, nb::call_guard<nb::gil_scoped_release>())
       .def_static("load", &PythonIndex::load, "path"_a, nb::call_guard<nb::gil_scoped_release>());
 }
