@@ -1,0 +1,25 @@
+{
+  "tests_passed": 13,
+  "official_reference_cases": 16,
+  "effective_codec_optimization": "-O3",
+  "rabitq_container": "direct-flat",
+  "explicit_row_id_array": false,
+  "rabitq_high_accuracy": true,
+  "matrix_rows_verified": 24,
+  "scope": "SIFT1M, 1 bit/dimension only",
+  "reproduce_validation": "cd benchmark && ./validate.sh",
+  "reproduce_measurement": "cd benchmark && taskset -c 0-7 ./run.sh --datasets sift --bits 1 --output output-corrected-sift-1bit",
+  "artifacts_sha256": {
+    "validation.log": "dce2b7330d44835319ccdb0a41b7b9823e5376e05ecbc4afb584f422a90d0425",
+    "summary.json": "718ee8d06c679f7e9b65b6201db8e51aff72551ae19fb9468beb1be003226455",
+    "qps-recall.png": "fc325506ab6144d9522baf288cfd89efd9771d3f2033ae6eeb1071b8b9d35903",
+    "preprocessing.csv": "da14f37e0f6f1e387598ec43697393f73e0bf76cc951f2ed28916e1efa86afee",
+    "README.md": "3304fac69670a34dcb5a2188a062063e56a278e171a36baba886b96f24e397ee",
+    "recall-storage.png": "7574d84ff7830edd73a88da0d2fd029a5362790e52042a6834a9ace001807148",
+    "as-run-harness.tar.gz": "e1072816c8f502bfe43fffba9d2815bdb8806c1cb87cc23d9a7b680fc4beb4a7",
+    "latency-recall.png": "eadb1b4f89499443014040c1af165911fbcb852d3ff4c487481f6f02bae38668",
+    "results.csv": "806e381becae231c71feb2ae5a91e1295e6918e2af8561563a397490f956cb8c",
+    "data-manifest.json": "fbe918ae21f7a2f38e35fd1e70215b62ed3b415c8688612ad155a9081a7f7d7e",
+    "meta.json": "d1e1ce03b38c0eba6e42771d3a8a5fe792f14a909969b2d343fbdc85b5522528"
+  }
+}

@@ -1,0 +1,214 @@
+diff --git a/README.md b/README.md
+index eaf59f6..5216cfe 100644
+--- a/README.md
++++ b/README.md
+@@ -2,6 +2,11 @@
+ 
+ TieredQ is a new vector quantization algorithm that dynamically allocates bits per dimension, providing a very high recall compression ratio (compared to RaBitQ or TurboQuant). TieredQ centers and rotates vectors into a PCA basis, then greedily allocates 0–8 bits per dimension to reduce quantization error. Other ANN indexes can use the codec directly.
+ 
++TieredQ core steps:
++1. PCA
++2. Variance-aware greedy bit allocation per dimension (principal component)
++3. Scalar quantization per dimension with allocated bit budget
++
+ ## Install
+ 
+ Requires C++20, CMake, LAPACK/BLAS and OpenMP. On macOS, install `libomp` with
+@@ -56,3 +61,9 @@ cmake --install build --prefix /desired/prefix
+ Include `<tieredq/tieredq.h>`, use `find_package(TieredQ CONFIG REQUIRED)`, and
+ link `TieredQ::TieredQ`. FetchContent also works. See [integration.md](integration.md)
+ for layouts, threading, ownership and dependency setup.
++
++## Codec comparison benchmark
++
++See [benchmark/README.md](benchmark/README.md) for the one-command CPU comparison
++against official RaBitQ on SIFT1M, GloVe-200 and OpenAI3-1536, including measured
++storage overhead, recall, throughput and latency.
+diff --git a/src/tieredq_fast_dispatch.h b/src/tieredq_fast_dispatch.h
+index c473b6c..9f335e5 100644
+--- a/src/tieredq_fast_dispatch.h
++++ b/src/tieredq_fast_dispatch.h
+@@ -2,12 +2,13 @@
+ #pragma once
+ #include "tieredq_scan_int8.h"
+ namespace dv::tieredq_detail {
+-enum class FastScanBackend { scalar, neon, avx512 };
++enum class FastScanBackend { scalar, neon, avx2, avx512 };
+ inline bool native_fast_scan_available() {
+ #if defined(__aarch64__) || defined(_M_ARM64)
+   return true;
+ #elif (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
+-  return __builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512bw");
++  return __builtin_cpu_supports("avx2") ||
++      (__builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512bw"));
+ #else
+   return false;
+ #endif
+@@ -16,8 +17,11 @@ inline FastScanBackend fast_scan_backend(const FastScanCache& cache) {
+ #if defined(__aarch64__) || defined(_M_ARM64)
+   if (!cache.lookup) return FastScanBackend::neon;
+ #elif (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
+-  if (native_fast_scan_available() && (cache.lookup || cache.level_max<=x86_fast_level_max))
+-    return FastScanBackend::avx512;
++  if (cache.lookup || cache.level_max<=x86_fast_level_max) {
++    if (__builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512bw"))
++      return FastScanBackend::avx512;
++    if (__builtin_cpu_supports("avx2")) return FastScanBackend::avx2;
++  }
+ #endif
+   return FastScanBackend::scalar;
+ }
+diff --git a/src/tieredq_index.cpp b/src/tieredq_index.cpp
+index 24990e1..ca40676 100644
+--- a/src/tieredq_index.cpp
++++ b/src/tieredq_index.cpp
+@@ -11,6 +11,7 @@
+ #if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
+ #define DV_TIEREDQ_X86 1
+ #include "tieredq_scan_int8_avx512.h"
++#include "tieredq_scan_int8_avx2.h"
+ #endif
+ #if defined(__aarch64__) || defined(_M_ARM64)
+ #define DV_TIEREDQ_NEON 1
+@@ -133,12 +134,15 @@ void fast_search(const tieredq_detail::FastScanCache& cache,const TieredQ& codec
+   }
+ #endif
+ #ifdef DV_TIEREDQ_X86
+-  if (backend==tieredq_detail::FastScanBackend::avx512) {
++  if (backend==tieredq_detail::FastScanBackend::avx512 || backend==tieredq_detail::FastScanBackend::avx2) {
+     auto prepare=[&](const float* vector) { return tieredq_detail::fast_scan_query_x86(cache,codec,vector); };
+     auto scan=[&](const auto* prepared,size_t count,size_t first,size_t documents,float* scores,size_t stride) {
+-      tieredq_detail::scan_fast_avx512_tile(cache,prepared,count,first,documents,scores,stride);
++      if (backend==tieredq_detail::FastScanBackend::avx512)
++        tieredq_detail::scan_fast_avx512_tile(cache,prepared,count,first,documents,scores,stride);
++      else tieredq_detail::scan_fast_avx2_tile(cache,prepared,count,first,documents,scores,stride);
+     };
+-    const size_t query_tile=cache.lookup ? 1 : tieredq_detail::fast_scan_query_tile_x86;
++    const size_t query_tile=cache.lookup ? 1 : backend==tieredq_detail::FastScanBackend::avx512
++        ? tieredq_detail::fast_scan_query_tile_x86 : tieredq_detail::fast_scan_query_tile_avx2;
+     auto prepared=prepare_search_queries(queries,rows,codec.config().dimensions,prepare);
+     tieredq_detail::search_fast_tiles(prepared,cache.count,k,query_tile,scan,finish);
+     return;
+diff --git a/src/tieredq_query_projection_x86.h b/src/tieredq_query_projection_x86.h
+index 32e40fb..8a70b3b 100644
+--- a/src/tieredq_query_projection_x86.h
++++ b/src/tieredq_query_projection_x86.h
+@@ -42,12 +42,33 @@ inline FastQueryProjection build_fast_query_projection(size_t dimensions,
+   }
+   return map;
+ }
+-#if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
+-__attribute__((target("avx512f")))
+-inline std::vector<float> project_fast_query_avx512(const FastQueryProjection& map,const float* vector) {
++inline void validate_fast_query(const FastQueryProjection& map,const float* vector) {
+   if (!vector) throw std::runtime_error("TieredQ: null query data");
+   for (size_t i=0;i<map.dimensions;++i)
+     if (!std::isfinite(vector[i])) throw std::runtime_error("TieredQ: nonfinite query data");
++}
++#if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
++__attribute__((target("avx2")))
++inline std::vector<float> project_fast_query_avx2(const FastQueryProjection& map,const float* vector) {
++  validate_fast_query(map,vector);
++  constexpr size_t lanes=8;
++  std::vector<float> output(map.width);
++  for (size_t col=0;col<map.width;col+=query_projection_lanes) {
++    const float* panel=map.panels.data()+col*map.dimensions;
++    auto low=_mm256_setzero_ps(),high=_mm256_setzero_ps();
++    for (size_t i=0;i<map.dimensions;++i) {
++      const auto value=_mm256_set1_ps(vector[i]);
++      low=_mm256_add_ps(low,_mm256_mul_ps(value,_mm256_loadu_ps(panel+i*query_projection_lanes)));
++      high=_mm256_add_ps(high,_mm256_mul_ps(value,_mm256_loadu_ps(panel+i*query_projection_lanes+lanes)));
++    }
++    _mm256_storeu_ps(output.data()+col,low);
++    _mm256_storeu_ps(output.data()+col+lanes,high);
++  }
++  return output;
++}
++__attribute__((target("avx512f")))
++inline std::vector<float> project_fast_query_avx512(const FastQueryProjection& map,const float* vector) {
++  validate_fast_query(map,vector);
+   std::vector<float> output(map.width);
+   for (size_t col=0;col<map.width;col+=query_projection_lanes) {
+     const float* panel=map.panels.data()+col*map.dimensions;
+@@ -62,10 +83,9 @@ inline std::vector<float> project_fast_query_avx512(const FastQueryProjection& m
+ inline std::vector<float> project_fast_query(const FastQueryProjection& map,const float* vector) {
+ #if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
+   if (__builtin_cpu_supports("avx512f")) return project_fast_query_avx512(map,vector);
++  if (__builtin_cpu_supports("avx2")) return project_fast_query_avx2(map,vector);
+ #endif
+-  if (!vector) throw std::runtime_error("TieredQ: null query data");
+-  for (size_t i=0;i<map.dimensions;++i)
+-    if (!std::isfinite(vector[i])) throw std::runtime_error("TieredQ: nonfinite query data");
++  validate_fast_query(map,vector);
+   std::vector<float> output(map.width,0);
+   for (size_t col=0;col<map.width;++col) for (size_t i=0;i<map.dimensions;++i)
+     output[col]+=vector[i]*map.panels[(col/query_projection_lanes*map.dimensions+i)*query_projection_lanes+col%query_projection_lanes];
+diff --git a/src/tieredq_scan_int8_avx512.h b/src/tieredq_scan_int8_avx512.h
+index dcdcb47..401eb98 100644
+--- a/src/tieredq_scan_int8_avx512.h
++++ b/src/tieredq_scan_int8_avx512.h
+@@ -3,63 +3,12 @@
+ // vpmaddubsw/vpmaddwd support CPUs without VNNI.
+ #pragma once
+ #include "tieredq_scan_int8.h"
+-#include "tieredq_fast_dispatch.h"
++#include "tieredq_scan_query_x86.h"
+ #include "tieredq_scan_lookup_avx512.h"
+ #include <immintrin.h>
+ #include <omp.h>
+ 
+ namespace dv::tieredq_detail {
+-struct FastScanQueryX86 {
+-  FastScanLookupQuery lookup;
+-  std::vector<int32_t> qwords;
+-  std::vector<float> centroid_scores, correction_weights;
+-  float scale = 1, offset = 0;
+-};
+-
+-inline bool fast_scan_available() {
+-  return native_fast_scan_available();
+-}
+-
+-__attribute__((target("avx512f,avx512bw")))
+-inline FastScanQueryX86 fast_scan_query_x86(const FastScanCache& cache, const TieredQQuery& q) {
+-  if (q.weights.size() != cache.dimensions)
+-    throw std::runtime_error("TieredQ: int8 query weight shape mismatch");
+-  float peak = 0;
+-  for (size_t r=0; r<cache.dimensions; ++r) {
+-    const size_t ti = cache.tier_of[r];
+-    if (ti == 0xFF) continue;
+-    peak = std::max(peak, std::fabs(q.weights[r] * cache.level_scale[ti]));
+-  }
+-  const float scale = peak > 0 ? peak / float(fast_scan_quant_max) : 1.0f;
+-  std::vector<int8_t> qint(cache.groups * 4, 0);
+-  long sum = 0;
+-  for (size_t r=0; r<cache.dimensions; ++r) {
+-    const size_t ti = cache.tier_of[r];
+-    if (ti == 0xFF) continue;
+-    const long value = std::lround(q.weights[r] * cache.level_scale[ti] / scale);
+-    qint[r] = int8_t(std::clamp<long>(value, -long(fast_scan_quant_max), long(fast_scan_quant_max)));
+-    sum += qint[r];
+-  }
+-  FastScanQueryX86 prepared;
+-  prepared.scale = scale;
+-  prepared.offset = float((cache.level_max + 1) * sum);
+-  prepared.centroid_scores = q.centroid_scores;
+-  prepared.correction_weights = q.correction_weights;
+-  prepared.qwords.resize(cache.groups);
+-  for (size_t g=0; g<cache.groups; ++g)
+-    prepared.qwords[g] = int32_t(uint32_t(uint8_t(qint[g*4])) | (uint32_t(uint8_t(qint[g*4+1]))<<8)
+-                               | (uint32_t(uint8_t(qint[g*4+2]))<<16) | (uint32_t(uint8_t(qint[g*4+3]))<<24));
+-  return prepared;
+-}
+-
+-inline FastScanQueryX86 fast_scan_query_x86(const FastScanCache& cache,
+-    const TieredQ& codec,const float* vector) {
+-  if (!cache.lookup) return fast_scan_query_x86(cache,codec.query(vector));
+-  FastScanQueryX86 query;
+-  query.lookup=prepare_fast_lookup_query(*cache.lookup,vector);
+-  return query;
+-}
+-
+ __attribute__((target("avx512f,avx512bw")))
+ inline __mmask16 fast_mask(size_t n) {
+   return n >= 16 ? __mmask16(0xFFFF) : __mmask16((1u<<n)-1);

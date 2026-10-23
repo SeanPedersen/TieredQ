@@ -1,0 +1,12 @@
+{
+  "source": {
+    "url": "https://ann-benchmarks.com/sift-128-euclidean.hdf5",
+    "sha256": "dd6f0a6ed6b7ebb8934680f861a33ed01ff33991eaee4fd60914d854a0ca5984"
+  },
+  "dataset": "sift",
+  "split_seed": 42,
+  "base_n": 1000000,
+  "queries": 1000,
+  "base_sha256": "ac8e11ed111b09e882bcf0ef1a77ebdd36c89f495bce8fd596603f69c35148e6",
+  "queries_sha256": "bd4faea0cbb6d80054ef3b7554cef8298001ee9c15ce798352b86bc1a206d598"
+}

@@ -1,0 +1,7 @@
+{
+  "status": "verified_complete",
+  "matrix_status": "complete",
+  "profiling_wall_s": 171.0662523349747,
+  "audit": "completeness-audit.json",
+  "wrapper_note": "The relative-path EXIT trap failed after changing directory; no exit-code marker was recorded. Final metadata, all artifacts and independent completeness/source/data audits verify completion."
+}

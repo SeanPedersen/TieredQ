@@ -1,0 +1,9 @@
+ M README.md
+ M src/tieredq_fast_dispatch.h
+ M src/tieredq_index.cpp
+ M src/tieredq_query_projection_x86.h
+ M src/tieredq_scan_int8_avx512.h
+?? SOURCE_REVISION
+?? benchmark/
+?? src/tieredq_scan_int8_avx2.h
+?? src/tieredq_scan_query_x86.h

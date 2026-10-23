@@ -1,0 +1,227 @@
+Validation started: 2026-10-23T21:47:28+02:00
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue4-20261023/TieredQ/benchmark/build-native
+[  5%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 25%] Built target dv_tieredq
+[ 85%] Built target nanobind-static
+[ 90%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 95%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[ 95%] Built target codec_native
+[100%] Linking CXX executable codec_reference
+[100%] Built target codec_reference
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+.FhtKacRotator is selected
+FhtKacRotator is selected
+.FhtKacRotator is selected
+.FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+..........
+----------------------------------------------------------------------
+Ran 13 tests in 5.547s
+
+OK
+Native compiler options, direct-kernel rankings and flat storage accounting verified.
+Matrix started: 2026-10-23T21:47:48+02:00
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue4-20261023/TieredQ/benchmark/build-native
+[  5%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 25%] Built target dv_tieredq
+[ 85%] Built target nanobind-static
+[ 90%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 95%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[ 95%] Built target codec_native
+[100%] Linking CXX executable codec_reference
+[100%] Built target codec_reference
+Exact FP32 truth: glove (100000, 200), queries=1000
+Exact FP32 truth: openai (100000, 1536), queries=1000
+sift tieredq b=1 seed=0 t=1 batch=1: {'recall10': 0.36329999999999996, 'qps': 369.1483343969428, 'p50_ms': 2.640280406922102, 'p95_ms': 2.9338385211303826}
+sift tieredq b=1 seed=0 t=1 batch=32: {'recall10': 0.36329999999999996, 'qps': 390.5398638882212, 'p50_ms': 80.50934132188559, 'p95_ms': 89.58730334416032}
+sift tieredq b=1 seed=0 t=8 batch=1: {'recall10': 0.36329999999999996, 'qps': 386.56676137812445, 'p50_ms': 2.5447316002100706, 'p95_ms': 2.824866771697998}
+sift tieredq b=1 seed=0 t=8 batch=32: {'recall10': 0.36329999999999996, 'qps': 2817.783715025094, 'p50_ms': 11.078468058258295, 'p95_ms': 12.02757889404893}
+sift tieredq b=2 seed=0 t=1 batch=1: {'recall10': 0.6302000000000001, 'qps': 226.34427125010745, 'p50_ms': 4.36627003364265, 'p95_ms': 4.677102016285062}
+sift tieredq b=2 seed=0 t=1 batch=32: {'recall10': 0.6302000000000001, 'qps': 228.08130533329827, 'p50_ms': 139.67624120414257, 'p95_ms': 146.30082435905933}
+sift tieredq b=2 seed=0 t=8 batch=1: {'recall10': 0.6302000000000001, 'qps': 231.61755380322074, 'p50_ms': 4.2493753135204315, 'p95_ms': 4.673083778470755}
+sift tieredq b=2 seed=0 t=8 batch=32: {'recall10': 0.6302000000000001, 'qps': 1706.742397023448, 'p50_ms': 18.622751347720623, 'p95_ms': 18.7798161059618}
+sift tieredq b=4 seed=0 t=1 batch=1: {'recall10': 0.8641000000000001, 'qps': 105.32772113568628, 'p50_ms': 9.450622368603945, 'p95_ms': 9.90068893879652}
+sift tieredq b=4 seed=0 t=1 batch=32: {'recall10': 0.8641000000000001, 'qps': 284.9923290104274, 'p50_ms': 110.65861489623785, 'p95_ms': 121.04959413409233}
+sift tieredq b=4 seed=0 t=8 batch=1: {'recall10': 0.8641000000000001, 'qps': 106.57082434167137, 'p50_ms': 9.331002365797758, 'p95_ms': 9.800683450885117}
+sift tieredq b=4 seed=0 t=8 batch=32: {'recall10': 0.8641000000000001, 'qps': 541.5700129616516, 'p50_ms': 57.11275199428201, 'p95_ms': 65.61319623142481}
+sift tieredq b=8 seed=0 t=1 batch=1: {'recall10': 0.9570000000000001, 'qps': 103.95712795484776, 'p50_ms': 9.605593048036098, 'p95_ms': 10.04154458642006}
+sift tieredq b=8 seed=0 t=1 batch=32: {'recall10': 0.9570000000000001, 'qps': 287.4073615432227, 'p50_ms': 109.94162410497665, 'p95_ms': 118.7150883488357}
+sift tieredq b=8 seed=0 t=8 batch=1: {'recall10': 0.9570000000000001, 'qps': 104.5705142343097, 'p50_ms': 9.520446648821235, 'p95_ms': 9.97274611145258}
+sift tieredq b=8 seed=0 t=8 batch=32: {'recall10': 0.9570000000000001, 'qps': 550.7658468957079, 'p50_ms': 56.149482261389494, 'p95_ms': 65.85723394528031}
+FhtKacRotator is selected
+sift rabitq b=1 seed=0 t=1 batch=1: {'recall10': 0.2429, 'qps': 291.7727868374872, 'p50_ms': 3.414881881326437, 'p95_ms': 3.542558243498206}
+sift rabitq b=1 seed=0 t=1 batch=32: {'recall10': 0.2429, 'qps': 290.27475626514564, 'p50_ms': 109.42433215677738, 'p95_ms': 113.80262905731797}
+sift rabitq b=1 seed=0 t=8 batch=1: {'recall10': 0.2429, 'qps': 299.6454707048385, 'p50_ms': 3.3258050680160522, 'p95_ms': 3.5149756586179137}
+sift rabitq b=1 seed=0 t=8 batch=32: {'recall10': 0.2429, 'qps': 2235.4087276277314, 'p50_ms': 14.159344136714935, 'p95_ms': 14.768101740628481}
+FhtKacRotator is selected
+sift rabitq b=2 seed=0 t=1 batch=1: {'recall10': 0.5492999999999999, 'qps': 248.7201340451259, 'p50_ms': 3.996651852503419, 'p95_ms': 4.618949769064784}
+sift rabitq b=2 seed=0 t=1 batch=32: {'recall10': 0.5492999999999999, 'qps': 249.47987921598101, 'p50_ms': 127.64821201562881, 'p95_ms': 137.10203394293785}
+sift rabitq b=2 seed=0 t=8 batch=1: {'recall10': 0.5492999999999999, 'qps': 249.75239169392466, 'p50_ms': 3.965329611673951, 'p95_ms': 4.594681574963033}
+sift rabitq b=2 seed=0 t=8 batch=32: {'recall10': 0.5492999999999999, 'qps': 1978.506922399755, 'p50_ms': 15.77712083235383, 'p95_ms': 16.67923992499709}
+FhtKacRotator is selected
+sift rabitq b=4 seed=0 t=1 batch=1: {'recall10': 0.8493, 'qps': 227.48828833678132, 'p50_ms': 4.319713916629553, 'p95_ms': 5.464152526110411}
+sift rabitq b=4 seed=0 t=1 batch=32: {'recall10': 0.8493, 'qps': 227.06567457553658, 'p50_ms': 140.8421229571104, 'p95_ms': 151.103928219527}
+sift rabitq b=4 seed=0 t=8 batch=1: {'recall10': 0.8493, 'qps': 225.48457981933197, 'p50_ms': 4.369654459878802, 'p95_ms': 5.52239513490349}
+sift rabitq b=4 seed=0 t=8 batch=32: {'recall10': 0.8493, 'qps': 1775.2210632733422, 'p50_ms': 17.893420066684484, 'p95_ms': 20.14856692403555}
+FhtKacRotator is selected
+sift rabitq b=8 seed=0 t=1 batch=1: {'recall10': 0.989, 'qps': 224.59812740903195, 'p50_ms': 4.352259682491422, 'p95_ms': 5.705498019233346}
+sift rabitq b=8 seed=0 t=1 batch=32: {'recall10': 0.989, 'qps': 223.92731245446166, 'p50_ms': 141.82134671136737, 'p95_ms': 157.31254685670137}
+sift rabitq b=8 seed=0 t=8 batch=1: {'recall10': 0.989, 'qps': 222.03226512995138, 'p50_ms': 4.401701968163252, 'p95_ms': 5.80051855649799}
+sift rabitq b=8 seed=0 t=8 batch=32: {'recall10': 0.989, 'qps': 1664.7508980038344, 'p50_ms': 19.029424991458654, 'p95_ms': 21.18665724992752}
+glove tieredq b=1 seed=0 t=1 batch=1: {'recall10': 0.41209999999999997, 'qps': 3303.995822355357, 'p50_ms': 0.2957959659397602, 'p95_ms': 0.3299368778243661}
+glove tieredq b=1 seed=0 t=1 batch=32: {'recall10': 0.41209999999999997, 'qps': 3514.8017675716696, 'p50_ms': 8.876397740095854, 'p95_ms': 10.054490063339472}
+glove tieredq b=1 seed=0 t=8 batch=1: {'recall10': 0.41209999999999997, 'qps': 3448.045205840136, 'p50_ms': 0.2862259279936552, 'p95_ms': 0.31705161090940237}
+glove tieredq b=1 seed=0 t=8 batch=32: {'recall10': 0.41209999999999997, 'qps': 20121.59263844874, 'p50_ms': 1.3373512774705887, 'p95_ms': 1.813418697565794}
+glove tieredq b=2 seed=0 t=1 batch=1: {'recall10': 0.6718999999999999, 'qps': 2464.433877850788, 'p50_ms': 0.40059350430965424, 'p95_ms': 0.4452265799045563}
+glove tieredq b=2 seed=0 t=1 batch=32: {'recall10': 0.6718999999999999, 'qps': 2547.570015676673, 'p50_ms': 12.329872697591782, 'p95_ms': 13.847157824784517}
+glove tieredq b=2 seed=0 t=8 batch=1: {'recall10': 0.6718999999999999, 'qps': 2477.294894148986, 'p50_ms': 0.4000419285148382, 'p95_ms': 0.437649292871356}
+glove tieredq b=2 seed=0 t=8 batch=32: {'recall10': 0.6718999999999999, 'qps': 12184.974645839384, 'p50_ms': 1.78138492628932, 'p95_ms': 7.587774191051722}
+glove tieredq b=4 seed=0 t=1 batch=1: {'recall10': 0.9011000000000001, 'qps': 1593.6939318110874, 'p50_ms': 0.6193099543452263, 'p95_ms': 0.6828447105363011}
+glove tieredq b=4 seed=0 t=1 batch=32: {'recall10': 0.9011000000000001, 'qps': 1623.3026909161072, 'p50_ms': 19.368895795196295, 'p95_ms': 21.306560840457678}
+glove tieredq b=4 seed=0 t=8 batch=1: {'recall10': 0.9011000000000001, 'qps': 1620.980068618238, 'p50_ms': 0.6114214193075895, 'p95_ms': 0.6766197970137}
+glove tieredq b=4 seed=0 t=8 batch=32: {'recall10': 0.9011000000000001, 'qps': 11232.951273501196, 'p50_ms': 2.7452437207102776, 'p95_ms': 3.51115083321929}
+glove tieredq b=8 seed=0 t=1 batch=1: {'recall10': 0.9744, 'qps': 917.5162105331675, 'p50_ms': 1.0746002662926912, 'p95_ms': 1.1989057529717684}
+glove tieredq b=8 seed=0 t=1 batch=32: {'recall10': 0.9744, 'qps': 1832.4739783165346, 'p50_ms': 17.066298983991146, 'p95_ms': 19.38012707978487}
+glove tieredq b=8 seed=0 t=8 batch=1: {'recall10': 0.9744, 'qps': 910.4407947573826, 'p50_ms': 1.0799029842019081, 'p95_ms': 1.2213021283969283}
+glove tieredq b=8 seed=0 t=8 batch=32: {'recall10': 0.9744, 'qps': 3632.8834801953662, 'p50_ms': 8.364211767911911, 'p95_ms': 10.172589216381311}
+FhtKacRotator is selected
+glove rabitq b=1 seed=0 t=1 batch=1: {'recall10': 0.4049, 'qps': 2353.775041635711, 'p50_ms': 0.41439197957515717, 'p95_ms': 0.47130731400102377}
+glove rabitq b=1 seed=0 t=1 batch=32: {'recall10': 0.4049, 'qps': 2352.0043380862617, 'p50_ms': 13.148474972695112, 'p95_ms': 14.816401991993189}
+glove rabitq b=1 seed=0 t=8 batch=1: {'recall10': 0.4049, 'qps': 2374.7514004313293, 'p50_ms': 0.4118222277611494, 'p95_ms': 0.47119183000177145}
+glove rabitq b=1 seed=0 t=8 batch=32: {'recall10': 0.4049, 'qps': 16056.410931448301, 'p50_ms': 1.7343498766422272, 'p95_ms': 2.0330711267888546}
+FhtKacRotator is selected
+glove rabitq b=2 seed=0 t=1 batch=1: {'recall10': 0.6558999999999999, 'qps': 1922.3806499236675, 'p50_ms': 0.5148046184331179, 'p95_ms': 0.623999210074544}
+glove rabitq b=2 seed=0 t=1 batch=32: {'recall10': 0.6558999999999999, 'qps': 1939.0152473091532, 'p50_ms': 16.07768191024661, 'p95_ms': 18.724512308835983}
+glove rabitq b=2 seed=0 t=8 batch=1: {'recall10': 0.6558999999999999, 'qps': 1956.5557965129099, 'p50_ms': 0.5097158718854189, 'p95_ms': 0.5972521845251321}
+glove rabitq b=2 seed=0 t=8 batch=32: {'recall10': 0.6558999999999999, 'qps': 13749.856082143138, 'p50_ms': 2.2132620215415955, 'p95_ms': 3.0501666478812695}
+FhtKacRotator is selected
+glove rabitq b=4 seed=0 t=1 batch=1: {'recall10': 0.8821000000000001, 'qps': 1710.6861274156054, 'p50_ms': 0.5761520005762577, 'p95_ms': 0.7496992824599147}
+glove rabitq b=4 seed=0 t=1 batch=32: {'recall10': 0.8821000000000001, 'qps': 1725.058019545086, 'p50_ms': 18.139717169106007, 'p95_ms': 21.1824350990355}
+glove rabitq b=4 seed=0 t=8 batch=1: {'recall10': 0.8821000000000001, 'qps': 1722.0308760121566, 'p50_ms': 0.5721698980778456, 'p95_ms': 0.7446306059136987}
+glove rabitq b=4 seed=0 t=8 batch=32: {'recall10': 0.8821000000000001, 'qps': 11678.693130492537, 'p50_ms': 2.589590847492218, 'p95_ms': 3.9087142795324326}
+FhtKacRotator is selected
+glove rabitq b=8 seed=0 t=1 batch=1: {'recall10': 0.9878000000000001, 'qps': 1648.2779238310534, 'p50_ms': 0.5946969613432884, 'p95_ms': 0.7988608209416269}
+glove rabitq b=8 seed=0 t=1 batch=32: {'recall10': 0.9878000000000001, 'qps': 1640.5135763861654, 'p50_ms': 19.274999853223562, 'p95_ms': 21.599673200398684}
+glove rabitq b=8 seed=0 t=8 batch=1: {'recall10': 0.9878000000000001, 'qps': 1636.026696169008, 'p50_ms': 0.6000085268169641, 'p95_ms': 0.8041554130613803}
+glove rabitq b=8 seed=0 t=8 batch=32: {'recall10': 0.9878000000000001, 'qps': 11125.267942915663, 'p50_ms': 2.734689973294735, 'p95_ms': 3.9764679968357086}
+openai tieredq b=1 seed=0 t=1 batch=1: {'recall10': 0.8939000000000002, 'qps': 513.1661663806598, 'p50_ms': 1.9111775327473879, 'p95_ms': 2.149626985192299}
+openai tieredq b=1 seed=0 t=1 batch=32: {'recall10': 0.8939000000000002, 'qps': 592.6881852983795, 'p50_ms': 52.97879781574011, 'p95_ms': 60.06066361442208}
+openai tieredq b=1 seed=0 t=8 batch=1: {'recall10': 0.8939000000000002, 'qps': 513.8932518908862, 'p50_ms': 1.9111824221909046, 'p95_ms': 2.1180230425670743}
+openai tieredq b=1 seed=0 t=8 batch=32: {'recall10': 0.8939000000000002, 'qps': 4125.58439852283, 'p50_ms': 7.615248207002878, 'p95_ms': 8.294833358377218}
+openai tieredq b=2 seed=0 t=1 batch=1: {'recall10': 0.9388000000000002, 'qps': 96.35636381507645, 'p50_ms': 10.320561472326517, 'p95_ms': 10.897296131588519}
+openai tieredq b=2 seed=0 t=1 batch=32: {'recall10': 0.9388000000000002, 'qps': 345.22518414722015, 'p50_ms': 91.50891425088048, 'p95_ms': 98.04666601121426}
+openai tieredq b=2 seed=0 t=8 batch=1: {'recall10': 0.9388000000000002, 'qps': 96.48223642714655, 'p50_ms': 10.270951082929969, 'p95_ms': 10.958059853874147}
+openai tieredq b=2 seed=0 t=8 batch=32: {'recall10': 0.9388000000000002, 'qps': 750.6695826163241, 'p50_ms': 41.69264389201999, 'p95_ms': 49.84256578609347}
+openai tieredq b=4 seed=0 t=1 batch=1: {'recall10': 0.9662000000000002, 'qps': 85.51612565991493, 'p50_ms': 11.612677481025457, 'p95_ms': 12.269355333410203}
+openai tieredq b=4 seed=0 t=1 batch=32: {'recall10': 0.9662000000000002, 'qps': 305.2807532299375, 'p50_ms': 103.58224203810096, 'p95_ms': 111.56323086470366}
+openai tieredq b=4 seed=0 t=8 batch=1: {'recall10': 0.9662000000000002, 'qps': 85.2802508427653, 'p50_ms': 11.684864992275834, 'p95_ms': 12.355041992850602}
+openai tieredq b=4 seed=0 t=8 batch=32: {'recall10': 0.9662000000000002, 'qps': 657.815760857856, 'p50_ms': 46.762132085859776, 'p95_ms': 56.21197307482362}
+openai tieredq b=8 seed=0 t=1 batch=1: {'recall10': 0.993, 'qps': 82.37119078355705, 'p50_ms': 12.066328199580312, 'p95_ms': 12.740957643836737}
+openai tieredq b=8 seed=0 t=1 batch=32: {'recall10': 0.993, 'qps': 273.89868616793024, 'p50_ms': 115.55358534678817, 'p95_ms': 123.16045723855495}
+openai tieredq b=8 seed=0 t=8 batch=1: {'recall10': 0.993, 'qps': 82.04967525334106, 'p50_ms': 12.119765393435955, 'p95_ms': 12.730434956029058}
+openai tieredq b=8 seed=0 t=8 batch=32: {'recall10': 0.993, 'qps': 606.2066699885847, 'p50_ms': 50.90475035831332, 'p95_ms': 58.084811083972454}
+FhtKacRotator is selected
+openai rabitq b=1 seed=0 t=1 batch=1: {'recall10': 0.8126000000000001, 'qps': 624.7983503370045, 'p50_ms': 1.5576665755361319, 'p95_ms': 1.8135165562853217}
+openai rabitq b=1 seed=0 t=1 batch=32: {'recall10': 0.8126000000000001, 'qps': 620.9668539951696, 'p50_ms': 50.15711719170213, 'p95_ms': 56.794673670083284}
+openai rabitq b=1 seed=0 t=8 batch=1: {'recall10': 0.8126000000000001, 'qps': 626.9215528129848, 'p50_ms': 1.5543699264526367, 'p95_ms': 1.790999015793204}
+openai rabitq b=1 seed=0 t=8 batch=32: {'recall10': 0.8126000000000001, 'qps': 4368.357753563535, 'p50_ms': 6.726976949721575, 'p95_ms': 13.359498232603073}
+FhtKacRotator is selected
+openai rabitq b=2 seed=0 t=1 batch=1: {'recall10': 0.9041000000000001, 'qps': 541.5686365364901, 'p50_ms': 1.8164513166993856, 'p95_ms': 2.0138037391006947}
+openai rabitq b=2 seed=0 t=1 batch=32: {'recall10': 0.9041000000000001, 'qps': 541.0212073209606, 'p50_ms': 58.13309783115983, 'p95_ms': 62.768608797341585}
+openai rabitq b=2 seed=0 t=8 batch=1: {'recall10': 0.9041000000000001, 'qps': 542.0386176603243, 'p50_ms': 1.8227798864245415, 'p95_ms': 2.0104969618842006}
+openai rabitq b=2 seed=0 t=8 batch=32: {'recall10': 0.9041000000000001, 'qps': 3929.403232476685, 'p50_ms': 8.033571764826775, 'p95_ms': 8.389994036406279}
+FhtKacRotator is selected
+openai rabitq b=4 seed=0 t=1 batch=1: {'recall10': 0.9664, 'qps': 576.9836506749186, 'p50_ms': 1.7044220585376024, 'p95_ms': 1.9107818137854335}
+openai rabitq b=4 seed=0 t=1 batch=32: {'recall10': 0.9664, 'qps': 573.1494142046378, 'p50_ms': 54.908295162022114, 'p95_ms': 60.45135483145714}
+openai rabitq b=4 seed=0 t=8 batch=1: {'recall10': 0.9664, 'qps': 555.3220640485938, 'p50_ms': 1.7440805677324533, 'p95_ms': 2.042966498993337}
+openai rabitq b=4 seed=0 t=8 batch=32: {'recall10': 0.9664, 'qps': 3856.5085311215585, 'p50_ms': 8.067375980317593, 'p95_ms': 8.776473812758923}
+FhtKacRotator is selected
+openai rabitq b=8 seed=0 t=1 batch=1: {'recall10': 0.9966999999999999, 'qps': 565.2040862315237, 'p50_ms': 1.7370700370520353, 'p95_ms': 1.9811742939054964}
+openai rabitq b=8 seed=0 t=1 batch=32: {'recall10': 0.9966999999999999, 'qps': 581.8164307407926, 'p50_ms': 54.2729920707643, 'p95_ms': 61.325578950345516}
+openai rabitq b=8 seed=0 t=8 batch=1: {'recall10': 0.9966999999999999, 'qps': 591.5406284827919, 'p50_ms': 1.6570393927395344, 'p95_ms': 1.9053153926506636}
+openai rabitq b=8 seed=0 t=8 batch=32: {'recall10': 0.9966999999999999, 'qps': 4434.950809026926, 'p50_ms': 6.969627924263477, 'p95_ms': 7.6988860964775085}
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Configuring done (0.3s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue4-20261023/TieredQ/benchmark/.deps/profile/build
+[  5%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_index.cpp.o
+[ 10%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 70%] Built target nanobind-static
+[ 75%] Linking CXX static library libdv_tieredq.a
+[ 85%] Built target dv_tieredq
+[ 90%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 95%] Linking CXX executable codec_reference
+[ 95%] Built target codec_reference
+[100%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[100%] Built target codec_native
+Profiled glove tieredq 1-bit
+Profiled glove tieredq 2-bit
+Profiled glove tieredq 4-bit
+Profiled glove tieredq 8-bit
+FhtKacRotator is selected
+Profiled glove rabitq 1-bit
+FhtKacRotator is selected
+Profiled glove rabitq 2-bit
+FhtKacRotator is selected
+Profiled glove rabitq 4-bit
+FhtKacRotator is selected
+Profiled glove rabitq 8-bit
+Profiled openai tieredq 1-bit
+Profiled openai tieredq 2-bit
+Profiled openai tieredq 4-bit
+Profiled openai tieredq 8-bit
+FhtKacRotator is selected
+Profiled openai rabitq 1-bit
+FhtKacRotator is selected
+Profiled openai rabitq 2-bit
+FhtKacRotator is selected
+Profiled openai rabitq 4-bit
+FhtKacRotator is selected
+Profiled openai rabitq 8-bit
+Profiled sift tieredq 1-bit
+Profiled sift tieredq 2-bit
+Profiled sift tieredq 4-bit
+Profiled sift tieredq 8-bit
+FhtKacRotator is selected
+Profiled sift rabitq 1-bit
+FhtKacRotator is selected
+Profiled sift rabitq 2-bit
+FhtKacRotator is selected
+Profiled sift rabitq 4-bit
+FhtKacRotator is selected
+Profiled sift rabitq 8-bit
+benchmark/output-full-single-run/job.sh: line 1: benchmark/output-full-single-run/exit-code: No such file or directory

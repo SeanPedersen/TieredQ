@@ -1,0 +1,12 @@
+{
+  "status": "passed",
+  "rows": 96,
+  "codec_configurations": 24,
+  "seed": 0,
+  "matrix_wall_s": 881.9737586211413,
+  "profiling_wall_s": 171.0662523349747,
+  "compiler_translation_units": 5,
+  "validated_source_files": 64,
+  "profile_rows": 96,
+  "preprocessing_above_10_percent": 24
+}

@@ -1,0 +1,24 @@
+{
+  "tests_passed": 13,
+  "official_reference_cases": 24,
+  "dimensions": [
+    128,
+    200,
+    1536
+  ],
+  "base_rows": 1025,
+  "partial_final_code_block": true,
+  "budgets": [
+    1,
+    2,
+    4,
+    8
+  ],
+  "metrics": [
+    "l2",
+    "ip"
+  ],
+  "tieredq_source_commit": "256dc45",
+  "full_matrix_started": false,
+  "validation_log_sha256": "51e70c0dd16b06892cfa4b1a2ff60923082d9817fca56219446eb6442c84403a"
+}
