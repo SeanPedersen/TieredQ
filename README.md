@@ -42,7 +42,8 @@ index = TieredQIndex.load("index.tq")
   larger is better. Normalize inputs for cosine similarity.
 - Fast storage size depends on the model and CPU. Inspect `bytes_per_vector`
   for the representation stride and `storage_bytes` for allocated vector data.
-  Files loaded on another CPU may use a slower scalar backend and emit a warning.
+  Fast scans use AVX-512 or AVX2 on x86, and NEON on ARM. Files loaded on
+  another CPU may use a slower scalar backend and emit a warning.
 - Matrix queries use OpenMP workers. Set `OMP_NUM_THREADS` before starting Python
   to control parallelism.
 
@@ -67,3 +68,5 @@ for layouts, threading, ownership and dependency setup.
 See [benchmark/README.md](benchmark/README.md) for the one-command CPU comparison
 against official RaBitQ on SIFT1M, GloVe-200 and OpenAI3-1536, including measured
 storage overhead, recall, throughput and latency.
+
+Disclaimer: everything but the core idea and the README was created using both Opus 5.5 and GPT 6.1 Sol
