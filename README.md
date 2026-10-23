@@ -4,12 +4,11 @@ Efficient vector quantization for C++ and Python, with a standalone exhaustive
 in-memory index. Other indexes can use the codec directly.
 
 TieredQ subtracts a learned centroid from each vector and rotates the residual
-into a PCA basis. It normally allocates 0–8 bits per dimension greedily, giving
-each extra bit to the coordinate where it reduces expected quantization error
-most. The preserved 512-dimension, 512-bit configuration instead uses a fixed
-layout of 64×4, 64×2 and 128×1 bits. Query lookup tables estimate inner products
-directly from the encoded vectors; larger scores are better. Normalize inputs
-for cosine similarity.
+into a PCA basis. It allocates 0–8 bits per dimension greedily, giving each
+extra bit to the coordinate where it reduces expected quantization error most.
+This greedy allocation applies at every dimensionality. Query lookup tables
+estimate inner products directly from the encoded vectors; larger scores are
+better. Normalize inputs for cosine similarity.
 
 ## Install
 
@@ -75,8 +74,3 @@ query at a time. Single-vector calls remain serial. Set `OMP_NUM_THREADS` before
 starting Python to control the worker limit; the useful count depends on CPU
 and memory bandwidth. Avoid multiplying that limit by application-level request
 concurrency. Results and score arithmetic match individual searches exactly.
-
-Issue [#5](https://github.com/SeanPedersen/TieredQ/issues/5) records the
-measured scaling and the reasoning behind this change. The C++
-`tieredq_scan_benchmark` separately measures query preparation, packed scans,
-and full-array top-k selection; index search instead maintains a bounded heap.

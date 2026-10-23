@@ -97,9 +97,8 @@ Installation builds the extension locally; no package is published to PyPI.
 
 The allocator ranks each extra bit by PCA variance times the reduction in
 expected Gaussian quantization error, subject to the configured bit caps.
-The 512-dimensional, 512-code-bit configuration retains a fixed allocation:
-64 dimensions at 4 bits, 64 at 2 bits, 128 at 1 bit, and the rest uncoded.
-Optional rotations within equal-bit tiers follow PCA and bit allocation.
+Greedy allocation applies to every dimensionality. Optional rotations within
+equal-bit tiers follow PCA and bit allocation.
 
 ## Engine containers and zvec IVF
 

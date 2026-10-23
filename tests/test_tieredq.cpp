@@ -91,10 +91,7 @@ void exercise(unsigned d,unsigned bits,bool rotate,const std::string& prefix) {
   TieredQConfig cfg{d,bits,4,rotate}; auto codec=TieredQ::train(cfg,sample.data(),rows,17);
   uint64_t budget=0; for(auto t:codec.tiers()) budget+=uint64_t(t.dimensions)*t.bits;
   check(budget==bits,"allocation exceeds budget"); check(codec.code_bytes()==(bits+7)/8,"code size mismatch");
-  if(d==512 && bits==512) {
-    const auto& ts=codec.tiers(); check(ts.size()==3 && ts[0].bits==4 && ts[0].dimensions==64 && ts[1].bits==2 && ts[1].dimensions==64 && ts[2].bits==1 && ts[2].dimensions==128,"fixed schedule regression");
-    check(codec.bytes_per_vector()==69,"payload size regression");
-  }
+  if(d==512 && bits==512) check(codec.bytes_per_vector()==69,"payload size regression");
   const auto codes=codec.encode(docs.data(),n); const auto lut=codec.query(q.data()); std::vector<float> scalar(n),simd(n);
   codec.score(codes.data(),n,lut,scalar.data(),TieredQKernel::scalar);
   codec.save(prefix+".codec"); auto loaded=TieredQ::load(prefix+".codec");

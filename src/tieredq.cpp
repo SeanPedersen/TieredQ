@@ -418,21 +418,17 @@ TieredQ TieredQ::train(TieredQConfig config,const float* sample,size_t rows,uint
   c.levels_.resize(9); std::array<double,9> error{}; error[0]=1;
   for (unsigned b=1;b<=8;++b) { c.levels_[b]=tieredq_detail::gaussian_codebooks()[b]; error[b]=tieredq_detail::distortion(c.levels_[b]); }
   std::vector<unsigned> bits(d,0);
-  if (d==512 && config.code_bits==512) {
-    std::fill_n(bits.begin(),64,4); std::fill_n(bits.begin()+64,64,2); std::fill_n(bits.begin()+128,128,1);
-  } else {
-    struct Gain { double value; int rank; bool operator<(const Gain& b) const { return value<b.value || (value==b.value && rank>b.rank); } };
-    std::priority_queue<Gain> gains;
-    auto gain=[&](int rank) { unsigned b=bits[rank]; return std::max(0.0,eigenvalues[d-1-rank])*(error[b]-error[b+1]); };
-    for (int j=0;j<d;++j) gains.push({gain(j),j});
-    auto cap=[&](int rank) {
-      return uint32_t(rank)<config.wide_dims ? config.max_bits : std::min<uint32_t>(config.max_bits,6);
-    };
-    for (uint32_t used=0;used<config.code_bits;++used) {
-      if (gains.empty()) bad("code_bits exceeds the allocation cap");
-      int j=gains.top().rank; gains.pop(); ++bits[j];
-      if (bits[j]<cap(j)) gains.push({gain(j),j});
-    }
+  struct Gain { double value; int rank; bool operator<(const Gain& b) const { return value<b.value || (value==b.value && rank>b.rank); } };
+  std::priority_queue<Gain> gains;
+  auto gain=[&](int rank) { unsigned b=bits[rank]; return std::max(0.0,eigenvalues[d-1-rank])*(error[b]-error[b+1]); };
+  for (int j=0;j<d;++j) gains.push({gain(j),j});
+  auto cap=[&](int rank) {
+    return uint32_t(rank)<config.wide_dims ? config.max_bits : std::min<uint32_t>(config.max_bits,6);
+  };
+  for (uint32_t used=0;used<config.code_bits;++used) {
+    if (gains.empty()) bad("code_bits exceeds the allocation cap");
+    int j=gains.top().rank; gains.pop(); ++bits[j];
+    if (bits[j]<cap(j)) gains.push({gain(j),j});
   }
   profile.mark("bit_allocation");
   // Group equal precisions; retain source PCA ranks explicitly in the unrotated basis.
