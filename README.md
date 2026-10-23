@@ -2,6 +2,11 @@
 
 TieredQ is a new vector quantization algorithm that dynamically allocates bits per dimension, providing a very high recall compression ratio (compared to RaBitQ or TurboQuant). TieredQ centers and rotates vectors into a PCA basis, then greedily allocates 0–8 bits per dimension to reduce quantization error. Other ANN indexes can use the codec directly.
 
+TieredQ core steps:
+1. PCA
+2. Variance-aware greedy bit allocation per dimension (principal component)
+3. Scalar quantization per dimension with allocated bit budget
+
 ## Install
 
 Requires C++20, CMake, LAPACK/BLAS and OpenMP. On macOS, install `libomp` with
@@ -56,3 +61,9 @@ cmake --install build --prefix /desired/prefix
 Include `<tieredq/tieredq.h>`, use `find_package(TieredQ CONFIG REQUIRED)`, and
 link `TieredQ::TieredQ`. FetchContent also works. See [integration.md](integration.md)
 for layouts, threading, ownership and dependency setup.
+
+## Codec comparison benchmark
+
+See [benchmark/README.md](benchmark/README.md) for the one-command CPU comparison
+against official RaBitQ on SIFT1M, GloVe-200 and OpenAI3-1536, including measured
+storage overhead, recall, throughput and latency.
