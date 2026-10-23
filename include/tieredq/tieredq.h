@@ -92,6 +92,9 @@ class TieredQ {
   static bool kernel_available(TieredQKernel kernel);
   void save(const std::string& path) const;
   static TieredQ load(const std::string& path);
+  // Owned model bytes for embedding in an engine's storage container.
+  std::vector<uint8_t> serialize() const;
+  static TieredQ deserialize(const std::vector<uint8_t>& data);
  private:
   friend class TieredQIndex;
   TieredQ() = default;
@@ -111,8 +114,6 @@ class TieredQ {
   void encode_block(const float* rows, size_t count, uint8_t* out, float* corrections, tieredq_detail::StageProfile* profile = nullptr) const;
   void encode_rows(const float* rows, size_t count, uint8_t* out, float* corrections) const;
   void validate_model() const;
-  std::vector<uint8_t> serialize() const;
-  static TieredQ deserialize(const std::vector<uint8_t>& data);
 };
 class TieredQIndex {
  public:

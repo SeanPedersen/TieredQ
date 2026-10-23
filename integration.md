@@ -100,3 +100,17 @@ expected Gaussian quantization error, subject to the configured bit caps.
 The 512-dimensional, 512-code-bit configuration retains a fixed allocation:
 64 dimensions at 4 bits, 64 at 2 bits, 128 at 1 bit, and the rest uncoded.
 Optional rotations within equal-bit tiers follow PCA and bit allocation.
+
+## Engine containers and zvec IVF
+
+`TieredQ::serialize()` returns owned model bytes, and
+`TieredQ::deserialize(bytes)` validates and restores that model without temporary
+files. These are the same model bytes used by the file API; engine containers
+must checksum their complete model and payload. Neither method serializes index
+rows. Persist the trained model instead of retraining it when reopening an index.
+
+The zvec integration in its `src/core/algorithm/ivf_tieredq/` module uses this
+API to embed the model alongside inverted lists. It registers native
+`IvfTieredqBuilder` and `IvfTieredqStreamer` factories. Its initial scope is dense
+FP32 inner-product search, up to 256 lists, and read-only search after building.
+See that module's README for build flags, query controls, and focused tests.
