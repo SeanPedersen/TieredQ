@@ -133,7 +133,8 @@ def test_nonfinite_first_batch_leaves_index_untrained():
     assert len(index) == len(rows)
 
 
-def test_concurrent_search_and_append():
+@pytest.mark.parametrize("batch", [False, True])
+def test_concurrent_search_and_append(batch):
     rows = vectors()
     index = built(rows)
 
@@ -141,10 +142,33 @@ def test_concurrent_search_and_append():
         if task % 3 == 0:
             index.add(rows[:1])
             return
-        scores, ids = index.search(rows[0], k=10)
-        assert len(scores) == len(ids) == 10
+        queries = rows[:3] if batch else rows[0]
+        scores, ids = index.search(queries, k=10)
+        assert scores.shape == ids.shape == ((3, 10) if batch else (10,))
 
     tasks = list(range(24))
     with ThreadPoolExecutor(max_workers=4) as pool:
         list(pool.map(append_or_search, tasks))
     assert len(index) == len(rows) + sum(task % 3 == 0 for task in tasks)
+
+
+@pytest.mark.parametrize("k", [0, 1, 10, 200])
+def test_batch_search_matches_independent_queries(k):
+    rows = vectors()
+    index = built(rows)
+    queries = vectors(rows=19, seed=7)
+    scores, ids = index.search(queries, k=k)
+    for row, query in enumerate(queries):
+        expected_scores, expected_ids = index.search(query, k=k)
+        np.testing.assert_array_equal(scores[row], expected_scores)
+        np.testing.assert_array_equal(ids[row], expected_ids)
+
+
+def test_batch_search_propagates_worker_exceptions():
+    rows = vectors()
+    index = built(rows)
+    queries = vectors(rows=19)
+    queries[7, 0] = np.nan
+    with pytest.raises(RuntimeError, match="nonfinite"):
+        index.search(queries)
+    assert index.search(rows[0])[1][0] == 0

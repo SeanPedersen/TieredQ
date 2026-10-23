@@ -3,6 +3,7 @@
 // codec on that batch. Mutations and searches may run concurrently; the GIL
 // is released for every native call.
 #include "arrays.h"
+#include "search.h"
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/unique_ptr.h>
 #include <algorithm>
@@ -68,14 +69,8 @@ class PythonIndex {
     SearchResult result{std::vector<float>(array_elements(rows, found), 0.0f),
                         std::vector<uint32_t>(array_elements(rows, found), 0),
                         rank == 1 ? std::vector<size_t>{found} : std::vector<size_t>{rows, found}};
-    const float* data = queries.data();
-    for (size_t row = 0; row < rows; ++row) {
-      const auto hits = index.search(data + row * width, k);
-      for (size_t hit = 0; hit < hits.size(); ++hit) {
-        result.scores[row * found + hit] = hits[hit].score;
-        result.ids[row * found + hit] = hits[hit].id;
-      }
-    }
+    search_rows(index, queries.data(), rows, width, k,
+                result.scores.data(), result.ids.data());
     return result;
   }
   void save(const std::string& path) const {

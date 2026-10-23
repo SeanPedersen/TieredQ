@@ -67,3 +67,16 @@ Code and model formats are unchanged. Grouped sums can differ slightly from
 coordinate-by-coordinate FP32 accumulation; this backend adds no quantization.
 See the [ARM benchmark results](https://github.com/SeanPedersen/TieredQ/issues/3#issuecomment-6355240929)
 for reproduction and limitations.
+
+## Batch search throughput
+
+Python matrix queries run across OpenMP workers, with each worker searching one
+query at a time. Single-vector calls remain serial. Set `OMP_NUM_THREADS` before
+starting Python to control the worker limit; the useful count depends on CPU
+and memory bandwidth. Avoid multiplying that limit by application-level request
+concurrency. Results and score arithmetic match individual searches exactly.
+
+Issue [#5](https://github.com/SeanPedersen/TieredQ/issues/5) records the
+measured scaling and the reasoning behind this change. The C++
+`tieredq_scan_benchmark` separately measures query preparation, packed scans,
+and full-array top-k selection; index search instead maintains a bounded heap.
