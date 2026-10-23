@@ -7,6 +7,10 @@
 
 namespace dv::tieredq_detail {
 constexpr size_t neon_block_docs = 16;
+constexpr size_t neon_float_lanes = sizeof(float32x4_t)/sizeof(float);
+constexpr size_t neon_score_vectors = neon_block_docs/neon_float_lanes;
+constexpr int neon_byte_bits = 8;
+using NeonBlockScores = std::array<float32x4_t,neon_score_vectors>;
 
 inline float32x4_t neon_lookup(const float* table, uint32x4_t codes, uint32_t bits) {
   const uint8x16_t byte_offsets = {0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3};
@@ -22,12 +26,37 @@ inline float32x4_t neon_lookup(const float* table, uint32x4_t codes, uint32_t bi
   return vreinterpretq_f32_u8(values);
 }
 
+inline NeonBlockScores neon_half_plane(const uint8_t* block,size_t offset) {
+  const auto low=vld1q_u8(block+offset*neon_block_docs);
+  const auto high=vld1q_u8(block+(offset+1)*neon_block_docs);
+  const auto first=vreinterpretq_f16_u16(vorrq_u16(vmovl_u8(vget_low_u8(low)),vshll_n_u8(vget_low_u8(high),neon_byte_bits)));
+  const auto last=vreinterpretq_f16_u16(vorrq_u16(vmovl_u8(vget_high_u8(low)),vshll_n_u8(vget_high_u8(high),neon_byte_bits)));
+  return {vcvt_f32_f16(vget_low_f16(first)),vcvt_f32_f16(vget_high_f16(first)),
+          vcvt_f32_f16(vget_low_f16(last)),vcvt_f32_f16(vget_high_f16(last))};
+}
+
+// Value arguments keep accumulator storage from escaping the grouped scoring loop.
+inline void neon_finish(const uint8_t* block,const TieredQQuery& q,const Layout& layout,
+    uint32_t centroids,NeonBlockScores sums,float* scores) {
+  const auto* ids=block+layout.centroid_offset()*neon_block_docs;
+  if (vmaxvq_u8(vld1q_u8(ids))>=centroids) throw std::runtime_error("TieredQ: invalid centroid id");
+  const auto factors=neon_half_plane(block,layout.factor_offset());
+  const auto corrections=neon_half_plane(block,layout.correction_offset());
+  for (size_t lane=0;lane<sums.size();++lane) {
+    const auto* id=ids+lane*neon_float_lanes;
+    const float centers[neon_float_lanes]={q.centroid_scores[id[0]],q.centroid_scores[id[1]],q.centroid_scores[id[2]],q.centroid_scores[id[3]]};
+    const float weights[neon_float_lanes]={q.correction_weights[id[0]],q.correction_weights[id[1]],q.correction_weights[id[2]],q.correction_weights[id[3]]};
+    const auto corrected=vaddq_f32(vld1q_f32(centers),vmulq_f32(vld1q_f32(weights),corrections[lane]));
+    vst1q_f32(scores+lane*neon_float_lanes,vaddq_f32(corrected,vmulq_f32(factors[lane],sums[lane])));
+  }
+}
+
 inline size_t scan_neon(const uint8_t* payload,size_t count,size_t stride,
     const TieredQQuery& q,const Layout& layout,uint32_t centroids,float* scores) {
   size_t begin=0;
   for (;count-begin>=neon_block_docs;begin+=neon_block_docs) {
     const auto* block=payload+begin*stride;
-    float32x4_t sums[4]={vdupq_n_f32(0),vdupq_n_f32(0),vdupq_n_f32(0),vdupq_n_f32(0)};
+    NeonBlockScores sums={vdupq_n_f32(0),vdupq_n_f32(0),vdupq_n_f32(0),vdupq_n_f32(0)};
     for (const auto& group:q.scan_groups) {
       const size_t byte=group.bit_offset/8;
       const int shift=group.bit_offset%8;
@@ -53,17 +82,7 @@ inline size_t scan_neon(const uint8_t* payload,size_t count,size_t stride,
         sums[lane]=vaddq_f32(sums[lane],values);
       }
     }
-    float totals[neon_block_docs];
-    for (size_t lane=0;lane<4;++lane) vst1q_f32(totals+lane*4,sums[lane]);
-    for (size_t i=0;i<neon_block_docs;++i) {
-      const auto* doc=block+i;
-      const auto cid=doc[layout.centroid_offset()*neon_block_docs];
-      if (cid>=centroids) throw std::runtime_error("TieredQ: invalid centroid id");
-      float score=q.centroid_scores[cid];
-      score+=q.correction_weights[cid]*layout.correction(doc,neon_block_docs);
-      score+=layout.factor(doc,neon_block_docs)*totals[i];
-      scores[begin+i]=score;
-    }
+    neon_finish(block,q,layout,centroids,sums,scores+begin);
   }
   return begin;
 }

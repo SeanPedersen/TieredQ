@@ -28,7 +28,7 @@ target_compile_options(dv_tieredq PRIVATE -O3 -Wall -Wextra -Wno-misleading-inde
 target_link_libraries(dv_tieredq PUBLIC LAPACK::LAPACK OpenMP::OpenMP_CXX ${CMAKE_DL_LIBS})
 if(TIEREDQ_TESTS)
   enable_testing()
-  add_executable(test_tieredq tests/test_tieredq.cpp tests/test_tieredq_model.cpp tests/test_tieredq_encoder.cpp)
+  add_executable(test_tieredq tests/test_tieredq.cpp tests/test_tieredq_model.cpp tests/test_tieredq_encoder.cpp tests/test_tieredq_neon.cpp)
   target_include_directories(test_tieredq PRIVATE src)
   target_compile_options(test_tieredq PRIVATE -ffp-contract=off)
   target_link_libraries(test_tieredq PRIVATE TieredQ::TieredQ)

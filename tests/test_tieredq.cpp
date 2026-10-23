@@ -187,6 +187,7 @@ void reject_unsupported_format(const std::string& prefix) {
   check(read(prefix+".golden")==read(fixture.string()),"golden bytes changed");
 }
 void tieredq_model_tests(const std::string& prefix);
+void tieredq_neon_tests();
 int main() {
   auto dir=std::filesystem::temp_directory_path()/("tieredq_test_"+std::to_string(getpid())); std::filesystem::create_directory(dir);
   try {
@@ -197,6 +198,7 @@ int main() {
     auto prefix=(dir/"model").string();
     reject_unsupported_format(prefix);
     tieredq_model_tests(prefix);
+    tieredq_neon_tests();
     for (unsigned bits=1;bits<=8;++bits) wide_register_parity(bits);
     for(unsigned d:{1u,7u,65u,384u,511u,512u,768u,1024u,1536u}) exercise(d,std::min(257u,d*8),d<=65,prefix);
     for(unsigned bytes:{32u,48u,64u,96u,128u}) exercise(512,bytes*8,bytes==64,prefix);

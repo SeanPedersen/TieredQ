@@ -97,8 +97,10 @@ int main(int argc,char** argv) {
       preparation[mode].push_back(prep); scan[mode].push_back(scoring); selection[mode].push_back(select); total[mode].push_back(prep+scoring+select);
     }
     for (size_t mode=0;mode<2;++mode) std::cout<<(mode ? "automatic" : "scalar")
-      <<" prep_p50_ms="<<percentile(preparation[mode],0.5)<<" scan_p50_ms="<<percentile(scan[mode],0.5)
+      <<" prep_p50_ms="<<percentile(preparation[mode],0.5)<<" prep_p95_ms="<<percentile(preparation[mode],0.95)
+      <<" scan_p50_ms="<<percentile(scan[mode],0.5)
       <<" scan_p95_ms="<<percentile(scan[mode],0.95)<<" topk_p50_ms="<<percentile(selection[mode],0.5)
+      <<" topk_p95_ms="<<percentile(selection[mode],0.95)
       <<" total_p50_ms="<<percentile(total[mode],0.5)<<" total_p95_ms="<<percentile(total[mode],0.95)<<" checksum="<<checksum<<std::endl;
   }
 }
