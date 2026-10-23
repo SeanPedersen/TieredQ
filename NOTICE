@@ -5,3 +5,6 @@ random-distribution tables are included.
 
 LAPACK, BLAS and OpenMP implementations are supplied by the build environment
 under their respective licenses.
+
+Python bindings use nanobind (BSD-3-Clause) and its robin-map dependency (MIT).
+Their notices are in licenses/ and included in Python installations.

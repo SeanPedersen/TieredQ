@@ -71,3 +71,32 @@ without replacement. A seed reproduces results within a fixed toolchain and
 backend configuration. Standard-library distribution algorithms and BLAS may
 vary across platforms; cross-toolchain trained-model byte identity is not a
 contract. Persist models when sharing trained results between environments.
+
+## Python API
+
+TieredQIndex(dimensions, code_bits) is the only public class and the only
+configuration surface. The first non-empty add() trains the codec on that
+batch using min(256, rows // 2) centroids and seed 0, then stores the batch.
+It needs at least 2 rows; empty adds are no-ops. Later add(rows) calls only
+encode. len(index) reports the count, and search(queries, k=10) returns
+(scores, ids) as float32 and uint32 arrays. A 1-D query returns 1-D results; a
+2-D [queries, dimensions] array returns [queries, min(k, size)]. save(path)
+and TieredQIndex.load(path) persist the trained index.
+
+The advanced codec surface (encode/decode/score, Config, Query) is C++ only.
+Inputs must be CPU NumPy arrays of float32 with contiguous layout; read-only
+inputs are accepted. Shape/type errors raise exceptions; inputs are borrowed
+during calls and must not be mutated concurrently. Outputs own their buffers
+and remain valid after the index is released. Native work releases the GIL.
+The index serializes writes against readers and permits concurrent searches.
+
+For development: uv sync --python 3.12 --dev, then uv run pytest -q.
+Installation builds the extension locally; no package is published to PyPI.
+
+## Bit allocation
+
+The allocator ranks each extra bit by PCA variance times the reduction in
+expected Gaussian quantization error, subject to the configured bit caps.
+The 512-dimensional, 512-code-bit configuration retains a fixed allocation:
+64 dimensions at 4 bits, 64 at 2 bits, 128 at 1 bit, and the rest uncoded.
+Optional rotations within equal-bit tiers follow PCA and bit allocation.

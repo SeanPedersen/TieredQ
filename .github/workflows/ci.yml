@@ -1,4 +1,4 @@
-name: C++
+name: C++ and Python
 on: [push, pull_request]
 jobs:
   test:
@@ -18,5 +18,12 @@ jobs:
         env:
           OMP_NUM_THREADS: 2
       - run: ./build/tieredq_example
+        env:
+          OMP_NUM_THREADS: 2
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: '3.12'
+      - run: uv sync --dev
+      - run: uv run --no-sync pytest -q
         env:
           OMP_NUM_THREADS: 2

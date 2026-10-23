@@ -49,3 +49,7 @@ install(EXPORT TieredQTargets NAMESPACE TieredQ:: DESTINATION ${CMAKE_INSTALL_LI
 configure_package_config_file(cmake/TieredQConfig.cmake.in "${CMAKE_CURRENT_BINARY_DIR}/TieredQConfig.cmake" INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/TieredQ)
 write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/TieredQConfigVersion.cmake" VERSION ${PROJECT_VERSION} COMPATIBILITY SameMajorVersion)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/TieredQConfig.cmake" "${CMAKE_CURRENT_BINARY_DIR}/TieredQConfigVersion.cmake" DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/TieredQ)
+
+if(SKBUILD AND TIEREDQ_STANDALONE)
+  include(cmake/Python.cmake)
+endif()

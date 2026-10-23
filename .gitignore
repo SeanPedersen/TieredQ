@@ -1,2 +1,6 @@
 build/
 example.tq
+.venv/
+__pycache__/
+.pytest_cache/
+*.egg-info/
