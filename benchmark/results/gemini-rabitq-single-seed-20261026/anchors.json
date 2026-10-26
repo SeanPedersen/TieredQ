@@ -1,0 +1,44 @@
+[
+  {
+    "anchor_bits": 1,
+    "requested_code_bits": 768,
+    "build_s": 0.07605021307244897,
+    "encode_vps": 2405830.4499009866,
+    "storage": {
+      "disk_bytes": 10696368,
+      "resident_bytes": 10696368,
+      "serving_bytes": 10696368,
+      "bytes_per_vector": 108.04412121212121,
+      "file_sha256": "2e865b6c4842b3ad3ec297a8dd8a3ea98fa6ebeb5b2f026070c3d08d6e551485",
+      "storage_write_s": 0.0018536909483373165
+    }
+  },
+  {
+    "anchor_bits": 2,
+    "requested_code_bits": 1536,
+    "build_s": 1.1509833452291787,
+    "encode_vps": 87972.408255677,
+    "storage": {
+      "disk_bytes": 20992368,
+      "resident_bytes": 20992368,
+      "serving_bytes": 20992368,
+      "bytes_per_vector": 212.0441212121212,
+      "file_sha256": "7136d2274916d680a1a44995693577439a3dda861262003ebbc64b9a57c83568",
+      "storage_write_s": 0.0034577688202261925
+    }
+  },
+  {
+    "anchor_bits": 4,
+    "requested_code_bits": 3072,
+    "build_s": 2.0417081783525646,
+    "encode_vps": 49132.19096476458,
+    "storage": {
+      "disk_bytes": 40000368,
+      "resident_bytes": 40000368,
+      "serving_bytes": 40000368,
+      "bytes_per_vector": 404.04412121212124,
+      "file_sha256": "6ddc7588cfc03d7cc954bc0139b344fc1b4a85c33370c1aeef35230733410f9e",
+      "storage_write_s": 0.00640026805922389
+    }
+  }
+]

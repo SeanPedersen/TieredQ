@@ -1,0 +1,30 @@
+{
+  "status": "PASS",
+  "scheduling_rows": 36,
+  "primary_rows": 9,
+  "codecs": [
+    "rabitq",
+    "qdrant-turboquant-plus",
+    "tieredq-fast"
+  ],
+  "dataset_identity": true,
+  "split_disjoint": true,
+  "truth_hashes_equal": true,
+  "raw_predictions_reproduce_recall": true,
+  "raw_timings_reproduce_qps_and_latency": true,
+  "recall_variation_across_scheduling": false,
+  "storage_definition": "max(saved_bytes, resident_serving_bytes)",
+  "note": "Single seed and one run per codec; no statistical-confidence claims.",
+  "source_bundles": {
+    "qdrant-tieredq": {
+      "path": "/Users/Studio-MacMini/projects/TieredQ/benchmark/results/gemini-qdrant-turboquant-single-seed-20261026",
+      "results_sha256": "479f260e8cb22c5f46bb81375221b97e55145f7bac4306438e4023bc615d07b3",
+      "manifest_sha256": "88d1a7521ba34a8742da54d6916f66d17e83f7752e14f01a79f2707ee0083161"
+    },
+    "rabitq": {
+      "path": "/Users/Studio-MacMini/projects/TieredQ/benchmark/results/gemini-rabitq-single-seed-20261026",
+      "results_sha256": "9c81c0b9308b5a37295b95b10bc524c809e1ee6b200c6f9533778ec2a71126bd",
+      "manifest_sha256": "88d1a7521ba34a8742da54d6916f66d17e83f7752e14f01a79f2707ee0083161"
+    }
+  }
+}

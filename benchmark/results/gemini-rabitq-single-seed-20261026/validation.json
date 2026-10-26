@@ -1,0 +1,23 @@
+[
+  {
+    "label": "rabitq-1",
+    "query_count": 65,
+    "serial_batch_thread_ids_equal": true,
+    "reload_ids_equal": null,
+    "reload_note": "The existing flat RaBitQ adapter exposes storage bytes but no load path; predictions are not reload-tested."
+  },
+  {
+    "label": "rabitq-2",
+    "query_count": 65,
+    "serial_batch_thread_ids_equal": true,
+    "reload_ids_equal": null,
+    "reload_note": "The existing flat RaBitQ adapter exposes storage bytes but no load path; predictions are not reload-tested."
+  },
+  {
+    "label": "rabitq-4",
+    "query_count": 65,
+    "serial_batch_thread_ids_equal": true,
+    "reload_ids_equal": null,
+    "reload_note": "The existing flat RaBitQ adapter exposes storage bytes but no load path; predictions are not reload-tested."
+  }
+]

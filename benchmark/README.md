@@ -220,3 +220,20 @@ equal-memory summaries retain the earlier accounting and are labeled accordingly
 reports unchanged-budget RAM savings, separate disk/RAM allocation accounting for
 both codecs, and a seed-0 OpenAI comparison constrained by both storage budgets.
 The saved format and unchanged-budget disk sizes are preserved.
+
+## Gemini/DBpedia native TurboQuant experiment
+
+The focused [TurboQuant runner](turboquant/README.md) adds the pinned 100K, 768D
+Gemini dataset with 1,000 held-out document queries and Qdrant’s native calibrated
+1/2/4-bit implementation. The [single-seed measured bundle](results/gemini-qdrant-turboquant-single-seed-20261026/README.md)
+contains 24 scheduling rows, storage-only integer TieredQ calibration, provenance,
+raw predictions/timings, validation, audit and figures. The earlier datasets and
+RaBitQ runner remain separate.
+
+`run_rabitq_gemini.py` then measures the repository's normal flat RaBitQ adapter on
+the same prepared Gemini arrays at the nominal 1/2/4-bit anchors. The
+[RaBitQ bundle](results/gemini-rabitq-single-seed-20261026/README.md) contains its
+12 scheduling rows and raw artifacts. `compare_gemini_three_codecs.py` merges both
+bundles into the audited [three-codec comparison](results/gemini-three-codec-single-seed-20261026/README.md),
+including a storage caveat: RaBitQ uses 3.0–5.9% more bytes/vector than the Qdrant
+anchors, so its nominal-bit points are not strictly equal-storage comparisons.

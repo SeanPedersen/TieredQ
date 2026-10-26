@@ -1,0 +1,12 @@
+{
+  "measurement_host": "hartmut",
+  "source_bundles": {
+    "qdrant-tieredq": "../gemini-qdrant-turboquant-single-seed-20261026",
+    "rabitq": "../gemini-rabitq-single-seed-20261026"
+  },
+  "dataset_revision": "e14a0f193988e9efb7ccc57b4c615418e6540f62",
+  "seed": 0,
+  "cpu_affinity": [0, 1, 2, 3, 4, 5, 6, 7],
+  "runs_were_interleaved": false,
+  "no_commit": true
+}

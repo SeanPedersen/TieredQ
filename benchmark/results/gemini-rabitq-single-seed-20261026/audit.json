@@ -1,0 +1,35 @@
+{
+  "status": "PASS",
+  "scheduling_rows": 12,
+  "unique_codec_anchor_pairs": 3,
+  "finite_timings": true,
+  "dataset_identity": true,
+  "disjoint_split": true,
+  "native_validation": [
+    {
+      "label": "rabitq-1",
+      "query_count": 65,
+      "serial_batch_thread_ids_equal": true,
+      "reload_ids_equal": null,
+      "reload_note": "The existing flat RaBitQ adapter exposes storage bytes but no load path; predictions are not reload-tested."
+    },
+    {
+      "label": "rabitq-2",
+      "query_count": 65,
+      "serial_batch_thread_ids_equal": true,
+      "reload_ids_equal": null,
+      "reload_note": "The existing flat RaBitQ adapter exposes storage bytes but no load path; predictions are not reload-tested."
+    },
+    {
+      "label": "rabitq-4",
+      "query_count": 65,
+      "serial_batch_thread_ids_equal": true,
+      "reload_ids_equal": null,
+      "reload_note": "The existing flat RaBitQ adapter exposes storage bytes but no load path; predictions are not reload-tested."
+    }
+  ],
+  "serial_batch_thread_prediction_equality": true,
+  "recall_variation_across_scheduling": false,
+  "reload_validation": false,
+  "note": "One seed and one run; no statistical-confidence claims. Reload is not exposed by the existing flat RaBitQ adapter."
+}
