@@ -1,0 +1,44 @@
+{
+  "code_bits": 2048,
+  "build_s": 14.528734895866364,
+  "encode_s": 1.143425075,
+  "allocation": {
+    "model": {
+      "object": 232,
+      "basis": 6494208,
+      "centroids": 1572864,
+      "mean": 4228,
+      "sigma": 4228,
+      "tiers": 80,
+      "half_norms": 1024,
+      "scan_plan": 28672,
+      "codebooks": 2424,
+      "lazy_encoder_object": 96
+    },
+    "cache": {
+      "object": 256,
+      "levels_or_packed_codes": 0,
+      "factor": 400384,
+      "correction": 400384,
+      "centroid_ids": 100096,
+      "code_offsets": 0,
+      "tier_of": 0,
+      "level_scale": 0,
+      "codebooks": 0,
+      "lookup_object": 128,
+      "lookup_projection": 9732096,
+      "lookup_groups": 16384,
+      "lookup_codes": 28126976,
+      "lookup_codebooks": 2256
+    },
+    "cache_total": 38778960,
+    "model_total": 8108056,
+    "serialized_bytes": 37105752,
+    "count": 100000,
+    "padded_count": 100096,
+    "vector_bytes": 290,
+    "resident_bytes": 46887016
+  },
+  "ids_sha256": "defdb18cab00402fa4e9a96f14317d9fccef7589eeba180b6b2f384875ff47e5",
+  "bytes_per_vector": 468.87016
+}

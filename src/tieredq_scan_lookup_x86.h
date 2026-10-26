@@ -64,8 +64,8 @@ inline std::shared_ptr<FastScanCache> build_fast_lookup_cache(
   cache->lookup=std::move(lookup);
   return cache;
 }
-inline FastScanLookupQuery prepare_fast_lookup_query(const FastScanLookupCache& cache,const float* vector) {
-  const auto output=project_fast_query(cache.projection,vector);
+inline FastScanLookupQuery prepare_fast_lookup_query(const FastScanLookupCache& cache,const float* vector,FastQueryBasis source) {
+  const auto output=project_fast_query(cache.projection,vector,source);
   const size_t m=cache.projection.weights,k=cache.projection.centroids;
   FastScanLookupQuery query;
   query.centroid_scores.assign(output.begin()+m,output.begin()+m+k);

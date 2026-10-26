@@ -15,7 +15,7 @@ struct FastScanScalarQuery {
 inline FastScanScalarQuery fast_scan_query_scalar(const FastScanCache& cache,const TieredQ& codec,const float* vector) {
   FastScanScalarQuery result;
   if (cache.code_lookup()) { result.codes=codec.query_weights(vector); return result; }
-  if (cache.lookup) { result.lookup=prepare_fast_lookup_query(*cache.lookup,vector); return result; }
+  if (cache.lookup) { result.lookup=prepare_fast_lookup_query(*cache.lookup,vector,FastQueryBasis::from(codec)); return result; }
   const auto query=codec.query_weights(vector);
   float peak=0;
   for (size_t rank=0;rank<cache.dimensions;++rank)

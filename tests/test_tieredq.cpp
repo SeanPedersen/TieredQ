@@ -267,6 +267,7 @@ void fast_scan_test(unsigned code_bits=384,unsigned max_bits=8) {
 }
 void tieredq_model_tests(const std::string& prefix);
 void tieredq_neon_tests();
+void tieredq_projection_tests();
 void tieredq_lookup_tests();
 void tieredq_search_tests();
 void tieredq_fast_mode_tests();
@@ -285,6 +286,7 @@ int main() {
     tieredq_fast_mode_tests();
     fast_scan_test();
     fast_scan_test(128,4);
+    tieredq_projection_tests();
     tieredq_lookup_tests();
     for (unsigned bits=1;bits<=8;++bits) wide_register_parity(bits);
     for(unsigned d:{1u,7u,65u,384u,511u,512u,768u,1024u,1536u}) exercise(d,std::min(257u,d*8),d<=65,prefix);

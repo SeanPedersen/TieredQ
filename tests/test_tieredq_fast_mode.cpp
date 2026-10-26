@@ -34,7 +34,18 @@ void ownership_test(uint32_t bits) {
   require(moved.fast_mode() && moved.size()==rows+append_rows && copy.size()==0,"move lost fast-only state");
   moved.save(path.string());
   auto loaded=dv::TieredQIndex::load(path.string());
+  const auto moved_hits=moved.search(data.data(),k);
+  const auto loaded_hits=loaded.search(data.data(),k);
+  for (size_t i=0;i<k;++i)
+    require(loaded_hits[i].id==moved_hits[i].id && loaded_hits[i].score==moved_hits[i].score,
+        "reload changes fast-only scores");
   loaded.add(data.data(),append_rows);
+  moved.add(data.data(),append_rows);
+  const auto appended=moved.search(data.data(),k);
+  const auto reloaded_append=loaded.search(data.data(),k);
+  for (size_t i=0;i<k;++i)
+    require(reloaded_append[i].id==appended[i].id && reloaded_append[i].score==appended[i].score,
+        "append after reload changes fast-only scores");
   require(loaded.fast_mode() && loaded.size()==rows+2*append_rows,"loaded fast-only index cannot append");
   std::filesystem::remove(path);
 }

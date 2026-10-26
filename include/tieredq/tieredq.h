@@ -10,7 +10,7 @@
 #include "tieredq/detail/tieredq_scan_plan.h"
 
 namespace dv {
-namespace tieredq_detail { class StageProfile; struct FastScanCache; struct EncoderData; class LazyEncoder; }
+namespace tieredq_detail { class StageProfile; struct FastScanCache; struct FastQueryBasis; struct EncoderData; class LazyEncoder; }
 enum class TieredQKernel { automatic, scalar, avx2, avx512, neon };
 struct TieredQConfig {
   uint32_t dimensions = 512;
@@ -111,6 +111,7 @@ class TieredQ {
   static TieredQ deserialize(const std::vector<uint8_t>& data);
  private:
   friend class TieredQIndex;
+  friend struct tieredq_detail::FastQueryBasis;
   TieredQ() = default;
   TieredQConfig config_;
   std::vector<TieredQTier> tiers_;

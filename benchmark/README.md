@@ -215,3 +215,8 @@ Historical performance measurements remain separate.
 [Corrected full-dataset serving-memory results](results/issue12-recall/storage-refresh/README.md)
 cover the eleven reported configurations at seeds 0/1/2. Historical figures and
 equal-memory summaries retain the earlier accounting and are labeled accordingly.
+
+[Compact narrow fast-query projection](results/serving-memory-20261026/README.md)
+reports unchanged-budget RAM savings, separate disk/RAM allocation accounting for
+both codecs, and a seed-0 OpenAI comparison constrained by both storage budgets.
+The saved format and unchanged-budget disk sizes are preserved.

@@ -260,3 +260,12 @@ unchanged; OpenAI 2/3-bit now measure 493.905/695.553 B/vector. See the refreshe
 table for per-seed diagnostics and all eleven configurations. Other points in
 the historical 1–8-bit curves were not remeasured, and their equal-memory
 summaries remain historical.
+
+## Narrow-query projection memory
+
+The narrow x86 lookup cache now regenerates scaled basis coefficients from the
+existing model, retaining only its centroid panels. Ordered FP32 query results
+and persisted bytes are unchanged; packed threshold-5 paths are unaffected.
+[Full allocation, disk/RAM and performance evidence](../benchmark/results/serving-memory-20261026/README.md)
+separates unchanged-budget memory savings from larger-code recall improvements
+and reports the measured query-time tradeoff.

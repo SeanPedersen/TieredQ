@@ -1,0 +1,25 @@
+{
+  "status": "pass",
+  "unchanged_budget_count": 7,
+  "identical_persisted_indexes": 7,
+  "identical_full_query_id_arrays": 3,
+  "primary_saved_bytes": 5701632,
+  "quality_budget": 1920,
+  "quality_bytes": 381.83136,
+  "quality_recall": 0.9121000000000001,
+  "dual_budget_code_bits": 2048,
+  "dual_budget_memory": {
+    "ram_components": {
+      "model": 8108056,
+      "cache": 32192592,
+      "index_object_excluding_embedded_codec": 56
+    },
+    "ram_bytes": 40300704,
+    "disk_bytes": 37105752,
+    "count": 100000,
+    "disk_bits_per_vector": 2968.46016,
+    "ram_bits_per_vector": 3224.05632
+  },
+  "dual_budget_recall": 0.9192000000000001,
+  "rabitq_recall": 0.9041000000000001
+}

@@ -51,7 +51,7 @@ inline FastScanQueryX86 fast_scan_query_x86(const FastScanCache& cache,
     const TieredQ& codec,const float* vector) {
   if (!cache.lookup) return fast_scan_query_x86(cache,codec.query_weights(vector));
   FastScanQueryX86 query;
-  query.lookup=prepare_fast_lookup_query(*cache.lookup,vector);
+  query.lookup=prepare_fast_lookup_query(*cache.lookup,vector,FastQueryBasis::from(codec));
   return query;
 }
 

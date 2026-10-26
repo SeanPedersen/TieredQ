@@ -1,0 +1,53 @@
+Start testing: Oct 26 15:11 CET
+----------------------------------------------------------
+1/2 Testing: tieredq
+1/2 Test: tieredq
+Command: "/tmp/tieredq-memory-local/test_tieredq"
+Directory: /tmp/tieredq-memory-local
+"tieredq" start time: Oct 26 15:11 CET
+Output:
+----------------------------------------------------------
+PASS D=1 bits=8 rotate=1
+PASS D=7 bits=56 rotate=1
+PASS D=65 bits=257 rotate=1
+PASS D=384 bits=257 rotate=0
+PASS D=511 bits=257 rotate=0
+PASS D=512 bits=257 rotate=0
+PASS D=768 bits=257 rotate=0
+PASS D=1024 bits=257 rotate=0
+PASS D=1536 bits=257 rotate=0
+PASS D=512 bits=256 rotate=0
+PASS D=512 bits=384 rotate=0
+PASS D=512 bits=512 rotate=1
+PASS D=512 bits=768 rotate=0
+PASS D=512 bits=1024 rotate=0
+PASS D=768 bits=512 rotate=1
+PASS D=768 bits=1024 rotate=0
+PASS D=7 bits=1 rotate=1
+PASS D=7 bits=56 rotate=0
+OK
+<end of output>
+Test time =  11.26 sec
+----------------------------------------------------------
+Test Passed.
+"tieredq" end time: Oct 26 15:11 CET
+"tieredq" time elapsed: 00:00:11
+----------------------------------------------------------
+
+2/2 Testing: training_rng
+2/2 Test: training_rng
+Command: "/tmp/tieredq-memory-local/test_training_rng"
+Directory: /tmp/tieredq-memory-local
+"training_rng" start time: Oct 26 15:11 CET
+Output:
+----------------------------------------------------------
+PASS training RNG
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"training_rng" end time: Oct 26 15:11 CET
+"training_rng" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Oct 26 15:11 CET

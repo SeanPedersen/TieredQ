@@ -1,0 +1,284 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 5958d87..3356a02 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -28,7 +28,7 @@ target_compile_options(dv_tieredq PRIVATE -O3 -Wall -Wextra -Wno-misleading-inde
+ target_link_libraries(dv_tieredq PUBLIC LAPACK::LAPACK OpenMP::OpenMP_CXX ${CMAKE_DL_LIBS})
+ if(TIEREDQ_TESTS)
+   enable_testing()
+-  add_executable(test_tieredq tests/test_tieredq.cpp tests/test_tieredq_model.cpp tests/test_tieredq_encoder.cpp tests/test_tieredq_neon.cpp tests/test_tieredq_lookup.cpp tests/test_tieredq_search.cpp tests/test_tieredq_fast_mode.cpp)
++  add_executable(test_tieredq tests/test_tieredq.cpp tests/test_tieredq_model.cpp tests/test_tieredq_encoder.cpp tests/test_tieredq_neon.cpp tests/test_tieredq_lookup.cpp tests/test_tieredq_projection.cpp tests/test_tieredq_search.cpp tests/test_tieredq_fast_mode.cpp)
+   target_include_directories(test_tieredq PRIVATE src)
+   target_compile_options(test_tieredq PRIVATE -ffp-contract=off)
+   target_link_libraries(test_tieredq PRIVATE TieredQ::TieredQ)
+diff --git a/benchmark/README.md b/benchmark/README.md
+index 2058efd..6b746e2 100644
+--- a/benchmark/README.md
++++ b/benchmark/README.md
+@@ -215,3 +215,8 @@ Historical performance measurements remain separate.
+ [Corrected full-dataset serving-memory results](results/issue12-recall/storage-refresh/README.md)
+ cover the eleven reported configurations at seeds 0/1/2. Historical figures and
+ equal-memory summaries retain the earlier accounting and are labeled accordingly.
++
++[Compact narrow fast-query projection](results/serving-memory-20261026/README.md)
++reports unchanged-budget RAM savings, separate disk/RAM allocation accounting for
++both codecs, and a seed-0 OpenAI comparison constrained by both storage budgets.
++The saved format and unchanged-budget disk sizes are preserved.
+diff --git a/docs/high-bit-recall.md b/docs/high-bit-recall.md
+index a564935..8f748ae 100644
+--- a/docs/high-bit-recall.md
++++ b/docs/high-bit-recall.md
+@@ -260,3 +260,12 @@ unchanged; OpenAI 2/3-bit now measure 493.905/695.553 B/vector. See the refreshe
+ table for per-seed diagnostics and all eleven configurations. Other points in
+ the historical 1–8-bit curves were not remeasured, and their equal-memory
+ summaries remain historical.
++
++## Narrow-query projection memory
++
++The narrow x86 lookup cache now regenerates scaled basis coefficients from the
++existing model, retaining only its centroid panels. Ordered FP32 query results
++and persisted bytes are unchanged; packed threshold-5 paths are unaffected.
++[Full allocation, disk/RAM and performance evidence](../benchmark/results/serving-memory-20261026/README.md)
++separates unchanged-budget memory savings from larger-code recall improvements
++and reports the measured query-time tradeoff.
+diff --git a/include/tieredq/tieredq.h b/include/tieredq/tieredq.h
+index e0309d4..b22d738 100644
+--- a/include/tieredq/tieredq.h
++++ b/include/tieredq/tieredq.h
+@@ -10,7 +10,7 @@
+ #include "tieredq/detail/tieredq_scan_plan.h"
+ 
+ namespace dv {
+-namespace tieredq_detail { class StageProfile; struct FastScanCache; struct EncoderData; class LazyEncoder; }
++namespace tieredq_detail { class StageProfile; struct FastScanCache; struct FastQueryBasis; struct EncoderData; class LazyEncoder; }
+ enum class TieredQKernel { automatic, scalar, avx2, avx512, neon };
+ struct TieredQConfig {
+   uint32_t dimensions = 512;
+@@ -111,6 +111,7 @@ class TieredQ {
+   static TieredQ deserialize(const std::vector<uint8_t>& data);
+  private:
+   friend class TieredQIndex;
++  friend struct tieredq_detail::FastQueryBasis;
+   TieredQ() = default;
+   TieredQConfig config_;
+   std::vector<TieredQTier> tiers_;
+diff --git a/src/tieredq_query_projection_x86.h b/src/tieredq_query_projection_x86.h
+index 99de6e1..0f091f3 100644
+--- a/src/tieredq_query_projection_x86.h
++++ b/src/tieredq_query_projection_x86.h
+@@ -1,7 +1,8 @@
+-// In-memory linear map from query coordinates to weights and centroid terms for approximate scans.
++// Compact centroid map and regenerated weight coefficients for narrow approximate scans.
+ // Output panels keep each reduction ordered while vectorizing independent outputs.
+ // Folding constants changes FP32 rounding, so this map is confined to approximate scans.
+ #pragma once
++#include "tieredq/tieredq.h"
+ #include <algorithm>
+ #include <cmath>
+ #if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
+@@ -12,6 +13,12 @@
+ 
+ namespace dv::tieredq_detail {
+ constexpr size_t query_projection_lanes = 16;
++// Borrow only for a query call: caches may outlive, move or copy their model.
++struct FastQueryBasis {
++  const std::vector<float>& basis;
++  const std::vector<float>& sigma;
++  static FastQueryBasis from(const TieredQ& codec) { return {codec.basis_,codec.sigma_}; }
++};
+ struct FastQueryProjection {
+   size_t dimensions = 0, weights = 0, centroids = 0, width = 0;
+   std::vector<float> panels;
+@@ -23,7 +30,7 @@ inline FastQueryProjection build_fast_query_projection(size_t dimensions,
+     const std::vector<float>& half_norms) {
+   FastQueryProjection map;
+   map.dimensions=dimensions; map.weights=sigma.size(); map.centroids=half_norms.size();
+-  const size_t outputs=map.weights+2*map.centroids;
++  const size_t outputs=2*map.centroids;
+   map.width=(outputs+query_projection_lanes-1)/query_projection_lanes*query_projection_lanes;
+   map.panels.assign(dimensions*map.width,0);
+   for (size_t i=0;i<dimensions;++i) {
+@@ -31,10 +38,9 @@ inline FastQueryProjection build_fast_query_projection(size_t dimensions,
+     for (size_t r=0;r<map.weights;++r) correction+=basis[i*map.weights+r]*mean[r];
+     for (size_t col=0;col<outputs;++col) {
+       float value;
+-      if (col<map.weights) value=basis[i*map.weights+col]*sigma[col];
+-      else if (col<map.weights+map.centroids) value=centroids[(col-map.weights)*dimensions+i]+correction;
++      if (col<map.centroids) value=centroids[col*dimensions+i]+correction;
+       else {
+-        const size_t cid=col-map.weights-map.centroids;
++        const size_t cid=col-map.centroids;
+         const float norm=2*half_norms[cid];
+         value=norm>0 ? centroids[cid*dimensions+i]/norm : 0;
+       }
+@@ -81,7 +87,7 @@ inline std::vector<float> project_fast_query_avx512(const FastQueryProjection& m
+   return output;
+ }
+ #endif
+-inline std::vector<float> project_fast_query(const FastQueryProjection& map,const float* vector) {
++inline std::vector<float> project_fast_centroids(const FastQueryProjection& map,const float* vector) {
+ #if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
+   if (__builtin_cpu_supports("avx512f")) return project_fast_query_avx512(map,vector);
+   if (__builtin_cpu_supports("avx2")) return project_fast_query_avx2(map,vector);
+@@ -92,4 +98,53 @@ inline std::vector<float> project_fast_query(const FastQueryProjection& map,cons
+     output[col]+=vector[i]*map.panels[(col/query_projection_lanes*map.dimensions+i)*query_projection_lanes+col%query_projection_lanes];
+   return output;
+ }
++// Regenerate basis*sigma before multiplying by the query, preserving the old FP32 rounding.
++// Basis rows are contiguous; vectorizing ranks avoids a second dense serving matrix.
++#if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
++__attribute__((target("avx2")))
++inline void project_fast_weights_avx2(const FastQueryProjection& map,const float* vector,
++    FastQueryBasis source,float* output) {
++  constexpr size_t lanes=8;
++  for (size_t i=0;i<map.dimensions;++i) {
++    const auto query=_mm256_set1_ps(vector[i]);
++    size_t rank=0;
++    for (;rank+lanes<=map.weights;rank+=lanes) {
++      const auto coefficient=_mm256_mul_ps(_mm256_loadu_ps(source.basis.data()+i*map.weights+rank),
++          _mm256_loadu_ps(source.sigma.data()+rank));
++      const auto sum=_mm256_add_ps(_mm256_loadu_ps(output+rank),_mm256_mul_ps(query,coefficient));
++      _mm256_storeu_ps(output+rank,sum);
++    }
++    for (;rank<map.weights;++rank)
++      output[rank]+=vector[i]*(source.basis[i*map.weights+rank]*source.sigma[rank]);
++  }
++}
++__attribute__((target("avx512f")))
++inline void project_fast_weights_avx512(const FastQueryProjection& map,const float* vector,
++    FastQueryBasis source,float* output) {
++  constexpr size_t lanes=16;
++  for (size_t i=0;i<map.dimensions;++i) {
++    const auto query=_mm512_set1_ps(vector[i]);
++    for (size_t rank=0;rank<map.weights;rank+=lanes) {
++      const auto mask=__mmask16((1u<<std::min(lanes,map.weights-rank))-1);
++      const auto coefficient=_mm512_mul_ps(_mm512_maskz_loadu_ps(mask,source.basis.data()+i*map.weights+rank),
++          _mm512_maskz_loadu_ps(mask,source.sigma.data()+rank));
++      const auto sum=_mm512_add_ps(_mm512_maskz_loadu_ps(mask,output+rank),_mm512_mul_ps(query,coefficient));
++      _mm512_mask_storeu_ps(output+rank,mask,sum);
++    }
++  }
++}
++#endif
++inline std::vector<float> project_fast_query(const FastQueryProjection& map,const float* vector,FastQueryBasis source) {
++  auto centers=project_fast_centroids(map,vector);
++  std::vector<float> output(map.weights+centers.size(),0);
++  std::copy(centers.begin(),centers.end(),output.begin()+map.weights);
++#if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
++  if (__builtin_cpu_supports("avx512f")) project_fast_weights_avx512(map,vector,source,output.data());
++  else if (__builtin_cpu_supports("avx2")) project_fast_weights_avx2(map,vector,source,output.data());
++  else
++#endif
++  for (size_t i=0;i<map.dimensions;++i) for (size_t rank=0;rank<map.weights;++rank)
++    output[rank]+=vector[i]*(source.basis[i*map.weights+rank]*source.sigma[rank]);
++  return output;
++}
+ } // namespace dv::tieredq_detail
+diff --git a/src/tieredq_scan_fast_scalar.h b/src/tieredq_scan_fast_scalar.h
+index e7e7243..3ff4792 100644
+--- a/src/tieredq_scan_fast_scalar.h
++++ b/src/tieredq_scan_fast_scalar.h
+@@ -15,7 +15,7 @@ struct FastScanScalarQuery {
+ inline FastScanScalarQuery fast_scan_query_scalar(const FastScanCache& cache,const TieredQ& codec,const float* vector) {
+   FastScanScalarQuery result;
+   if (cache.code_lookup()) { result.codes=codec.query_weights(vector); return result; }
+-  if (cache.lookup) { result.lookup=prepare_fast_lookup_query(*cache.lookup,vector); return result; }
++  if (cache.lookup) { result.lookup=prepare_fast_lookup_query(*cache.lookup,vector,FastQueryBasis::from(codec)); return result; }
+   const auto query=codec.query_weights(vector);
+   float peak=0;
+   for (size_t rank=0;rank<cache.dimensions;++rank)
+diff --git a/src/tieredq_scan_lookup_x86.h b/src/tieredq_scan_lookup_x86.h
+index 965cbc0..8409a83 100644
+--- a/src/tieredq_scan_lookup_x86.h
++++ b/src/tieredq_scan_lookup_x86.h
+@@ -64,8 +64,8 @@ inline std::shared_ptr<FastScanCache> build_fast_lookup_cache(
+   cache->lookup=std::move(lookup);
+   return cache;
+ }
+-inline FastScanLookupQuery prepare_fast_lookup_query(const FastScanLookupCache& cache,const float* vector) {
+-  const auto output=project_fast_query(cache.projection,vector);
++inline FastScanLookupQuery prepare_fast_lookup_query(const FastScanLookupCache& cache,const float* vector,FastQueryBasis source) {
++  const auto output=project_fast_query(cache.projection,vector,source);
+   const size_t m=cache.projection.weights,k=cache.projection.centroids;
+   FastScanLookupQuery query;
+   query.centroid_scores.assign(output.begin()+m,output.begin()+m+k);
+diff --git a/src/tieredq_scan_query_x86.h b/src/tieredq_scan_query_x86.h
+index 20dcfd2..fb40ee6 100644
+--- a/src/tieredq_scan_query_x86.h
++++ b/src/tieredq_scan_query_x86.h
+@@ -51,7 +51,7 @@ inline FastScanQueryX86 fast_scan_query_x86(const FastScanCache& cache,
+     const TieredQ& codec,const float* vector) {
+   if (!cache.lookup) return fast_scan_query_x86(cache,codec.query_weights(vector));
+   FastScanQueryX86 query;
+-  query.lookup=prepare_fast_lookup_query(*cache.lookup,vector);
++  query.lookup=prepare_fast_lookup_query(*cache.lookup,vector,FastQueryBasis::from(codec));
+   return query;
+ }
+ 
+diff --git a/tests/test_tieredq.cpp b/tests/test_tieredq.cpp
+index df29f85..b04d7d4 100644
+--- a/tests/test_tieredq.cpp
++++ b/tests/test_tieredq.cpp
+@@ -267,6 +267,7 @@ void fast_scan_test(unsigned code_bits=384,unsigned max_bits=8) {
+ }
+ void tieredq_model_tests(const std::string& prefix);
+ void tieredq_neon_tests();
++void tieredq_projection_tests();
+ void tieredq_lookup_tests();
+ void tieredq_search_tests();
+ void tieredq_fast_mode_tests();
+@@ -285,6 +286,7 @@ int main() {
+     tieredq_fast_mode_tests();
+     fast_scan_test();
+     fast_scan_test(128,4);
++    tieredq_projection_tests();
+     tieredq_lookup_tests();
+     for (unsigned bits=1;bits<=8;++bits) wide_register_parity(bits);
+     for(unsigned d:{1u,7u,65u,384u,511u,512u,768u,1024u,1536u}) exercise(d,std::min(257u,d*8),d<=65,prefix);
+diff --git a/tests/test_tieredq_fast_mode.cpp b/tests/test_tieredq_fast_mode.cpp
+index 18f1fdb..259773a 100644
+--- a/tests/test_tieredq_fast_mode.cpp
++++ b/tests/test_tieredq_fast_mode.cpp
+@@ -34,7 +34,18 @@ void ownership_test(uint32_t bits) {
+   require(moved.fast_mode() && moved.size()==rows+append_rows && copy.size()==0,"move lost fast-only state");
+   moved.save(path.string());
+   auto loaded=dv::TieredQIndex::load(path.string());
++  const auto moved_hits=moved.search(data.data(),k);
++  const auto loaded_hits=loaded.search(data.data(),k);
++  for (size_t i=0;i<k;++i)
++    require(loaded_hits[i].id==moved_hits[i].id && loaded_hits[i].score==moved_hits[i].score,
++        "reload changes fast-only scores");
+   loaded.add(data.data(),append_rows);
++  moved.add(data.data(),append_rows);
++  const auto appended=moved.search(data.data(),k);
++  const auto reloaded_append=loaded.search(data.data(),k);
++  for (size_t i=0;i<k;++i)
++    require(reloaded_append[i].id==appended[i].id && reloaded_append[i].score==appended[i].score,
++        "append after reload changes fast-only scores");
+   require(loaded.fast_mode() && loaded.size()==rows+2*append_rows,"loaded fast-only index cannot append");
+   std::filesystem::remove(path);
+ }
+diff --git a/tests/test_tieredq_lookup.cpp b/tests/test_tieredq_lookup.cpp
+index ecad1da..f9f4a40 100644
+--- a/tests/test_tieredq_lookup.cpp
++++ b/tests/test_tieredq_lookup.cpp
+@@ -88,8 +88,8 @@ void lookup_kernel_test(size_t count,bool avx512) {
+   }
+   const auto cache=build_fast_lookup_cache(levels,tiers,map,count,stride,code_bytes,centroids,rows.data());
+   const std::vector<float> input{.3f,-.7f,.1f,.2f};
+-  auto query=prepare_fast_lookup_query(*cache->lookup,input.data());
+-  const auto output=project_fast_query(map,input.data());
++  auto query=prepare_fast_lookup_query(*cache->lookup,input.data(),{basis,sigma});
++  const auto output=project_fast_query(map,input.data(),{basis,sigma});
+   for (size_t r=0;r<weights;++r) {
+     float expected=0; for (size_t i=0;i<dimensions;++i) expected+=input[i]*basis[i*weights+r];
+     require(std::fabs(output[r]-expected*sigma[r])<1e-5f,"fast query projection differs");
+@@ -154,7 +154,7 @@ void lookup_kernel_test(size_t count,bool avx512) {
+   }
+ 
+   const std::vector<float> zero(dimensions);
+-  const auto zero_query=prepare_fast_lookup_query(*cache->lookup,zero.data());
++  const auto zero_query=prepare_fast_lookup_query(*cache->lookup,zero.data(),{basis,sigma});
+   scan(zero_query,0,count,scores.data());
+   require(std::all_of(scores.begin(),scores.begin()+count,[](float x){return x==0;}),"zero byte-table query differs");
+ }

@@ -1,0 +1,810 @@
+{
+  "variant": "before",
+  "affinity": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "seed": 0,
+  "queries": 1000,
+  "warmups": 3,
+  "repeats": 3,
+  "compiler_commands": [
+    {
+      "file": "/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/before/benchmark/native/module.cpp",
+      "arguments": [
+        "/usr/bin/c++",
+        "-DBENCH_FULL_SCORE=0",
+        "-Dcodec_native_EXPORTS",
+        "-I/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/before/benchmark/.deps/rabitq-native/include",
+        "-I/home/sean/.local/share/uv/python/cpython-3.12-linux-x86_64-gnu/include/python3.12",
+        "-I/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/before/benchmark/.venv/lib/python3.12/site-packages/nanobind/include",
+        "-I/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/before/include",
+        "-O3",
+        "-DNDEBUG",
+        "-std=gnu++20",
+        "-fPIC",
+        "-fvisibility=hidden",
+        "-O3",
+        "-march=native",
+        "-ffp-contract=off",
+        "-fno-stack-protector",
+        "-ffunction-sections",
+        "-fdata-sections",
+        "-fopenmp",
+        "-o",
+        "CMakeFiles/codec_native.dir/module.cpp.o",
+        "-c",
+        "/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/before/benchmark/native/module.cpp"
+      ],
+      "effective_optimization": "-O3"
+    },
+    {
+      "file": "/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/before/benchmark/native/reference.cpp",
+      "arguments": [
+        "/usr/bin/c++",
+        "-I/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/before/benchmark/.deps/rabitq-native/include",
+        "-O3",
+        "-DNDEBUG",
+        "-std=gnu++20",
+        "-O3",
+        "-march=native",
+        "-ffp-contract=off",
+        "-fopenmp",
+        "-o",
+        "CMakeFiles/codec_reference.dir/reference.cpp.o",
+        "-c",
+        "/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/before/benchmark/native/reference.cpp"
+      ],
+      "effective_optimization": "-O3"
+    },
+    {
+      "file": "/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/before/src/tieredq.cpp",
+      "arguments": [
+        "/usr/bin/c++",
+        "-I/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/before/include",
+        "-O3",
+        "-DNDEBUG",
+        "-std=gnu++20",
+        "-fPIC",
+        "-O3",
+        "-march=native",
+        "-ffp-contract=off",
+        "-Wall",
+        "-Wextra",
+        "-Wno-misleading-indentation",
+        "-fopenmp",
+        "-o",
+        "CMakeFiles/dv_tieredq.dir/src/tieredq.cpp.o",
+        "-c",
+        "/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/before/src/tieredq.cpp"
+      ],
+      "effective_optimization": "-O3"
+    },
+    {
+      "file": "/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/before/src/tieredq_index.cpp",
+      "arguments": [
+        "/usr/bin/c++",
+        "-I/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/before/include",
+        "-O3",
+        "-DNDEBUG",
+        "-std=gnu++20",
+        "-fPIC",
+        "-O3",
+        "-march=native",
+        "-ffp-contract=off",
+        "-Wall",
+        "-Wextra",
+        "-Wno-misleading-indentation",
+        "-fopenmp",
+        "-o",
+        "CMakeFiles/dv_tieredq.dir/src/tieredq_index.cpp.o",
+        "-c",
+        "/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/before/src/tieredq_index.cpp"
+      ],
+      "effective_optimization": "-O3"
+    },
+    {
+      "file": "/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/before/src/tieredq_index_io.cpp",
+      "arguments": [
+        "/usr/bin/c++",
+        "-I/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/before/include",
+        "-O3",
+        "-DNDEBUG",
+        "-std=gnu++20",
+        "-fPIC",
+        "-O3",
+        "-march=native",
+        "-ffp-contract=off",
+        "-Wall",
+        "-Wextra",
+        "-Wno-misleading-indentation",
+        "-fopenmp",
+        "-o",
+        "CMakeFiles/dv_tieredq.dir/src/tieredq_index_io.cpp.o",
+        "-c",
+        "/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/before/src/tieredq_index_io.cpp"
+      ],
+      "effective_optimization": "-O3"
+    }
+  ],
+  "binary_sha256": "bf726c8e0d58f596accabc695d138a5e6c9b86e1e2e351fa29ee327e449ebb68",
+  "data_manifest": {
+    "source": {
+      "repo": "Qdrant/dbpedia-entities-openai3-text-embedding-3-large-1536-1M",
+      "revision": "4a9731217921bc476a0f03544f11f22ae4903fa5",
+      "column": "text-embedding-3-large-1536-embedding"
+    },
+    "dataset": "openai",
+    "split_seed": 42,
+    "base_n": 100000,
+    "queries": 1000,
+    "base_sha256": "09bf358f7e818a69aac33aaf8888a702e2843c4ff2904b9cfdf3bbfd5ab6a948",
+    "queries_sha256": "59f90bed24086c0a74d4d80a626a8945e6718ab373807063b089d4a4477ef1cd"
+  },
+  "truth_sha256": "3c170137a11342f3936a2dfda21feaf2061ade02b2c540278b43c634574a3c3a",
+  "uname": "Linux hartmut 7.2.8-1-cachyos #1 SMP PREEMPT_DYNAMIC Sat, 26 Sep 2026 22:46:02 +0000 x86_64 GNU/Linux",
+  "cpuinfo": "Architecture:                            x86_64\nCPU op-mode(s):                          32-bit, 64-bit\nAddress sizes:                           46 bits physical, 48 bits virtual\nByte Order:                              Little Endian\nCPU(s):                                  36\nOn-line CPU(s) list:                     0-35\nVendor ID:                               GenuineIntel\nModel name:                              Intel(R) Core(TM) i9-7980XE CPU @ 2.60GHz\nCPU family:                              6\nModel:                                   85\nThread(s) per core:                      2\nCore(s) per socket:                      18\nSocket(s):                               1\nStepping:                                4\nMicrocode version:                       0x2007006\nCPU(s) scaling MHz:                      34%\nCPU max MHz:                             4400.0000\nCPU min MHz:                             1200.0000\nBogoMIPS:                                5199.98\nFlags:                                   fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf pni pclmulqdq dtes64 monitor ds_cpl vmx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid dca sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault epb cat_l3 cdp_l3 pti ssbd mba ibrs ibpb stibp tpr_shadow flexpriority ept vpid ept_ad fsgsbase tsc_adjust bmi1 hle avx2 smep bmi2 erms invpcid rtm cqm mpx rdt_a avx512f avx512dq rdseed adx smap clflushopt clwb intel_pt avx512cd avx512bw avx512vl xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local dtherm ida arat pln pts hwp hwp_act_window hwp_epp hwp_pkg_req vnmi md_clear flush_l1d arch_capabilities\nVirtualization:                          VT-x\nL1d cache:                               576 KiB (18 instances)\nL1i cache:                               576 KiB (18 instances)\nL2 cache:                                18 MiB (18 instances)\nL3 cache:                                24.8 MiB (1 instance)\nNUMA node(s):                            1\nNUMA node0 CPU(s):                       0-35\nVulnerability Gather data sampling:      Mitigation; Microcode\nVulnerability Ghostwrite:                Not affected\nVulnerability Indirect target selection: Not affected\nVulnerability Itlb multihit:             KVM: Mitigation: Split huge pages\nVulnerability L1tf:                      Mitigation; PTE Inversion; VMX conditional cache flushes, SMT vulnerable\nVulnerability Mds:                       Mitigation; Clear CPU buffers; SMT vulnerable\nVulnerability Meltdown:                  Mitigation; PTI\nVulnerability Mmio stale data:           Mitigation; Clear CPU buffers; SMT vulnerable\nVulnerability Old microcode:             Not affected\nVulnerability Reg file data sampling:    Not affected\nVulnerability Retbleed:                  Mitigation; IBRS\nVulnerability Spec rstack overflow:      Not affected\nVulnerability Spec store bypass:         Mitigation; Speculative Store Bypass disabled via prctl\nVulnerability Spectre v1:                Mitigation; usercopy/swapgs barriers and __user pointer sanitization\nVulnerability Spectre v2:                Mitigation; IBRS; IBPB conditional; STIBP conditional; RSB filling; PBRSB-eIBRS Not affected; BHI Not affected\nVulnerability Srbds:                     Not affected\nVulnerability Tsa:                       Not affected\nVulnerability Tsx async abort:           Mitigation; Clear CPU buffers; SMT vulnerable\nVulnerability Vmscape:                   Mitigation; IBPB before exit to userspace\n",
+  "source_sha256": {
+    "src/tieredq.cpp": "cc3bcf871d78deb41f3fbf765cd0cc05178fe516f9d6af9f3bf7415b17af03be",
+    "src/tieredq_encode.h": "094cd90cab3bd46fd93fd4f673ab3bc1ff680cbed735bc32fc43818e16994ee7",
+    "src/tieredq_encode_float.h": "eb84bced3a1e931ff12b94f89bec130de829784c3dbf8ca0313951770419867c",
+    "src/tieredq_encode_grid.h": "d36a190ec56e0806b195e581bd8584b1151b8d7d0b7389b5376a966ef0a8299f",
+    "src/tieredq_encode_matrix.h": "1e16df2a2d6902be3a6aef27847ae561888bc8ccb01de9fb79755de5c3f18366",
+    "src/tieredq_fast_dispatch.h": "dbcc0ca75551edd31d3a6101d594aa99428de371449c432d517d6d937d5f26f7",
+    "src/tieredq_fast_storage.h": "5f29830505e0afa78239e3d1bba855ae4b3a2baad827039da51c0f5fdc7cdf0b",
+    "src/tieredq_index.cpp": "841ff0a5d245836f5d4909b302abfa9d81160ca234d51e53ea51e8b019f00305",
+    "src/tieredq_index_io.cpp": "8526e2912500d8bdcae121718fe8ed1e5ca75e4d3ae8fd1b9ab06be37d60dbfa",
+    "src/tieredq_io.h": "e1469d651f12e9061e6742c2bae2b3c1535e608e15c64cd8534a35858690313b",
+    "src/tieredq_layout.h": "d6030e7a2a312a632343abf8735b975057b1df43a7f259a0ce1e59ebdfb56ce6",
+    "src/tieredq_profile.h": "eb0ce6b211a372eb61a45a028d301c4db1b91343219854dcfd676b8e97cdabed",
+    "src/tieredq_query_projection_x86.h": "cf190b0684cd41a13d0c0cb636c6081f992327b6282bbf5b55227ad7873268ff",
+    "src/tieredq_scan_avx512.h": "fcd3324e6ada2493c6adff23f278eb951e403bbfd1eb6a3c2c459e2d546bece2",
+    "src/tieredq_scan_codes.h": "4f7d0a05a1da197dd5ab468ce97e890da00676f657f1c2448986132be8d654fa",
+    "src/tieredq_scan_codes_neon.h": "c2dc325cdaf13307c6d5bd2287378836058c91934036abee9f562bd002795326",
+    "src/tieredq_scan_codes_x86.h": "1c3b184aef12287616e19a4100c2bbeac0d3eb7ef35be7d18ddb13b86dcf2d66",
+    "src/tieredq_scan_fast_scalar.h": "db7f4b11ea68b7f9d0c9a97bc7c6677093d2eb645196d946d4366bd847419576",
+    "src/tieredq_scan_groups.h": "daa9d64c6d6a38b42a11cc02ce74aadea3138b665e37e8848b48a23d7870c7e7",
+    "src/tieredq_scan_int8.h": "ff52f30f5e0c305ce692d77b4f74d156094f29f7f5c92aee362d0d223d7388eb",
+    "src/tieredq_scan_int8_avx2.h": "4c211ccc4b5cd4d05e5fd573a9728ab7c77c9deef9b5e2cf209d129b6bfd62f1",
+    "src/tieredq_scan_int8_avx512.h": "7acf618b919c0bfc8b553a33f4313e5a099a2389838f3f1383a8bd9552363ab4",
+    "src/tieredq_scan_int8_neon.h": "7f206dfe1169632ae55425fab3c3db7ef418d99f6dd40a6e26ea7f96b2592b89",
+    "src/tieredq_scan_lookup_avx512.h": "c09fe148d85e7827ece0c6d2aa103018a87650039de906ce80cc303decc1c95f",
+    "src/tieredq_scan_lookup_x86.h": "84aeff13880244522351f6cf56bfc319e7b0977c0140ea639f50732e64cadfee",
+    "src/tieredq_scan_neon.h": "bda54c151a984be8c045f8d278322a6a43c67750480fc5f95730d7291b7c1812",
+    "src/tieredq_scan_query_x86.h": "516b2f47cbb54d63a33309990496123f4a8d1d7ba018854903085f64941ca857",
+    "src/tieredq_search.h": "e5cb9d13cf04f112cd9bd0117ef000d5e3d84ce00f318a661d30fda8a128ec11",
+    "src/tieredq_search_fast.h": "b3e789ffe5d62b3087cbdbe69547eb36e2ea23d9b8cafb9f2b29902e8267b44a",
+    "src/tieredq_train_codebook.h": "5988570c02e2fe6dd7f8b56bc029f67ccc00b1631730968a6d91fa8f6ebb7eb7",
+    "src/tieredq_train_codebook_data.h": "6f79753ad23d6d73f8d7d51b185f7cd4ff0d48dcc35003e9f167f23d87bc951b",
+    "src/tieredq_train_covariance.h": "7d6f9d32d6de1db36f635b5763602d7870f8714453634b0a3f7bdafb9544c146",
+    "src/tieredq_train_kmeans.h": "788def94d30f4bed18f7a91313e6507d8964dddd8ceeb581a8435437b33516fd",
+    "src/tieredq_train_linalg.h": "7b2291c2fb2396f998ae0b7284b842a4016c51aecdcc7d5e7cec1dd95ccfee4c",
+    "src/tieredq_train_residuals.h": "3a97f61a987a3fdb05a72b0fab9d2bf1b5d3a609dfb09a8c2abe51d1ef3a1cd8",
+    "src/tieredq_train_stats.h": "e9b9eb26ffb05bfd677e30d3e21eb8b061f131b3c1867b10f272fa469cf557b4",
+    "src/training_rng.h": "3cc5602e62a8e3e6ba1d2c6ba8b90a7ec2a61137972ab8125d4babe4a1d2865e",
+    "include/tieredq/tieredq.h": "5e789ee1046239564cb30950bedc0d2d2dc1c8613dbc7344c2a26d7c8700c659",
+    "include/tieredq/detail/tieredq_scan_plan.h": "49de530237801b7c7ef61aa9cdb23893de0fc5270945617a00cd0716c3195e7f",
+    "tests/test_tieredq.cpp": "604c927e3bc29110db15ff53f8a769668c140ed23801c6f1a86b2abd527190a1",
+    "tests/test_tieredq_encoder.cpp": "f1d4e86112a5338c414ac54e643528edb8e05e17ac570fa27960f2bcd294f2f2",
+    "tests/test_tieredq_fast_mode.cpp": "c2ea2c62144ba03ae22a7641e3e962680c3aa3e5eca9eec4c662ce143765c090",
+    "tests/test_tieredq_lookup.cpp": "2a1632a57dd324d57e828c6ba0d643ce583eeabc9760d399cae3437806549076",
+    "tests/test_tieredq_model.cpp": "11c6ab530db89de7a31696bf1eaeb76326d0e7e319c221e12cc5b52e188c775f",
+    "tests/test_tieredq_neon.cpp": "05c35901ee0a9a2e0f1488e0399fe972d4101d1810a5ffdbf461fcee238574d0",
+    "tests/test_tieredq_search.cpp": "ea8600c6c30efb3017cb18a08437ba0cf505fdcbc8d3ea34b832fac658eb6076",
+    "tests/test_training_rng.cpp": "ed0e2f72e47bbfbdfbd6f2526116db47c83ed8251e05a392ba6a2b972d3c4465",
+    "tests/fixtures/tieredq_codec.codec": "c6fb6e66d8940795631bb25383e51301d381682252884368047463cd4d1bd3e8",
+    "tests/fixtures/tieredq_codec.md": "bfbc68d34086f33ffaf71de12ee0496549d46c5e402d10606970091772284205",
+    "tests/python/test_api.py": "00ccf94f0df70ec19193c0b895eb714c6cfe0db42964f945150180fe2849352e",
+    "tests/python/test_fast_mode.py": "f5ffb9da78dde583002d15d22cc1c194a44b5d451a2fd317475bdb16a16e5e4d",
+    "tests/python/test_fast_scan.py": "e0d4fd0b3955bcd5bb89209b8f4d1f31235894fd79c1e570d4eceda48213fbb4",
+    "benchmark/native/CMakeLists.txt": "6e646fac385d166ffdda6fe596048e4b6bb949e199556adb1e404a6d6d430780",
+    "benchmark/native/rabitq_flat.h": "435d1df8b4fb33517e03b8e159c04561b2a4e2b5993ba097292c47b835864907",
+    "benchmark/native/reference.cpp": "b1b17c45b6623967411f97ab6e0bfd050e8afcb8048e1176f935639d151d8333",
+    "benchmark/native/module.cpp": "d144b1353e188feb5cc344e941d9e86dab60c7377e611a2f6b78d519c98e1d28"
+  },
+  "records": [
+    {
+      "code_bits": 1695,
+      "build_s": 14.208507360890508,
+      "encode_s": 1.007178429,
+      "encode_vps": 99287.27335759888,
+      "bytes_per_vector": 402.1992,
+      "allocation": {
+        "model": {
+          "object": 232,
+          "basis": 5640192,
+          "centroids": 1572864,
+          "mean": 3672,
+          "sigma": 3672,
+          "tiers": 80,
+          "half_norms": 1024,
+          "scan_plan": 14336,
+          "codebooks": 2424,
+          "lazy_encoder_object": 96
+        },
+        "cache": {
+          "object": 256,
+          "levels_or_packed_codes": 0,
+          "factor": 400384,
+          "correction": 400384,
+          "centroid_ids": 100096,
+          "code_offsets": 0,
+          "tier_of": 0,
+          "level_scale": 0,
+          "codebooks": 0,
+          "lookup_object": 128,
+          "lookup_projection": 8847360,
+          "lookup_groups": 8192,
+          "lookup_codes": 23222272,
+          "lookup_codebooks": 2256
+        },
+        "cache_total": 32981328,
+        "model_total": 7238592,
+        "serialized_bytes": 31345920,
+        "count": 100000,
+        "padded_count": 100096,
+        "vector_bytes": 241,
+        "resident_bytes": 40219920
+      },
+      "diagnostics": {
+        "tiers": [
+          {
+            "start": 0,
+            "dimensions": 51,
+            "bits": 4
+          },
+          {
+            "start": 51,
+            "dimensions": 159,
+            "bits": 3
+          },
+          {
+            "start": 210,
+            "dimensions": 306,
+            "bits": 2
+          },
+          {
+            "start": 516,
+            "dimensions": 402,
+            "bits": 1
+          }
+        ],
+        "coded_dimensions": 918,
+        "packed_code_bytes": 212,
+        "vector_bytes": 241,
+        "allocated_vector_bytes": 32981328,
+        "model_serialized_bytes": 7222660,
+        "model_memory_bytes": 16579352,
+        "model_serving_memory_bytes": 7238592,
+        "scalar_fast_scan": false
+      },
+      "index_sha256": "adc53073e56ad9fff909f26128ba6b5e9dd5fad47261f2c6f4dd3eafbbed5f56",
+      "timings": [
+        {
+          "threads": 8,
+          "batch": 32,
+          "recall10": 0.8991000000000001,
+          "qps": 3671.7050895202315,
+          "p50_ms": 8.674820885062218,
+          "p95_ms": 9.119095746427774
+        },
+        {
+          "threads": 8,
+          "batch": 1,
+          "recall10": 0.8991000000000001,
+          "qps": 1120.2569212769608,
+          "p50_ms": 0.8843843825161457,
+          "p95_ms": 0.9711266262456772
+        },
+        {
+          "threads": 1,
+          "batch": 1,
+          "recall10": 0.8991000000000001,
+          "qps": 455.11466781971944,
+          "p50_ms": 2.124621532857418,
+          "p95_ms": 2.45892689563334
+        }
+      ],
+      "reloaded_scores_and_ids_equal": true,
+      "ids_sha256": "48ce880ed363b4c9c405f618860b9acbc8fac38375503cf226f3d8f413f66a2d"
+    },
+    {
+      "code_bits": 5344,
+      "build_s": 15.294687262736261,
+      "encode_s": 1.897929069,
+      "encode_vps": 52689.00805270294,
+      "bytes_per_vector": 787.79958,
+      "allocation": {
+        "model": {
+          "object": 232,
+          "basis": 9424896,
+          "centroids": 1572864,
+          "mean": 6136,
+          "sigma": 6136,
+          "tiers": 160,
+          "half_norms": 1024,
+          "scan_plan": 57344,
+          "codebooks": 2424,
+          "lazy_encoder_object": 96
+        },
+        "cache": {
+          "object": 256,
+          "levels_or_packed_codes": 66800000,
+          "factor": 400000,
+          "correction": 400000,
+          "centroid_ids": 100000,
+          "code_offsets": 6136,
+          "tier_of": 1534,
+          "level_scale": 24,
+          "codebooks": 696
+        },
+        "cache_total": 67708646,
+        "model_total": 11071312,
+        "serialized_bytes": 78712456,
+        "count": 100000,
+        "padded_count": 100000,
+        "vector_bytes": 677,
+        "resident_bytes": 78779958
+      },
+      "diagnostics": {
+        "tiers": [
+          {
+            "start": 0,
+            "dimensions": 67,
+            "bits": 6
+          },
+          {
+            "start": 67,
+            "dimensions": 203,
+            "bits": 5
+          },
+          {
+            "start": 270,
+            "dimensions": 435,
+            "bits": 4
+          },
+          {
+            "start": 705,
+            "dimensions": 538,
+            "bits": 3
+          },
+          {
+            "start": 1243,
+            "dimensions": 282,
+            "bits": 2
+          },
+          {
+            "start": 1525,
+            "dimensions": 9,
+            "bits": 1
+          }
+        ],
+        "coded_dimensions": 1534,
+        "packed_code_bytes": 668,
+        "vector_bytes": 677,
+        "allocated_vector_bytes": 67708646,
+        "model_serialized_bytes": 11012332,
+        "model_memory_bytes": 25425576,
+        "model_serving_memory_bytes": 11071312,
+        "scalar_fast_scan": false
+      },
+      "index_sha256": "c04fba226b227576d59ea94ba52cd6cddc585a86582820e59fd0152993900405",
+      "timings": [
+        {
+          "threads": 8,
+          "batch": 32,
+          "recall10": 0.9793,
+          "qps": 1075.4776043437544,
+          "p50_ms": 29.2025338858366,
+          "p95_ms": 36.161725874990225
+        },
+        {
+          "threads": 8,
+          "batch": 1,
+          "recall10": 0.9793,
+          "qps": 291.3681761909669,
+          "p50_ms": 3.4268724266439676,
+          "p95_ms": 3.6262616980820894
+        }
+      ],
+      "reloaded_scores_and_ids_equal": true,
+      "ids_sha256": "85fc09176beb7201c293bd3721b9a29db3e831d675342679a7f141d870c8d46e"
+    },
+    {
+      "code_bits": 11488,
+      "build_s": 21.864027777221054,
+      "encode_s": 7.82664997,
+      "encode_vps": 12776.858602761815,
+      "bytes_per_vector": 1555.81058,
+      "allocation": {
+        "model": {
+          "object": 232,
+          "basis": 9424896,
+          "centroids": 1572864,
+          "mean": 6136,
+          "sigma": 6136,
+          "tiers": 80,
+          "half_norms": 1024,
+          "scan_plan": 57344,
+          "codebooks": 2424,
+          "lazy_encoder_object": 96
+        },
+        "cache": {
+          "object": 256,
+          "levels_or_packed_codes": 143600000,
+          "factor": 400000,
+          "correction": 400000,
+          "centroid_ids": 100000,
+          "code_offsets": 6136,
+          "tier_of": 1534,
+          "level_scale": 12,
+          "codebooks": 1888
+        },
+        "cache_total": 144509826,
+        "model_total": 11071232,
+        "serialized_bytes": 155512396,
+        "count": 100000,
+        "padded_count": 100000,
+        "vector_bytes": 1445,
+        "resident_bytes": 155581058
+      },
+      "diagnostics": {
+        "tiers": [
+          {
+            "start": 0,
+            "dimensions": 876,
+            "bits": 8
+          },
+          {
+            "start": 876,
+            "dimensions": 532,
+            "bits": 7
+          },
+          {
+            "start": 1408,
+            "dimensions": 126,
+            "bits": 6
+          }
+        ],
+        "coded_dimensions": 1534,
+        "packed_code_bytes": 1436,
+        "vector_bytes": 1445,
+        "allocated_vector_bytes": 144509826,
+        "model_serialized_bytes": 11012272,
+        "model_memory_bytes": 25425496,
+        "model_serving_memory_bytes": 11071232,
+        "scalar_fast_scan": false
+      },
+      "index_sha256": "a8fa957afd777ef13680f73d9e67635ac1a90d8c53c342009068c29866ed2a3d",
+      "timings": [
+        {
+          "threads": 8,
+          "batch": 32,
+          "recall10": 0.9982000000000001,
+          "qps": 941.8073936551816,
+          "p50_ms": 33.54075597599149,
+          "p95_ms": 39.23908015713096
+        },
+        {
+          "threads": 8,
+          "batch": 1,
+          "recall10": 0.9982000000000001,
+          "qps": 131.00491518203526,
+          "p50_ms": 7.57253379561007,
+          "p95_ms": 8.164458093233403
+        }
+      ],
+      "reloaded_scores_and_ids_equal": true,
+      "ids_sha256": "628b5dff2104eb900abb8fa4526c89918f8a332630c50842944172e27b1b75a8"
+    },
+    {
+      "code_bits": 1536,
+      "build_s": 14.062505589798093,
+      "encode_s": 0.845132016,
+      "encode_vps": 118324.70916591096,
+      "bytes_per_vector": 372.06256,
+      "allocation": {
+        "model": {
+          "object": 232,
+          "basis": 5222400,
+          "centroids": 1572864,
+          "mean": 3400,
+          "sigma": 3400,
+          "tiers": 80,
+          "half_norms": 1024,
+          "scan_plan": 14336,
+          "codebooks": 2424,
+          "lazy_encoder_object": 96
+        },
+        "cache": {
+          "object": 256,
+          "levels_or_packed_codes": 0,
+          "factor": 400384,
+          "correction": 400384,
+          "centroid_ids": 100096,
+          "code_offsets": 0,
+          "tier_of": 0,
+          "level_scale": 0,
+          "codebooks": 0,
+          "lookup_object": 128,
+          "lookup_projection": 8454144,
+          "lookup_groups": 8192,
+          "lookup_codes": 21020160,
+          "lookup_codebooks": 2256
+        },
+        "cache_total": 30386000,
+        "model_total": 6820256,
+        "serialized_bytes": 28725472,
+        "count": 100000,
+        "padded_count": 100096,
+        "vector_bytes": 219,
+        "resident_bytes": 37206256
+      },
+      "diagnostics": {
+        "tiers": [
+          {
+            "start": 0,
+            "dimensions": 40,
+            "bits": 4
+          },
+          {
+            "start": 40,
+            "dimensions": 143,
+            "bits": 3
+          },
+          {
+            "start": 183,
+            "dimensions": 280,
+            "bits": 2
+          },
+          {
+            "start": 463,
+            "dimensions": 387,
+            "bits": 1
+          }
+        ],
+        "coded_dimensions": 850,
+        "packed_code_bytes": 192,
+        "vector_bytes": 219,
+        "allocated_vector_bytes": 30386000,
+        "model_serialized_bytes": 6804324,
+        "model_memory_bytes": 15669496,
+        "model_serving_memory_bytes": 6820256,
+        "scalar_fast_scan": false
+      },
+      "index_sha256": "b95f2f39dda75027d716d8a274ca2d90aa289d4910ad3d7299d0304750c6e457",
+      "timings": []
+    },
+    {
+      "code_bits": 3072,
+      "build_s": 14.825489093083888,
+      "encode_s": 1.340357705,
+      "encode_vps": 74606.9497918095,
+      "bytes_per_vector": 493.90534,
+      "allocation": {
+        "model": {
+          "object": 232,
+          "basis": 8466432,
+          "centroids": 1572864,
+          "mean": 5512,
+          "sigma": 5512,
+          "tiers": 160,
+          "half_norms": 1024,
+          "scan_plan": 28672,
+          "codebooks": 2424,
+          "lazy_encoder_object": 96
+        },
+        "cache": {
+          "object": 256,
+          "levels_or_packed_codes": 38400000,
+          "factor": 400000,
+          "correction": 400000,
+          "centroid_ids": 100000,
+          "code_offsets": 5512,
+          "tier_of": 1378,
+          "level_scale": 20,
+          "codebooks": 440
+        },
+        "cache_total": 39307606,
+        "model_total": 10082928,
+        "serialized_bytes": 49352724,
+        "count": 100000,
+        "padded_count": 100000,
+        "vector_bytes": 393,
+        "resident_bytes": 49390534
+      },
+      "diagnostics": {
+        "tiers": [
+          {
+            "start": 0,
+            "dimensions": 35,
+            "bits": 5
+          },
+          {
+            "start": 35,
+            "dimensions": 150,
+            "bits": 4
+          },
+          {
+            "start": 185,
+            "dimensions": 321,
+            "bits": 3
+          },
+          {
+            "start": 506,
+            "dimensions": 462,
+            "bits": 2
+          },
+          {
+            "start": 968,
+            "dimensions": 410,
+            "bits": 1
+          }
+        ],
+        "coded_dimensions": 1378,
+        "packed_code_bytes": 384,
+        "vector_bytes": 393,
+        "allocated_vector_bytes": 39307606,
+        "model_serialized_bytes": 10052600,
+        "model_memory_bytes": 23257544,
+        "model_serving_memory_bytes": 10082928,
+        "scalar_fast_scan": false
+      },
+      "index_sha256": "6d9a845d5ec8a75bbccf3c2371f60194dce54d77f4b0c3e3b7d56a5572873981",
+      "timings": []
+    },
+    {
+      "code_bits": 6144,
+      "build_s": 16.231748920865357,
+      "encode_s": 2.295262105,
+      "encode_vps": 43568.00897908782,
+      "bytes_per_vector": 887.80474,
+      "allocation": {
+        "model": {
+          "object": 232,
+          "basis": 9424896,
+          "centroids": 1572864,
+          "mean": 6136,
+          "sigma": 6136,
+          "tiers": 160,
+          "half_norms": 1024,
+          "scan_plan": 57344,
+          "codebooks": 2424,
+          "lazy_encoder_object": 96
+        },
+        "cache": {
+          "object": 256,
+          "levels_or_packed_codes": 76800000,
+          "factor": 400000,
+          "correction": 400000,
+          "centroid_ids": 100000,
+          "code_offsets": 6136,
+          "tier_of": 1534,
+          "level_scale": 28,
+          "codebooks": 1208
+        },
+        "cache_total": 77709162,
+        "model_total": 11071312,
+        "serialized_bytes": 88712476,
+        "count": 100000,
+        "padded_count": 100000,
+        "vector_bytes": 777,
+        "resident_bytes": 88780474
+      },
+      "diagnostics": {
+        "tiers": [
+          {
+            "start": 0,
+            "dimensions": 13,
+            "bits": 7
+          },
+          {
+            "start": 13,
+            "dimensions": 129,
+            "bits": 6
+          },
+          {
+            "start": 142,
+            "dimensions": 316,
+            "bits": 5
+          },
+          {
+            "start": 458,
+            "dimensions": 536,
+            "bits": 4
+          },
+          {
+            "start": 994,
+            "dimensions": 477,
+            "bits": 3
+          },
+          {
+            "start": 1471,
+            "dimensions": 61,
+            "bits": 2
+          },
+          {
+            "start": 1532,
+            "dimensions": 2,
+            "bits": 1
+          }
+        ],
+        "coded_dimensions": 1534,
+        "packed_code_bytes": 768,
+        "vector_bytes": 777,
+        "allocated_vector_bytes": 77709162,
+        "model_serialized_bytes": 11012352,
+        "model_memory_bytes": 25425576,
+        "model_serving_memory_bytes": 11071312,
+        "scalar_fast_scan": false
+      },
+      "index_sha256": "8569f4e7e4ce8a9f4da545e1010e50060a0f1e38abb522ab59e737398c916b4e",
+      "timings": []
+    },
+    {
+      "code_bits": 12288,
+      "build_s": 26.15372692840174,
+      "encode_s": 8.907065255,
+      "encode_vps": 11227.042481120792,
+      "bytes_per_vector": 1655.92464,
+      "allocation": {
+        "model": {
+          "object": 232,
+          "basis": 9437184,
+          "centroids": 1572864,
+          "mean": 6144,
+          "sigma": 6144,
+          "tiers": 20,
+          "half_norms": 1024,
+          "scan_plan": 57344,
+          "codebooks": 2424,
+          "lazy_encoder_object": 96
+        },
+        "cache": {
+          "object": 256,
+          "levels_or_packed_codes": 153600000,
+          "factor": 400000,
+          "correction": 400000,
+          "centroid_ids": 100000,
+          "code_offsets": 6144,
+          "tier_of": 1536,
+          "level_scale": 4,
+          "codebooks": 1048
+        },
+        "cache_total": 154508988,
+        "model_total": 11083476,
+        "serialized_bytes": 165524660,
+        "count": 100000,
+        "padded_count": 100000,
+        "vector_bytes": 1545,
+        "resident_bytes": 165592464
+      },
+      "diagnostics": {
+        "tiers": [
+          {
+            "start": 0,
+            "dimensions": 1536,
+            "bits": 8
+          }
+        ],
+        "coded_dimensions": 1536,
+        "packed_code_bytes": 1536,
+        "vector_bytes": 1545,
+        "allocated_vector_bytes": 154508988,
+        "model_serialized_bytes": 11024536,
+        "model_memory_bytes": 25437740,
+        "model_serving_memory_bytes": 11083476,
+        "scalar_fast_scan": false
+      },
+      "index_sha256": "152cecccb8e3f6eef4ed009537c80f1c717353ee08ac7b09e1c47ed2fcf93792",
+      "timings": []
+    }
+  ],
+  "wall_s": 182.3637123880908
+}

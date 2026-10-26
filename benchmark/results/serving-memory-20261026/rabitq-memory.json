@@ -1,0 +1,231 @@
+{
+  "affinity": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "compiler_commands": [
+    {
+      "file": "/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/sequential/benchmark/native/module.cpp",
+      "arguments": [
+        "/usr/bin/c++",
+        "-DBENCH_FULL_SCORE=0",
+        "-Dcodec_native_EXPORTS",
+        "-I/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/sequential/benchmark/.deps/rabitq-native/include",
+        "-I/home/sean/.local/share/uv/python/cpython-3.12-linux-x86_64-gnu/include/python3.12",
+        "-I/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/sequential/benchmark/.venv/lib/python3.12/site-packages/nanobind/include",
+        "-I/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/sequential/include",
+        "-O3",
+        "-DNDEBUG",
+        "-std=gnu++20",
+        "-fPIC",
+        "-fvisibility=hidden",
+        "-O3",
+        "-march=native",
+        "-ffp-contract=off",
+        "-fno-stack-protector",
+        "-ffunction-sections",
+        "-fdata-sections",
+        "-fopenmp",
+        "-o",
+        "CMakeFiles/codec_native.dir/module.cpp.o",
+        "-c",
+        "/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/sequential/benchmark/native/module.cpp"
+      ],
+      "effective_optimization": "-O3"
+    },
+    {
+      "file": "/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/sequential/benchmark/native/reference.cpp",
+      "arguments": [
+        "/usr/bin/c++",
+        "-I/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/sequential/benchmark/.deps/rabitq-native/include",
+        "-O3",
+        "-DNDEBUG",
+        "-std=gnu++20",
+        "-O3",
+        "-march=native",
+        "-ffp-contract=off",
+        "-fopenmp",
+        "-o",
+        "CMakeFiles/codec_reference.dir/reference.cpp.o",
+        "-c",
+        "/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/sequential/benchmark/native/reference.cpp"
+      ],
+      "effective_optimization": "-O3"
+    },
+    {
+      "file": "/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/sequential/src/tieredq.cpp",
+      "arguments": [
+        "/usr/bin/c++",
+        "-I/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/sequential/include",
+        "-O3",
+        "-DNDEBUG",
+        "-std=gnu++20",
+        "-fPIC",
+        "-O3",
+        "-march=native",
+        "-ffp-contract=off",
+        "-Wall",
+        "-Wextra",
+        "-Wno-misleading-indentation",
+        "-fopenmp",
+        "-o",
+        "CMakeFiles/dv_tieredq.dir/src/tieredq.cpp.o",
+        "-c",
+        "/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/sequential/src/tieredq.cpp"
+      ],
+      "effective_optimization": "-O3"
+    },
+    {
+      "file": "/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/sequential/src/tieredq_index.cpp",
+      "arguments": [
+        "/usr/bin/c++",
+        "-I/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/sequential/include",
+        "-O3",
+        "-DNDEBUG",
+        "-std=gnu++20",
+        "-fPIC",
+        "-O3",
+        "-march=native",
+        "-ffp-contract=off",
+        "-Wall",
+        "-Wextra",
+        "-Wno-misleading-indentation",
+        "-fopenmp",
+        "-o",
+        "CMakeFiles/dv_tieredq.dir/src/tieredq_index.cpp.o",
+        "-c",
+        "/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/sequential/src/tieredq_index.cpp"
+      ],
+      "effective_optimization": "-O3"
+    },
+    {
+      "file": "/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/sequential/src/tieredq_index_io.cpp",
+      "arguments": [
+        "/usr/bin/c++",
+        "-I/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/sequential/include",
+        "-O3",
+        "-DNDEBUG",
+        "-std=gnu++20",
+        "-fPIC",
+        "-O3",
+        "-march=native",
+        "-ffp-contract=off",
+        "-Wall",
+        "-Wextra",
+        "-Wno-misleading-indentation",
+        "-fopenmp",
+        "-o",
+        "CMakeFiles/dv_tieredq.dir/src/tieredq_index_io.cpp.o",
+        "-c",
+        "/home/sean/experiments/TieredQ-serving-memory-20261026-OxwQTjbU/sequential/src/tieredq_index_io.cpp"
+      ],
+      "effective_optimization": "-O3"
+    }
+  ],
+  "data_manifest": {
+    "source": {
+      "repo": "Qdrant/dbpedia-entities-openai3-text-embedding-3-large-1536-1M",
+      "revision": "4a9731217921bc476a0f03544f11f22ae4903fa5",
+      "column": "text-embedding-3-large-1536-embedding"
+    },
+    "dataset": "openai",
+    "split_seed": 42,
+    "base_n": 100000,
+    "queries": 1000,
+    "base_sha256": "09bf358f7e818a69aac33aaf8888a702e2843c4ff2904b9cfdf3bbfd5ab6a948",
+    "queries_sha256": "59f90bed24086c0a74d4d80a626a8945e6718ab373807063b089d4a4477ef1cd"
+  },
+  "records": [
+    {
+      "bits": 2,
+      "build_s": 2.3864681706763804,
+      "encode_s": 2.3333275,
+      "memory": {
+        "ram_components": {
+          "core_object": 136,
+          "rotation_object_and_flips": 864,
+          "center": 6144,
+          "binary_codes_and_factors": 20400000,
+          "extra_codes_and_factors": 20000000
+        },
+        "ram_bytes": 40407144,
+        "disk_bytes": 40406960,
+        "count": 100000,
+        "disk_bits_per_vector": 3232.5568,
+        "ram_bits_per_vector": 3232.57152
+      },
+      "timings": [
+        {
+          "threads": 8,
+          "batch": 32,
+          "recall10": 0.9041000000000001,
+          "qps": 4718.014114686203,
+          "p50_ms": 6.738679949194193,
+          "p95_ms": 7.167419884353876
+        },
+        {
+          "threads": 8,
+          "batch": 1,
+          "recall10": 0.9041000000000001,
+          "qps": 607.0342370640299,
+          "p50_ms": 1.5765184070914984,
+          "p95_ms": 1.8542208475992081
+        },
+        {
+          "threads": 1,
+          "batch": 1,
+          "recall10": 0.9041000000000001,
+          "qps": 605.3394480971479,
+          "p50_ms": 1.6001341864466667,
+          "p95_ms": 1.8856727983802557
+        }
+      ]
+    },
+    {
+      "bits": 4,
+      "build_s": 4.160275585949421,
+      "encode_s": 4.111318425,
+      "memory": {
+        "ram_components": {
+          "core_object": 136,
+          "rotation_object_and_flips": 864,
+          "center": 6144,
+          "binary_codes_and_factors": 20400000,
+          "extra_codes_and_factors": 58400000
+        },
+        "ram_bytes": 78807144,
+        "disk_bytes": 78806960,
+        "count": 100000,
+        "disk_bits_per_vector": 6304.5568,
+        "ram_bits_per_vector": 6304.57152
+      },
+      "timings": []
+    },
+    {
+      "bits": 8,
+      "build_s": 13.765849093906581,
+      "encode_s": 13.711148512,
+      "memory": {
+        "ram_components": {
+          "core_object": 136,
+          "rotation_object_and_flips": 864,
+          "center": 6144,
+          "binary_codes_and_factors": 20400000,
+          "extra_codes_and_factors": 135200000
+        },
+        "ram_bytes": 155607144,
+        "disk_bytes": 155606960,
+        "count": 100000,
+        "disk_bits_per_vector": 12448.5568,
+        "ram_bits_per_vector": 12448.57152
+      },
+      "timings": []
+    }
+  ]
+}

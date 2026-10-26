@@ -88,8 +88,8 @@ void lookup_kernel_test(size_t count,bool avx512) {
   }
   const auto cache=build_fast_lookup_cache(levels,tiers,map,count,stride,code_bytes,centroids,rows.data());
   const std::vector<float> input{.3f,-.7f,.1f,.2f};
-  auto query=prepare_fast_lookup_query(*cache->lookup,input.data());
-  const auto output=project_fast_query(map,input.data());
+  auto query=prepare_fast_lookup_query(*cache->lookup,input.data(),{basis,sigma});
+  const auto output=project_fast_query(map,input.data(),{basis,sigma});
   for (size_t r=0;r<weights;++r) {
     float expected=0; for (size_t i=0;i<dimensions;++i) expected+=input[i]*basis[i*weights+r];
     require(std::fabs(output[r]-expected*sigma[r])<1e-5f,"fast query projection differs");
@@ -154,7 +154,7 @@ void lookup_kernel_test(size_t count,bool avx512) {
   }
 
   const std::vector<float> zero(dimensions);
-  const auto zero_query=prepare_fast_lookup_query(*cache->lookup,zero.data());
+  const auto zero_query=prepare_fast_lookup_query(*cache->lookup,zero.data(),{basis,sigma});
   scan(zero_query,0,count,scores.data());
   require(std::all_of(scores.begin(),scores.begin()+count,[](float x){return x==0;}),"zero byte-table query differs");
 }
