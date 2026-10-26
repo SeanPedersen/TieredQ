@@ -1,0 +1,33 @@
+{
+  "arguments": {
+    "data": "/home/sean/experiments/TieredQ-issue4-current-20261026-tpj3ze/benchmark/data",
+    "native": "build",
+    "output": "results",
+    "datasets": [
+      "sift",
+      "glove",
+      "openai"
+    ],
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "bits": [
+      2,
+      4
+    ],
+    "queries": 200,
+    "train_rows": 8192
+  },
+  "host": "hartmut",
+  "threads": 8,
+  "batch": 32,
+  "fit_limit": 1000000,
+  "fitting": "sigma-squared weighted standardized tier values; Gaussian initialization",
+  "source_hashes": {
+    "/home/sean/experiments/TieredQ-codebooks-20261026-AUmRXY/benchmark/experiments/learned_codebooks/CMakeLists.txt": "bc8f7ad695cf1e89c7ac79124dcdd893eb8662acb169b6ced1737064d842aeaf",
+    "/home/sean/experiments/TieredQ-codebooks-20261026-AUmRXY/benchmark/experiments/learned_codebooks/module.cpp": "aa75c2989b290956f0417340b8c902bcf54dc997b18a117eeea9ca00221c2463",
+    "/home/sean/experiments/TieredQ-codebooks-20261026-AUmRXY/benchmark/experiments/learned_codebooks/run.py": "29800f2828534335814588f4d34a82a6d3a44cbd4c0f179ea1e0fc2abb85c72e"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "affinity": [
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15
+  ],
+  "host": "hartmut",
+  "warmups": 3,
+  "repeats": 3,
+  "single_queries": 128,
+  "include_query_transform": false,
+  "native_module_sha256": "7796a86f7d518be8d462301e41587021c7c23f882226985fed235c828ea76f8e",
+  "sources": {
+    "common.py": "3ce5a14d5310b5b414fd3de27b968d6ab9aba668ee657cd1c3c24299fb059335",
+    "quality.py": "7824dfbe7db9494c60c577db905fb341307f26dc6d3720a40bc3367bf2742ebb",
+    "timing.py": "f9604a79414e6e512beb9131ea801599f6118cc422023be8493ddb1fe3b37565",
+    "instrument.py": "c0c260479d401e2986a8c80bff06656d9474f2171d35a4be52a53a3ba2810f37"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "arguments": {
+    "data": "/home/sean/experiments/TieredQ-issue4-current-20261026-tpj3ze/benchmark/data",
+    "native": "build",
+    "output": "results-row-normalized",
+    "datasets": [
+      "sift",
+      "glove",
+      "openai"
+    ],
+    "seeds": [
+      0
+    ],
+    "bits": [
+      2,
+      4
+    ],
+    "queries": 200,
+    "train_rows": 8192,
+    "fit_space": "row-normalized"
+  },
+  "host": "hartmut",
+  "threads": 8,
+  "batch": 32,
+  "fit_limit": 1000000,
+  "fitting": "sigma-squared weighted standardized tier values; Gaussian initialization",
+  "source_hashes": {
+    "/home/sean/experiments/TieredQ-codebooks-20261026-AUmRXY/benchmark/experiments/learned_codebooks/CMakeLists.txt": "bc8f7ad695cf1e89c7ac79124dcdd893eb8662acb169b6ced1737064d842aeaf",
+    "/home/sean/experiments/TieredQ-codebooks-20261026-AUmRXY/benchmark/experiments/learned_codebooks/module.cpp": "aa75c2989b290956f0417340b8c902bcf54dc997b18a117eeea9ca00221c2463",
+    "/home/sean/experiments/TieredQ-codebooks-20261026-AUmRXY/benchmark/experiments/learned_codebooks/run.py": "a98dc0a7e362f4ad9ea09b51efd137f2c6f1e4eea9b9d0f5d368b68f844bdc78",
+    "/home/sean/experiments/TieredQ-codebooks-20261026-AUmRXY/benchmark/experiments/learned_codebooks/summarize.py": "5ee5162e14c92a3517b558a7740d51501b116a3b29dd9abd853ba374b9c30592",
+    "/home/sean/experiments/TieredQ-codebooks-20261026-AUmRXY/benchmark/experiments/learned_codebooks/README.md": "001ae03d72f93a4183d11fdfe377c334817405fc740c5d1e34f9c01a1079e72d"
+  }
+}

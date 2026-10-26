@@ -1,0 +1,21 @@
+{
+  "quality_rows": 30,
+  "timing_rows": 90,
+  "phase_rows": 20,
+  "quality_models": 15,
+  "source_unchanged_during_measurements": true,
+  "profile_changes": [
+    "src/tieredq_index.cpp",
+    "src/tieredq_search_fast.h"
+  ],
+  "legacy_training_parity_smoke": true,
+  "fp32_and_fast_save_load_scores_ids_smoke": true,
+  "model_roundtrip_checks": 15,
+  "top10_vs_top1000_prefix_checks": 30,
+  "Gaussian_codebooks_identical_across_models": true,
+  "exit_codes": {
+    "quality": 0,
+    "timing": 0,
+    "profile": 0
+  }
+}

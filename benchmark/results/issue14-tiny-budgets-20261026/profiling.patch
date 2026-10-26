@@ -1,0 +1,105 @@
+--- a/src/tieredq_index.cpp
++++ b/src/tieredq_index.cpp
+@@ -1,3 +1,4 @@
++#include "/home/sean/experiments/TieredQ-tiny-budgets-20261026-9NAZyQ/profile-source/benchmark/experiments/native/profile.h"
+ // Index ownership, append transactions and exhaustive exact/fast query execution.
+ #include "tieredq/tieredq.h"
+ #include "tieredq_io.h"
+@@ -133,6 +134,7 @@
+ template<class Finish>
+ void fast_search(const tieredq_detail::FastScanCache& cache,const TieredQ& codec,
+     const float* queries,size_t rows,size_t k,Finish finish) {
++  experiment_profile::Phase preparation_phase(experiment_profile::preparation);
+   [[maybe_unused]] const auto backend=tieredq_detail::fast_scan_backend(cache);
+ #ifdef DV_TIEREDQ_NEON
+   if (backend==tieredq_detail::FastScanBackend::neon) {
+@@ -141,6 +143,7 @@
+       tieredq_detail::scan_fast_neon_tile(cache,prepared,count,first,documents,scores,stride);
+     };
+     auto prepared=fast_search_queries(cache,codec,queries,rows,prepare);
++    preparation_phase.stop();
+     tieredq_detail::search_fast_tiles(prepared,cache.count,k,cache.code_lookup() ? tieredq_detail::fast_code_query_group : tieredq_detail::fast_scan_query_tile_neon,scan,finish);
+     return;
+   }
+@@ -156,6 +159,7 @@
+     const size_t query_tile=cache.lookup ? 1 : cache.code_lookup() ? tieredq_detail::fast_code_query_group : backend==tieredq_detail::FastScanBackend::avx512
+         ? tieredq_detail::fast_scan_query_tile_x86 : tieredq_detail::fast_scan_query_tile_avx2;
+     auto prepared=fast_search_queries(cache,codec,queries,rows,prepare);
++    preparation_phase.stop();
+     tieredq_detail::search_fast_tiles(prepared,cache.count,k,query_tile,scan,finish);
+     return;
+   }
+@@ -165,6 +169,7 @@
+   auto scan=[&](const auto* prepared,size_t count,size_t first,size_t documents,float* scores,size_t stride) {
+     tieredq_detail::scan_fast_scalar_tile(cache,prepared,count,first,documents,scores,stride);
+   };
++  preparation_phase.stop();
+   tieredq_detail::search_fast_tiles(prepared,cache.count,k,1,scan,finish);
+ }
+ } // namespace
+@@ -205,8 +210,10 @@
+   size_t segment_blocks=(total_blocks+segments-1)/segments;
+   segments=(total_blocks+segment_blocks-1)/segment_blocks;
+   const size_t tasks=query_chunks*segments,workers=std::min(tasks,available);
++  experiment_profile::Phase preparation_phase(experiment_profile::preparation);
+   auto prepared=prepare_search_queries(queries,rows,dimensions,
+       [&](const float* vector) { return codec_.query(vector); });
++  preparation_phase.stop();
+   std::vector<float> partial_scores(tasks*chunk*found);
+   std::vector<uint32_t> partial_ids(tasks*chunk*found),partial_counts(tasks*chunk);
+   std::exception_ptr failure; std::mutex failure_mutex;
+@@ -221,10 +228,13 @@
+       std::vector<float> block_scores(count*selection_block);
+       for (size_t doc=begin;doc<end;doc+=selection_block) {
+         const size_t n=std::min(selection_block,end-doc);
+-        codec_.score_planes_batch(payload_.data()+doc*stride,n,prepared.data()+first,count,
+-                                  block_scores.data(),n,TieredQKernel::automatic,false);
++        { experiment_profile::Phase scan_phase(experiment_profile::scan);
++          codec_.score_planes_batch(payload_.data()+doc*stride,n,prepared.data()+first,count,
++                                  block_scores.data(),n,TieredQKernel::automatic,false); }
++        experiment_profile::Phase selection_phase(experiment_profile::selection);
+         for (size_t i=0;i<count;++i) heaps[i].add(block_scores.data()+i*n,n,doc);
+       }
++      experiment_profile::Phase selection_phase(experiment_profile::selection);
+       for (size_t i=0;i<count;++i) {
+         const auto hits=heaps[i].finish();
+         const size_t offset=(task*chunk+i)*found;
+@@ -242,6 +252,7 @@
+   if (failure) std::rethrow_exception(failure);
+ #pragma omp parallel for schedule(static) num_threads(std::min(rows,available)) if(rows>1 && !omp_in_parallel())
+   for (size_t row=0;row<rows;++row) {
++    experiment_profile::Phase merge_phase(experiment_profile::merge);
+     const size_t chunk_index=row/chunk,local=row%chunk;
+     std::vector<TieredQHit> hits; hits.reserve(segments*found);
+     for (size_t segment=0;segment<segments;++segment) {
+--- a/src/tieredq_search_fast.h
++++ b/src/tieredq_search_fast.h
+@@ -1,3 +1,4 @@
++#include "/home/sean/experiments/TieredQ-tiny-budgets-20261026-9NAZyQ/profile-source/benchmark/experiments/native/profile.h"
+ // Bounded-memory fast-search orchestration: scan cache tiles and select before reusing scratch.
+ // Documents are split into segments when query tiles alone cannot occupy every worker; per-segment
+ // top-k lists merge with the same score/id order, so results do not depend on the split.
+@@ -41,17 +42,21 @@
+       for (size_t row=0;row<rows;++row) top.emplace_back(k);
+       for (size_t begin=begin_document;begin<end_document;begin+=stride) {
+         const size_t count=std::min(stride,end_document-begin);
+-        scan(queries.data()+first,rows,begin,count,scratch.data(),stride);
++        { experiment_profile::Phase scan_phase(experiment_profile::scan);
++          scan(queries.data()+first,rows,begin,count,scratch.data(),stride); }
++        experiment_profile::Phase selection_phase(experiment_profile::selection);
+         for (size_t row=0;row<rows;++row) for (size_t block=0;block<count;block+=selection_block)
+           top[row].add(scratch.data()+row*stride+block,std::min(selection_block,count-block),begin+block);
+       }
+-      for (size_t row=0;row<rows;++row) partial[(first+row)*segments+segment]=top[row].finish();
++      { experiment_profile::Phase selection_phase(experiment_profile::selection);
++        for (size_t row=0;row<rows;++row) partial[(first+row)*segments+segment]=top[row].finish(); }
+     } catch (...) {
+       std::lock_guard lock(failure_mutex);
+       if (!failure) failure=std::current_exception();
+     }
+   }
+   if (failure) std::rethrow_exception(failure);
++  experiment_profile::Phase merge_phase(experiment_profile::merge);
+   for (size_t row=0;row<queries.size();++row) {
+     if (segments==1) { finish(row,std::move(partial[row])); continue; }
+     std::vector<TieredQHit> hits;

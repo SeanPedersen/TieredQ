@@ -1,0 +1,201 @@
+{
+  "primary": [
+    {
+      "file": "/home/sean/experiments/TieredQ-tiny-budgets-20261026-9NAZyQ/benchmark/experiments/native/module.cpp",
+      "arguments": [
+        "/usr/bin/c++",
+        "-DEXPERIMENT_MODULE=tiny_native",
+        "-Dtiny_native_EXPORTS",
+        "-I/home/sean/.local/share/uv/python/cpython-3.12-linux-x86_64-gnu/include/python3.12",
+        "-I/home/sean/experiments/TieredQ-issue4-current-20261026-tpj3ze/benchmark/.venv/lib/python3.12/site-packages/nanobind/include",
+        "-I/home/sean/experiments/TieredQ-tiny-budgets-20261026-9NAZyQ/include",
+        "-O3",
+        "-DNDEBUG",
+        "-std=gnu++20",
+        "-fPIC",
+        "-fvisibility=hidden",
+        "-O3",
+        "-march=native",
+        "-ffp-contract=off",
+        "-fno-stack-protector",
+        "-ffunction-sections",
+        "-fdata-sections",
+        "-fopenmp",
+        "-o",
+        "CMakeFiles/tiny_native.dir/home/sean/experiments/TieredQ-tiny-budgets-20261026-9NAZyQ/benchmark/experiments/native/module.cpp.o",
+        "-c",
+        "/home/sean/experiments/TieredQ-tiny-budgets-20261026-9NAZyQ/benchmark/experiments/native/module.cpp"
+      ],
+      "effective_optimization": "-O3"
+    },
+    {
+      "file": "/home/sean/experiments/TieredQ-tiny-budgets-20261026-9NAZyQ/src/tieredq.cpp",
+      "arguments": [
+        "/usr/bin/c++",
+        "-I/home/sean/experiments/TieredQ-tiny-budgets-20261026-9NAZyQ/include",
+        "-O3",
+        "-DNDEBUG",
+        "-std=gnu++20",
+        "-fPIC",
+        "-O3",
+        "-march=native",
+        "-ffp-contract=off",
+        "-Wall",
+        "-Wextra",
+        "-Wno-misleading-indentation",
+        "-fopenmp",
+        "-o",
+        "CMakeFiles/dv_tieredq.dir/src/tieredq.cpp.o",
+        "-c",
+        "/home/sean/experiments/TieredQ-tiny-budgets-20261026-9NAZyQ/src/tieredq.cpp"
+      ],
+      "effective_optimization": "-O3"
+    },
+    {
+      "file": "/home/sean/experiments/TieredQ-tiny-budgets-20261026-9NAZyQ/src/tieredq_index.cpp",
+      "arguments": [
+        "/usr/bin/c++",
+        "-I/home/sean/experiments/TieredQ-tiny-budgets-20261026-9NAZyQ/include",
+        "-O3",
+        "-DNDEBUG",
+        "-std=gnu++20",
+        "-fPIC",
+        "-O3",
+        "-march=native",
+        "-ffp-contract=off",
+        "-Wall",
+        "-Wextra",
+        "-Wno-misleading-indentation",
+        "-fopenmp",
+        "-o",
+        "CMakeFiles/dv_tieredq.dir/src/tieredq_index.cpp.o",
+        "-c",
+        "/home/sean/experiments/TieredQ-tiny-budgets-20261026-9NAZyQ/src/tieredq_index.cpp"
+      ],
+      "effective_optimization": "-O3"
+    },
+    {
+      "file": "/home/sean/experiments/TieredQ-tiny-budgets-20261026-9NAZyQ/src/tieredq_index_io.cpp",
+      "arguments": [
+        "/usr/bin/c++",
+        "-I/home/sean/experiments/TieredQ-tiny-budgets-20261026-9NAZyQ/include",
+        "-O3",
+        "-DNDEBUG",
+        "-std=gnu++20",
+        "-fPIC",
+        "-O3",
+        "-march=native",
+        "-ffp-contract=off",
+        "-Wall",
+        "-Wextra",
+        "-Wno-misleading-indentation",
+        "-fopenmp",
+        "-o",
+        "CMakeFiles/dv_tieredq.dir/src/tieredq_index_io.cpp.o",
+        "-c",
+        "/home/sean/experiments/TieredQ-tiny-budgets-20261026-9NAZyQ/src/tieredq_index_io.cpp"
+      ],
+      "effective_optimization": "-O3"
+    }
+  ],
+  "profile": [
+    {
+      "file": "/home/sean/experiments/TieredQ-tiny-budgets-20261026-9NAZyQ/profile-source/benchmark/experiments/native/module.cpp",
+      "arguments": [
+        "/usr/bin/c++",
+        "-DEXPERIMENT_MODULE=tiny_native",
+        "-DEXPERIMENT_PROFILE=1",
+        "-Dtiny_native_EXPORTS",
+        "-I/home/sean/.local/share/uv/python/cpython-3.12-linux-x86_64-gnu/include/python3.12",
+        "-I/home/sean/experiments/TieredQ-issue4-current-20261026-tpj3ze/benchmark/.venv/lib/python3.12/site-packages/nanobind/include",
+        "-I/home/sean/experiments/TieredQ-tiny-budgets-20261026-9NAZyQ/profile-source/include",
+        "-O3",
+        "-DNDEBUG",
+        "-std=gnu++20",
+        "-fPIC",
+        "-fvisibility=hidden",
+        "-O3",
+        "-march=native",
+        "-ffp-contract=off",
+        "-fno-stack-protector",
+        "-ffunction-sections",
+        "-fdata-sections",
+        "-fopenmp",
+        "-o",
+        "CMakeFiles/tiny_native.dir/home/sean/experiments/TieredQ-tiny-budgets-20261026-9NAZyQ/profile-source/benchmark/experiments/native/module.cpp.o",
+        "-c",
+        "/home/sean/experiments/TieredQ-tiny-budgets-20261026-9NAZyQ/profile-source/benchmark/experiments/native/module.cpp"
+      ],
+      "effective_optimization": "-O3"
+    },
+    {
+      "file": "/home/sean/experiments/TieredQ-tiny-budgets-20261026-9NAZyQ/profile-source/src/tieredq.cpp",
+      "arguments": [
+        "/usr/bin/c++",
+        "-I/home/sean/experiments/TieredQ-tiny-budgets-20261026-9NAZyQ/profile-source/include",
+        "-O3",
+        "-DNDEBUG",
+        "-std=gnu++20",
+        "-fPIC",
+        "-O3",
+        "-march=native",
+        "-ffp-contract=off",
+        "-Wall",
+        "-Wextra",
+        "-Wno-misleading-indentation",
+        "-fopenmp",
+        "-o",
+        "CMakeFiles/dv_tieredq.dir/src/tieredq.cpp.o",
+        "-c",
+        "/home/sean/experiments/TieredQ-tiny-budgets-20261026-9NAZyQ/profile-source/src/tieredq.cpp"
+      ],
+      "effective_optimization": "-O3"
+    },
+    {
+      "file": "/home/sean/experiments/TieredQ-tiny-budgets-20261026-9NAZyQ/profile-source/src/tieredq_index.cpp",
+      "arguments": [
+        "/usr/bin/c++",
+        "-I/home/sean/experiments/TieredQ-tiny-budgets-20261026-9NAZyQ/profile-source/include",
+        "-O3",
+        "-DNDEBUG",
+        "-std=gnu++20",
+        "-fPIC",
+        "-O3",
+        "-march=native",
+        "-ffp-contract=off",
+        "-Wall",
+        "-Wextra",
+        "-Wno-misleading-indentation",
+        "-fopenmp",
+        "-o",
+        "CMakeFiles/dv_tieredq.dir/src/tieredq_index.cpp.o",
+        "-c",
+        "/home/sean/experiments/TieredQ-tiny-budgets-20261026-9NAZyQ/profile-source/src/tieredq_index.cpp"
+      ],
+      "effective_optimization": "-O3"
+    },
+    {
+      "file": "/home/sean/experiments/TieredQ-tiny-budgets-20261026-9NAZyQ/profile-source/src/tieredq_index_io.cpp",
+      "arguments": [
+        "/usr/bin/c++",
+        "-I/home/sean/experiments/TieredQ-tiny-budgets-20261026-9NAZyQ/profile-source/include",
+        "-O3",
+        "-DNDEBUG",
+        "-std=gnu++20",
+        "-fPIC",
+        "-O3",
+        "-march=native",
+        "-ffp-contract=off",
+        "-Wall",
+        "-Wextra",
+        "-Wno-misleading-indentation",
+        "-fopenmp",
+        "-o",
+        "CMakeFiles/dv_tieredq.dir/src/tieredq_index_io.cpp.o",
+        "-c",
+        "/home/sean/experiments/TieredQ-tiny-budgets-20261026-9NAZyQ/profile-source/src/tieredq_index_io.cpp"
+      ],
+      "effective_optimization": "-O3"
+    }
+  ]
+}

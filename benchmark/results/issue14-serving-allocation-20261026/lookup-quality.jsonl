@@ -1,0 +1,6 @@
+{"budget": 64, "grouping": "register", "all_document_scores_equal": true, "recall10": 0.2217, "stride": 19, "storage": 19270992, "model_memory": 154140, "bytes_per_vector": 19.55903}
+{"budget": 64, "grouping": "byte", "all_document_scores_equal": true, "recall10": 0.2217, "stride": 19, "storage": 19270992, "model_memory": 154140, "bytes_per_vector": 19.55903}
+{"budget": 80, "grouping": "register", "all_document_scores_equal": true, "recall10": 0.2998, "stride": 21, "storage": 21271376, "model_memory": 157284, "bytes_per_vector": 21.562558}
+{"budget": 80, "grouping": "byte", "all_document_scores_equal": true, "recall10": 0.2998, "stride": 21, "storage": 21271376, "model_memory": 157284, "bytes_per_vector": 21.562558}
+{"budget": 128, "grouping": "register", "all_document_scores_equal": true, "recall10": 0.501, "stride": 27, "storage": 27273040, "model_memory": 166564, "bytes_per_vector": 27.573502}
+{"budget": 128, "grouping": "byte", "all_document_scores_equal": true, "recall10": 0.501, "stride": 27, "storage": 27273040, "model_memory": 166564, "bytes_per_vector": 27.573502}

@@ -1,0 +1,28 @@
+{
+  "boundary_append_save_load_equal_sizes": [
+    1,
+    15,
+    16,
+    17,
+    255,
+    256,
+    257,
+    4095,
+    4096,
+    4097
+  ],
+  "prior_top10_equal_budgets": [
+    64,
+    80,
+    128
+  ],
+  "gaussian_recipes_checked": 64,
+  "exact_budget_checks": true,
+  "lookup_full_document_scores_and_rankings_equal": true,
+  "codec_source_stable_across_primary_modes": {
+    "lookup": true,
+    "allocation": true,
+    "timing": true
+  },
+  "complete_matrix_and_exit_markers_checked": true
+}
