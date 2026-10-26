@@ -11,5 +11,13 @@
     "repo": "Qdrant/dbpedia-entities-openai3-text-embedding-3-large-1536-1M",
     "revision": "4a9731217921bc476a0f03544f11f22ae4903fa5",
     "column": "text-embedding-3-large-1536-embedding"
+  },
+  "gemini": {
+    "repo": "nirantk/dbpedia-entities-google-palm-gemini-embedding-001-100K",
+    "revision": "e14a0f193988e9efb7ccc57b4c615418e6540f62",
+    "files": {
+      "data/train-00000-of-00002.parquet": "73d3b212a797fdd6239edcef92616dfcb791a6660a9d15127fa3ff02afc4c488",
+      "data/train-00001-of-00002.parquet": "4acbd56186ea9afc9410becac479b7c41309dfcb8e601ccea97bbe0a8fbfdaef"
+    }
   }
 }
