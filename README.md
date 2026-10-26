@@ -1,8 +1,8 @@
 # TieredQ: Variance-Aware Bit Allocation
 
-TieredQ is a new vector quantization algorithm that dynamically allocates bits per dimension, providing a very high recall compression ratio (compared to RaBitQ or TurboQuant). TieredQ centers and rotates vectors into a PCA basis, then greedily allocates 0–8 bits per dimension to reduce quantization error. Other ANN indexes can use the codec directly.
+TieredQ is a new vector quantization algorithm that dynamically allocates bits per dimension, providing higher recall compression ratio (compared to RaBitQ or TurboQuant). TieredQ centers and rotates vectors into a PCA basis, then greedily allocates 0–8 bits per dimension to reduce quantization error. Existing ANN indexes (HNSW / IVF) can use the codec directly as drop-in for RaBitQ or TurboQuant.
 
-TieredQ core steps:
+TieredQ core algorithm:
 1. PCA
 2. Variance-aware greedy bit allocation per dimension (principal component)
 3. Scalar quantization per dimension with allocated bit budget
@@ -25,7 +25,7 @@ import gensim.downloader as api
 from tieredq import TieredQIndex
 
 vectors = api.load("glove-wiki-gigaword-100").vectors  # (400000, 100), float32
-index = TieredQIndex(dimensions=100, code_bits=200, fast_mode=True)
+index = TieredQIndex(dimensions=100, code_bits=200, fast_mode=True) # 2 bits per dim
 index.add(vectors)  # first add trains; later adds only encode
 scores, ids = index.search(vectors[:2], k=10)  # (2, 10) float32, uint32
 
@@ -38,12 +38,10 @@ index = TieredQIndex.load("index.tq")
   the fast representation. Both modes scan every vector; saving preserves the mode.
 - The first `add()` needs a representative batch of at least two vectors.
   Inputs must be contiguous float32 NumPy arrays.
-- Queries accept one vector or a matrix. Scores estimate inner products;
-  larger is better. Normalize inputs for cosine similarity.
+- Queries accept one vector or a matrix. Scores estimate inner products.
 - Fast storage size depends on the model and CPU. Inspect `bytes_per_vector`
   for the representation stride and `storage_bytes` for allocated vector data.
-  Fast scans use AVX-512 or AVX2 on x86, and NEON on ARM. Files loaded on
-  another CPU may use a slower scalar backend and emit a warning.
+  Fast scans use AVX-512 or AVX2 on x86, and NEON on ARM.
 - Matrix queries use OpenMP workers. Set `OMP_NUM_THREADS` before starting Python
   to control parallelism.
 
