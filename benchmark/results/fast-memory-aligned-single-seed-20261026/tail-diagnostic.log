@@ -1,0 +1,40 @@
+{
+  "scope": "Targeted diagnostic only: OpenAI seed 0, 2048 code bits, eight threads, batch 1, original 1000 queries, three warmup queries and three repeats. Matrix row retained unchanged; no profiling or budget selection.",
+  "repeats": [
+    {
+      "p50_ms": 1.177499769255519,
+      "p95_ms": 1.25020369887352,
+      "max_ms": 4.0823230519890785
+    },
+    {
+      "p50_ms": 1.1764711234718561,
+      "p95_ms": 1.2655903352424502,
+      "max_ms": 1.7981580458581448
+    },
+    {
+      "p50_ms": 1.1625715997070074,
+      "p95_ms": 1.2236054055392742,
+      "max_ms": 1.5019443817436695
+    }
+  ],
+  "overall_p50_ms": 1.1725658550858498,
+  "overall_p95_ms": 1.2458303477615118,
+  "host_before": [
+    "    PID     ELAPSED %CPU COMMAND",
+    "2346075       00:16  434 benchmark/.venv/bin/python check_tail.py",
+    "2347157       00:00  200 ps -eo pid,etime,pcpu,args --sort=-pcpu",
+    "2347151       00:00  111 python -c import urllib.request; urllib.request.urlopen('http://127.0.0.1:23239/health/ready', timeout=2)",
+    "2382859  4-04:04:33  100 /app/.venv/bin/python /app/.venv/bin/uvicorn crawler_app:app --host 0.0.0.0 --port 23239 --no-access-log",
+    "2380132  4-04:04:55 66.5 /app/.venv/bin/python /app/.venv/bin/uvicorn app:app --host 0.0.0.0 --port 23237 --no-access-log",
+    "   1620 27-21:13:23  4.5 /usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock",
+    "   1287 27-21:13:36  3.9 /usr/bin/containerd",
+    "  26622  4-13:11:34  2.6 btop",
+    "   2557 27-21:13:17  2.4 /usr/bin/kwin_wayland --wayland-fd 7 --socket wayland-0 --xwayland-fd 8 --xwayland-fd 9 --xwayland-display :0 --xwayland-xauthority /run/user/1000/xauth_fVJnJa --xwayland",
+    "    507 27-21:14:00  1.9 [nv_queue]",
+    "2649964  4-03:07:15  1.4 /app/llama-server --model /models/Qwen_Qwen3.5-4B-Q4_K_M.gguf --alias SemIf-Q4 --n-gpu-layers 999 --ctx-size 6144 --parallel 1 --cache-ram 0 --host 0.0.0.0 --port 8080 --jinja",
+    "   4088 27-21:13:16  1.3 /usr/bin/plasmashell --no-respawn",
+    "  26228  4-13:11:35  1.0 mosh-server new -c 256 -s -l LANG=en_US.UTF-8",
+    "  49498 25-03:04:40  0.9 redis-server *:6379"
+  ],
+  "limitation": "A separate repeat cannot recover the cause of the original p95 spike. Background services remain active; no isolated causal or confidence claim."
+}

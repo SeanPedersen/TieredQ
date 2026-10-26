@@ -1,0 +1,32 @@
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-openai-aligned-20261026-akXzMJ/benchmark/build-native
+[ 20%] Built target dv_tieredq
+[ 25%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 85%] Built target nanobind-static
+[ 90%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 95%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[ 95%] Built target codec_native
+[100%] Linking CXX executable codec_reference
+[100%] Built target codec_reference
+Storage calibration: {"anchor_bits": 2, "attempt": 1, "target_code_bits": 1792, "nominal_bits_per_dimension": 1.1666666666666667, "bytes_per_vector": 419.57704, "build_s": 14.437561929225922, "tiers": [{"start": 0, "dimensions": 59, "bits": 4}, {"start": 59, "dimensions": 168, "bits": 3}, {"start": 227, "dimensions": 322, "bits": 2}, {"start": 549, "dimensions": 408, "bits": 1}]}
+Storage calibration: {"anchor_bits": 2, "attempt": 2, "target_code_bits": 1667, "nominal_bits_per_dimension": 1.0852864583333333, "bytes_per_vector": 396.5356, "build_s": 14.24855891102925, "tiers": [{"start": 0, "dimensions": 49, "bits": 4}, {"start": 49, "dimensions": 155, "bits": 3}, {"start": 204, "dimensions": 303, "bits": 2}, {"start": 507, "dimensions": 400, "bits": 1}]}
+Storage calibration: {"anchor_bits": 2, "attempt": 3, "target_code_bits": 1727, "nominal_bits_per_dimension": 1.1243489583333333, "bytes_per_vector": 407.98584, "build_s": 14.2976566827856, "tiers": [{"start": 0, "dimensions": 54, "bits": 4}, {"start": 54, "dimensions": 161, "bits": 3}, {"start": 215, "dimensions": 312, "bits": 2}, {"start": 527, "dimensions": 404, "bits": 1}]}
+Storage calibration: {"anchor_bits": 2, "attempt": 4, "target_code_bits": 1695, "nominal_bits_per_dimension": 1.103515625, "bytes_per_vector": 402.1992, "build_s": 14.07453298009932, "tiers": [{"start": 0, "dimensions": 51, "bits": 4}, {"start": 51, "dimensions": 159, "bits": 3}, {"start": 210, "dimensions": 306, "bits": 2}, {"start": 516, "dimensions": 402, "bits": 1}]}
+Measured code_bits=1695, threads=1, batch=1: {'recall10': 0.8991000000000001, 'qps': 499.6598356636077, 'p50_ms': 1.966171432286501, 'p95_ms': 2.2067447425797577}
+Measured code_bits=1695, threads=1, batch=32: {'recall10': 0.8991000000000001, 'qps': 537.1414642917695, 'p50_ms': 58.90788324177265, 'p95_ms': 63.96753713488579}
+Measured code_bits=1695, threads=8, batch=1: {'recall10': 0.8991000000000001, 'qps': 1134.8206178076716, 'p50_ms': 0.8500816766172647, 'p95_ms': 0.9210893651470541}
+Measured code_bits=1695, threads=8, batch=32: {'recall10': 0.8991000000000001, 'qps': 3759.4602513284926, 'p50_ms': 8.503623772412539, 'p95_ms': 9.12714097648859}
+Storage calibration: {"anchor_bits": 4, "attempt": 1, "target_code_bits": 5344, "nominal_bits_per_dimension": 3.4791666666666665, "bytes_per_vector": 787.79958, "build_s": 15.574982523918152, "tiers": [{"start": 0, "dimensions": 67, "bits": 6}, {"start": 67, "dimensions": 203, "bits": 5}, {"start": 270, "dimensions": 435, "bits": 4}, {"start": 705, "dimensions": 538, "bits": 3}, {"start": 1243, "dimensions": 282, "bits": 2}, {"start": 1525, "dimensions": 9, "bits": 1}]}
+Measured code_bits=5344, threads=1, batch=1: {'recall10': 0.9793, 'qps': 65.83316199104432, 'p50_ms': 14.914141269400716, 'p95_ms': 16.5882516419515}
+Measured code_bits=5344, threads=1, batch=32: {'recall10': 0.9793, 'qps': 219.42933484650567, 'p50_ms': 151.3938307762146, 'p95_ms': 162.92679822072387}
+Measured code_bits=5344, threads=8, batch=1: {'recall10': 0.9793, 'qps': 292.4670781674698, 'p50_ms': 3.442842746153474, 'p95_ms': 3.6130463238805532}
+Measured code_bits=5344, threads=8, batch=32: {'recall10': 0.9793, 'qps': 1106.199914988048, 'p50_ms': 28.460083063691854, 'p95_ms': 33.05823029950261}
+Storage calibration: {"anchor_bits": 8, "attempt": 1, "target_code_bits": 11488, "nominal_bits_per_dimension": 7.479166666666667, "bytes_per_vector": 1555.81058, "build_s": 21.953455139882863, "tiers": [{"start": 0, "dimensions": 876, "bits": 8}, {"start": 876, "dimensions": 532, "bits": 7}, {"start": 1408, "dimensions": 126, "bits": 6}]}
+Measured code_bits=11488, threads=1, batch=1: {'recall10': 0.9982000000000001, 'qps': 25.220170912903193, 'p50_ms': 38.936636643484235, 'p95_ms': 42.962900549173355}
+Measured code_bits=11488, threads=1, batch=32: {'recall10': 0.9982000000000001, 'qps': 178.7948618501982, 'p50_ms': 176.12191569060087, 'p95_ms': 193.2852459140122}
+Measured code_bits=11488, threads=8, batch=1: {'recall10': 0.9982000000000001, 'qps': 130.27769553063985, 'p50_ms': 7.639896124601364, 'p95_ms': 8.151725796051323}
+Measured code_bits=11488, threads=8, batch=32: {'recall10': 0.9982000000000001, 'qps': 959.568491002586, 'p50_ms': 31.892505008727312, 'p95_ms': 45.52522208541632}
+Completed: 346.09656111802906 seconds

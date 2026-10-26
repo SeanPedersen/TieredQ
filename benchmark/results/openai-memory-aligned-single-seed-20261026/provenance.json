@@ -1,0 +1,11 @@
+{
+  "commit": "3c9dbf590209dabf8ecccd3385fd56254779c70d",
+  "branch": "main",
+  "source_archive": "../issue4-current-single-seed-20261026/committed-source.tar",
+  "source_archive_sha256": "7777c730da32ce5d90df0cf23ff4853b2a6d48f820060b7caed9aa7a767e0641",
+  "workspace": "sean@hartmut:/home/sean/experiments/TieredQ-openai-aligned-20261026-akXzMJ",
+  "change_scope": "Benchmark-only exact total-code-bit constructor overload, using existing TieredQConfig::target_code_bits. No codec source changes. Standalone measurement driver reuses original data/measure/storage implementations.",
+  "rabitq_anchors": "Original fresh issue4-current-single-seed-20261026 results; not simultaneous remeasurements. Native bounds/HACC.",
+  "selection": "Storage-only candidates; accept within 0.5% below measured anchor; not global optimality or exact-equal-memory claim.",
+  "preservation": "Current branch unchanged; no commit; previous source workspaces and outputs untouched."
+}

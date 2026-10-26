@@ -1,0 +1,129 @@
+Using completed validation: 16 tests passed
+Dataset verification started 2026-10-26T13:06:27Z
+Verified full sift: 1000000 vectors, 1000 queries, cached truth
+Verified full glove: 100000 vectors, 1000 queries, cached truth
+Verified full openai: 100000 vectors, 1000 queries, cached truth
+Core matrix started 2026-10-26T13:06:39Z
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue4-current-20261026-tpj3ze/benchmark/build-native
+[  5%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 25%] Built target dv_tieredq
+[ 85%] Built target nanobind-static
+[ 90%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 95%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[ 95%] Built target codec_native
+[100%] Linking CXX executable codec_reference
+[100%] Built target codec_reference
+sift tieredq b=1 seed=0 t=1 batch=1: {'recall10': 0.5005, 'qps': 369.5831011081993, 'p50_ms': 2.6529550086706877, 'p95_ms': 2.9541102470830083}
+sift tieredq b=1 seed=0 t=1 batch=32: {'recall10': 0.5005999999999999, 'qps': 372.1569069547314, 'p50_ms': 84.62441572919488, 'p95_ms': 92.32596075162292}
+sift tieredq b=1 seed=0 t=8 batch=1: {'recall10': 0.5005, 'qps': 2225.335241940905, 'p50_ms': 0.449024373665452, 'p95_ms': 0.4786979639902711}
+sift tieredq b=1 seed=0 t=8 batch=32: {'recall10': 0.5005999999999999, 'qps': 2759.2219549003203, 'p50_ms': 11.507902294397354, 'p95_ms': 12.232327368110418}
+sift tieredq b=2 seed=0 t=1 batch=1: {'recall10': 0.7622000000000001, 'qps': 80.07735739300324, 'p50_ms': 12.191816000267863, 'p95_ms': 13.89221593271941}
+sift tieredq b=2 seed=0 t=1 batch=32: {'recall10': 0.7622000000000001, 'qps': 356.9275576712892, 'p50_ms': 88.24527589604259, 'p95_ms': 95.7352458499372}
+sift tieredq b=2 seed=0 t=8 batch=1: {'recall10': 0.7622000000000001, 'qps': 555.3398052340608, 'p50_ms': 1.7889889422804117, 'p95_ms': 1.98268168605864}
+sift tieredq b=2 seed=0 t=8 batch=32: {'recall10': 0.7622000000000001, 'qps': 2383.1336136807836, 'p50_ms': 13.436616864055395, 'p95_ms': 14.682612381875515}
+sift tieredq b=4 seed=0 t=1 batch=1: {'recall10': 0.9333, 'qps': 43.20543079726592, 'p50_ms': 22.70167088136077, 'p95_ms': 25.365173583850265}
+sift tieredq b=4 seed=0 t=1 batch=32: {'recall10': 0.9333, 'qps': 257.34810149383475, 'p50_ms': 122.39466095343232, 'p95_ms': 131.63105910643935}
+sift tieredq b=4 seed=0 t=8 batch=1: {'recall10': 0.9333, 'qps': 305.70630573540893, 'p50_ms': 3.243695944547653, 'p95_ms': 3.5623748786747456}
+sift tieredq b=4 seed=0 t=8 batch=32: {'recall10': 0.9333, 'qps': 1660.2719986149323, 'p50_ms': 18.60958570614457, 'p95_ms': 24.056547321379185}
+sift tieredq b=8 seed=0 t=1 batch=1: {'recall10': 0.9894000000000001, 'qps': 24.53923706869022, 'p50_ms': 39.963058196008205, 'p95_ms': 44.20872658956796}
+sift tieredq b=8 seed=0 t=1 batch=32: {'recall10': 0.9894000000000001, 'qps': 219.817269594552, 'p50_ms': 142.8050622344017, 'p95_ms': 155.07493074983358}
+sift tieredq b=8 seed=0 t=8 batch=1: {'recall10': 0.9894000000000001, 'qps': 181.20327507573518, 'p50_ms': 5.494727985933423, 'p95_ms': 5.875632748939097}
+sift tieredq b=8 seed=0 t=8 batch=32: {'recall10': 0.9894000000000001, 'qps': 1412.3211691864026, 'p50_ms': 20.402781199663877, 'p95_ms': 36.187203135341406}
+FhtKacRotator is selected
+sift rabitq b=1 seed=0 t=1 batch=1: {'recall10': 0.2429, 'qps': 301.48471834991756, 'p50_ms': 3.248730441555381, 'p95_ms': 3.5117660416290164}
+sift rabitq b=1 seed=0 t=1 batch=32: {'recall10': 0.2429, 'qps': 299.73050980696564, 'p50_ms': 105.67068681120872, 'p95_ms': 112.212298437953}
+sift rabitq b=1 seed=0 t=8 batch=1: {'recall10': 0.2429, 'qps': 300.33365236232754, 'p50_ms': 3.283827332779765, 'p95_ms': 3.533063526265323}
+sift rabitq b=1 seed=0 t=8 batch=32: {'recall10': 0.2429, 'qps': 2307.004981817257, 'p50_ms': 13.565442990511656, 'p95_ms': 14.563496224582195}
+FhtKacRotator is selected
+sift rabitq b=2 seed=0 t=1 batch=1: {'recall10': 0.5492999999999999, 'qps': 250.74985015359954, 'p50_ms': 3.9652485866099596, 'p95_ms': 4.585619550198316}
+sift rabitq b=2 seed=0 t=1 batch=32: {'recall10': 0.5492999999999999, 'qps': 248.6662119737904, 'p50_ms': 127.85571906715631, 'p95_ms': 136.9701512157917}
+sift rabitq b=2 seed=0 t=8 batch=1: {'recall10': 0.5492999999999999, 'qps': 247.54591309845458, 'p50_ms': 4.023143555969, 'p95_ms': 4.656501254066824}
+sift rabitq b=2 seed=0 t=8 batch=32: {'recall10': 0.5492999999999999, 'qps': 1976.032861063568, 'p50_ms': 16.027565114200115, 'p95_ms': 16.859671100974083}
+FhtKacRotator is selected
+sift rabitq b=4 seed=0 t=1 batch=1: {'recall10': 0.8493, 'qps': 228.74670604205713, 'p50_ms': 4.2792020831257105, 'p95_ms': 5.418967013247311}
+sift rabitq b=4 seed=0 t=1 batch=32: {'recall10': 0.8493, 'qps': 231.175533846188, 'p50_ms': 137.4552557244897, 'p95_ms': 149.64796975255013}
+sift rabitq b=4 seed=0 t=8 batch=1: {'recall10': 0.8493, 'qps': 228.0685126754492, 'p50_ms': 4.304630681872368, 'p95_ms': 5.4596384055912495}
+sift rabitq b=4 seed=0 t=8 batch=32: {'recall10': 0.8493, 'qps': 1534.5808844815845, 'p50_ms': 18.372779246419668, 'p95_ms': 36.174634005874395}
+FhtKacRotator is selected
+sift rabitq b=8 seed=0 t=1 batch=1: {'recall10': 0.989, 'qps': 223.3177111676603, 'p50_ms': 4.362317966297269, 'p95_ms': 5.771016492508352}
+sift rabitq b=8 seed=0 t=1 batch=32: {'recall10': 0.989, 'qps': 222.21610603111714, 'p50_ms': 143.25788198038936, 'p95_ms': 157.70185505971313}
+sift rabitq b=8 seed=0 t=8 batch=1: {'recall10': 0.989, 'qps': 221.15733292600646, 'p50_ms': 4.417633637785912, 'p95_ms': 5.810835515148937}
+sift rabitq b=8 seed=0 t=8 batch=32: {'recall10': 0.989, 'qps': 1618.0751086819346, 'p50_ms': 19.257147796452045, 'p95_ms': 21.92135713994503}
+glove tieredq b=1 seed=0 t=1 batch=1: {'recall10': 0.41209999999999997, 'qps': 3172.8273742265683, 'p50_ms': 0.30759978108108044, 'p95_ms': 0.34388666972517967}
+glove tieredq b=1 seed=0 t=1 batch=32: {'recall10': 0.41209999999999997, 'qps': 3370.2779382477074, 'p50_ms': 9.370474144816399, 'p95_ms': 10.174163151532412}
+glove tieredq b=1 seed=0 t=8 batch=1: {'recall10': 0.41209999999999997, 'qps': 8071.788938851906, 'p50_ms': 0.09219534695148468, 'p95_ms': 0.1303007826209068}
+glove tieredq b=1 seed=0 t=8 batch=32: {'recall10': 0.41209999999999997, 'qps': 25452.71648116022, 'p50_ms': 1.2523671612143517, 'p95_ms': 1.350675243884325}
+glove tieredq b=2 seed=0 t=1 batch=1: {'recall10': 0.6718999999999999, 'qps': 2315.934656756845, 'p50_ms': 0.42853900231420994, 'p95_ms': 0.4636920057237148}
+glove tieredq b=2 seed=0 t=1 batch=32: {'recall10': 0.6718999999999999, 'qps': 2456.1120454906845, 'p50_ms': 12.427203822880983, 'p95_ms': 14.60782578215003}
+glove tieredq b=2 seed=0 t=8 batch=1: {'recall10': 0.6718999999999999, 'qps': 8806.277844461398, 'p50_ms': 0.11181295849382877, 'p95_ms': 0.12689197901636362}
+glove tieredq b=2 seed=0 t=8 batch=32: {'recall10': 0.6718999999999999, 'qps': 17418.371042354756, 'p50_ms': 1.8375199288129807, 'p95_ms': 1.908432226628065}
+glove tieredq b=4 seed=0 t=1 batch=1: {'recall10': 0.9011000000000001, 'qps': 1528.2055212928162, 'p50_ms': 0.6383208092302084, 'p95_ms': 0.7317362353205681}
+glove tieredq b=4 seed=0 t=1 batch=32: {'recall10': 0.9011000000000001, 'qps': 1599.122630127361, 'p50_ms': 19.530911929905415, 'p95_ms': 21.942538674920797}
+glove tieredq b=4 seed=0 t=8 batch=1: {'recall10': 0.9011000000000001, 'qps': 5624.479847547839, 'p50_ms': 0.1656895037740469, 'p95_ms': 0.18671744037419552}
+glove tieredq b=4 seed=0 t=8 batch=32: {'recall10': 0.9011000000000001, 'qps': 11613.611725278206, 'p50_ms': 2.7214353904128075, 'p95_ms': 2.8790258802473545}
+glove tieredq b=8 seed=0 t=1 batch=1: {'recall10': 0.9921, 'qps': 166.45177488043214, 'p50_ms': 5.890161031857133, 'p95_ms': 6.732460157945752}
+glove tieredq b=8 seed=0 t=1 batch=32: {'recall10': 0.9921, 'qps': 1414.8804692905126, 'p50_ms': 22.288036067038774, 'p95_ms': 24.273155722767115}
+glove tieredq b=8 seed=0 t=8 batch=1: {'recall10': 0.9921, 'qps': 931.8907608320728, 'p50_ms': 1.0823754128068686, 'p95_ms': 1.154113165102899}
+glove tieredq b=8 seed=0 t=8 batch=32: {'recall10': 0.9921, 'qps': 7286.0291473241905, 'p50_ms': 4.290380980819464, 'p95_ms': 5.190758965909481}
+FhtKacRotator is selected
+glove rabitq b=1 seed=0 t=1 batch=1: {'recall10': 0.4049, 'qps': 2438.776153353069, 'p50_ms': 0.4068608395755291, 'p95_ms': 0.4424462094902992}
+glove rabitq b=1 seed=0 t=1 batch=32: {'recall10': 0.4049, 'qps': 2445.5944536442707, 'p50_ms': 12.906746007502079, 'p95_ms': 14.52021673321724}
+glove rabitq b=1 seed=0 t=8 batch=1: {'recall10': 0.4049, 'qps': 2420.3933657232883, 'p50_ms': 0.40680449455976486, 'p95_ms': 0.4535270854830742}
+glove rabitq b=1 seed=0 t=8 batch=32: {'recall10': 0.4049, 'qps': 16371.488727918651, 'p50_ms': 1.8038111738860607, 'p95_ms': 2.8931889683008194}
+FhtKacRotator is selected
+glove rabitq b=2 seed=0 t=1 batch=1: {'recall10': 0.6558999999999999, 'qps': 1932.4547756013474, 'p50_ms': 0.5150081124156713, 'p95_ms': 0.609508203342557}
+glove rabitq b=2 seed=0 t=1 batch=32: {'recall10': 0.6558999999999999, 'qps': 1984.4063835595077, 'p50_ms': 16.006396152079105, 'p95_ms': 17.86163542419672}
+glove rabitq b=2 seed=0 t=8 batch=1: {'recall10': 0.6558999999999999, 'qps': 1912.066859579581, 'p50_ms': 0.519398832693696, 'p95_ms': 0.6279801484197377}
+glove rabitq b=2 seed=0 t=8 batch=32: {'recall10': 0.6558999999999999, 'qps': 12752.940378329384, 'p50_ms': 2.1879770793020725, 'p95_ms': 4.105886910110712}
+FhtKacRotator is selected
+glove rabitq b=4 seed=0 t=1 batch=1: {'recall10': 0.8821000000000001, 'qps': 1687.1159691691842, 'p50_ms': 0.5829713772982359, 'p95_ms': 0.7558483397588134}
+glove rabitq b=4 seed=0 t=1 batch=32: {'recall10': 0.8821000000000001, 'qps': 1718.4194060719135, 'p50_ms': 18.41516885906458, 'p95_ms': 20.75325697660446}
+glove rabitq b=4 seed=0 t=8 batch=1: {'recall10': 0.8821000000000001, 'qps': 1677.8543650329868, 'p50_ms': 0.5866389255970716, 'p95_ms': 0.7696703309193252}
+glove rabitq b=4 seed=0 t=8 batch=32: {'recall10': 0.8821000000000001, 'qps': 12130.53663961452, 'p50_ms': 2.50066164880991, 'p95_ms': 3.0790618620812893}
+FhtKacRotator is selected
+glove rabitq b=8 seed=0 t=1 batch=1: {'recall10': 0.9878000000000001, 'qps': 1563.2213587354129, 'p50_ms': 0.6252208258956671, 'p95_ms': 0.8506156038492916}
+glove rabitq b=8 seed=0 t=1 batch=32: {'recall10': 0.9878000000000001, 'qps': 1548.138731873885, 'p50_ms': 20.5318508669734, 'p95_ms': 23.719506803900003}
+glove rabitq b=8 seed=0 t=8 batch=1: {'recall10': 0.9878000000000001, 'qps': 1651.5760657422138, 'p50_ms': 0.5957526154816151, 'p95_ms': 0.7947264472022653}
+glove rabitq b=8 seed=0 t=8 batch=32: {'recall10': 0.9878000000000001, 'qps': 11282.689387854476, 'p50_ms': 2.6689437218010426, 'p95_ms': 3.9013968780636787}
+openai tieredq b=1 seed=0 t=1 batch=1: {'recall10': 0.8939000000000002, 'qps': 519.7522833574793, 'p50_ms': 1.8837277311831713, 'p95_ms': 2.1314284298568964}
+openai tieredq b=1 seed=0 t=1 batch=32: {'recall10': 0.8939000000000002, 'qps': 589.1924623501806, 'p50_ms': 53.31612331792712, 'p95_ms': 59.18722506612539}
+openai tieredq b=1 seed=0 t=8 batch=1: {'recall10': 0.8939000000000002, 'qps': 1299.625133917505, 'p50_ms': 0.7652053609490395, 'p95_ms': 0.8256316417828201}
+openai tieredq b=1 seed=0 t=8 batch=32: {'recall10': 0.8939000000000002, 'qps': 4319.249645267734, 'p50_ms': 7.402115035802126, 'p95_ms': 7.696729153394699}
+openai tieredq b=2 seed=0 t=1 batch=1: {'recall10': 0.9474000000000001, 'qps': 76.90593047379161, 'p50_ms': 12.710481649264693, 'p95_ms': 14.335141610354185}
+openai tieredq b=2 seed=0 t=1 batch=32: {'recall10': 0.9474000000000001, 'qps': 239.9579511625253, 'p50_ms': 136.62339467555285, 'p95_ms': 150.4328311420977}
+openai tieredq b=2 seed=0 t=8 batch=1: {'recall10': 0.9474000000000001, 'qps': 341.22033458509094, 'p50_ms': 2.91631487198174, 'p95_ms': 3.144284849986434}
+openai tieredq b=2 seed=0 t=8 batch=32: {'recall10': 0.9474000000000001, 'qps': 1259.4796472090354, 'p50_ms': 24.780767038464546, 'p95_ms': 28.74854626134038}
+openai tieredq b=4 seed=0 t=1 batch=1: {'recall10': 0.9839000000000001, 'qps': 63.36437389042794, 'p50_ms': 15.491484897211194, 'p95_ms': 17.254425841383636}
+openai tieredq b=4 seed=0 t=1 batch=32: {'recall10': 0.9839000000000001, 'qps': 209.01224176868988, 'p50_ms': 152.67527010291815, 'p95_ms': 167.78161330148578}
+openai tieredq b=4 seed=0 t=8 batch=1: {'recall10': 0.9839000000000001, 'qps': 282.449435312767, 'p50_ms': 3.5461385268718004, 'p95_ms': 3.6971330642700195}
+openai tieredq b=4 seed=0 t=8 batch=32: {'recall10': 0.9839000000000001, 'qps': 1030.0865411000912, 'p50_ms': 30.037542805075645, 'p95_ms': 39.50257180258632}
+openai tieredq b=8 seed=0 t=1 batch=1: {'recall10': 0.9980999999999999, 'qps': 20.963195580886016, 'p50_ms': 46.951239462941885, 'p95_ms': 51.50404202286154}
+openai tieredq b=8 seed=0 t=1 batch=32: {'recall10': 0.9980999999999999, 'qps': 178.8758581963867, 'p50_ms': 182.84910917282104, 'p95_ms': 195.32389799132943}
+openai tieredq b=8 seed=0 t=8 batch=1: {'recall10': 0.9980999999999999, 'qps': 111.2639422882814, 'p50_ms': 8.994212141260505, 'p95_ms': 9.414874855428934}
+openai tieredq b=8 seed=0 t=8 batch=32: {'recall10': 0.9980999999999999, 'qps': 874.1484306789317, 'p50_ms': 35.01222701743245, 'p95_ms': 50.21900404244661}
+FhtKacRotator is selected
+openai rabitq b=1 seed=0 t=1 batch=1: {'recall10': 0.8126000000000001, 'qps': 616.7956136438518, 'p50_ms': 1.582215540111065, 'p95_ms': 1.824847050011158}
+openai rabitq b=1 seed=0 t=1 batch=32: {'recall10': 0.8126000000000001, 'qps': 614.7273051100187, 'p50_ms': 51.36137316003442, 'p95_ms': 56.329638697206974}
+openai rabitq b=1 seed=0 t=8 batch=1: {'recall10': 0.8126000000000001, 'qps': 613.5628550128854, 'p50_ms': 1.5918759163469076, 'p95_ms': 1.8531507346779106}
+openai rabitq b=1 seed=0 t=8 batch=32: {'recall10': 0.8126000000000001, 'qps': 4118.027058277938, 'p50_ms': 7.18295993283391, 'p95_ms': 12.866957113146782}
+FhtKacRotator is selected
+openai rabitq b=2 seed=0 t=1 batch=1: {'recall10': 0.9041000000000001, 'qps': 589.8943108004989, 'p50_ms': 1.6589229926466942, 'p95_ms': 1.901991246268153}
+openai rabitq b=2 seed=0 t=1 batch=32: {'recall10': 0.9041000000000001, 'qps': 597.5313756095265, 'p50_ms': 52.31556482613087, 'p95_ms': 60.732307843863964}
+openai rabitq b=2 seed=0 t=8 batch=1: {'recall10': 0.9041000000000001, 'qps': 619.6711600675791, 'p50_ms': 1.5737058129161596, 'p95_ms': 1.8243191530928016}
+openai rabitq b=2 seed=0 t=8 batch=32: {'recall10': 0.9041000000000001, 'qps': 4588.540920481494, 'p50_ms': 6.800654344260693, 'p95_ms': 7.18716811388731}
+FhtKacRotator is selected
+openai rabitq b=4 seed=0 t=1 batch=1: {'recall10': 0.9664, 'qps': 541.6478285533258, 'p50_ms': 1.826789230108261, 'p95_ms': 1.9847282906994221}
+openai rabitq b=4 seed=0 t=1 batch=32: {'recall10': 0.9664, 'qps': 539.4755321478291, 'p50_ms': 58.62993001937866, 'p95_ms': 62.65798304229975}
+openai rabitq b=4 seed=0 t=8 batch=1: {'recall10': 0.9664, 'qps': 536.5053239043673, 'p50_ms': 1.8395944498479366, 'p95_ms': 2.0086820237338543}
+openai rabitq b=4 seed=0 t=8 batch=32: {'recall10': 0.9664, 'qps': 3917.123091135814, 'p50_ms': 8.0269081518054, 'p95_ms': 8.274870924651623}
+FhtKacRotator is selected
+openai rabitq b=8 seed=0 t=1 batch=1: {'recall10': 0.9966999999999999, 'qps': 509.8723371707705, 'p50_ms': 1.928034471347928, 'p95_ms': 2.1237874403595924}
+openai rabitq b=8 seed=0 t=1 batch=32: {'recall10': 0.9966999999999999, 'qps': 525.5752842554759, 'p50_ms': 60.35209307447076, 'p95_ms': 65.16238581389189}
+openai rabitq b=8 seed=0 t=8 batch=1: {'recall10': 0.9966999999999999, 'qps': 526.7222002258059, 'p50_ms': 1.8802350386977196, 'p95_ms': 2.049777563661337}
+openai rabitq b=8 seed=0 t=8 batch=32: {'recall10': 0.9966999999999999, 'qps': 3709.8482493805413, 'p50_ms': 8.485670667141676, 'p95_ms': 8.922561071813107}
+Core matrix and figures completed 2026-10-26T13:24:55Z
+Job completed: exit 0

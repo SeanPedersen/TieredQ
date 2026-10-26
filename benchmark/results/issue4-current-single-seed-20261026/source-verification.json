@@ -1,0 +1,6 @@
+{
+  "unchanged_as_run_files": 73,
+  "native_source_hashes_match_metadata": true,
+  "harness_hashes_match_metadata": true,
+  "scope_only_patch": "--- committed/benchmark/run.py\n+++ as-run/benchmark/run.py\n@@ -153,11 +153,6 @@\n     metadata[\"status\"] = \"complete\"\n     (args.output/\"meta.json\").write_text(json.dumps(metadata, indent=2))\n     subprocess.run([sys.executable, str(HERE/\"report.py\"), str(args.output)], check=True)\n-    diagnostic_start = time.perf_counter()\n-    subprocess.run([sys.executable, str(HERE/\"profile.py\"), str(args.output), \"--data\", str(args.data),\n-                    *([\"--legacy-l2-lift\"] if args.legacy_l2_lift else [])], check=True)\n-    metadata[\"profiling_wall_s\"] = time.perf_counter() - diagnostic_start\n-    (args.output/\"meta.json\").write_text(json.dumps(metadata, indent=2))\n \n if __name__ == \"__main__\":\n     main()\n"
+}

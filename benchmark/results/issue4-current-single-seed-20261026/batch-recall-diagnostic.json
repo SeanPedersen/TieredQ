@@ -1,0 +1,11 @@
+{
+  "scope": "SIFT TieredQ 1-bit seed 0 only; targeted correctness diagnostic, no performance measurements",
+  "max_adapter_coordinate_difference": 1.1444091796875e-05,
+  "adapter_coordinates_different": 106161,
+  "same_serial_probes_ids_equal_across_native_batches": true,
+  "same_batched_probes_ids_equal_across_native_batches": true,
+  "serial_adapter_recall": 0.5005,
+  "batched_adapter_recall": 0.5005999999999999,
+  "query_top10_sets_changed": 1,
+  "interpretation": "See equality checks: adapter matrix multiplication rounding is isolated by holding transformed probes fixed while varying native batch size."
+}

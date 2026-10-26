@@ -1,0 +1,608 @@
+[
+  {
+    "dataset": "sift",
+    "anchor_bits": 1,
+    "anchor_bytes": 28.000624,
+    "attempt": 2,
+    "target_code_bits": 129,
+    "bytes_per_vector": 27.573558,
+    "build_s": 1.7594354371540248,
+    "storage": {
+      "disk_bytes": 27168484,
+      "index_allocated_bytes": 27273040,
+      "model_bytes": 166564,
+      "index_shell_bytes": 56,
+      "resident_bytes": 27439660,
+      "index_sha256": "4bf751d6b147823963c65b1ea3632a60014e3d58b29d90300532864b8b2b183a",
+      "adapter_bytes": 133898,
+      "serving_bytes": 27573558
+    },
+    "diagnostics": {
+      "tiers": [
+        {
+          "start": 0,
+          "dimensions": 11,
+          "bits": 4
+        },
+        {
+          "start": 11,
+          "dimensions": 13,
+          "bits": 3
+        },
+        {
+          "start": 24,
+          "dimensions": 15,
+          "bits": 2
+        },
+        {
+          "start": 39,
+          "dimensions": 16,
+          "bits": 1
+        }
+      ],
+      "coded_dimensions": 55,
+      "packed_code_bytes": 17,
+      "vector_bytes": 27,
+      "allocated_vector_bytes": 27273040,
+      "model_serialized_bytes": 163176,
+      "model_memory_bytes": 538428,
+      "model_serving_memory_bytes": 166564,
+      "scalar_fast_scan": false
+    },
+    "wall_s": 2.0675278077833354,
+    "selected_build_s": 1.6975188851356506
+  },
+  {
+    "dataset": "sift",
+    "anchor_bits": 2,
+    "anchor_bytes": 52.000624,
+    "attempt": 7,
+    "target_code_bits": 320,
+    "bytes_per_vector": 49.329562,
+    "build_s": 2.612943893764168,
+    "storage": {
+      "disk_bytes": 49189016,
+      "index_allocated_bytes": 49001496,
+      "model_bytes": 194112,
+      "index_shell_bytes": 56,
+      "resident_bytes": 49195664,
+      "index_sha256": "18d486563dd50fc1058fd6eea3e03403612c8a454326f2b3042c1eba8fd8a8f6",
+      "adapter_bytes": 133898,
+      "serving_bytes": 49329562
+    },
+    "diagnostics": {
+      "tiers": [
+        {
+          "start": 0,
+          "dimensions": 10,
+          "bits": 6
+        },
+        {
+          "start": 10,
+          "dimensions": 14,
+          "bits": 5
+        },
+        {
+          "start": 24,
+          "dimensions": 16,
+          "bits": 4
+        },
+        {
+          "start": 40,
+          "dimensions": 20,
+          "bits": 3
+        },
+        {
+          "start": 60,
+          "dimensions": 22,
+          "bits": 2
+        },
+        {
+          "start": 82,
+          "dimensions": 22,
+          "bits": 1
+        }
+      ],
+      "coded_dimensions": 104,
+      "packed_code_bytes": 40,
+      "vector_bytes": 49,
+      "allocated_vector_bytes": 49001496,
+      "model_serialized_bytes": 188892,
+      "model_memory_bytes": 689048,
+      "model_serving_memory_bytes": 194112,
+      "scalar_fast_scan": false
+    },
+    "wall_s": 3.164135728031397,
+    "selected_build_s": 2.2163862893357873
+  },
+  {
+    "dataset": "sift",
+    "anchor_bits": 4,
+    "anchor_bytes": 84.000624,
+    "attempt": 2,
+    "target_code_bits": 569,
+    "bytes_per_vector": 81.343273,
+    "build_s": 3.874923591967672,
+    "storage": {
+      "disk_bytes": 81201108,
+      "index_allocated_bytes": 81003155,
+      "model_bytes": 206164,
+      "index_shell_bytes": 56,
+      "resident_bytes": 81209375,
+      "index_sha256": "f6d39f620797b775f266e004961981a46b03c79f36d36c1d5289e9a2093f1fc6",
+      "adapter_bytes": 133898,
+      "serving_bytes": 81343273
+    },
+    "diagnostics": {
+      "tiers": [
+        {
+          "start": 0,
+          "dimensions": 8,
+          "bits": 8
+        },
+        {
+          "start": 8,
+          "dimensions": 10,
+          "bits": 7
+        },
+        {
+          "start": 18,
+          "dimensions": 20,
+          "bits": 6
+        },
+        {
+          "start": 38,
+          "dimensions": 22,
+          "bits": 5
+        },
+        {
+          "start": 60,
+          "dimensions": 26,
+          "bits": 4
+        },
+        {
+          "start": 86,
+          "dimensions": 23,
+          "bits": 3
+        },
+        {
+          "start": 109,
+          "dimensions": 14,
+          "bits": 2
+        },
+        {
+          "start": 123,
+          "dimensions": 4,
+          "bits": 1
+        }
+      ],
+      "coded_dimensions": 127,
+      "packed_code_bytes": 72,
+      "vector_bytes": 81,
+      "allocated_vector_bytes": 81003155,
+      "model_serialized_bytes": 200984,
+      "model_memory_bytes": 701100,
+      "model_serving_memory_bytes": 206164,
+      "scalar_fast_scan": false
+    },
+    "wall_s": 4.758352947887033,
+    "selected_build_s": 3.6368824341334403
+  },
+  {
+    "dataset": "sift",
+    "anchor_bits": 8,
+    "anchor_bytes": 148.000624,
+    "attempt": 1,
+    "target_code_bits": 1032,
+    "bytes_per_vector": 141.346563,
+    "build_s": 9.176953251007944,
+    "storage": {
+      "disk_bytes": 141202016,
+      "index_allocated_bytes": 141001953,
+      "model_bytes": 210656,
+      "index_shell_bytes": 56,
+      "resident_bytes": 141212665,
+      "index_sha256": "fb06ed32602062c94e178fdc952e0c9e1fe51fbc61193d239a1c21825e056635",
+      "adapter_bytes": 133898,
+      "serving_bytes": 141346563
+    },
+    "diagnostics": {
+      "tiers": [
+        {
+          "start": 0,
+          "dimensions": 129,
+          "bits": 8
+        }
+      ],
+      "coded_dimensions": 129,
+      "packed_code_bytes": 129,
+      "vector_bytes": 141,
+      "allocated_vector_bytes": 141001953,
+      "model_serialized_bytes": 201892,
+      "model_memory_bytes": 730360,
+      "model_serving_memory_bytes": 210656,
+      "scalar_fast_scan": false
+    },
+    "wall_s": 10.695339887868613,
+    "selected_build_s": 8.36623697122559
+  },
+  {
+    "dataset": "glove",
+    "anchor_bits": 1,
+    "anchor_bytes": 44.012,
+    "attempt": 1,
+    "target_code_bits": 210,
+    "bytes_per_vector": 43.88784,
+    "build_s": 0.7920184042304754,
+    "storage": {
+      "disk_bytes": 3972200,
+      "index_allocated_bytes": 4016720,
+      "model_bytes": 372008,
+      "index_shell_bytes": 56,
+      "resident_bytes": 4388784,
+      "index_sha256": "557941b122d8d4d1144c78fd7534983399729c36ba4fb59154947b23dec2f700",
+      "adapter_bytes": 0,
+      "serving_bytes": 4388784
+    },
+    "diagnostics": {
+      "tiers": [
+        {
+          "start": 0,
+          "dimensions": 10,
+          "bits": 2
+        },
+        {
+          "start": 10,
+          "dimensions": 190,
+          "bits": 1
+        }
+      ],
+      "coded_dimensions": 200,
+      "packed_code_bytes": 27,
+      "vector_bytes": 36,
+      "allocated_vector_bytes": 4016720,
+      "model_serialized_bytes": 368620,
+      "model_memory_bytes": 1249408,
+      "model_serving_memory_bytes": 372008,
+      "scalar_fast_scan": false
+    },
+    "wall_s": 0.83933359477669,
+    "selected_build_s": 0.5534953307360411
+  },
+  {
+    "dataset": "glove",
+    "anchor_bits": 2,
+    "anchor_bytes": 84.012,
+    "attempt": 5,
+    "target_code_bits": 468,
+    "bytes_per_vector": 84.01072,
+    "build_s": 0.9196385703980923,
+    "storage": {
+      "disk_bytes": 7976040,
+      "index_allocated_bytes": 8023632,
+      "model_bytes": 377384,
+      "index_shell_bytes": 56,
+      "resident_bytes": 8401072,
+      "index_sha256": "1a1db9ced86341521f64e9ac0e4460ba8f46dd26dad1ec2c3180ac24206673c8",
+      "adapter_bytes": 0,
+      "serving_bytes": 8401072
+    },
+    "diagnostics": {
+      "tiers": [
+        {
+          "start": 0,
+          "dimensions": 68,
+          "bits": 3
+        },
+        {
+          "start": 68,
+          "dimensions": 132,
+          "bits": 2
+        }
+      ],
+      "coded_dimensions": 200,
+      "packed_code_bytes": 59,
+      "vector_bytes": 76,
+      "allocated_vector_bytes": 8023632,
+      "model_serialized_bytes": 368620,
+      "model_memory_bytes": 1254784,
+      "model_serving_memory_bytes": 377384,
+      "scalar_fast_scan": false
+    },
+    "wall_s": 1.0092685581184924,
+    "selected_build_s": 0.5727426116354764
+  },
+  {
+    "dataset": "glove",
+    "anchor_bits": 4,
+    "anchor_bytes": 148.012,
+    "attempt": 4,
+    "target_code_bits": 1055,
+    "bytes_per_vector": 144.79136,
+    "build_s": 1.107324121054262,
+    "storage": {
+      "disk_bytes": 14468744,
+      "index_allocated_bytes": 14101696,
+      "model_bytes": 377384,
+      "index_shell_bytes": 56,
+      "resident_bytes": 14479136,
+      "index_sha256": "0b4e0cd17f6b1b58b1cbced3186b8625b260416cf7ec18ad1ae4c6b22b7b12b3",
+      "adapter_bytes": 0,
+      "serving_bytes": 14479136
+    },
+    "diagnostics": {
+      "tiers": [
+        {
+          "start": 0,
+          "dimensions": 55,
+          "bits": 6
+        },
+        {
+          "start": 55,
+          "dimensions": 145,
+          "bits": 5
+        }
+      ],
+      "coded_dimensions": 200,
+      "packed_code_bytes": 132,
+      "vector_bytes": 141,
+      "allocated_vector_bytes": 14101696,
+      "model_serialized_bytes": 368620,
+      "model_memory_bytes": 1254784,
+      "model_serving_memory_bytes": 377384,
+      "scalar_fast_scan": false
+    },
+    "wall_s": 1.2448864290490746,
+    "selected_build_s": 0.7571585462428629
+  },
+  {
+    "dataset": "glove",
+    "anchor_bits": 8,
+    "anchor_bytes": 276.012,
+    "attempt": 1,
+    "target_code_bits": 1600,
+    "bytes_per_vector": 212.79728,
+    "build_s": 1.7901857192628086,
+    "storage": {
+      "disk_bytes": 21268724,
+      "index_allocated_bytes": 20902308,
+      "model_bytes": 377364,
+      "index_shell_bytes": 56,
+      "resident_bytes": 21279728,
+      "index_sha256": "0b69720585a288531a0190bc645620063d44116de0618a534da95ed2be3fe79c",
+      "adapter_bytes": 0,
+      "serving_bytes": 21279728
+    },
+    "diagnostics": {
+      "tiers": [
+        {
+          "start": 0,
+          "dimensions": 200,
+          "bits": 8
+        }
+      ],
+      "coded_dimensions": 200,
+      "packed_code_bytes": 200,
+      "vector_bytes": 209,
+      "allocated_vector_bytes": 20902308,
+      "model_serialized_bytes": 368600,
+      "model_memory_bytes": 1254764,
+      "model_serving_memory_bytes": 377364,
+      "scalar_fast_scan": false
+    },
+    "wall_s": 1.998992227949202,
+    "selected_build_s": 1.5647609741427004
+  },
+  {
+    "dataset": "openai",
+    "anchor_bits": 1,
+    "anchor_bytes": 204.0696,
+    "attempt": 3,
+    "target_code_bits": 835,
+    "bytes_per_vector": 203.47352,
+    "build_s": 15.612490904983133,
+    "storage": {
+      "disk_bytes": 17186172,
+      "index_allocated_bytes": 15564368,
+      "model_bytes": 4782928,
+      "index_shell_bytes": 56,
+      "resident_bytes": 20347352,
+      "index_sha256": "48058b23bba94978ff8c015fb55cca7cfe81b32c6b5fd8aa83757eeec176e8d0",
+      "adapter_bytes": 0,
+      "serving_bytes": 20347352
+    },
+    "diagnostics": {
+      "tiers": [
+        {
+          "start": 0,
+          "dimensions": 76,
+          "bits": 3
+        },
+        {
+          "start": 76,
+          "dimensions": 163,
+          "bits": 2
+        },
+        {
+          "start": 239,
+          "dimensions": 281,
+          "bits": 1
+        }
+      ],
+      "coded_dimensions": 520,
+      "packed_code_bytes": 105,
+      "vector_bytes": 124,
+      "allocated_vector_bytes": 15564368,
+      "model_serialized_bytes": 4774144,
+      "model_memory_bytes": 10879656,
+      "model_serving_memory_bytes": 4782928,
+      "scalar_fast_scan": false
+    },
+    "wall_s": 15.828329180367291,
+    "selected_build_s": 14.003300438635051
+  },
+  {
+    "dataset": "openai",
+    "anchor_bits": 2,
+    "anchor_bytes": 404.0696,
+    "attempt": 1,
+    "target_code_bits": 2048,
+    "bytes_per_vector": 403.00704,
+    "build_s": 21.7623352361843,
+    "storage": {
+      "disk_bytes": 37105752,
+      "index_allocated_bytes": 32192592,
+      "model_bytes": 8108056,
+      "index_shell_bytes": 56,
+      "resident_bytes": 40300704,
+      "index_sha256": "bb9069f13afc4480ce921e547af8d502f315da9c44abc5ceb42ce19551de02ff",
+      "adapter_bytes": 0,
+      "serving_bytes": 40300704
+    },
+    "diagnostics": {
+      "tiers": [
+        {
+          "start": 0,
+          "dimensions": 81,
+          "bits": 4
+        },
+        {
+          "start": 81,
+          "dimensions": 194,
+          "bits": 3
+        },
+        {
+          "start": 275,
+          "dimensions": 360,
+          "bits": 2
+        },
+        {
+          "start": 635,
+          "dimensions": 422,
+          "bits": 1
+        }
+      ],
+      "coded_dimensions": 1057,
+      "packed_code_bytes": 256,
+      "vector_bytes": 290,
+      "allocated_vector_bytes": 32192592,
+      "model_serialized_bytes": 8077788,
+      "model_memory_bytes": 18628464,
+      "model_serving_memory_bytes": 8108056,
+      "scalar_fast_scan": false
+    },
+    "wall_s": 22.25166720012203,
+    "selected_build_s": 14.56776022631675
+  },
+  {
+    "dataset": "openai",
+    "anchor_bits": 4,
+    "anchor_bytes": 788.0696,
+    "attempt": 1,
+    "target_code_bits": 5344,
+    "bytes_per_vector": 787.80014,
+    "build_s": 17.246484166942537,
+    "storage": {
+      "disk_bytes": 78712456,
+      "index_allocated_bytes": 67708646,
+      "model_bytes": 11071312,
+      "index_shell_bytes": 56,
+      "resident_bytes": 78780014,
+      "index_sha256": "c04fba226b227576d59ea94ba52cd6cddc585a86582820e59fd0152993900405",
+      "adapter_bytes": 0,
+      "serving_bytes": 78780014
+    },
+    "diagnostics": {
+      "tiers": [
+        {
+          "start": 0,
+          "dimensions": 67,
+          "bits": 6
+        },
+        {
+          "start": 67,
+          "dimensions": 203,
+          "bits": 5
+        },
+        {
+          "start": 270,
+          "dimensions": 435,
+          "bits": 4
+        },
+        {
+          "start": 705,
+          "dimensions": 538,
+          "bits": 3
+        },
+        {
+          "start": 1243,
+          "dimensions": 282,
+          "bits": 2
+        },
+        {
+          "start": 1525,
+          "dimensions": 9,
+          "bits": 1
+        }
+      ],
+      "coded_dimensions": 1534,
+      "packed_code_bytes": 668,
+      "vector_bytes": 677,
+      "allocated_vector_bytes": 67708646,
+      "model_serialized_bytes": 11012332,
+      "model_memory_bytes": 25425576,
+      "model_serving_memory_bytes": 11071312,
+      "scalar_fast_scan": false
+    },
+    "wall_s": 18.122403076849878,
+    "selected_build_s": 15.494236967992038
+  },
+  {
+    "dataset": "openai",
+    "anchor_bits": 8,
+    "anchor_bytes": 1556.0696,
+    "attempt": 1,
+    "target_code_bits": 11488,
+    "bytes_per_vector": 1555.81114,
+    "build_s": 22.193491164129227,
+    "storage": {
+      "disk_bytes": 155512396,
+      "index_allocated_bytes": 144509826,
+      "model_bytes": 11071232,
+      "index_shell_bytes": 56,
+      "resident_bytes": 155581114,
+      "index_sha256": "a8fa957afd777ef13680f73d9e67635ac1a90d8c53c342009068c29866ed2a3d",
+      "adapter_bytes": 0,
+      "serving_bytes": 155581114
+    },
+    "diagnostics": {
+      "tiers": [
+        {
+          "start": 0,
+          "dimensions": 876,
+          "bits": 8
+        },
+        {
+          "start": 876,
+          "dimensions": 532,
+          "bits": 7
+        },
+        {
+          "start": 1408,
+          "dimensions": 126,
+          "bits": 6
+        }
+      ],
+      "coded_dimensions": 1534,
+      "packed_code_bytes": 1436,
+      "vector_bytes": 1445,
+      "allocated_vector_bytes": 144509826,
+      "model_serialized_bytes": 11012272,
+      "model_memory_bytes": 25425496,
+      "model_serving_memory_bytes": 11071232,
+      "scalar_fast_scan": false
+    },
+    "wall_s": 23.994513138663024,
+    "selected_build_s": 22.064632904715836
+  }
+]

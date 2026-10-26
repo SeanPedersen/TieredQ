@@ -1,0 +1,24 @@
+{
+  "head": "06cda8574db318207fe577f55b4feca4c29a9995",
+  "branch": "main",
+  "tracked_working_tree_clean": true,
+  "initial_untracked_preserved": [
+    "benchmark/experiments/",
+    "benchmark/results/issue14-codebooks-20261026/",
+    "benchmark/results/issue14-serving-allocation-20261026/",
+    "benchmark/results/issue14-tiny-budgets-20261026/",
+    "benchmark/results/issue4-current-single-seed-20261026/",
+    "benchmark/results/openai-memory-aligned-single-seed-20261026/"
+  ],
+  "memory_fix": "06cda85: compact regenerated scaled basis projection; src/tieredq_query_projection_x86.h and scan view callers; projection/ownership/persistence validation",
+  "archive_sha256": "3923d51bea4ba9d2e3ba4eb730474401804d20788cb9a15310e378569981f78b",
+  "remote_workspace": "sean@hartmut:/home/sean/experiments/TieredQ-fast-aligned-20261026-0GBhDm",
+  "remote_reconciliation": "Fresh local HEAD export. Production source verified against export; only benchmark binding patched for existing exact-code API and reloaded allocation introspection. Fresh uv environment and native build. Historical dependency copied, upstream commit checked. Historical sources/workspaces untouched.",
+  "controls_comparability": "git diff 3c9dbf5 HEAD is empty for benchmark/native, native_build.py, setup_native.py, measure.py and l2_transform.py. Same GCC 16.2.1, five audited -O3 -march=native -ffp-contract=off commands, nanobind NOMINSIZE, pinned RaBitQ, native bounds/HACC, data hashes and timing schedule. Reuse unrounded archived CSV memory anchors and separate-run controls.",
+  "host_jobs": "Existing serving_allocation quality/timing jobs left untouched; calibration allowed to coexist; matrix waits for experiments to finish. Background application services left active.",
+  "historical_workspaces_preserved": [
+    "/home/sean/experiments/TieredQ-issue12-recall",
+    "/home/sean/experiments/TieredQ-issue4-current-20261026-tpj3ze",
+    "/home/sean/experiments/TieredQ-openai-aligned-20261026-akXzMJ"
+  ]
+}

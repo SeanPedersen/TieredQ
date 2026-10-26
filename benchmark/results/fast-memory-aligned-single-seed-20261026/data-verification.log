@@ -1,0 +1,3 @@
+Verified full sift: 1000000 vectors, 1000 queries, cached truth
+Verified full glove: 100000 vectors, 1000 queries, cached truth
+Verified full openai: 100000 vectors, 1000 queries, cached truth

@@ -1,0 +1,19 @@
+{
+  "historical_workspaces": {
+    "TieredQ-issue12-recall": {
+      "exists": true,
+      "module_sha256": "1f65b37084d3d1259c01848a459c31255379717973fbef15ab431d3edbca852d",
+      "git_head": "source export"
+    },
+    "TieredQ-issue4-current-20261026-tpj3ze": {
+      "exists": true,
+      "module_sha256": "1f65b37084d3d1259c01848a459c31255379717973fbef15ab431d3edbca852d",
+      "git_head": "source export"
+    },
+    "TieredQ-openai-aligned-20261026-akXzMJ": {
+      "exists": true,
+      "module_sha256": "1c71279e09e3d582b42c92d68674871b3b2dee1982aa3b90376cd8a53dc3d8b3",
+      "git_head": "source export"
+    }
+  }
+}

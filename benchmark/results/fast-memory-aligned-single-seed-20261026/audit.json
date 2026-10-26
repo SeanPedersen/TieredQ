@@ -1,0 +1,43 @@
+{
+  "rows": 48,
+  "unique_rows": 48,
+  "full_dataset_identity": true,
+  "within_all_anchors": true,
+  "finite_positive_timings": true,
+  "scheduling_invariants": true,
+  "recall_variations": [],
+  "single_seed": 0,
+  "statistical_confidence_claim": false,
+  "gaps_above_half_percent": [
+    {
+      "dataset": "sift",
+      "anchor": "1",
+      "percent_below": "1.5252017240758633"
+    },
+    {
+      "dataset": "sift",
+      "anchor": "2",
+      "percent_below": "5.136596053155053"
+    },
+    {
+      "dataset": "sift",
+      "anchor": "4",
+      "percent_below": "3.1634895950296817"
+    },
+    {
+      "dataset": "sift",
+      "anchor": "8",
+      "percent_below": "4.495968206188094"
+    },
+    {
+      "dataset": "glove",
+      "anchor": "4",
+      "percent_below": "2.175931681215039"
+    },
+    {
+      "dataset": "glove",
+      "anchor": "8",
+      "percent_below": "22.9028882802197"
+    }
+  ]
+}

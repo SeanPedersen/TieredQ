@@ -1,0 +1,42 @@
+{
+  "rows": 96,
+  "unique_rows": 96,
+  "configurations": 24,
+  "seed": 0,
+  "full_datasets": true,
+  "queries": 1000,
+  "finite_positive_timings": true,
+  "scheduling_invariants": [
+    "effective_bytes_per_vector",
+    "effective_bits_per_dim",
+    "build_s",
+    "encode_vps",
+    "config"
+  ],
+  "recall_consistent_across_threads": true,
+  "batch_recall_variations": [
+    {
+      "dataset": "sift",
+      "codec": "tieredq",
+      "bits": 1,
+      "minimum": 0.5005,
+      "maximum": 0.5005999999999999,
+      "spread": 9.999999999998899e-05
+    }
+  ],
+  "dataset_manifests_identical_to_issue4": true,
+  "compiler_commands_audited": 5,
+  "cpu_affinity": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "matrix_wall_s": 1076.9097809190862,
+  "profiling_run": false,
+  "statistical_confidence_claim": false
+}

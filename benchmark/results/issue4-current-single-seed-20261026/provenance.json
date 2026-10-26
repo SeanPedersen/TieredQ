@@ -1,0 +1,11 @@
+{
+  "local_head": "3c9dbf590209dabf8ecccd3385fd56254779c70d",
+  "branch": "main",
+  "initial_working_tree": "clean",
+  "committed_source_tar_sha256": "7777c730da32ce5d90df0cf23ff4853b2a6d48f820060b7caed9aa7a767e0641",
+  "remote_workspace": "sean@hartmut:/home/sean/experiments/TieredQ-issue4-current-20261026-tpj3ze",
+  "reconciliation": "Historical issue4 checkout HEAD 6444b654b601864a9f4064a31629e65a653fc1c2 was dirty; issue12 workspace was a source export. Neither used as current source. Clean local committed export transferred with identical SHA256. Fresh native build and fresh uv environment; pinned RaBitQ checkout copied then revision checked; only historical verified dataset caches reused.",
+  "scope_adjustment": "scope-only.patch removes automatic post-matrix profile.py tail; no codec or timing behavior changed. SOURCE_REVISION added for export provenance.",
+  "cache_path": "/home/sean/experiments/TieredQ-issue4-20261023/TieredQ/benchmark/data",
+  "host_exclusivity": "No existing benchmark jobs. Unrelated crawler/application services active, left untouched."
+}

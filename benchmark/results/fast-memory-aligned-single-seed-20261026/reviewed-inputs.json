@@ -1,0 +1,17 @@
+{
+  "benchmark_readme": "benchmark/README.md",
+  "prior_core": "benchmark/results/issue4-current-single-seed-20261026/README.md",
+  "prior_alignment": "benchmark/results/openai-memory-aligned-single-seed-20261026/README.md",
+  "memory_fix_docs": [
+    "docs/high-bit-recall.md",
+    "benchmark/results/serving-memory-20261026/README.md"
+  ],
+  "memory_fix_validation": [
+    "tests/test_tieredq_projection.cpp",
+    "tests/test_tieredq_fast_mode.cpp",
+    "benchmark/results/serving-memory-20261026/validation-after-sequential.log",
+    "benchmark/results/serving-memory-20261026/validation-cpp-arm.log",
+    "benchmark/results/serving-memory-20261026/validation-python-arm.log"
+  ],
+  "notes": "Current benchmark/native/module.cpp changed only by constructor overload for existing exact total-bit API and storage component introspection. No codec kernel, pruning, HACC, training, data, or timing protocol changes."
+}

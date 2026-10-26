@@ -1,0 +1,7 @@
+{
+  "binary": "/home/sean/experiments/TieredQ-issue4-current-20261026-tpj3ze/benchmark/build-native/codec_native.cpython-312-x86_64-linux-gnu.so",
+  "sha256": "89239e6c45dfc2ba26c0c7b50c7b65665250c5f6ad0cb49936e95fe8ec8c5b6e",
+  "rabitq_checkout_commit": "ced3763857e7e4e48553951bf66fabc8517bc4f0",
+  "rabitq_checkout_dirty": "",
+  "source_unchanged_after_matrix_and_diagnostic": true
+}

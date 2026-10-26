@@ -1,0 +1,9 @@
+{
+  "status": "pass",
+  "figures": {
+    "qps-storage.png": "2a79b7435c8c8c4b57ecfb39c224f96829956262d40cde3b56120737c655781b",
+    "recall-storage.png": "eb875bc74f42ff9ee6b335ac3a9ca49314ba2be58232bb9639161ea39fa4acc4",
+    "latency-storage.png": "20b10346f956a4a79c63f3055c0ea4b8906133e203d7417eb0eaab45018468b8"
+  },
+  "review": "All three rendered figures visually inspected: actual storage axes, dataset panels, RAM anchor labels, visible legends/labels, separate-run controls, single-seed/no-confidence caption. Recall-storage regenerated and visually checked with each codec connected in RAM-anchor order."
+}

@@ -1,0 +1,4 @@
+{
+  "failure": "Initial proposal exceeded public API limit of 8*input_dimensions; no searches performed; all completed attempts and selections retained.",
+  "failed_phase_wall_s": 105.02985739707947
+}

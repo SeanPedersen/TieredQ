@@ -1,0 +1,187 @@
+[
+  {
+    "anchor_bits": 2,
+    "attempt": 1,
+    "target_code_bits": 1792,
+    "nominal_bits_per_dimension": 1.1666666666666667,
+    "bytes_per_vector": 419.57704,
+    "build_s": 14.437561929225922,
+    "tiers": [
+      {
+        "start": 0,
+        "dimensions": 59,
+        "bits": 4
+      },
+      {
+        "start": 59,
+        "dimensions": 168,
+        "bits": 3
+      },
+      {
+        "start": 227,
+        "dimensions": 322,
+        "bits": 2
+      },
+      {
+        "start": 549,
+        "dimensions": 408,
+        "bits": 1
+      }
+    ]
+  },
+  {
+    "anchor_bits": 2,
+    "attempt": 2,
+    "target_code_bits": 1667,
+    "nominal_bits_per_dimension": 1.0852864583333333,
+    "bytes_per_vector": 396.5356,
+    "build_s": 14.24855891102925,
+    "tiers": [
+      {
+        "start": 0,
+        "dimensions": 49,
+        "bits": 4
+      },
+      {
+        "start": 49,
+        "dimensions": 155,
+        "bits": 3
+      },
+      {
+        "start": 204,
+        "dimensions": 303,
+        "bits": 2
+      },
+      {
+        "start": 507,
+        "dimensions": 400,
+        "bits": 1
+      }
+    ]
+  },
+  {
+    "anchor_bits": 2,
+    "attempt": 3,
+    "target_code_bits": 1727,
+    "nominal_bits_per_dimension": 1.1243489583333333,
+    "bytes_per_vector": 407.98584,
+    "build_s": 14.2976566827856,
+    "tiers": [
+      {
+        "start": 0,
+        "dimensions": 54,
+        "bits": 4
+      },
+      {
+        "start": 54,
+        "dimensions": 161,
+        "bits": 3
+      },
+      {
+        "start": 215,
+        "dimensions": 312,
+        "bits": 2
+      },
+      {
+        "start": 527,
+        "dimensions": 404,
+        "bits": 1
+      }
+    ]
+  },
+  {
+    "anchor_bits": 2,
+    "attempt": 4,
+    "target_code_bits": 1695,
+    "nominal_bits_per_dimension": 1.103515625,
+    "bytes_per_vector": 402.1992,
+    "build_s": 14.07453298009932,
+    "tiers": [
+      {
+        "start": 0,
+        "dimensions": 51,
+        "bits": 4
+      },
+      {
+        "start": 51,
+        "dimensions": 159,
+        "bits": 3
+      },
+      {
+        "start": 210,
+        "dimensions": 306,
+        "bits": 2
+      },
+      {
+        "start": 516,
+        "dimensions": 402,
+        "bits": 1
+      }
+    ]
+  },
+  {
+    "anchor_bits": 4,
+    "attempt": 1,
+    "target_code_bits": 5344,
+    "nominal_bits_per_dimension": 3.4791666666666665,
+    "bytes_per_vector": 787.79958,
+    "build_s": 15.574982523918152,
+    "tiers": [
+      {
+        "start": 0,
+        "dimensions": 67,
+        "bits": 6
+      },
+      {
+        "start": 67,
+        "dimensions": 203,
+        "bits": 5
+      },
+      {
+        "start": 270,
+        "dimensions": 435,
+        "bits": 4
+      },
+      {
+        "start": 705,
+        "dimensions": 538,
+        "bits": 3
+      },
+      {
+        "start": 1243,
+        "dimensions": 282,
+        "bits": 2
+      },
+      {
+        "start": 1525,
+        "dimensions": 9,
+        "bits": 1
+      }
+    ]
+  },
+  {
+    "anchor_bits": 8,
+    "attempt": 1,
+    "target_code_bits": 11488,
+    "nominal_bits_per_dimension": 7.479166666666667,
+    "bytes_per_vector": 1555.81058,
+    "build_s": 21.953455139882863,
+    "tiers": [
+      {
+        "start": 0,
+        "dimensions": 876,
+        "bits": 8
+      },
+      {
+        "start": 876,
+        "dimensions": 532,
+        "bits": 7
+      },
+      {
+        "start": 1408,
+        "dimensions": 126,
+        "bits": 6
+      }
+    ]
+  }
+]

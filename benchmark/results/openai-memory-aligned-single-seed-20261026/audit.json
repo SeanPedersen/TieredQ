@@ -1,0 +1,12 @@
+{
+  "unique_rows": 12,
+  "full_dataset_identity_verified": true,
+  "codec_sources_identical_to_core": true,
+  "finite_timings": true,
+  "scheduling_invariants_verified": true,
+  "all_points_within_anchor": true,
+  "max_memory_shortfall_percent": 0.4628905515287369,
+  "compiler_commands_audited": 5,
+  "single_seed": 0,
+  "statistical_confidence_claim": false
+}

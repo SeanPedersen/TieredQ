@@ -1,0 +1,14 @@
+--- committed/benchmark/run.py
++++ as-run/benchmark/run.py
+@@ -153,11 +153,6 @@
+     metadata["status"] = "complete"
+     (args.output/"meta.json").write_text(json.dumps(metadata, indent=2))
+     subprocess.run([sys.executable, str(HERE/"report.py"), str(args.output)], check=True)
+-    diagnostic_start = time.perf_counter()
+-    subprocess.run([sys.executable, str(HERE/"profile.py"), str(args.output), "--data", str(args.data),
+-                    *(["--legacy-l2-lift"] if args.legacy_l2_lift else [])], check=True)
+-    metadata["profiling_wall_s"] = time.perf_counter() - diagnostic_start
+-    (args.output/"meta.json").write_text(json.dumps(metadata, indent=2))
+ 
+ if __name__ == "__main__":
+     main()

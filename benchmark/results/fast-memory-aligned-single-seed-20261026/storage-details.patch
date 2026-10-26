@@ -1,0 +1,29 @@
+--- exact/benchmark/native/module.cpp
++++ as-run/benchmark/native/module.cpp
+@@ -85,6 +85,18 @@
+     #pragma omp parallel for schedule(static) if(rows > 1)
+     for (size_t i=0; i<rows; ++i) rq_->search(queries.data()+i*width_, top_k, ids.data()+i*top_k);
+   }
++  nb::dict storage_details(const std::string& path) const {
++    tq_->save(path);
++    const auto served = dv::TieredQIndex::load(path);
++    nb::dict result;
++    result["disk_bytes"] = std::filesystem::file_size(path);
++    result["index_allocated_bytes"] = served.storage_bytes();
++    result["model_bytes"] = served.codec().memory_bytes();
++    result["index_shell_bytes"] = sizeof(dv::TieredQIndex) - sizeof(dv::TieredQ);
++    result["resident_bytes"] = served.storage_bytes() + served.codec().memory_bytes()
++        + sizeof(dv::TieredQIndex) - sizeof(dv::TieredQ);
++    return result;
++  }
+   size_t storage(const std::string& path) const {
+     if (rq_) { rq_->save(path.c_str()); return std::max<size_t>(std::filesystem::file_size(path),rq_->storage_bytes()); }
+     tq_->save(path);
+@@ -112,6 +124,7 @@
+     .def(nb::init<Matrix,size_t,uint64_t,bool,bool>(), nb::call_guard<nb::gil_scoped_release>())
+     .def(nb::init<Matrix,size_t,uint64_t,bool,bool,bool>(), nb::call_guard<nb::gil_scoped_release>())
+     .def(nb::init<Matrix,size_t,uint64_t,bool,bool,bool,uint32_t>(), nb::call_guard<nb::gil_scoped_release>())
++    .def("storage_details", &Index::storage_details)
+     .def("diagnostics", &Index::diagnostics)
+     .def_prop_ro("encode_seconds", &Index::encode_seconds)
+     .def("search", &Index::search, nb::call_guard<nb::gil_scoped_release>())
