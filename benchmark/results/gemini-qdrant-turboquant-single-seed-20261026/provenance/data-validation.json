@@ -1,0 +1,22 @@
+{
+  "status": "PASS",
+  "array_hashes_verified": true,
+  "finite_normalized_arrays": true,
+  "independent_full_corpus_argsort_queries": [
+    0,
+    1,
+    31,
+    32,
+    65,
+    127,
+    255,
+    511,
+    777,
+    999
+  ],
+  "top10_sets_equal": true,
+  "base_norm_range": [
+    0.9999998807907104,
+    1.0000001192092896
+  ]
+}

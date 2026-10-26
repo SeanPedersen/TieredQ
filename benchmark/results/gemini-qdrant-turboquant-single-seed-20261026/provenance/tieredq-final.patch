@@ -1,0 +1,49 @@
+diff --git a/benchmark/README.md b/benchmark/README.md
+index 6b746e2..8b5f9d4 100644
+--- a/benchmark/README.md
++++ b/benchmark/README.md
+@@ -220,3 +220,12 @@ equal-memory summaries retain the earlier accounting and are labeled accordingly
+ reports unchanged-budget RAM savings, separate disk/RAM allocation accounting for
+ both codecs, and a seed-0 OpenAI comparison constrained by both storage budgets.
+ The saved format and unchanged-budget disk sizes are preserved.
++
++## Gemini/DBpedia native TurboQuant experiment
++
++The focused [TurboQuant runner](turboquant/README.md) adds the pinned 100K, 768D
++Gemini dataset with 1,000 held-out document queries and Qdrant’s native calibrated
++1/2/4-bit implementation. The [single-seed measured bundle](results/gemini-qdrant-turboquant-single-seed-20261026/README.md)
++contains 24 scheduling rows, storage-only integer TieredQ calibration, provenance,
++raw predictions/timings, validation, audit and figures. The earlier datasets and
++RaBitQ runner remain separate.
+diff --git a/benchmark/data.py b/benchmark/data.py
+index 5ecb2c9..d396844 100644
+--- a/benchmark/data.py
++++ b/benchmark/data.py
+@@ -43,6 +43,9 @@ def normalize(rows):
+ 
+ def prepare(root, name, max_base=None, query_count=QUERY_COUNT):
+     root.mkdir(parents=True, exist_ok=True)
++    if name == "gemini":
++        from gemini_data import prepare_gemini
++        return prepare_gemini(root, max_base, query_count)
+     n = min(max_base or BASE_COUNTS[name], BASE_COUNTS[name])
+     if n < TOP_K or not 1 <= query_count <= QUERY_COUNT:
+         raise ValueError("Need at least 10 base rows and 1–1000 queries")
+diff --git a/benchmark/datasets.json b/benchmark/datasets.json
+index fb3269c..0f5de5a 100644
+--- a/benchmark/datasets.json
++++ b/benchmark/datasets.json
+@@ -11,5 +11,13 @@
+     "repo": "Qdrant/dbpedia-entities-openai3-text-embedding-3-large-1536-1M",
+     "revision": "4a9731217921bc476a0f03544f11f22ae4903fa5",
+     "column": "text-embedding-3-large-1536-embedding"
++  },
++  "gemini": {
++    "repo": "nirantk/dbpedia-entities-google-palm-gemini-embedding-001-100K",
++    "revision": "e14a0f193988e9efb7ccc57b4c615418e6540f62",
++    "files": {
++      "data/train-00000-of-00002.parquet": "73d3b212a797fdd6239edcef92616dfcb791a6660a9d15127fa3ff02afc4c488",
++      "data/train-00001-of-00002.parquet": "4acbd56186ea9afc9410becac479b7c41309dfcb8e601ccea97bbe0a8fbfdaef"
++    }
+   }
+ }

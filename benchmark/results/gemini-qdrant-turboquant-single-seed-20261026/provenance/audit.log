@@ -1,0 +1,57 @@
+{
+  "status": "PASS",
+  "scheduling_rows": 24,
+  "unique_codec_anchor_pairs": 6,
+  "finite_timings": true,
+  "dataset_identity": true,
+  "disjoint_split": true,
+  "storage_feasible": true,
+  "selection_uses_storage_only": true,
+  "native_validation": [
+    {
+      "label": "qdrant-1",
+      "query_count": 65,
+      "serial_batch_thread_ids_equal": true,
+      "reload_ids_equal": true,
+      "storage_equal": true
+    },
+    {
+      "label": "qdrant-2",
+      "query_count": 65,
+      "serial_batch_thread_ids_equal": true,
+      "reload_ids_equal": true,
+      "storage_equal": true
+    },
+    {
+      "label": "qdrant-4",
+      "query_count": 65,
+      "serial_batch_thread_ids_equal": true,
+      "reload_ids_equal": true,
+      "storage_equal": true
+    },
+    {
+      "label": "tieredq-1",
+      "query_count": 65,
+      "serial_batch_thread_ids_equal": true,
+      "reload_ids_equal": true,
+      "storage_equal": true
+    },
+    {
+      "label": "tieredq-2",
+      "query_count": 65,
+      "serial_batch_thread_ids_equal": true,
+      "reload_ids_equal": true,
+      "storage_equal": true
+    },
+    {
+      "label": "tieredq-4",
+      "query_count": 65,
+      "serial_batch_thread_ids_equal": true,
+      "reload_ids_equal": true,
+      "storage_equal": true
+    }
+  ],
+  "serial_batch_thread_prediction_equality": true,
+  "recall_variation_across_scheduling": false,
+  "note": "One seed and one run; no statistical confidence claims. Host services remained running."
+}

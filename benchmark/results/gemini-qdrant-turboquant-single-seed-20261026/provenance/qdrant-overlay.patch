@@ -1,0 +1,102 @@
+diff --git a/lib/quantization/src/encoded_vectors_tq.rs b/lib/quantization/src/encoded_vectors_tq.rs
+index adc827a..9c8ff04 100644
+--- a/lib/quantization/src/encoded_vectors_tq.rs
++++ b/lib/quantization/src/encoded_vectors_tq.rs
+@@ -32,6 +32,7 @@ pub struct EncodedVectorsTQ<TStorage: EncodedStorageWrite> {
+ 
+     // Buffer used when encoding vectors.
+     encoding_buffer: Vec<f64>,
++    pub benchmark_encode_seconds: f64,
+ }
+ 
+ #[derive(Serialize, Deserialize)]
+@@ -289,6 +290,7 @@ impl<TStorage: EncodedStorageWrite> EncodedVectorsTQ<TStorage> {
+         })?;
+         let mut buf = vec![0.0f64; quantizer.padded_dim];
+ 
++        let benchmark_encode_start = std::time::Instant::now();
+         for vector in data {
+             if stopped.load(Ordering::Relaxed) {
+                 return Err(EncodingError::Stopped);
+@@ -307,6 +309,7 @@ impl<TStorage: EncodedStorageWrite> EncodedVectorsTQ<TStorage> {
+                 })?;
+         }
+ 
++        let benchmark_encode_seconds = benchmark_encode_start.elapsed().as_secs_f64();
+         let encoded_vectors = storage_builder
+             .build()
+             .map_err(|e| EncodingError::EncodingError(format!("Failed to build storage: {e}",)))?;
+@@ -335,6 +338,7 @@ impl<TStorage: EncodedStorageWrite> EncodedVectorsTQ<TStorage> {
+             encoded_vectors,
+             metadata,
+             metadata_path: meta_path.map(PathBuf::from),
++            benchmark_encode_seconds,
+             encoding_buffer: vec![0.0f64; quantizer.padded_dim],
+             quantizer,
+         })
+@@ -367,6 +371,7 @@ impl<TStorage: EncodedStorage> EncodedVectorsTQ<TStorage> {
+             encoded_vectors,
+             metadata,
+             metadata_path: Some(meta_path.to_path_buf()),
++            benchmark_encode_seconds: 0.0,
+             encoding_buffer: vec![0.0f64; quantizer.padded_dim],
+             quantizer,
+         };
+@@ -494,6 +499,7 @@ impl<TStorage: EncodedStorage> EncodedVectors for EncodedVectorsTQ<TStorage> {
+             encoded_vectors,
+             metadata: _,
+             metadata_path: _,
++            benchmark_encode_seconds: _,
+             quantizer,
+             encoding_buffer,
+         } = self;
+diff --git a/lib/quantization/src/quantile.rs b/lib/quantization/src/quantile.rs
+index c6c29dd..401e72f 100644
+--- a/lib/quantization/src/quantile.rs
++++ b/lib/quantization/src/quantile.rs
+@@ -160,7 +160,7 @@ where
+     // runs.
+     let actual_sample = sample_size.min(count);
+     let mut indices: Vec<usize> =
+-        rand::seq::index::sample(&mut rand::rng(), count, actual_sample).into_vec();
++        rand::seq::index::sample(&mut <rand::rngs::StdRng as rand::SeedableRng>::seed_from_u64(0), count, actual_sample).into_vec();
+     indices.sort_unstable();
+ 
+     // One pair of P-square estimators per coord. The interleaved
+diff --git a/lib/quantization/src/turboquant/quantization.rs b/lib/quantization/src/turboquant/quantization.rs
+index 059e64d..4b0c711 100644
+--- a/lib/quantization/src/turboquant/quantization.rs
++++ b/lib/quantization/src/turboquant/quantization.rs
+@@ -105,7 +105,7 @@ impl TurboQuantizer {
+     /// Heap memory owned by the quantizer: the rotation tables and, in TQ+
+     /// mode, the per-coordinate error-correction vectors. Resident in RAM
+     /// regardless of whether the encoded vectors are stored in RAM or mmap.
+-    pub(crate) fn heap_size_bytes(&self) -> usize {
++    pub fn heap_size_bytes(&self) -> usize {
+         let Self {
+             rotation: _,
+             bits: _,
+@@ -115,7 +115,7 @@ impl TurboQuantizer {
+             error_correction,
+         } = self;
+ 
+-        error_correction.as_ref().map_or(0, |ec| {
++        self.rotation.benchmark_heap_bytes() + error_correction.as_ref().map_or(0, |ec| {
+             let ErrorCorrection {
+                 shift,
+                 scale,
+diff --git a/lib/quantization/src/turboquant/rotation.rs b/lib/quantization/src/turboquant/rotation.rs
+index 9379a61..fa1b15f 100644
+--- a/lib/quantization/src/turboquant/rotation.rs
++++ b/lib/quantization/src/turboquant/rotation.rs
+@@ -62,6 +62,10 @@ impl HadamardRotation {
+     }
+ 
+     /// Number of coordinates this rotation spans.
++    pub fn benchmark_heap_bytes(&self) -> usize {
++        self.forward_maps.iter().chain(self.backward_maps.iter()).map(|v| v.capacity()*size_of::<u32>()).sum()
++    }
++
+     pub fn dim(&self) -> usize {
+         self.dim
+     }

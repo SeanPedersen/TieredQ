@@ -1,0 +1,117 @@
+[
+  {
+    "anchor_bits": 1,
+    "requested_code_bits": 470,
+    "storage": {
+      "tiers": [
+        {
+          "dimensions": 16,
+          "bits": 3
+        },
+        {
+          "dimensions": 137,
+          "bits": 2
+        },
+        {
+          "dimensions": 148,
+          "bits": 1
+        }
+      ],
+      "learned_code_bits": 470,
+      "index_allocated_bytes": 8512592,
+      "model_bytes": 1720952,
+      "shell_bytes": 72,
+      "resident_bytes": 10233616,
+      "packed_code_bytes": 59,
+      "vector_bytes": 70,
+      "disk_bytes": 8650916,
+      "file_sha256": "011334a958cfa0de512a92a3696ae841bc4f381dffad30a811a0cd011957be7a",
+      "serving_bytes": 10233616
+    },
+    "build_s": 3.698358852881938,
+    "encode_vps": 342665.08426930517,
+    "wall_s": 3.7530620461329818
+  },
+  {
+    "anchor_bits": 2,
+    "requested_code_bits": 1044,
+    "storage": {
+      "tiers": [
+        {
+          "dimensions": 23,
+          "bits": 4
+        },
+        {
+          "dimensions": 159,
+          "bits": 3
+        },
+        {
+          "dimensions": 166,
+          "bits": 2
+        },
+        {
+          "dimensions": 143,
+          "bits": 1
+        }
+      ],
+      "learned_code_bits": 1044,
+      "index_allocated_bytes": 17435216,
+      "model_bytes": 2316904,
+      "shell_bytes": 72,
+      "resident_bytes": 19752192,
+      "packed_code_bytes": 131,
+      "vector_bytes": 160,
+      "disk_bytes": 18152616,
+      "file_sha256": "7767ba4c29390f3fc1be7ae6e855a2a2cd8d126397d45ecbfb579c61d9c3ec5e",
+      "serving_bytes": 19752192
+    },
+    "build_s": 3.8877635332755744,
+    "encode_vps": 206863.59275530934,
+    "wall_s": 4.006442562211305
+  },
+  {
+    "anchor_bits": 4,
+    "requested_code_bits": 2778,
+    "storage": {
+      "tiers": [
+        {
+          "dimensions": 34,
+          "bits": 6
+        },
+        {
+          "dimensions": 188,
+          "bits": 5
+        },
+        {
+          "dimensions": 192,
+          "bits": 4
+        },
+        {
+          "dimensions": 185,
+          "bits": 3
+        },
+        {
+          "dimensions": 142,
+          "bits": 2
+        },
+        {
+          "dimensions": 27,
+          "bits": 1
+        }
+      ],
+      "learned_code_bits": 2778,
+      "index_allocated_bytes": 35350672,
+      "model_bytes": 3184480,
+      "shell_bytes": 72,
+      "resident_bytes": 38535224,
+      "packed_code_bytes": 348,
+      "vector_bytes": 357,
+      "disk_bytes": 38500152,
+      "file_sha256": "24ef2b116ae75528cc03c3429411a9575727812538e739ecfac342eed9776b25",
+      "serving_bytes": 38535224
+    },
+    "build_s": 4.222008268814534,
+    "encode_vps": 111373.67348386197,
+    "wall_s": 4.4833681751042604
+  }
+]

@@ -1,0 +1,21 @@
+{
+  "HEAD": "06cda8574db318207fe577f55b4feca4c29a9995\n",
+  "branch": "main\n",
+  "status": " M benchmark/data.py\n M benchmark/datasets.json\n?? benchmark/experiments/\n?? benchmark/gemini_data.py\n?? benchmark/results/fast-memory-aligned-single-seed-20261026/\n?? benchmark/results/gemini-qdrant-turboquant-single-seed-20261026/\n?? benchmark/results/issue14-codebooks-20261026/\n?? benchmark/results/issue14-serving-allocation-20261026/\n?? benchmark/results/issue14-tiny-budgets-20261026/\n?? benchmark/results/issue4-current-single-seed-20261026/\n?? benchmark/results/openai-memory-aligned-single-seed-20261026/\n?? benchmark/turboquant/\n",
+  "tracked_diff": "diff --git a/benchmark/data.py b/benchmark/data.py\nindex 5ecb2c9..d396844 100644\n--- a/benchmark/data.py\n+++ b/benchmark/data.py\n@@ -43,6 +43,9 @@ def normalize(rows):\n \n def prepare(root, name, max_base=None, query_count=QUERY_COUNT):\n     root.mkdir(parents=True, exist_ok=True)\n+    if name == \"gemini\":\n+        from gemini_data import prepare_gemini\n+        return prepare_gemini(root, max_base, query_count)\n     n = min(max_base or BASE_COUNTS[name], BASE_COUNTS[name])\n     if n < TOP_K or not 1 <= query_count <= QUERY_COUNT:\n         raise ValueError(\"Need at least 10 base rows and 1\u20131000 queries\")\ndiff --git a/benchmark/datasets.json b/benchmark/datasets.json\nindex fb3269c..0f5de5a 100644\n--- a/benchmark/datasets.json\n+++ b/benchmark/datasets.json\n@@ -11,5 +11,13 @@\n     \"repo\": \"Qdrant/dbpedia-entities-openai3-text-embedding-3-large-1536-1M\",\n     \"revision\": \"4a9731217921bc476a0f03544f11f22ae4903fa5\",\n     \"column\": \"text-embedding-3-large-1536-embedding\"\n+  },\n+  \"gemini\": {\n+    \"repo\": \"nirantk/dbpedia-entities-google-palm-gemini-embedding-001-100K\",\n+    \"revision\": \"e14a0f193988e9efb7ccc57b4c615418e6540f62\",\n+    \"files\": {\n+      \"data/train-00000-of-00002.parquet\": \"73d3b212a797fdd6239edcef92616dfcb791a6660a9d15127fa3ff02afc4c488\",\n+      \"data/train-00001-of-00002.parquet\": \"4acbd56186ea9afc9410becac479b7c41309dfcb8e601ccea97bbe0a8fbfdaef\"\n+    }\n   }\n }\n",
+  "remote_workspace": "/home/sean/experiments/TieredQ-gemini-turboquant-20261026-vDAm7R",
+  "capture_phase": "after integration, before timing",
+  "initial_HEAD": "06cda8574db318207fe577f55b4feca4c29a9995",
+  "initial_tracked_clean": true,
+  "initial_untracked_roots": [
+    "benchmark/experiments/",
+    "benchmark/results/fast-memory-aligned-single-seed-20261026/",
+    "benchmark/results/issue14-codebooks-20261026/",
+    "benchmark/results/issue14-serving-allocation-20261026/",
+    "benchmark/results/issue14-tiny-budgets-20261026/",
+    "benchmark/results/issue4-current-single-seed-20261026/",
+    "benchmark/results/openai-memory-aligned-single-seed-20261026/"
+  ],
+  "final_status": " M benchmark/README.md\n M benchmark/data.py\n M benchmark/datasets.json\n?? benchmark/experiments/\n?? benchmark/gemini_data.py\n?? benchmark/results/fast-memory-aligned-single-seed-20261026/\n?? benchmark/results/gemini-qdrant-turboquant-single-seed-20261026/\n?? benchmark/results/issue14-codebooks-20261026/\n?? benchmark/results/issue14-serving-allocation-20261026/\n?? benchmark/results/issue14-tiny-budgets-20261026/\n?? benchmark/results/issue4-current-single-seed-20261026/\n?? benchmark/results/openai-memory-aligned-single-seed-20261026/\n?? benchmark/turboquant/\n",
+  "no_commit": true
+}

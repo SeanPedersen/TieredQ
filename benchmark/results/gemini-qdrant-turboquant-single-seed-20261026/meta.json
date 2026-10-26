@@ -1,0 +1,21 @@
+{
+  "status": "complete",
+  "seed": 0,
+  "affinity": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "selection_rule": "Recall never evaluated in calibration. First measured under-anchor point within 0.5%; otherwise largest measured feasible serving byte total after bounded secant/bisection, integer budgets 1..8*d. Every proposed layout is built and measured.",
+  "tolerance": 0.005,
+  "max_attempts": 24,
+  "calibration_wall_s": 97.62239850312471,
+  "search_matrix_wall_s": 208.5189370890148,
+  "selected_build_s": 18.441557951271534,
+  "rows": 24
+}

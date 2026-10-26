@@ -1,0 +1,44 @@
+[
+  {
+    "label": "qdrant-1",
+    "query_count": 65,
+    "serial_batch_thread_ids_equal": true,
+    "reload_ids_equal": true,
+    "storage_equal": true
+  },
+  {
+    "label": "qdrant-2",
+    "query_count": 65,
+    "serial_batch_thread_ids_equal": true,
+    "reload_ids_equal": true,
+    "storage_equal": true
+  },
+  {
+    "label": "qdrant-4",
+    "query_count": 65,
+    "serial_batch_thread_ids_equal": true,
+    "reload_ids_equal": true,
+    "storage_equal": true
+  },
+  {
+    "label": "tieredq-1",
+    "query_count": 65,
+    "serial_batch_thread_ids_equal": true,
+    "reload_ids_equal": true,
+    "storage_equal": true
+  },
+  {
+    "label": "tieredq-2",
+    "query_count": 65,
+    "serial_batch_thread_ids_equal": true,
+    "reload_ids_equal": true,
+    "storage_equal": true
+  },
+  {
+    "label": "tieredq-4",
+    "query_count": 65,
+    "serial_batch_thread_ids_equal": true,
+    "reload_ids_equal": true,
+    "storage_equal": true
+  }
+]

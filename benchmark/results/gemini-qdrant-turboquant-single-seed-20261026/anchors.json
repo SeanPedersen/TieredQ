@@ -1,0 +1,74 @@
+[
+  {
+    "anchor_bits": 1,
+    "storage": {
+      "disk_bytes": 10312258,
+      "resident_bytes": 10322408,
+      "serving_bytes": 10322408,
+      "codes_allocated_bytes": 10296000,
+      "rotation_calibration_bytes": 26112,
+      "shell_bytes": 296,
+      "vector_bytes": 104,
+      "files": {
+        "metadata.json": {
+          "bytes": 16258,
+          "sha256": "d73d8f2f11348eb1bdaa9111eb8bd652af9cecfe5ff9205ef4d2e616d9a3d439"
+        },
+        "codes.bin": {
+          "bytes": 10296000,
+          "sha256": "0fc30adba3926ded8df52ce82fbacaf9e7f235d3837b62ef49f9d674856008fc"
+        }
+      }
+    },
+    "build_s": 1.7107602749019861,
+    "encode_vps": 63203.127894964615
+  },
+  {
+    "anchor_bits": 2,
+    "storage": {
+      "disk_bytes": 19816239,
+      "resident_bytes": 19826408,
+      "serving_bytes": 19826408,
+      "codes_allocated_bytes": 19800000,
+      "rotation_calibration_bytes": 26112,
+      "shell_bytes": 296,
+      "vector_bytes": 200,
+      "files": {
+        "metadata.json": {
+          "bytes": 16239,
+          "sha256": "4ba8ebb66e7c42a54e4d3c966ed903b135a8c4e4344acd4bdbd04114b75f3de8"
+        },
+        "codes.bin": {
+          "bytes": 19800000,
+          "sha256": "d3cb81cf7ba3fbe63586ddd3365af9ecb850f8fbd7302f85a1e768b664b7cbaa"
+        }
+      }
+    },
+    "build_s": 2.124860242009163,
+    "encode_vps": 51480.065667971765
+  },
+  {
+    "anchor_bits": 4,
+    "storage": {
+      "disk_bytes": 38824257,
+      "resident_bytes": 38834408,
+      "serving_bytes": 38834408,
+      "codes_allocated_bytes": 38808000,
+      "rotation_calibration_bytes": 26112,
+      "shell_bytes": 296,
+      "vector_bytes": 392,
+      "files": {
+        "metadata.json": {
+          "bytes": 16257,
+          "sha256": "4aaf89944bb048ab3629625211de1dc91f3fc4c2bc47affb7b02830faafee677"
+        },
+        "codes.bin": {
+          "bytes": 38808000,
+          "sha256": "3afe94cc97560b90196fdfc6afb7574ca0c2df9b903d08ecf9d258bdce4c42de"
+        }
+      }
+    },
+    "build_s": 2.8051515417173505,
+    "encode_vps": 40879.095146662956
+  }
+]

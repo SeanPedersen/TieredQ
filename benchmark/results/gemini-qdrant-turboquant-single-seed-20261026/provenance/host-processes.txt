@@ -1,0 +1,826 @@
+    PID     ELAPSED %CPU COMMAND
+2468590       00:55  457 /home/sean/experiments/TieredQ-gemini-turboquant-20261026-vDAm7R/TieredQ/benchmark/.venv/bin/python turboquant/run_experiment.py ../../output
+2472605       00:00  200 ps -eo pid,etime,pcpu,args --sort=-pcpu
+2382859  4-04:33:45  100 /app/.venv/bin/python /app/.venv/bin/uvicorn crawler_app:app --host 0.0.0.0 --port 23239 --no-access-log
+2380132  4-04:34:08 66.5 /app/.venv/bin/python /app/.venv/bin/uvicorn app:app --host 0.0.0.0 --port 23237 --no-access-log
+   1620 27-21:42:36  4.5 /usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock
+   1287 27-21:42:49  3.9 /usr/bin/containerd
+  26622  4-13:40:47  2.6 btop
+   2557 27-21:42:30  2.4 /usr/bin/kwin_wayland --wayland-fd 7 --socket wayland-0 --xwayland-fd 8 --xwayland-fd 9 --xwayland-display :0 --xwayland-xauthority /run/user/1000/xauth_fVJnJa --xwayland
+    507 27-21:43:12  1.9 [nv_queue]
+2649964  4-03:36:27  1.4 /app/llama-server --model /models/Qwen_Qwen3.5-4B-Q4_K_M.gguf --alias SemIf-Q4 --n-gpu-layers 999 --ctx-size 6144 --parallel 1 --cache-ram 0 --host 0.0.0.0 --port 8080 --jinja
+   4088 27-21:42:28  1.3 /usr/bin/plasmashell --no-respawn
+  26228  4-13:40:48  1.0 mosh-server new -c 256 -s -l LANG=en_US.UTF-8
+  49498 25-03:33:53  0.9 redis-server *:6379
+2465130       01:44  0.7 [kworker/u145:19-kcryptd-253:0-1]
+2921473 18-20:26:47  0.7 /home/sean/.hermes/tools/python-3.14.7+20260901-linux-x64/bin/python3 -I -c import os, re, sys import contextlib, hashlib, io, pathlib, shutil, subprocess os.environ.pop('PYTHONHOME', None) os.environ.pop('PYTHONPATH', None) sys.path.insert(0, '/home/sean/.hermes/hermes-agent') def _hermes_closure_repair():     import contextlib, hashlib, io, shutil, subprocess     from pathlib import Path     root = Path('/home/sean/.hermes/hermes-agent')     git = root / '.git'     try:         if git.is_file():             text = git.read_text(encoding='utf-8-sig').strip()             git = root / text[7:].strip() if text.startswith('gitdir:') else git         fields = dict(line.partition('=')[::2] for line in (git / 'hermes-update-pull').read_text(encoding='utf-8-sig').splitlines())     except OSError:         return     pre = fields.get('pre', '').strip()     if not re.fullmatch('[0-9a-f]{40}|[0-9a-f]{64}', pre):         return     closure = git / 'hermes-update-recovery' / pre     files = (*('hermes_cli/_early_recovery.py', 'hermes_cli/update_lock.py', 'hermes_cli/update_custody.py'), 'hermes_cli/__init__.py')      def blob_id(data):         return hashlib.new('sha1' if len(pre) == 40 else 'sha256', b'blob %d\0' % len(data) + data).hexdigest()      def verified():         try:             listed = dict(line.split(' ', 1)[::-1] for line in (closure / 'MANIFEST').read_text(encoding='utf-8-sig').splitlines())             return (set(listed) == set(files) and listed['hermes_cli/__init__.py'] == blob_id(b'')                     and all(blob_id((closure / rel).read_bytes()) == oid for rel, oid in listed.items()))         except (OSError, ValueError):             return False      if not verified():         exe = fields.get('git', '').strip()         if not (os.path.isabs(exe) and os.path.isfile(exe)):             names = ('git.exe',) if os.name == 'nt' else ('git',)             exe = next((os.path.join(d, n) for d in os.environ.get('PATH', '').split(os.pathsep) if os.path.isabs(d)                         for n in names if os.path.isfile(os.path.join(d, n))), '')         if not exe:             return          def git_out(*args):             done = subprocess.run([exe, '--no-replace-objects', '-C', str(root), *args], capture_output=True, timeout=60,                                   stdin=subprocess.DEVNULL, creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))             if done.returncode != 0:                 raise OSError(done.stderr)             return done.stdout          staging = closure.with_name('.%s.%d.launch' % (pre, os.getpid()))         try:             ids = {}             for entry in git_out('ls-tree', '-z', '--full-tree', pre, '--', *('hermes_cli/_early_recovery.py', 'hermes_cli/update_lock.py', 'hermes_cli/update_custody.py')).split(b'\0'):                 meta, _, rel = entry.decode('utf-8', 'replace').partition('\t')                 if meta.split()[1:2] == ['blob']:                     ids[rel] = meta.split()[2]             blobs = {'hermes_cli/__init__.py': b''}             for rel in ('hermes_cli/_early_recovery.py', 'hermes_cli/update_lock.py', 'hermes_cli/update_custody.py'):                 blobs[rel] = git_out('cat-file', 'blob', ids[rel])                 if blob_id(blobs[rel]) != ids[rel]:  # an object that inflates to bytes pre never had                     raise OSError('%s does not hash to %s' % (rel, ids[rel]))             blobs['MANIFEST'] = ''.join('%s %s\n' % (blob_id(data), rel) for rel, data in blobs.items()).encode('utf-8')             for rel, data in blobs.items():                 (staging / rel).parent.mkdir(parents=True, exist_ok=True)                 (staging / rel).write_bytes(data)             shutil.rmtree(closure, ignore_errors=True)             os.replace(staging, closure)         except (OSError, KeyError, subprocess.SubprocessError):             pass         finally:             shutil.rmtree(staging, ignore_errors=True)         if not verified():             return     for name in [n for n in sys.modules if n.split('.')[0] in ('hermes_cli', 'hermes_bootstrap', 'hermes_constants', 'pm')]:         del sys.modules[name]     tree = os.path.normcase(os.path.realpath(root))     sys.path[:] = [str(closure)] + [p for p in sys.path if p and os.path.normcase(os.path.realpath(p)) != tree                                     and not os.path.normcase(os.path.realpath(p)).startswith(tree + os.sep)]     sys.dont_write_bytecode = True     said = io.StringIO()     restored = False     try:         with contextlib.redirect_stderr(said):             from hermes_cli import _early_recovery             restored = _early_recovery.restore_interrupted_pull(root)     except Exception as exc:         said.write('hermes: the checkout cannot start after an interrupted `hermes update`, and it was not '                    'repaired: %s\n' % (exc,))     if restored:         sys.stderr.write('hermes: the checkout could not start after an interrupted `hermes update`; '                          'repaired it with the recovery code saved before the update.\n' + said.getvalue())         _early_recovery.relaunch_after_restore()     sys.stderr.write(said.getvalue() or 'hermes: the checkout cannot start after an interrupted `hermes update`; '                      'launch again once the update that owns it finishes.\n')     raise SystemExit(1) if sys.argv[1:2] == ['--print-runtime-command']:     sys.dont_write_bytecode = True     from pathlib import Path     try:         from hermes_cli import _early_recovery     except Exception as exc:         if _hermes_closure_repair() or not isinstance(exc, ImportError):             raise         _early_recovery = None  # a tree without the repair: the imports below report real damage     if _early_recovery is not None and _early_recovery.restore_interrupted_pull(Path('/home/sean/.hermes/hermes-agent')):         _early_recovery.relaunch_after_restore()     from hermes_constants import get_default_hermes_root     os.environ['HERMES_HOME'] = os.environ.get('HERMES_HOME') or str(get_default_hermes_root())     from hermes_cli._launchers import print_runtime_command     print_runtime_command(Path('/home/sean/.hermes/hermes-agent'), sys.argv[2:])     sys.exit(0) sys._hermes_pin_default_home = True try:     import hermes_bootstrap except Exception:     _hermes_closure_repair()     raise if not os.environ.get('HERMES_HOME'):     from hermes_constants import get_default_hermes_root     os.environ['HERMES_HOME'] = str(get_default_hermes_root()) if sys.argv[1:2] == ['--run-module']:     import runpy     if len(sys.argv) < 3: sys.exit('hermes: --run-module needs a module')     module = sys.argv.pop(2)     del sys.argv[1]     runpy.run_module(module, run_name='__main__', alter_sys=True)     sys.exit(0) from hermes_cli.main import main sys.argv[0] = re.sub(r'(-script\.pyw|\.exe)?$', '', sys.argv[0]) sys.exit(main())  gateway run
+2444045       05:58  0.6 [kworker/u146:4-kcryptd-253:0-1]
+   1139 27-21:42:51  0.6 /usr/bin/ananicy-cpp start
+2421528  7-01:36:05  0.5 python server.py
+2426845       10:02  0.4 [kworker/u145:5-kcryptd-253:0-1]
+   1274 27-21:42:49  0.4 /usr/sbin/tailscaled --state=/var/lib/tailscale/tailscaled.state --socket=/run/tailscale/tailscaled.sock --port=41641
+    657 27-21:42:56  0.4 [btrfs-transaction]
+2444347       05:54  0.3 [kworker/u146:13-kcryptd-253:0-1]
+2389473       19:03  0.3 [kworker/u145:2-btrfs-endio]
+1019375  4-09:57:43  0.3 /app/.venv/bin/python /app/.venv/bin/uvicorn drive_index.builder:app --host 0.0.0.0 --port 23242 --workers 1 --no-access-log
+   6842 27-21:42:07  0.3 /usr/bin/cloudflared --no-autoupdate tunnel run --token-file /etc/cloudflared/token
+2178663    01:02:16  0.3 [kworker/u146:10-btrfs-endio]
+2189006    01:00:29  0.3 [kworker/u146:19-events_unbound]
+2189007    01:00:29  0.3 [kworker/u146:21-btrfs-endio]
+2126180    01:14:53  0.3 [kworker/u146:7-kcryptd-253:0-1]
+2261892       46:56  0.3 [kworker/u146:20-kcryptd-253:0-1]
+1991543    01:45:10  0.3 [kworker/u146:27-btrfs-endio]
+3599536 18-17:15:29  0.3 /home/sean/.hermes/tools/python-3.14.7+20260901-linux-x64/bin/python3 -I -c import os, re, sys import contextlib, hashlib, io, pathlib, shutil, subprocess os.environ.pop('PYTHONHOME', None) os.environ.pop('PYTHONPATH', None) sys.path.insert(0, '/home/sean/.hermes/hermes-agent') def _hermes_closure_repair():     import contextlib, hashlib, io, shutil, subprocess     from pathlib import Path     root = Path('/home/sean/.hermes/hermes-agent')     git = root / '.git'     try:         if git.is_file():             text = git.read_text(encoding='utf-8-sig').strip()             git = root / text[7:].strip() if text.startswith('gitdir:') else git         fields = dict(line.partition('=')[::2] for line in (git / 'hermes-update-pull').read_text(encoding='utf-8-sig').splitlines())     except OSError:         return     pre = fields.get('pre', '').strip()     if not re.fullmatch('[0-9a-f]{40}|[0-9a-f]{64}', pre):         return     closure = git / 'hermes-update-recovery' / pre     files = (*('hermes_cli/_early_recovery.py', 'hermes_cli/update_lock.py', 'hermes_cli/update_custody.py'), 'hermes_cli/__init__.py')      def blob_id(data):         return hashlib.new('sha1' if len(pre) == 40 else 'sha256', b'blob %d\0' % len(data) + data).hexdigest()      def verified():         try:             listed = dict(line.split(' ', 1)[::-1] for line in (closure / 'MANIFEST').read_text(encoding='utf-8-sig').splitlines())             return (set(listed) == set(files) and listed['hermes_cli/__init__.py'] == blob_id(b'')                     and all(blob_id((closure / rel).read_bytes()) == oid for rel, oid in listed.items()))         except (OSError, ValueError):             return False      if not verified():         exe = fields.get('git', '').strip()         if not (os.path.isabs(exe) and os.path.isfile(exe)):             names = ('git.exe',) if os.name == 'nt' else ('git',)             exe = next((os.path.join(d, n) for d in os.environ.get('PATH', '').split(os.pathsep) if os.path.isabs(d)                         for n in names if os.path.isfile(os.path.join(d, n))), '')         if not exe:             return          def git_out(*args):             done = subprocess.run([exe, '--no-replace-objects', '-C', str(root), *args], capture_output=True, timeout=60,                                   stdin=subprocess.DEVNULL, creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))             if done.returncode != 0:                 raise OSError(done.stderr)             return done.stdout          staging = closure.with_name('.%s.%d.launch' % (pre, os.getpid()))         try:             ids = {}             for entry in git_out('ls-tree', '-z', '--full-tree', pre, '--', *('hermes_cli/_early_recovery.py', 'hermes_cli/update_lock.py', 'hermes_cli/update_custody.py')).split(b'\0'):                 meta, _, rel = entry.decode('utf-8', 'replace').partition('\t')                 if meta.split()[1:2] == ['blob']:                     ids[rel] = meta.split()[2]             blobs = {'hermes_cli/__init__.py': b''}             for rel in ('hermes_cli/_early_recovery.py', 'hermes_cli/update_lock.py', 'hermes_cli/update_custody.py'):                 blobs[rel] = git_out('cat-file', 'blob', ids[rel])                 if blob_id(blobs[rel]) != ids[rel]:  # an object that inflates to bytes pre never had                     raise OSError('%s does not hash to %s' % (rel, ids[rel]))             blobs['MANIFEST'] = ''.join('%s %s\n' % (blob_id(data), rel) for rel, data in blobs.items()).encode('utf-8')             for rel, data in blobs.items():                 (staging / rel).parent.mkdir(parents=True, exist_ok=True)                 (staging / rel).write_bytes(data)             shutil.rmtree(closure, ignore_errors=True)             os.replace(staging, closure)         except (OSError, KeyError, subprocess.SubprocessError):             pass         finally:             shutil.rmtree(staging, ignore_errors=True)         if not verified():             return     for name in [n for n in sys.modules if n.split('.')[0] in ('hermes_cli', 'hermes_bootstrap', 'hermes_constants', 'pm')]:         del sys.modules[name]     tree = os.path.normcase(os.path.realpath(root))     sys.path[:] = [str(closure)] + [p for p in sys.path if p and os.path.normcase(os.path.realpath(p)) != tree                                     and not os.path.normcase(os.path.realpath(p)).startswith(tree + os.sep)]     sys.dont_write_bytecode = True     said = io.StringIO()     restored = False     try:         with contextlib.redirect_stderr(said):             from hermes_cli import _early_recovery             restored = _early_recovery.restore_interrupted_pull(root)     except Exception as exc:         said.write('hermes: the checkout cannot start after an interrupted `hermes update`, and it was not '                    'repaired: %s\n' % (exc,))     if restored:         sys.stderr.write('hermes: the checkout could not start after an interrupted `hermes update`; '                          'repaired it with the recovery code saved before the update.\n' + said.getvalue())         _early_recovery.relaunch_after_restore()     sys.stderr.write(said.getvalue() or 'hermes: the checkout cannot start after an interrupted `hermes update`; '                      'launch again once the update that owns it finishes.\n')     raise SystemExit(1) if sys.argv[1:2] == ['--print-runtime-command']:     sys.dont_write_bytecode = True     from pathlib import Path     try:         from hermes_cli import _early_recovery     except Exception as exc:         if _hermes_closure_repair() or not isinstance(exc, ImportError):             raise         _early_recovery = None  # a tree without the repair: the imports below report real damage     if _early_recovery is not None and _early_recovery.restore_interrupted_pull(Path('/home/sean/.hermes/hermes-agent')):         _early_recovery.relaunch_after_restore()     from hermes_constants import get_default_hermes_root     os.environ['HERMES_HOME'] = os.environ.get('HERMES_HOME') or str(get_default_hermes_root())     from hermes_cli._launchers import print_runtime_command     print_runtime_command(Path('/home/sean/.hermes/hermes-agent'), sys.argv[2:])     sys.exit(0) sys._hermes_pin_default_home = True try:     import hermes_bootstrap except Exception:     _hermes_closure_repair()     raise if not os.environ.get('HERMES_HOME'):     from hermes_constants import get_default_hermes_root     os.environ['HERMES_HOME'] = str(get_default_hermes_root()) if sys.argv[1:2] == ['--run-module']:     import runpy     if len(sys.argv) < 3: sys.exit('hermes: --run-module needs a module')     module = sys.argv.pop(2)     del sys.argv[1]     runpy.run_module(module, run_name='__main__', alter_sys=True)     sys.exit(0) from hermes_cli.main import main sys.argv[0] = re.sub(r'(-script\.pyw|\.exe)?$', '', sys.argv[0]) sys.exit(main())  serve --host 100.70.93.57 --port 9119
+2422554  7-01:35:55  0.3 /app/.venv/bin/python -m rerank.worker --port 23239
+  49473 25-03:33:53  0.3 /usr/bin/containerd-shim-runc-v2 -namespace moby -id c3a40f6c1c4052f9d5a131676f8db5597289b1243b0a2c775a46517c84cc6c5b -address /run/containerd/containerd.sock
+2256521       48:05  0.3 [kworker/u145:28-kcryptd-253:0-1]
+2073175    01:27:11  0.3 [kworker/u146:17-btrfs-endio-meta]
+3193509 22-21:41:02  0.3 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 2938549e464090d73a567758318491b01697c773207cf642a970549c9b89f85c -address /run/containerd/containerd.sock
+2444348       05:54  0.2 [kworker/u146:15-kcryptd-253:0-1]
+2465128       01:44  0.2 [kworker/u145:14-kcryptd-253:0-1]
+2380692  4-04:34:05  0.2 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 38c3fbfb5d508023488df3925a7759053e0a649f3d5496ccf6a370650c71c48d -address /run/containerd/containerd.sock
+2416910       12:25  0.2 [kworker/u146:1-kcryptd-253:0-1]
+1737043    02:43:11  0.2 [kworker/u146:0-kcryptd-253:0-1]
+3193315 22-21:41:02  0.2 /usr/bin/containerd-shim-runc-v2 -namespace moby -id d41fc543c4f5a5db6a41d89336e12b9c39e5bc7236a46d20d32ffac68956d5de -address /run/containerd/containerd.sock
+2261895       46:56  0.2 [kworker/u146:30-btrfs-endio]
+2261896       46:56  0.2 [kworker/u146:31-btrfs-endio]
+1687422 11-02:48:57  0.2 /w/bonsai2-grammar/build/bin/llama-server -m /w/models/Ternary-Bonsai-2-27B-Abliterated-PQ2_0.gguf -dev CUDA0 -ngl 99 -c 65536 -ctk q4_0 -ctv q4_0 -ub 256 -fa on -np 1 --backend-sampling --jinja --load-mode none --spec-type draft-mtp -md /w/models/mtp-bonsai2-native-v5b-dv64k.gguf -devd CUDA0 -ngld 99 -ctkd f16 -ctvd f16 --spec-draft-n-max 3 --spec-draft-p-min 0.4 --grammar-file /w/grammars/structured-cot-v4.gbnf --reasoning-format deepseek --temp 0.6 --top-p 0.95 --top-k 20 --min-p 0 --host 0.0.0.0 --port 8080
+2224294       54:04  0.2 [kworker/u145:3-btrfs-endio-meta]
+2073574    01:27:05  0.2 [kworker/u146:23-kcryptd-253:0-1]
+1994997    01:44:27  0.2 [kworker/u145:21-events_unbound]
+1802377    02:27:50  0.2 [kworker/u146:6-kcryptd-253:0-1]
+2358885       26:23  0.2 [kworker/u145:0-kcryptd-253:0-1]
+2073173    01:27:11  0.2 [kworker/u146:11-btrfs-endio]
+2258068       47:47  0.2 [kworker/u146:12-btrfs-endio]
+1657080    03:02:21  0.2 [kworker/u146:24-btrfs-endio-write]
+2256783       48:03  0.2 [kworker/u145:30-kcryptd-253:0-1]
+2256970       48:00  0.2 [kworker/u145:32-kcryptd-253:0-1]
+    788 27-21:42:54  0.2 /usr/lib/systemd/systemd-resolved
+2069716    01:27:49  0.2 [kworker/u145:25-kcryptd-253:0-1]
+2256518       48:06  0.2 [kworker/u145:17-kcryptd-253:0-1]
+2188289    01:00:38  0.2 [kworker/u146:18-btrfs-endio]
+2380189  4-04:34:08  0.2 /app/.venv/bin/python /app/.venv/bin/uvicorn search:app --host 0.0.0.0 --port 23232 --no-access-log
+2255561       48:20  0.2 [kworker/u145:4-kcryptd-253:0-1]
+3219108 22-21:35:36  0.2 redis-server *:6379
+2171175    01:04:03  0.2 [kworker/u145:7-kcryptd-253:0-1]
+3551353 17-05:14:19  0.2 /usr/local/bin/gitea web
+2069717    01:27:49  0.2 [kworker/u145:26-kcryptd-253:0-1]
+1852313    02:16:15  0.2 [kworker/u145:16-kcryptd-253:0-1]
+2022562    01:38:25  0.2 [kworker/u145:24-kcryptd-253:0-1]
+2227240       53:35  0.2 [kworker/u145:11-kcryptd-253:0-1]
+2224297       54:04  0.1 [kworker/u145:10-kcryptd-253:0-1]
+2256319       48:10  0.1 [kworker/u145:12-kcryptd-253:0-1]
+2444346       05:54  0.1 [kworker/u146:9-kcryptd-253:0-1]
+   4325 27-21:42:28  0.1 /usr/bin/ksystemstats
+2126179    01:14:53  0.1 [kworker/u146:5-kcryptd-253:0-1]
+2256520       48:05  0.1 [kworker/u145:27-kcryptd-253:0-1]
+2380313  4-04:34:07  0.1 /app/.venv/bin/python /app/.venv/bin/uvicorn platform_svc.main:app --host 0.0.0.0 --port 23234
+   6287 27-21:42:14  0.1 /app/bin/collection-worker
+   1339 27-21:42:49  0.1 /usr/lib/systemd/systemd-oomd
+2311676       37:19  0.1 [kworker/u145:1-btrfs-endio]
+2430181       09:14  0.1 [kworker/u146:3-kcryptd-253:0-1]
+   4214 27-21:42:28  0.1 node --dns-result-order=ipv4first --no-network-family-autoselection /app/server.js
+   1140 27-21:42:51  0.1 /usr/bin/NetworkManager --no-daemon
+2380054  4-04:34:08  0.1 /app/.venv/bin/python /app/.venv/bin/uvicorn pinball:app --host 0.0.0.0 --port 23233
+2224295       54:04  0.1 [kworker/u145:6-kcryptd-253:0-1]
+3219658 22-21:35:30  0.1 python /app/proxy_server.py
+2421503  7-01:36:05  0.1 /usr/bin/containerd-shim-runc-v2 -namespace moby -id aa162d8432078cc20be01716e0252266095bd433598d34cdd514cfa7888d0748 -address /run/containerd/containerd.sock
+3550150 17-05:14:30  0.1 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 1e4852d2ddd378504395846f2216d0196f84dec6652ad9114b34e12e93c6e100 -address /run/containerd/containerd.sock
+1019350  4-09:57:43  0.1 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 167e4e9c71f6d4d3e781f29a1a90d61f70b0bf5c3014290ef96a7ad7ede8ad21 -address /run/containerd/containerd.sock
+3219084 22-21:35:36  0.1 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 60f7660b4baa319263c1fb50b8442a1f1d50e30f08f11390c9aa2b08d52ad2ac -address /run/containerd/containerd.sock
+2444345       05:54  0.1 [kworker/u146:8-btrfs-endio-write]
+2444349       05:54  0.1 [kworker/u145:8-btrfs-endio-meta]
+2337764       31:20  0.1 [kworker/u146:2-btrfs-endio]
+2256519       48:05  0.1 [kworker/u145:18-kcryptd-253:0-1]
+3218980 22-21:35:36  0.1 tor -f /tmp/torrc.generated
+    269 27-21:43:16  0.1 [kswapd0]
+    621 27-21:42:56  0.1 [dmcrypt_write/253:0]
+2465127       01:44  0.0 [kworker/u145:13-kcryptd-253:0-1]
+   4055 27-21:42:28  0.0 /usr/bin/kded6
+2382834  4-04:33:45  0.0 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 64a537834edba02a8cb0d139284a060e3939d7e2079d40c430b9b8225a7b363d -address /run/containerd/containerd.sock
+1763324 20-00:54:02  0.0 glance
+2429230       09:28  0.0 [kworker/u144:2-phy2]
+1084485 21-03:31:02  0.0 /agent
+     16 27-21:43:18  0.0 [rcu_preempt]
+   1268 27-21:42:50  0.0 /usr/bin/wpa_supplicant -u -s -O /run/wpa_supplicant
+2442889       06:14  0.0 [kworker/u149:2-rtw_tx_wq]
+2440654       06:44  0.0 [kworker/u148:0-rtw_tx_wq]
+3218955 22-21:35:36  0.0 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 8131468f5809e2d89bb3850c2af279e3c33981fbeb8484054b5e5cc2aaa5e17d -address /run/containerd/containerd.sock
+3599043 18-17:15:31  0.0 /usr/bin/zellij --server /tmp/zellij-1000/contract_version_1/remarkable-clarinet
+2649940  4-03:36:27  0.0 /usr/bin/containerd-shim-runc-v2 -namespace moby -id af1915f616338560571775cb3ff701be4d236f1a677a7c30268ebb5f8ed58100 -address /run/containerd/containerd.sock
+3220048 22-21:35:28  0.0 /usr/bin/containerd-shim-runc-v2 -namespace moby -id a539ff3c1379948fd4ba7cd8b776d14c57206dbea37be0a7ab24f2e5fa820bc4 -address /run/containerd/containerd.sock
+   3460 27-21:42:29  0.0 /usr/bin/containerd-shim-runc-v2 -namespace moby -id e15ca80f22ea04a118af1be21a604f60a7bae94abab3f0a1e8d92da928ac22cc -address /run/containerd/containerd.sock
+1763299 20-00:54:02  0.0 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 5dbf9200fdbf3cee315b5f06e8679f97c1e15096ee11fcd86c35b5169ccdad81 -address /run/containerd/containerd.sock
+2090321    01:23:17  0.0 [kworker/u144:3-phy2]
+3739366 26-14:26:10  0.0 /usr/bin/zsh -c until ! pgrep -f "onnx-stage/sweep.sh" >/dev/null; do sleep 2; done; grep -E "^===|granite 1024|vision image" ~/onnx-stage/sweep2.log | paste - - - | tail -4 | sed "s/X=1//; s/TAIL //g; s/n=15 //g; s/first= *[0-9.]* //g; s/  */ /g; s/p95=[^m]*max=[ 0-9.]*//g" cd ~/onnx-check; unset LD_LIBRARY_PATH DIGGER_OV_THREADS; S=~/onnx-stage export MODE=tail SIGLIP_DIR=$S/siglip TOKENIZER=$S/models/granite_tokenizer.json RUNS=500 LENGTHS=8,128,512,1024 echo "##### OPENVINO auto threads (18 cores), 500 runs"; ORT_DYLIB_PATH=$S/lib/libonnxruntime.so MODEL_DIR=$S/models ./target/release/onnx-harness 2>&1 | grep -E "^Loaded|^TAIL|load" echo "##### FUSED fallback on ORT CPU (Intel 1.24.1 lib), 500 runs"; ORT_DYLIB_PATH=$S/lib/libonnxruntime.so MODEL_DIR=$S/models-fused ./target/release/onnx-harness 2>&1 | grep -E "^TAIL|load"
+3220084 22-21:35:28  0.0 node server/dist/index.js
+1642077  1-12:36:43  0.0 /usr/lib/iwd/iwd
+   6145 27-21:42:16  0.0 /usr/bin/konsole -qwindowtitle btop++ -qwindowicon btop -e /usr/bin/btop
+   1138 27-21:42:51  0.0 dbus-broker --log 10 --controller 9 --machine-id 526b72bb3c494c27b6ee80f37582b92c --max-bytes 536870912 --max-fds 4096 --max-matches 131072 --audit
+    497 27-21:43:14  0.0 [nvidia-modeset/kthread_q]
+2468028       01:03  0.0 uv run --locked python turboquant/run_experiment.py ../../output
+1083757 21-03:31:11  0.0 /beszel serve --http=0.0.0.0:8090
+   4220 27-21:42:28  0.0 /usr/lib/org_kde_powerdevil
+    505 27-21:43:12  0.0 [irq/71-nvidia]
+1489220 14-00:38:13  0.0 /usr/bin/zsh -c cd ~/experiments/vidore3/rerank; while pgrep -f two_stage.py >/dev/null; do sleep 3; done; CUDA_VISIBLE_DEVICES=0 timeout 1500 .venv/bin/python trt_bge.py engine 2>&1 | grep -vE "\[W\]" | tail -3 && bash -c "trap \"docker start digger-prod-inference-1 digger-green-web-crawler-1 >/dev/null && echo prod restarted\" EXIT; docker stop digger-prod-inference-1 digger-green-web-crawler-1 >/dev/null; CUDA_VISIBLE_DEVICES=0 .venv/bin/python trt_bge.py time 20 30 2>&1 | grep -E \"^bge|^output|Error\""
+2464823       01:49  0.0 [kworker/u145:9-btrfs-endio-meta]
+   2441 27-21:42:30  0.0 /usr/bin/containerd-shim-runc-v2 -namespace moby -id e1d7bd2110684f3fef1d0bfa8d1b16b766d463b7c847d4bfe34022b15192297f -address /run/containerd/containerd.sock
+3219633 22-21:35:30  0.0 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 2e4bb6b74b6e032a407cc5803a40d6187cb3754036af4cf55c2a65eea6748c9b -address /run/containerd/containerd.sock
+1083732 21-03:31:11  0.0 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 9d1138c7707aadbcde37ecc64d27be22d59071f2cff830484115964807469cb6 -address /run/containerd/containerd.sock
+1084461 21-03:31:02  0.0 /usr/bin/containerd-shim-runc-v2 -namespace moby -id c35b80b03ec316ece0b1d6ca811032bfde79a9af2966542a0ca8944f974cd715 -address /run/containerd/containerd.sock
+2380106  4-04:34:08  0.0 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 8613bfcc829dd58eab1fe5e8c7fdf36ce8ba748de7d8be8139d93973f6665b5e -address /run/containerd/containerd.sock
+3551156 17-05:14:19  0.0 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 3e1beff9a4e02fe1c26ebf83bc522f26e5ba0bf1c031b766147cd43e9dd2445f -address /run/containerd/containerd.sock
+2379896  4-04:34:09  0.0 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 98cb76a22e5c0e5e87da78b2bc9b6d2fd32b2c7ced5d287154a0820822c5a3af -address /run/containerd/containerd.sock
+2379920  4-04:34:09  0.0 python server.py
+1687397 11-02:48:58  0.0 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 725927c3372c97662898fff5873dd212a616f37a1dd5b7aea15af23a342e7dc6 -address /run/containerd/containerd.sock
+2380165  4-04:34:08  0.0 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 5c7f37532e077ce29975ff21cd0c929af48639be45af9cafc8e58150763a3e6b -address /run/containerd/containerd.sock
+2380029  4-04:34:08  0.0 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 6ca83225a11a5717aed91f59e9700a5396a8b602fc10ecb678723c49b1055819 -address /run/containerd/containerd.sock
+2380258  4-04:34:07  0.0 /usr/bin/containerd-shim-runc-v2 -namespace moby -id d739541086b0f46075922d527d986ab91f01aab89f19bda57838a647cecc7151 -address /run/containerd/containerd.sock
+2342742       30:14  0.0 [kworker/u148:2-rtw_tx_wq]
+2361959       25:38  0.0 [kworker/u149:0-rtw_tx_wq]
+    253 27-21:43:18  0.0 [khugepaged]
+     15 27-21:43:18  0.0 [ksoftirqd/0]
+   2428 27-21:42:30  0.0 dbus-broker --log 11 --controller 10 --machine-id 526b72bb3c494c27b6ee80f37582b92c --max-bytes 100000000000000 --max-fds 25000000000000 --max-matches 5000000000
+2330866       32:59  0.0 [kworker/u144:1-rtw88_usb: tx wq]
+3550176 17-05:14:30  0.0 postgres
+      1 27-21:43:18  0.0 /usr/lib/systemd/systemd --switched-root --system --deserialize=59 splash
+1354865 14-01:10:31  0.0 /usr/bin/zsh -c while pgrep -f "uv add tensorrt" >/dev/null; do sleep 5; done; cd ~/experiments/vidore3/rerank && .venv/bin/python -c "import tensorrt,onnx,torch;print(tensorrt.__version__,onnx.__version__,torch.__version__)" && CUDA_VISIBLE_DEVICES=1 .venv/bin/python trt_export.py check 2>&1 | grep -vi warn | tail -3
+2468021       01:03  0.0 /usr/bin/tailscaled be-child ssh --login-shell=/usr/bin/zsh --uid=1000 --gid=1000 --groups=1000,3,90,998,995,990,989,985,983,982,979,956,955,952 --local-user=sean --home-dir=/home/sean --remote-user=SeanPedersen@github --remote-ip=100.113.222.54 --has-tty=false --tty-name= --force-v1-behavior --cmd=cd /home/sean/experiments/TieredQ-gemini-turboquant-20261026-vDAm7R/TieredQ/benchmark/turboquant/native; RUSTFLAGS="-C target-cpu=native -C opt-level=3" CFLAGS="-O3 -march=native -ffp-contract=off" taskset -c 0-7 cargo +1.99.1 build --release --locked -j8 > ../../../../rust-build-3.log 2>&1; cd ../..; OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=8 taskset -c 0-7 uv run --locked python turboquant/run_experiment.py ../../output > ../../experiment.log 2>&1
+1495302 14-00:36:47  0.0 /usr/bin/zsh -c cd ~/experiments/vidore3/rerank; while pgrep -f "trt_bge.py" >/dev/null; do sleep 5; done; CUDA_VISIBLE_DEVICES=0 nohup .venv/bin/python quality_only.py jina-v3.5 512 20 > results/q-jina-512-d20.log 2>&1 &
+1371703 14-01:06:26  0.0 /usr/bin/zsh -c while pgrep -f "trt_export.py check" >/dev/null; do sleep 5; done
+1424724 14-00:53:52  0.0 /usr/bin/zsh -c cd ~/experiments/vidore3/rerank; while pgrep -f "quality_only.py jina-v3.5" >/dev/null; do sleep 5; done; for f in results/q-jina-192-d20.log results/q-jina-224-d20.log; do grep -E "ndcg|Error" $f | tail -1; done
+1491329 14-00:37:44  0.0 /usr/bin/zsh -c while pgrep -f "trt_bge.py" >/dev/null || pgrep -f two_stage.py >/dev/null; do sleep 5; done
+3441273    12:44:49  0.0 [kworker/1:2-events]
+2423770       10:47  0.0 [kworker/0:2-mm_percpu_wq]
+   4346 27-21:42:28  0.0 /usr/lib/udisks2/udisksd
+     19 27-21:43:18  0.0 [rcu_exp_gp_kthread_worker]
+1322227 27-16:29:14  0.0 /usr/bin/zsh -c cd granite-siglip2-adapter; until grep -qE "ALL DONE|Traceback|Error" logs/gpu1.log || grep -q "=== .* train smoke" logs/gpu1.log && grep -q "epoch 1" logs/gpu1.log; do sleep 10; done; grep -vE "it/s\]|s/it\]" logs/gpu1.log | tail -40 | cut -c1-300
+     18 27-21:43:18  0.0 [rcu_exp_par_gp_kthread_worker/1]
+1408827 14-00:57:50  0.0 /usr/bin/zsh -c cd ~/experiments/vidore3/rerank; while pgrep -f "quality_only.py jina-v3.5" >/dev/null; do sleep 10; done; for f in results/q-jina-192-d20.log results/q-jina-224-d20.log; do grep -E "ndcg|Error" $f | tail -1; done
+2274502       44:31  0.0 [kworker/17:2-mm_percpu_wq]
+2408515       14:28  0.0 [kworker/5:2-events]
+   2466 27-21:42:30  0.0 python main.py
+2348924       28:47  0.0 [kworker/2:1-mm_percpu_wq]
+3730376 18-16:40:25  0.0 lingbot-map/.venv/bin/python -m http.server 8090 --bind 0.0.0.0 -d sean-room2/web
+4071743 18-15:07:39  0.0 lingbot-map/.venv/bin/python -m http.server 8091 --bind 0.0.0.0 -d sean-room2/web_sharp
+     97 27-21:43:18  0.0 [rcu_exp_par_gp_kthread_worker/2]
+    740 27-21:42:54  0.0 /usr/lib/systemd/systemd-journald
+2368989       23:57  0.0 [kworker/7:1-mm_percpu_wq]
+2291970       41:28  0.0 [kworker/4:2-mm_percpu_wq]
+2252280       48:57  0.0 [kworker/14:1-events]
+ 178415 27-21:00:06  0.0 /home/sean/.codex/packages/app-server-daemon/releases/0.164.0-x86_64-unknown-linux-musl/bin/codex app-server daemon pid-update-loop
+2368261       24:07  0.0 [kworker/3:2-events]
+     32 27-21:43:18  0.0 [migration/2]
+    793 27-21:42:54  0.0 /usr/lib/systemd/systemd-udevd
+2248764       49:36  0.0 [kworker/11:0-mm_percpu_wq]
+    643 27-21:42:56  0.0 [kworker/4:1H-kblockd]
+    672 27-21:42:56  0.0 [kworker/7:1H-kblockd]
+    644 27-21:42:56  0.0 [kworker/5:1H-kblockd]
+    720 27-21:42:55  0.0 [kworker/8:1H-kblockd]
+    630 27-21:42:56  0.0 [kworker/3:1H-kblockd]
+    645 27-21:42:56  0.0 [kworker/21:1H-kblockd]
+2369390       23:50  0.0 [kworker/8:1-events]
+2344641       29:49  0.0 [kworker/16:1-events]
+    328 27-21:43:16  0.0 [kworker/9:1H-kblockd]
+    671 27-21:42:56  0.0 [kworker/6:1H-kblockd]
+    648 27-21:42:56  0.0 [kworker/13:1H-kblockd]
+    723 27-21:42:55  0.0 [kworker/24:1H-kblockd]
+2405486       15:11  0.0 [kworker/12:2-events]
+    517 27-21:43:09  0.0 [kworker/10:1H-kblockd]
+2379759       21:20  0.0 [kworker/6:0-events]
+2379188       21:28  0.0 [kworker/9:2-events]
+    726 27-21:42:55  0.0 [kworker/11:1H-kblockd]
+    649 27-21:42:56  0.0 [kworker/14:1H-kblockd]
+    629 27-21:42:56  0.0 [kworker/12:1H-kblockd]
+    650 27-21:42:56  0.0 [kworker/30:1H-kblockd]
+    727 27-21:42:55  0.0 [kworker/27:1H-kblockd]
+3186673 26-16:27:17  0.0 -zsh
+    647 27-21:42:56  0.0 [kworker/16:1H-kblockd]
+    492 27-21:43:14  0.0 [kworker/15:1H-kblockd]
+   2290 27-21:42:33  0.0 /usr/lib/systemd/systemd --user
+    682 27-21:42:56  0.0 [kworker/33:1H-kblockd]
+     38 27-21:43:18  0.0 [migration/3]
+2539102 26-18:57:58  0.0 /usr/bin/zsh -c until [ -f ~/granite-siglip2-adapter/artifacts/cache/teacher_samelang_ml-t1.npy ] && ! pgrep -f "adapter.encode dataset" >/dev/null; do sleep 10; done; tail -2 ~/granite-siglip2-adapter/logs/ml-t1-encode.log
+    652 27-21:42:56  0.0 [kworker/2:1H-kblockd]
+   1142 27-21:42:51  0.0 avahi-daemon: running [hartmut-455.local]
+     20 27-21:43:18  0.0 [migration/0]
+    681 27-21:42:56  0.0 [kworker/17:1H-kblockd]
+    489 27-21:43:14  0.0 [kworker/0:1H-kblockd]
+    653 27-21:42:56  0.0 [kworker/18:1H-kblockd]
+    646 27-21:42:56  0.0 [kworker/22:1H-kblockd]
+    728 27-21:42:55  0.0 [kworker/25:1H-kblockd]
+    651 27-21:42:56  0.0 [kworker/31:1H-kblockd]
+    742 27-21:42:54  0.0 [kworker/28:1H-kblockd]
+     44 27-21:43:18  0.0 [migration/4]
+    683 27-21:42:56  0.0 [kworker/34:1H-kblockd]
+    912 27-21:42:54  0.0 [kworker/26:1H-kblockd]
+    892 27-21:42:54  0.0 [kworker/23:1H-kblockd]
+    921 27-21:42:54  0.0 [kworker/29:1H-kblockd]
+   1072 27-21:42:53  0.0 [kworker/32:1H-kblockd]
+3776696  4-15:22:01  0.0 /usr/bin/zsh -c until grep -q __EXIT__ ~/experiments/diskovec-glove-20261022/work/ntu-dev/bisect1.log 2>/dev/null; do sleep 20; done; cd ~/experiments/diskovec-glove-20261022/work/ntu-dev; grep "B=[34]" ablation1.log; cat bisect1.log
+3713185  4-15:34:23  0.0 /usr/bin/zsh -c until grep -q __EXIT__ ~/experiments/diskovec-glove-20261022/work/ntu-dev/bisect1.log 2>/dev/null; do sleep 20; done; cd ~/experiments/diskovec-glove-20261022/work/ntu-dev; grep "B=" ablation1.log; cat bisect1.log
+    329 27-21:43:16  0.0 [kworker/1:1H-kblockd]
+    654 27-21:42:56  0.0 [kworker/19:1H-kblockd]
+    655 27-21:42:56  0.0 [kworker/20:1H-kblockd]
+     50 27-21:43:18  0.0 [migration/5]
+2429621       09:23  0.0 [kworker/10:2-events]
+2450640       04:44  0.0 [kworker/14:2-events]
+2386192       19:51  0.0 [kworker/15:1-events]
+    251 27-21:43:18  0.0 [kcompactd0]
+   4813 27-21:42:27  0.0 [nvidia-drm/timeline-43]
+   3593 27-21:42:29  0.0 [nvidia-drm/timeline-3b]
+2447622       05:09  0.0 [kworker/15:0-events]
+     56 27-21:43:18  0.0 [migration/6]
+   1190 27-21:42:51  0.0 [kworker/35:1H-kblockd]
+     62 27-21:43:18  0.0 [migration/7]
+     33 27-21:43:18  0.0 [ksoftirqd/2]
+2102671    01:20:29  0.0 [kworker/13:0-events]
+   1149 27-21:42:51  0.0 /usr/lib/systemd/systemd-logind
+     74 27-21:43:18  0.0 [migration/9]
+     68 27-21:43:18  0.0 [migration/8]
+     80 27-21:43:18  0.0 [migration/10]
+     86 27-21:43:18  0.0 [migration/11]
+     92 27-21:43:18  0.0 [migration/12]
+    100 27-21:43:18  0.0 [migration/13]
+   1543 27-21:42:45  0.0 /usr/lib/polkit-1/polkitd --no-debug --log-level=notice
+    106 27-21:43:18  0.0 [migration/14]
+    112 27-21:43:18  0.0 [migration/15]
+    118 27-21:43:18  0.0 [migration/16]
+   3558 27-21:42:29  0.0 /sbin/tini -- /usr/local/bin/docker-entrypoint.sh
+1801499    02:28:04  0.0 [kworker/5:0-events]
+   5798 27-21:42:21  0.0 /usr/lib/xdg-desktop-portal
+     81 27-21:43:18  0.0 [ksoftirqd/10]
+ 193207 27-20:56:38  0.0 /usr/lib/gvfsd-trash --spawner :1.52 /org/gtk/gvfs/exec_spaw/0
+     39 27-21:43:18  0.0 [ksoftirqd/3]
+3193568 22-21:41:01  0.0 /usr/bin/docker-proxy -proto tcp -host-ip 127.0.0.1 -host-port 3000 -container-ip 172.27.0.6 -container-port 80 -use-listen-fd
+     27 27-21:43:18  0.0 [ksoftirqd/1]
+   1077 27-21:42:53  0.0 [irq/89-rtw_pci]
+1571145    03:23:05  0.0 [kworker/18:1-events]
+3193438 22-21:41:02  0.0 /usr/bin/docker-proxy -proto tcp -host-ip 127.0.0.1 -host-port 3010 -container-ip 172.27.0.4 -container-port 3010 -use-listen-fd
+3377443    13:00:16  0.0 [kworker/24:0-events]
+   1152 27-21:42:51  0.0 /usr/lib/systemd/systemd-machined
+1672694    02:58:42  0.0 [kworker/33:1-events]
+1896774    02:05:42  0.0 [kworker/31:1-mm_percpu_wq]
+   4096 27-21:42:28  0.0 /usr/lib/at-spi2-registryd --use-gnome-session
+  47432 27-21:31:47  0.0 [psimon]
+2015195    01:40:07  0.0 [kworker/32:2-events]
+    124 27-21:43:18  0.0 [migration/17]
+     45 27-21:43:18  0.0 [ksoftirqd/4]
+     26 27-21:43:18  0.0 [migration/1]
+3613604    12:03:02  0.0 [kworker/22:1-events]
+    142 27-21:43:18  0.0 [migration/20]
+   4021 27-21:42:29  0.0 dbus-broker --log 10 --controller 9 --machine-id 526b72bb3c494c27b6ee80f37582b92c --max-bytes 100000000000000 --max-fds 6400000 --max-matches 5000000000
+2077956    01:26:09  0.0 [kworker/26:0-events]
+1994159    01:44:36  0.0 [kworker/21:1-events]
+    274 27-21:43:16  0.0 [hwrng]
+     51 27-21:43:18  0.0 [ksoftirqd/5]
+3550919 17-05:14:22  0.0 postgres: autovacuum launcher 
+    130 27-21:43:18  0.0 [migration/18]
+2380843  4-04:34:04  0.0 nginx: worker process
+2380831  4-04:34:04  0.0 nginx: worker process
+2380832  4-04:34:04  0.0 nginx: worker process
+2380833  4-04:34:04  0.0 nginx: worker process
+2380834  4-04:34:04  0.0 nginx: worker process
+2380835  4-04:34:04  0.0 nginx: worker process
+2380839  4-04:34:04  0.0 nginx: worker process
+2380840  4-04:34:04  0.0 nginx: worker process
+2380842  4-04:34:04  0.0 nginx: worker process
+2380846  4-04:34:04  0.0 nginx: worker process
+2380847  4-04:34:04  0.0 nginx: worker process
+2380852  4-04:34:04  0.0 nginx: worker process
+2380853  4-04:34:04  0.0 nginx: worker process
+2380855  4-04:34:04  0.0 nginx: worker process
+2380857  4-04:34:04  0.0 nginx: worker process
+2380858  4-04:34:04  0.0 nginx: worker process
+2380861  4-04:34:04  0.0 nginx: worker process
+2380827  4-04:34:04  0.0 nginx: worker process
+2380829  4-04:34:04  0.0 nginx: worker process
+2380836  4-04:34:04  0.0 nginx: worker process
+2380837  4-04:34:04  0.0 nginx: worker process
+2380838  4-04:34:04  0.0 nginx: worker process
+2380841  4-04:34:04  0.0 nginx: worker process
+2380844  4-04:34:04  0.0 nginx: worker process
+2380845  4-04:34:04  0.0 nginx: worker process
+2380849  4-04:34:04  0.0 nginx: worker process
+2380854  4-04:34:04  0.0 nginx: worker process
+2380856  4-04:34:04  0.0 nginx: worker process
+2380859  4-04:34:04  0.0 nginx: worker process
+2380826  4-04:34:04  0.0 nginx: worker process
+2380828  4-04:34:04  0.0 nginx: worker process
+2380830  4-04:34:04  0.0 nginx: worker process
+2380848  4-04:34:04  0.0 nginx: worker process
+2380850  4-04:34:04  0.0 nginx: worker process
+2380851  4-04:34:04  0.0 nginx: worker process
+2380860  4-04:34:04  0.0 nginx: worker process
+     57 27-21:43:18  0.0 [ksoftirqd/6]
+     69 27-21:43:18  0.0 [ksoftirqd/8]
+2292037       41:28  0.0 [kworker/23:1-events]
+2709123    15:40:56  0.0 postgres: gitea gitea 192.168.80.3(37320) idle
+     63 27-21:43:18  0.0 [ksoftirqd/7]
+ 461382    07:51:28  0.0 [kworker/35:2-events]
+     75 27-21:43:18  0.0 [ksoftirqd/9]
+   1111 27-21:42:52  0.0 [jbd2/sda1-8]
+ 871901  1-15:42:18  0.0 postgres: gitea gitea 192.168.80.3(60616) idle
+2043056    01:33:52  0.0 [kworker/19:1-events]
+2586489    16:10:33  0.0 [kworker/25:2-events]
+     87 27-21:43:18  0.0 [ksoftirqd/11]
+    148 27-21:43:18  0.0 [migration/21]
+2694080    15:44:32  0.0 [kworker/28:2-events]
+     93 27-21:43:18  0.0 [ksoftirqd/12]
+ 180275    08:59:03  0.0 [kworker/19:2-mm_percpu_wq]
+    101 27-21:43:18  0.0 [ksoftirqd/13]
+    107 27-21:43:18  0.0 [ksoftirqd/14]
+    113 27-21:43:18  0.0 [ksoftirqd/15]
+2247478       49:48  0.0 [kworker/34:2-events]
+   1537 27-21:42:45  0.0 /usr/lib/rtkit-daemon
+2243156       50:22  0.0 [kworker/20:0-events]
+    119 27-21:43:18  0.0 [ksoftirqd/16]
+3083699 16-14:19:42  0.0 /usr/bin/dirmngr --homedir /etc/pacman.d/gnupg --supervised
+    154 27-21:43:18  0.0 [migration/22]
+   1581 27-21:42:45  0.0 /usr/lib/upowerd
+2426105    16:49:20  0.0 [kworker/34:1-cgroup_release]
+2278804  1-10:03:50  0.0 [kworker/30:1-events]
+2384490  4-04:33:33  0.0 nginx: worker process
+2384469  4-04:33:33  0.0 nginx: worker process
+2384463  4-04:33:33  0.0 nginx: worker process
+2384464  4-04:33:33  0.0 nginx: worker process
+2384445  4-04:33:33  0.0 nginx: worker process
+2384481  4-04:33:33  0.0 nginx: worker process
+2384477  4-04:33:33  0.0 nginx: worker process
+2384478  4-04:33:33  0.0 nginx: worker process
+2384475  4-04:33:33  0.0 nginx: worker process
+2384471  4-04:33:33  0.0 nginx: worker process
+2384467  4-04:33:33  0.0 nginx: worker process
+2384465  4-04:33:33  0.0 nginx: worker process
+2384466  4-04:33:33  0.0 nginx: worker process
+2384462  4-04:33:33  0.0 nginx: worker process
+2384456  4-04:33:33  0.0 nginx: worker process
+2384457  4-04:33:33  0.0 nginx: worker process
+2384454  4-04:33:33  0.0 nginx: worker process
+2384455  4-04:33:33  0.0 nginx: worker process
+2384453  4-04:33:33  0.0 nginx: worker process
+2384452  4-04:33:33  0.0 nginx: worker process
+2384448  4-04:33:33  0.0 nginx: worker process
+2384446  4-04:33:33  0.0 nginx: worker process
+   5833 27-21:42:20  0.0 /usr/lib/xdg-desktop-portal-gtk
+2384491  4-04:33:33  0.0 nginx: worker process
+2384492  4-04:33:33  0.0 nginx: worker process
+2384487  4-04:33:33  0.0 nginx: worker process
+2384483  4-04:33:33  0.0 nginx: worker process
+2384479  4-04:33:33  0.0 nginx: worker process
+2384480  4-04:33:33  0.0 nginx: worker process
+2384472  4-04:33:33  0.0 nginx: worker process
+2384473  4-04:33:33  0.0 nginx: worker process
+2384474  4-04:33:33  0.0 nginx: worker process
+2384460  4-04:33:33  0.0 nginx: worker process
+2384461  4-04:33:33  0.0 nginx: worker process
+2384459  4-04:33:33  0.0 nginx: worker process
+2384451  4-04:33:33  0.0 nginx: worker process
+2384458  4-04:33:33  0.0 nginx: worker process
+   3792 27-21:42:29  0.0 /usr/bin/wireplumber
+    160 27-21:43:18  0.0 [migration/23]
+3550916 17-05:14:22  0.0 postgres: background writer 
+    125 27-21:43:18  0.0 [ksoftirqd/17]
+3550918 17-05:14:22  0.0 postgres: walwriter 
+    766 27-21:42:54  0.0 /usr/lib/systemd/systemd-userdbd
+    166 27-21:43:18  0.0 [migration/24]
+   4052 27-21:42:28  0.0 /usr/bin/ksmserver
+   4215 27-21:42:28  0.0 /usr/bin/gmenudbusmenuproxy
+   4231 27-21:42:28  0.0 /usr/bin/xembedsniproxy
+   4216 27-21:42:28  0.0 /usr/bin/kaccess
+2384073  4-04:33:35  0.0 nginx: worker process
+2384043  4-04:33:35  0.0 nginx: worker process
+2384074  4-04:33:35  0.0 nginx: worker process
+2384064  4-04:33:35  0.0 nginx: worker process
+2384066  4-04:33:35  0.0 nginx: worker process
+2384067  4-04:33:35  0.0 nginx: worker process
+2384062  4-04:33:35  0.0 nginx: worker process
+2384056  4-04:33:35  0.0 nginx: worker process
+2384052  4-04:33:35  0.0 nginx: worker process
+2384053  4-04:33:35  0.0 nginx: worker process
+2384049  4-04:33:35  0.0 nginx: worker process
+2384050  4-04:33:35  0.0 nginx: worker process
+2384051  4-04:33:35  0.0 nginx: worker process
+2384047  4-04:33:35  0.0 nginx: worker process
+2384042  4-04:33:35  0.0 nginx: worker process
+2384040  4-04:33:35  0.0 nginx: worker process
+2384077  4-04:33:35  0.0 nginx: worker process
+2384075  4-04:33:35  0.0 nginx: worker process
+2384076  4-04:33:35  0.0 nginx: worker process
+2384072  4-04:33:35  0.0 nginx: worker process
+2384070  4-04:33:35  0.0 nginx: worker process
+2384071  4-04:33:35  0.0 nginx: worker process
+2384068  4-04:33:35  0.0 nginx: worker process
+2384069  4-04:33:35  0.0 nginx: worker process
+2384065  4-04:33:35  0.0 nginx: worker process
+2384060  4-04:33:35  0.0 nginx: worker process
+2384061  4-04:33:35  0.0 nginx: worker process
+2384063  4-04:33:35  0.0 nginx: worker process
+2384057  4-04:33:35  0.0 nginx: worker process
+2384054  4-04:33:35  0.0 nginx: worker process
+2384055  4-04:33:35  0.0 nginx: worker process
+2384046  4-04:33:35  0.0 nginx: worker process
+2384048  4-04:33:35  0.0 nginx: worker process
+2384044  4-04:33:35  0.0 nginx: worker process
+2384045  4-04:33:35  0.0 nginx: worker process
+   4789 27-21:42:27  0.0 /usr/lib/bluetooth/obexd
+2384058  4-04:33:35  0.0 nginx: worker process
+   4217 27-21:42:28  0.0 /usr/lib/polkit-kde-authentication-agent-1
+2281101       43:00  0.0 [kworker/10:1-events]
+   6479 27-21:42:12  0.0 /usr/lib/power-profiles-daemon
+    186 27-21:43:18  0.0 [migration/27]
+    174 27-21:43:18  0.0 [migration/25]
+    246 27-21:43:18  0.0 [khungtaskd]
+    192 27-21:43:18  0.0 [migration/28]
+    180 27-21:43:18  0.0 [migration/26]
+    198 27-21:43:18  0.0 [migration/29]
+1687584 11-02:48:57  0.0 /usr/bin/docker-proxy -proto tcp -host-ip 127.0.0.1 -host-port 8000 -container-ip 192.168.96.2 -container-port 8080 -use-listen-fd
+    204 27-21:43:18  0.0 [migration/30]
+    210 27-21:43:18  0.0 [migration/31]
+    228 27-21:43:18  0.0 [migration/34]
+    216 27-21:43:18  0.0 [migration/32]
+    222 27-21:43:18  0.0 [migration/33]
+1763502 20-00:54:02  0.0 /usr/bin/docker-proxy -proto tcp -host-ip :: -host-port 8082 -container-ip 172.29.0.2 -container-port 8080 -use-listen-fd
+    794 27-21:42:54  0.0 /usr/lib/systemd/systemd-timesyncd
+   5013 27-21:42:26  0.0 /usr/bin/kdeconnectd
+    136 27-21:43:18  0.0 [migration/19]
+    234 27-21:43:18  0.0 [migration/35]
+3193339 22-21:41:02  0.0 nginx: master process nginx -g daemon off;
+    131 27-21:43:18  0.0 [ksoftirqd/18]
+3193534 22-21:41:02  0.0 nginx: master process nginx -g daemon off;
+    137 27-21:43:18  0.0 [ksoftirqd/19]
+      2 27-21:43:18  0.0 [kthreadd]
+    656 27-21:42:56  0.0 [btrfs-cleaner]
+    235 27-21:43:18  0.0 [ksoftirqd/35]
+   4117 27-21:42:28  0.0 /usr/bin/docker-proxy -proto tcp -host-ip :: -host-port 3003 -container-ip 172.20.0.2 -container-port 3000 -use-listen-fd
+   4108 27-21:42:28  0.0 /usr/bin/docker-proxy -proto tcp -host-ip 0.0.0.0 -host-port 3003 -container-ip 172.20.0.2 -container-port 3000 -use-listen-fd
+    143 27-21:43:18  0.0 [ksoftirqd/20]
+  78985    09:23:35  0.0 [kworker/1:0-events]
+    149 27-21:43:18  0.0 [ksoftirqd/21]
+3219788 22-21:35:30  0.0 /usr/bin/docker-proxy -proto tcp -host-ip 127.0.0.1 -host-port 8080 -container-ip 172.21.0.4 -container-port 8080 -use-listen-fd
+3219773 22-21:35:30  0.0 /usr/bin/docker-proxy -proto tcp -host-ip 172.17.0.1 -host-port 1080 -container-ip 172.21.0.4 -container-port 1080 -use-listen-fd
+1083867 21-03:31:11  0.0 /usr/bin/docker-proxy -proto tcp -host-ip :: -host-port 3004 -container-ip 192.168.32.2 -container-port 8090 -use-listen-fd
+1083855 21-03:31:11  0.0 /usr/bin/docker-proxy -proto tcp -host-ip 0.0.0.0 -host-port 3004 -container-ip 192.168.32.2 -container-port 8090 -use-listen-fd
+2380798  4-04:34:05  0.0 /usr/bin/docker-proxy -proto tcp -host-ip 127.0.0.1 -host-port 3101 -container-ip 192.168.0.6 -container-port 80 -use-listen-fd
+3220116 22-21:35:28  0.0 /usr/bin/docker-proxy -proto tcp -host-ip 172.17.0.1 -host-port 3001 -container-ip 172.26.0.2 -container-port 3001 -use-listen-fd
+1763496 20-00:54:02  0.0 /usr/bin/docker-proxy -proto tcp -host-ip 0.0.0.0 -host-port 8082 -container-ip 172.29.0.2 -container-port 8080 -use-listen-fd
+3551299 17-05:14:19  0.0 /usr/bin/docker-proxy -proto tcp -host-ip 0.0.0.0 -host-port 2222 -container-ip 192.168.80.3 -container-port 22 -use-listen-fd
+1687590 11-02:48:57  0.0 /usr/bin/docker-proxy -proto tcp -host-ip 172.17.0.1 -host-port 8000 -container-ip 192.168.96.2 -container-port 8080 -use-listen-fd
+2421675  7-01:36:05  0.0 /usr/bin/docker-proxy -proto tcp -host-ip 127.0.0.1 -host-port 8081 -container-ip 172.28.0.2 -container-port 8081 -use-listen-fd
+3551329 17-05:14:19  0.0 /usr/bin/docker-proxy -proto tcp -host-ip :: -host-port 3005 -container-ip 192.168.80.3 -container-port 3000 -use-listen-fd
+3551307 17-05:14:19  0.0 /usr/bin/docker-proxy -proto tcp -host-ip :: -host-port 2222 -container-ip 192.168.80.3 -container-port 22 -use-listen-fd
+3551323 17-05:14:19  0.0 /usr/bin/docker-proxy -proto tcp -host-ip 0.0.0.0 -host-port 3005 -container-ip 192.168.80.3 -container-port 3000 -use-listen-fd
+    229 27-21:43:18  0.0 [ksoftirqd/34]
+    499 27-21:43:14  0.0 [UVM global queue]
+    217 27-21:43:18  0.0 [ksoftirqd/32]
+    501 27-21:43:14  0.0 [UVM Tools Event Queue]
+    175 27-21:43:18  0.0 [ksoftirqd/25]
+    167 27-21:43:18  0.0 [ksoftirqd/24]
+    199 27-21:43:18  0.0 [ksoftirqd/29]
+    211 27-21:43:18  0.0 [ksoftirqd/31]
+    181 27-21:43:18  0.0 [ksoftirqd/26]
+    205 27-21:43:18  0.0 [ksoftirqd/30]
+    223 27-21:43:18  0.0 [ksoftirqd/33]
+    193 27-21:43:18  0.0 [ksoftirqd/28]
+     17 27-21:43:18  0.0 [rcub/1]
+  26229  4-13:40:48  0.0 -zsh
+    155 27-21:43:18  0.0 [ksoftirqd/22]
+    187 27-21:43:18  0.0 [ksoftirqd/27]
+ 368008    08:13:37  0.0 [kworker/11:1-events]
+    161 27-21:43:18  0.0 [ksoftirqd/23]
+3550920 17-05:14:22  0.0 postgres: logical replication launcher 
+2380717  4-04:34:05  0.0 nginx: master process nginx -g daemon off;
+3550915 17-05:14:22  0.0 postgres: checkpointer 
+   1137 27-21:42:51  0.0 /usr/bin/dbus-broker-launch --scope system --audit
+   5818 27-21:42:20  0.0 /usr/lib/xdg-document-portal
+     96 27-21:43:18  0.0 [rcub/2]
+   1143 27-21:42:51  0.0 /usr/lib/bluetooth/bluetoothd
+   5857 27-21:42:20  0.0 /usr/lib/xdg-desktop-portal-kde
+3599067 18-17:15:31  0.0 /usr/bin/zsh
+   3835 27-21:42:29  0.0 /usr/bin/Xwayland :0 -auth /run/user/1000/xauth_fVJnJa -listenfd 8 -listenfd 9 -displayfd 143 -wm 146 -rootless
+    170 27-21:43:18  0.0 [rcub/3]
+   5031 27-21:42:25  0.0 /usr/bin/kwalletd6
+   2343 27-21:42:31  0.0 /usr/bin/ksecretd --pam-login 8 9
+   6062 27-21:42:17  0.0 /usr/lib/baloorunner
+   1449 27-21:42:47  0.0 /usr/bin/virtlogd
+  50247 27-21:31:07  0.0 /usr/lib/gvfsd-metadata
+3551181 17-05:14:19  0.0 /usr/bin/s6-svscan /etc/s6
+   5841 27-21:42:20  0.0 /usr/lib/gvfsd
+   3790 27-21:42:29  0.0 /usr/bin/pipewire
+   2213 27-21:42:34  0.0 /usr/lib/plasmalogin-helper --socket /tmp/plasmalogin-auth-6590da93-efb8-41c6-aafd-ea9c5f74208d --id 1 --start /usr/lib/plasma-dbus-run-session-if-needed /usr/bin/startplasma-wayland --user sean
+    797 27-21:42:54  0.0 [psimon]
+   4155 27-21:42:28  0.0 /usr/lib/kactivitymanagerd
+   2344 27-21:42:31  0.0 /usr/bin/startplasma-wayland
+   1272 27-21:42:49  0.0 sshd: /usr/bin/sshd -D [listener] 0 of 10-100 startups
+   4570 27-21:42:28  0.0 /usr/bin/pipewire-pulse
+   1312 27-21:42:49  0.0 /usr/bin/plasmalogin
+   5847 27-21:42:20  0.0 /usr/lib/gvfsd-fuse /run/user/1000/gvfs -f
+   5810 27-21:42:20  0.0 /usr/lib/xdg-permission-store
+   2427 27-21:42:30  0.0 /usr/bin/dbus-broker-launch --scope user
+    781 27-21:42:54  0.0 [psimon]
+   2552 27-21:42:30  0.0 /usr/bin/kwin_wayland_wrapper --xwayland
+3551354 17-05:14:19  0.0 sshd: /usr/sbin/sshd -D -e [listener] 0 of 10-100 startups
+ 286254 17-18:34:00  0.0 tail -n +1 -f step2b.log
+   4142 27-21:42:28  0.0 /usr/lib/dconf-service
+   3999 27-21:42:29  0.0 /usr/lib/at-spi-bus-launcher
+      3 27-21:43:18  0.0 [pool_workqueue_release]
+      4 27-21:43:18  0.0 [kworker/R-rcu_gp]
+      5 27-21:43:18  0.0 [kworker/R-sync_wq]
+      6 27-21:43:18  0.0 [kworker/R-kvfree_rcu_reclaim]
+      7 27-21:43:18  0.0 [kworker/R-slub_flushwq]
+      8 27-21:43:18  0.0 [kworker/R-netns]
+     10 27-21:43:18  0.0 [kworker/0:0H-kblockd]
+     13 27-21:43:18  0.0 [kworker/R-mm_percpu_wq]
+     21 27-21:43:18  0.0 [kprobe-optimizer]
+     22 27-21:43:18  0.0 [idle_inject/0]
+     23 27-21:43:18  0.0 [cpuhp/0]
+     24 27-21:43:18  0.0 [cpuhp/1]
+     25 27-21:43:18  0.0 [idle_inject/1]
+     29 27-21:43:18  0.0 [kworker/1:0H-kblockd]
+     30 27-21:43:18  0.0 [cpuhp/2]
+     31 27-21:43:18  0.0 [idle_inject/2]
+     35 27-21:43:18  0.0 [kworker/2:0H-kblockd]
+     36 27-21:43:18  0.0 [cpuhp/3]
+     37 27-21:43:18  0.0 [idle_inject/3]
+     41 27-21:43:18  0.0 [kworker/3:0H-kblockd]
+     42 27-21:43:18  0.0 [cpuhp/4]
+     43 27-21:43:18  0.0 [idle_inject/4]
+     47 27-21:43:18  0.0 [kworker/4:0H-kblockd]
+     48 27-21:43:18  0.0 [cpuhp/5]
+     49 27-21:43:18  0.0 [idle_inject/5]
+     53 27-21:43:18  0.0 [kworker/5:0H-kblockd]
+     54 27-21:43:18  0.0 [cpuhp/6]
+     55 27-21:43:18  0.0 [idle_inject/6]
+     59 27-21:43:18  0.0 [kworker/6:0H-kblockd]
+     60 27-21:43:18  0.0 [cpuhp/7]
+     61 27-21:43:18  0.0 [idle_inject/7]
+     65 27-21:43:18  0.0 [kworker/7:0H-kblockd]
+     66 27-21:43:18  0.0 [cpuhp/8]
+     67 27-21:43:18  0.0 [idle_inject/8]
+     71 27-21:43:18  0.0 [kworker/8:0H-kblockd]
+     72 27-21:43:18  0.0 [cpuhp/9]
+     73 27-21:43:18  0.0 [idle_inject/9]
+     77 27-21:43:18  0.0 [kworker/9:0H-kblockd]
+     78 27-21:43:18  0.0 [cpuhp/10]
+     79 27-21:43:18  0.0 [idle_inject/10]
+     83 27-21:43:18  0.0 [kworker/10:0H-kblockd]
+     84 27-21:43:18  0.0 [cpuhp/11]
+     85 27-21:43:18  0.0 [idle_inject/11]
+     89 27-21:43:18  0.0 [kworker/11:0H-kblockd]
+     90 27-21:43:18  0.0 [cpuhp/12]
+     91 27-21:43:18  0.0 [idle_inject/12]
+     95 27-21:43:18  0.0 [kworker/12:0H-kblockd]
+     98 27-21:43:18  0.0 [cpuhp/13]
+     99 27-21:43:18  0.0 [idle_inject/13]
+    103 27-21:43:18  0.0 [kworker/13:0H-kblockd]
+    104 27-21:43:18  0.0 [cpuhp/14]
+    105 27-21:43:18  0.0 [idle_inject/14]
+    109 27-21:43:18  0.0 [kworker/14:0H-kblockd]
+    110 27-21:43:18  0.0 [cpuhp/15]
+    111 27-21:43:18  0.0 [idle_inject/15]
+    115 27-21:43:18  0.0 [kworker/15:0H-kblockd]
+    116 27-21:43:18  0.0 [cpuhp/16]
+    117 27-21:43:18  0.0 [idle_inject/16]
+    121 27-21:43:18  0.0 [kworker/16:0H-kblockd]
+    122 27-21:43:18  0.0 [cpuhp/17]
+    123 27-21:43:18  0.0 [idle_inject/17]
+    127 27-21:43:18  0.0 [kworker/17:0H-kblockd]
+    128 27-21:43:18  0.0 [cpuhp/18]
+    129 27-21:43:18  0.0 [idle_inject/18]
+    133 27-21:43:18  0.0 [kworker/18:0H-kblockd]
+    134 27-21:43:18  0.0 [cpuhp/19]
+    135 27-21:43:18  0.0 [idle_inject/19]
+    139 27-21:43:18  0.0 [kworker/19:0H-kblockd]
+    140 27-21:43:18  0.0 [cpuhp/20]
+    141 27-21:43:18  0.0 [idle_inject/20]
+    145 27-21:43:18  0.0 [kworker/20:0H-kblockd]
+    146 27-21:43:18  0.0 [cpuhp/21]
+    147 27-21:43:18  0.0 [idle_inject/21]
+    151 27-21:43:18  0.0 [kworker/21:0H-kblockd]
+    152 27-21:43:18  0.0 [cpuhp/22]
+    153 27-21:43:18  0.0 [idle_inject/22]
+    157 27-21:43:18  0.0 [kworker/22:0H-kblockd]
+    158 27-21:43:18  0.0 [cpuhp/23]
+    159 27-21:43:18  0.0 [idle_inject/23]
+    163 27-21:43:18  0.0 [kworker/23:0H-kblockd]
+    164 27-21:43:18  0.0 [cpuhp/24]
+    165 27-21:43:18  0.0 [idle_inject/24]
+    169 27-21:43:18  0.0 [kworker/24:0H-kblockd]
+    171 27-21:43:18  0.0 [rcu_exp_par_gp_kthread_worker/3]
+    172 27-21:43:18  0.0 [cpuhp/25]
+    173 27-21:43:18  0.0 [idle_inject/25]
+    177 27-21:43:18  0.0 [kworker/25:0H-kblockd]
+    178 27-21:43:18  0.0 [cpuhp/26]
+    179 27-21:43:18  0.0 [idle_inject/26]
+    183 27-21:43:18  0.0 [kworker/26:0H-kblockd]
+    184 27-21:43:18  0.0 [cpuhp/27]
+    185 27-21:43:18  0.0 [idle_inject/27]
+    189 27-21:43:18  0.0 [kworker/27:0H-kblockd]
+    190 27-21:43:18  0.0 [cpuhp/28]
+    191 27-21:43:18  0.0 [idle_inject/28]
+    195 27-21:43:18  0.0 [kworker/28:0H-kblockd]
+    196 27-21:43:18  0.0 [cpuhp/29]
+    197 27-21:43:18  0.0 [idle_inject/29]
+    201 27-21:43:18  0.0 [kworker/29:0H-kblockd]
+    202 27-21:43:18  0.0 [cpuhp/30]
+    203 27-21:43:18  0.0 [idle_inject/30]
+    207 27-21:43:18  0.0 [kworker/30:0H-kblockd]
+    208 27-21:43:18  0.0 [cpuhp/31]
+    209 27-21:43:18  0.0 [idle_inject/31]
+    213 27-21:43:18  0.0 [kworker/31:0H-kblockd]
+    214 27-21:43:18  0.0 [cpuhp/32]
+    215 27-21:43:18  0.0 [idle_inject/32]
+    219 27-21:43:18  0.0 [kworker/32:0H-kblockd]
+    220 27-21:43:18  0.0 [cpuhp/33]
+    221 27-21:43:18  0.0 [idle_inject/33]
+    225 27-21:43:18  0.0 [kworker/33:0H-kblockd]
+    226 27-21:43:18  0.0 [cpuhp/34]
+    227 27-21:43:18  0.0 [idle_inject/34]
+    231 27-21:43:18  0.0 [kworker/34:0H-kblockd]
+    232 27-21:43:18  0.0 [cpuhp/35]
+    233 27-21:43:18  0.0 [idle_inject/35]
+    237 27-21:43:18  0.0 [kworker/35:0H-kblockd]
+    240 27-21:43:18  0.0 [kdevtmpfs]
+    241 27-21:43:18  0.0 [kworker/R-inet_frag_wq]
+    242 27-21:43:18  0.0 [rcu_tasks_kthread]
+    243 27-21:43:18  0.0 [rcu_tasks_rude_kthread]
+    244 27-21:43:18  0.0 [kauditd]
+    248 27-21:43:18  0.0 [oom_reaper]
+    250 27-21:43:18  0.0 [kworker/R-writeback]
+    252 27-21:43:18  0.0 [ksmd]
+    254 27-21:43:18  0.0 [kworker/R-kblockd]
+    255 27-21:43:18  0.0 [kworker/R-blkcg_punt_bio]
+    256 27-21:43:18  0.0 [kworker/R-kintegrityd]
+    257 27-21:43:18  0.0 [irq/9-acpi]
+    262 27-21:43:16  0.0 [kworker/R-tpm_dev_wq]
+    263 27-21:43:16  0.0 [kworker/R-ata_sff]
+    264 27-21:43:16  0.0 [kworker/R-edac-poller]
+    265 27-21:43:16  0.0 [kworker/R-devfreq_wq]
+    266 27-21:43:16  0.0 [watchdogd]
+    267 27-21:43:16  0.0 [kworker/R-quota_events_unbound]
+    270 27-21:43:16  0.0 [kworker/R-kthrotld]
+    271 27-21:43:16  0.0 [kworker/R-acpi_thermal_pm]
+    275 27-21:43:16  0.0 [scsi_eh_0]
+    276 27-21:43:16  0.0 [kworker/R-scsi_tmf_0]
+    277 27-21:43:16  0.0 [scsi_eh_1]
+    278 27-21:43:16  0.0 [kworker/R-scsi_tmf_1]
+    279 27-21:43:16  0.0 [scsi_eh_2]
+    280 27-21:43:16  0.0 [kworker/R-scsi_tmf_2]
+    281 27-21:43:16  0.0 [scsi_eh_3]
+    282 27-21:43:16  0.0 [kworker/R-scsi_tmf_3]
+    283 27-21:43:16  0.0 [scsi_eh_4]
+    284 27-21:43:16  0.0 [kworker/R-scsi_tmf_4]
+    285 27-21:43:16  0.0 [scsi_eh_5]
+    286 27-21:43:16  0.0 [kworker/R-scsi_tmf_5]
+    287 27-21:43:16  0.0 [scsi_eh_6]
+    288 27-21:43:16  0.0 [kworker/R-scsi_tmf_6]
+    289 27-21:43:16  0.0 [scsi_eh_7]
+    290 27-21:43:16  0.0 [kworker/R-scsi_tmf_7]
+    306 27-21:43:16  0.0 [kworker/R-mld]
+    307 27-21:43:16  0.0 [kworker/R-ipv6_addrconf]
+    308 27-21:43:16  0.0 [kworker/R-kstrp]
+    323 27-21:43:16  0.0 [kworker/R-zswap-shrink]
+    325 27-21:43:16  0.0 [kworker/u147:0-hci0]
+    480 27-21:43:14  0.0 [nv_queue]
+    481 27-21:43:14  0.0 [nv_queue]
+    482 27-21:43:14  0.0 [nv_open_q]
+    483 27-21:43:14  0.0 [kworker/R-nvme-wq]
+    484 27-21:43:14  0.0 [kworker/R-nvme-reset-wq]
+    485 27-21:43:14  0.0 [kworker/R-nvme-delete-wq]
+    486 27-21:43:14  0.0 [kworker/R-nvme-auth-wq]
+    495 27-21:43:14  0.0 [nv_open_q]
+    498 27-21:43:14  0.0 [nvidia-modeset/deferred_close_kthread_q]
+    500 27-21:43:14  0.0 [UVM deferred release queue]
+    502 27-21:43:14  0.0 [irq/70-nvidia]
+    503 27-21:43:14  0.0 [nvidia]
+    504 27-21:43:14  0.0 [nv_queue]
+    506 27-21:43:12  0.0 [nvidia]
+    618 27-21:42:56  0.0 [kworker/R-kdmflush/253:0]
+    619 27-21:42:56  0.0 [kworker/R-kcryptd_io-253:0-1]
+    620 27-21:42:56  0.0 [kworker/R-kcryptd-253:0-1]
+    631 27-21:42:56  0.0 [kworker/R-btrfs-worker]
+    632 27-21:42:56  0.0 [kworker/R-btrfs-delalloc]
+    633 27-21:42:56  0.0 [kworker/R-btrfs-flush_delalloc]
+    634 27-21:42:56  0.0 [kworker/R-btrfs-cache]
+    635 27-21:42:56  0.0 [kworker/R-btrfs-fixup]
+    636 27-21:42:56  0.0 [kworker/R-btrfs-endio]
+    637 27-21:42:56  0.0 [kworker/R-btrfs-endio-meta]
+    638 27-21:42:56  0.0 [kworker/R-btrfs-rmw]
+    639 27-21:42:56  0.0 [kworker/R-btrfs-endio-write]
+    640 27-21:42:56  0.0 [kworker/R-btrfs-freespace-write]
+    641 27-21:42:56  0.0 [kworker/R-btrfs-delayed-meta]
+    642 27-21:42:56  0.0 [kworker/R-btrfs-qgroup-rescan]
+    755 27-21:42:54  0.0 [kworker/R-usbip_event]
+    910 27-21:42:54  0.0 [irq/77-mei_me]
+    950 27-21:42:53  0.0 [kworker/R-cfg80211]
+    962 27-21:42:53  0.0 [kworker/R-led_workqueue]
+    963 27-21:42:53  0.0 [kworker/u147:1-hci0]
+    975 27-21:42:53  0.0 [irq/82-14-0008]
+    983 27-21:42:53  0.0 [kworker/R-14-0008-con1]
+   1078 27-21:42:53  0.0 [kworker/R-nfit]
+   1112 27-21:42:52  0.0 [kworker/R-ext4-rsv-conversion]
+   1165 27-21:42:51  0.0 avahi-daemon: chroot helper
+   1593 27-21:42:45  0.0 [krfcommd]
+   2292 27-21:42:33  0.0 (sd-pam)
+   2785 27-21:42:30  0.0 [nvidia-drm/timeline-2b]
+   2827 27-21:42:30  0.0 [nvidia-drm/timeline-2c]
+   2831 27-21:42:30  0.0 [nvidia-drm/timeline-2d]
+   2851 27-21:42:30  0.0 [nvidia-drm/timeline-2e]
+   2869 27-21:42:30  0.0 [nvidia-drm/timeline-2f]
+   2915 27-21:42:30  0.0 [nvidia-drm/timeline-30]
+   2940 27-21:42:30  0.0 [nvidia-drm/timeline-31]
+   2942 27-21:42:29  0.0 [nvidia-drm/timeline-32]
+   2971 27-21:42:29  0.0 [nvidia-drm/timeline-33]
+   2986 27-21:42:29  0.0 [nvidia-drm/timeline-34]
+   2990 27-21:42:29  0.0 [nvidia-drm/timeline-35]
+   3004 27-21:42:29  0.0 [nvidia-drm/timeline-36]
+   3012 27-21:42:29  0.0 [nvidia-drm/timeline-37]
+   3039 27-21:42:29  0.0 [nvidia-drm/timeline-38]
+   3046 27-21:42:29  0.0 [nvidia-drm/timeline-39]
+   3299 27-21:42:29  0.0 [nvidia-drm/timeline-3a]
+   3863 27-21:42:29  0.0 [nvidia-drm/timeline-3c]
+   4017 27-21:42:29  0.0 /usr/bin/dbus-broker-launch --config-file=/usr/share/defaults/at-spi2/accessibility.conf --scope user
+   4786 27-21:42:27  0.0 /usr/bin/xsettingsd
+   5827 27-21:42:20  0.0 fusermount3 -o rw,nosuid,nodev,fsname=portal,auto_unmount,subtype=portal -- /run/user/1000/doc
+  36321 27-21:34:27  0.0 [kworker/R-dio/dm-0]
+ 585672    07:21:25  0.0 [kworker/22:2]
+ 632854 17-17:07:19  0.0 tail -n +1 -f cpu_query.log
+ 691210 17-16:54:49  0.0 tail -n +1 -f /home/sean/diskovec-bench/recall_warm2.log
+1007569 23-04:49:31  0.0 [kworker/R-dio/sda1]
+1020092    05:36:19  0.0 [kworker/18:0]
+1266773 11-23:10:04  0.0 [kworker/R-rtw88_usb: tx wq]
+1362316    20:55:43  0.0 [kworker/33:0]
+1584784    03:19:47  0.0 [kworker/21:0]
+1586931    03:19:16  0.0 [kworker/31:0-mm_percpu_wq]
+1687731 11-02:48:56  0.0 [vidmem lazy free]
+1687732 11-02:48:56  0.0 [UVM GPU2 BH]
+1878975  3-14:05:40  0.0 [kworker/24:2-cgroup_free]
+1954798    18:37:17  0.0 [kworker/30:0]
+2031424    01:36:28  0.0 [kworker/35:1]
+2070774    01:27:41  0.0 [kworker/23:0]
+2091141    01:23:05  0.0 [kworker/20:1]
+2093190    01:22:36  0.0 [kworker/2:2-events]
+2176075    01:02:53  0.0 [kworker/0:1]
+2218259       55:16  0.0 [kworker/16:0-events]
+2221331 26-20:15:34  0.0 /usr/bin/zsh -c tail -n0 -F ~/granite-siglip2-adapter/logs/it-full.log 2>/dev/null | grep --line-buffered -E "^epoch|^it-|Traceback|Error|FULL_DONE|train images"
+2221332 26-20:15:34  0.0 tail -n0 -F /home/sean/granite-siglip2-adapter/logs/it-full.log
+2221333 26-20:15:34  0.0 grep --line-buffered -E ^epoch|^it-|Traceback|Error|FULL_DONE|train images
+2224337       54:02  0.0 [kworker/15:2-events]
+2226911       53:37  0.0 [kworker/6:2-events]
+2232839       52:25  0.0 [kworker/28:1-cgroup_release]
+2233106       52:21  0.0 [kworker/17:1-events]
+2249571       49:26  0.0 [kworker/32:1]
+2258899       47:37  0.0 [kworker/29:1]
+2277870       43:43  0.0 [kworker/9:0]
+2299517       40:10  0.0 [kworker/13:1]
+2316365       36:22  0.0 [kworker/8:2-cgroup_release]
+2320411       35:25  0.0 [kworker/3:0]
+2338601 26-19:46:46  0.0 /usr/bin/zsh -c tail -n0 -F ~/granite-siglip2-adapter/logs/samelang.log 2>/dev/null | grep --line-buffered -E "samelang [0-9]+/[0-9]+ .* eta|steps/epoch|^step (100|200|300|400)/|^epoch|Traceback|Error|SAMELANG_DONE"
+2338602 26-19:46:46  0.0 tail -n0 -F /home/sean/granite-siglip2-adapter/logs/samelang.log
+2338603 26-19:46:46  0.0 grep --line-buffered -E samelang [0-9]+/[0-9]+ .* eta|steps/epoch|^step (100|200|300|400)/|^epoch|Traceback|Error|SAMELANG_DONE
+2341714       30:29  0.0 [kworker/7:2-events]
+2394579       17:50  0.0 [kworker/29:2-events]
+2396705       17:19  0.0 [kworker/14:0-mm_percpu_wq]
+2422379  7-01:35:57  0.0 [vidmem lazy free]
+2422380  7-01:35:57  0.0 [UVM GPU1 BH]
+2422381  7-01:35:57  0.0 [UVM GPU1 KC]
+2430182       09:14  0.0 [kworker/27:1-events]
+2435972       07:52  0.0 [kworker/12:1-cgroup_release]
+2443467       06:06  0.0 [kworker/4:1]
+2448507       04:57  0.0 [kworker/0:0]
+2452963       04:25  0.0 systemd-userwork: waiting...
+2453839       04:18  0.0 [kworker/u144:0]
+2454158       04:16  0.0 [kworker/29:0-events]
+2455337       04:00  0.0 systemd-userwork: waiting...
+2455338       04:00  0.0 systemd-userwork: waiting...
+2458644       03:14  0.0 [kworker/1:1-events]
+2462287       02:26  0.0 [kworker/30:2]
+2465129       01:44  0.0 [kworker/u145:15-kcryptd-253:0-1]
+2465986       01:33  0.0 [kworker/10:0-events]
+2469515       00:43  0.0 [kworker/32:0-events]
+2471784       00:10  0.0 sleep 20
+2471843       00:09  0.0 sleep 20
+2472317       00:02  0.0 sleep 10
+2472412       00:02  0.0 sleep 10
+2472418       00:01  0.0 sleep 5
+2472419       00:01  0.0 sleep 5
+2472420       00:01  0.0 sleep 5
+2472421       00:01  0.0 sleep 5
+2472422       00:01  0.0 sleep 5
+2472443       00:00  0.0 sleep 3
+2472445       00:00  0.0 sleep 2
+2472521       00:00  0.0 /usr/bin/tailscaled be-child ssh --login-shell=/usr/bin/zsh --uid=1000 --gid=1000 --groups=1000,3,90,998,995,990,989,985,983,982,979,956,955,952 --local-user=sean --home-dir=/home/sean --remote-user=SeanPedersen@github --remote-ip=100.113.222.54 --has-tty=false --tty-name= --force-v1-behavior --cmd=cd /home/sean/experiments/TieredQ-gemini-turboquant-20261026-vDAm7R; mkdir -p provenance; git -C qdrant diff > provenance/qdrant-overlay.patch; git -C qdrant rev-parse HEAD > provenance/qdrant-commit.txt; git -C qdrant status --short > provenance/qdrant-status.txt; uname -a > provenance/host.txt; lscpu >> provenance/host.txt; c++ --version >> provenance/host.txt; rustc +1.99.1 -vV >> provenance/host.txt; ps -eo pid,etime,pcpu,args --sort=-pcpu > provenance/host-processes.txt; cp TieredQ/benchmark/turboquant/build/compile_commands.json provenance/; cp TieredQ/benchmark/turboquant/native/Cargo.lock provenance/adapter-Cargo.lock; cp qdrant/Cargo.lock provenance/qdrant-Cargo.lock; cp TieredQ/benchmark/uv.lock provenance/uv.lock; cp TieredQ/benchmark/data/gemini-manifest.json provenance/; cp TieredQ/benchmark/data/gemini-*row-ids.npy provenance/; cd qdrant; git ls-files -z | xargs -0 sha256sum > ../provenance/qdrant-as-run-source-sha256.txt
+2472536       00:00  0.0 /usr/bin/zsh -c cd /home/sean/experiments/TieredQ-gemini-turboquant-20261026-vDAm7R; mkdir -p provenance; git -C qdrant diff > provenance/qdrant-overlay.patch; git -C qdrant rev-parse HEAD > provenance/qdrant-commit.txt; git -C qdrant status --short > provenance/qdrant-status.txt; uname -a > provenance/host.txt; lscpu >> provenance/host.txt; c++ --version >> provenance/host.txt; rustc +1.99.1 -vV >> provenance/host.txt; ps -eo pid,etime,pcpu,args --sort=-pcpu > provenance/host-processes.txt; cp TieredQ/benchmark/turboquant/build/compile_commands.json provenance/; cp TieredQ/benchmark/turboquant/native/Cargo.lock provenance/adapter-Cargo.lock; cp qdrant/Cargo.lock provenance/qdrant-Cargo.lock; cp TieredQ/benchmark/uv.lock provenance/uv.lock; cp TieredQ/benchmark/data/gemini-manifest.json provenance/; cp TieredQ/benchmark/data/gemini-*row-ids.npy provenance/; cd qdrant; git ls-files -z | xargs -0 sha256sum > ../provenance/qdrant-as-run-source-sha256.txt
+2472563       00:00  0.0 sleep 10
+2547540 26-18:56:06  0.0 /usr/bin/zsh -c cd ~/granite-siglip2-adapter/logs && tail -n0 -F ml-baselines.log ml-t1-train.log 2>&1 | grep -E --line-buffered "^ml-t1: |^epoch|Traceback|Error|Killed|out of memory"
+2547542 26-18:56:06  0.0 tail -n0 -F ml-baselines.log ml-t1-train.log
+2547543 26-18:56:06  0.0 grep -E --line-buffered ^ml-t1: |^epoch|Traceback|Error|Killed|out of memory
+3054590 18-19:53:03  0.0 tail -f /home/sean/experiments/repo-summaries-20261007/out/select_pilot.log
+3190143    13:45:01  0.0 [kworker/25:1]
+3428051  1-22:18:01  0.0 [kworker/26:1]
+3550912 17-05:14:22  0.0 postgres: io worker 0
+3550913 17-05:14:22  0.0 postgres: io worker 1
+3550914 17-05:14:22  0.0 postgres: io worker 2
+3551351 17-05:14:19  0.0 s6-supervise gitea
+3551352 17-05:14:19  0.0 s6-supervise openssh
+3569737    12:13:40  0.0 [kworker/27:0-cgwb_release]
