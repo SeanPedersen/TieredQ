@@ -1,0 +1,183 @@
+{
+  "source_sha256": {
+    "src/tieredq_encode_float.h": "eb84bced3a1e931ff12b94f89bec130de829784c3dbf8ca0313951770419867c",
+    "src/tieredq_encode_grid.h": "d36a190ec56e0806b195e581bd8584b1151b8d7d0b7389b5376a966ef0a8299f",
+    "src/tieredq_encode_matrix.h": "1e16df2a2d6902be3a6aef27847ae561888bc8ccb01de9fb79755de5c3f18366",
+    "src/tieredq_fast_dispatch.h": "dbcc0ca75551edd31d3a6101d594aa99428de371449c432d517d6d937d5f26f7",
+    "src/tieredq_io.h": "e1469d651f12e9061e6742c2bae2b3c1535e608e15c64cd8534a35858690313b",
+    "src/tieredq_layout.h": "d6030e7a2a312a632343abf8735b975057b1df43a7f259a0ce1e59ebdfb56ce6",
+    "src/tieredq_profile.h": "eb0ce6b211a372eb61a45a028d301c4db1b91343219854dcfd676b8e97cdabed",
+    "src/tieredq_query_projection_x86.h": "5e629989e38da02482548a0fffc9a3713c7a3a07da2e5d30fdd6f42cbdad44d8",
+    "src/tieredq_scan_avx512.h": "fcd3324e6ada2493c6adff23f278eb951e403bbfd1eb6a3c2c459e2d546bece2",
+    "src/tieredq_scan_groups.h": "daa9d64c6d6a38b42a11cc02ce74aadea3138b665e37e8848b48a23d7870c7e7",
+    "src/tieredq_scan_lookup_avx512.h": "c09fe148d85e7827ece0c6d2aa103018a87650039de906ce80cc303decc1c95f",
+    "src/tieredq_scan_lookup_x86.h": "51e8eb2f5c898bdf9c54ff7015eadf973f7feb71a3353b99cc6c214bb075854a",
+    "src/tieredq_scan_neon.h": "bda54c151a984be8c045f8d278322a6a43c67750480fc5f95730d7291b7c1812",
+    "src/tieredq_search.h": "e5cb9d13cf04f112cd9bd0117ef000d5e3d84ce00f318a661d30fda8a128ec11",
+    "src/tieredq_search_fast.h": "d5dc350519137ad07240dcda6afb0fa4391e196d1124a50d1bf67dc76383ac63",
+    "src/tieredq_train_codebook.h": "5988570c02e2fe6dd7f8b56bc029f67ccc00b1631730968a6d91fa8f6ebb7eb7",
+    "src/tieredq_train_codebook_data.h": "6f79753ad23d6d73f8d7d51b185f7cd4ff0d48dcc35003e9f167f23d87bc951b",
+    "src/tieredq_train_covariance.h": "7d6f9d32d6de1db36f635b5763602d7870f8714453634b0a3f7bdafb9544c146",
+    "src/tieredq_train_kmeans.h": "788def94d30f4bed18f7a91313e6507d8964dddd8ceeb581a8435437b33516fd",
+    "src/tieredq_train_linalg.h": "7b2291c2fb2396f998ae0b7284b842a4016c51aecdcc7d5e7cec1dd95ccfee4c",
+    "src/tieredq_train_residuals.h": "3a97f61a987a3fdb05a72b0fab9d2bf1b5d3a609dfb09a8c2abe51d1ef3a1cd8",
+    "src/tieredq_train_stats.h": "e9b9eb26ffb05bfd677e30d3e21eb8b061f131b3c1867b10f272fa469cf557b4",
+    "src/training_rng.h": "3cc5602e62a8e3e6ba1d2c6ba8b90a7ec2a61137972ab8125d4babe4a1d2865e",
+    "src/tieredq_scan_int8_avx2.h": "4c211ccc4b5cd4d05e5fd573a9728ab7c77c9deef9b5e2cf209d129b6bfd62f1",
+    "src/tieredq_scan_int8_avx512.h": "a8b40a475020bd91902779c0b4d331f915f0c608a46732691f511a13a41e239a",
+    "src/tieredq_index_io.cpp": "1ed0674b6d90c9ee045a4b75421de0d976951b307e43736f0284f9db3209ded5",
+    "src/tieredq.cpp": "9aca8d751cb44a27e827fd9e8cda7257b11edadb8b891074ff7b5fed59bb81a9",
+    "src/tieredq_encode.h": "62a45d56994d60003b5e2857a919cb26960b7500f814e0405d3b606efb6040be",
+    "src/tieredq_index.cpp": "d6f537238742a360c86129a36abbac50fa05e1ad98764e3da29ba421d1c6dbac",
+    "src/tieredq_scan_codes.h": "548c634467e35947759bf70efbdbaecd385eb6eacdc110330989022ac9ea3f99",
+    "src/tieredq_scan_fast_scalar.h": "db7f4b11ea68b7f9d0c9a97bc7c6677093d2eb645196d946d4366bd847419576",
+    "src/tieredq_scan_int8_neon.h": "3b6423fb760806bcf8ca9b313393956cd9a3bd18dfc2c358eb921b43132af3a1",
+    "src/tieredq_scan_query_x86.h": "516b2f47cbb54d63a33309990496123f4a8d1d7ba018854903085f64941ca857",
+    "src/tieredq_fast_storage.h": "6cb051600a0de963ba8411441f1dcd133bdc55f051775892584f2754c97d1b2a",
+    "src/tieredq_scan_codes_neon.h": "1cd4cc13aed8b7615d77540f2c3d0b65128f750fc71249de9b1dd3b60ebcbc95",
+    "src/tieredq_scan_codes_x86.h": "6a0c4b6828a61fff481cf335481b09e29bde68cd15f61000d6c164c48e1ff756",
+    "src/tieredq_scan_int8.h": "64bd6f5fbd7a23ec1e933d6f8222ecd39f1d75bb8d68a5147a148a957002ad42",
+    "include/tieredq/tieredq.h": "9aa4d686d8ff3fc9042a9d302495b0ad9bf611f5734dbecf935c77a7ff3ab571",
+    "include/tieredq/detail/tieredq_scan_plan.h": "49de530237801b7c7ef61aa9cdb23893de0fc5270945617a00cd0716c3195e7f",
+    "benchmark/native/CMakeLists.txt": "6e646fac385d166ffdda6fe596048e4b6bb949e199556adb1e404a6d6d430780",
+    "benchmark/native/rabitq_flat.h": "435d1df8b4fb33517e03b8e159c04561b2a4e2b5993ba097292c47b835864907",
+    "benchmark/native/reference.cpp": "b1b17c45b6623967411f97ab6e0bfd050e8afcb8048e1176f935639d151d8333",
+    "benchmark/native/module.cpp": "3a84abcdfd9a93d51142f425729e82ad3a4ba3a2e1de1892131587b224b44e14"
+  },
+  "harness_sha256": {
+    "data.py": "2186a21d72539616eff9be338928b6e1a6e474a907c00598ead6c2ed8b4d9a84",
+    "native_build.py": "c83cbe812bef75d57a42a64da9630ac67d4a04a07b61385e7b4912daa731b685",
+    "report.py": "012db06fd25dd79825a2859400c24008b24053bbf0e50f9a79888e758a15b7fb",
+    "setup_native.py": "2518558f9fa570c7d2eead4df088f9285f71fd6a652221b707ebd1e0a6d5b3b2",
+    "test_build_policy.py": "a579b5dd298a481414296b8a423c60c2dc6a7726464ea3c626fcb4c0d4c515a4",
+    "test_native.py": "48757e76e21906995794c4fc5795b7a40a65da0e8f1739a830f7ede98d645aec",
+    "test_reference.py": "fcdedc4f49d61cc331d72a67b64d3b919e075139d81c58209dbcb79eae296dbe",
+    "validate.py": "eaa421351ce992099a76d15c9e7e0527e7c520ffab3c50df3a9bb0d48bb8e826",
+    "build_policy.py": "122128c009f367831865478be63c814bea85c91efcc203fe458d3ee74b195cbb",
+    "investigate_recall.py": "8a094ae4f341885d0971d5f1bbc62d28a160db7a32bade96d3995ab167a85f4d",
+    "measure.py": "a769b25235837dd3b648bc36a7522171a13f573d357abdd21add7463a794f11f",
+    "test_benchmark.py": "3fd2591669d0dcb38d7c1998c5411ed19b560c19452020f6b743b63c6be22006",
+    "compare.py": "9b843687d83220978bb534edad2ea700a331a57e51481086db0b244155f46361",
+    "l2_transform.py": "d986eef1defe1b347d1bf406b11bfacc16a90518f3ffc3671297718080a42dd1",
+    "plotting.py": "96c41317770ef0f3597d3c473689d07daa8385de1e8cf8061e47e6c410276e09",
+    "run.py": "1e6303ba0b1ef79e42deb6ac8bdac13ca70b6d55b5a9ada28e74d31fdaad67a6",
+    "test_compare.py": "27afdeb35f1e077dfbafdf3d5fdc46011c34999c57d6d5f2c1523e5125fcaac5",
+    "trace_layouts.py": "7ab33cb9b785277314a0c4ead95c1cef5f193fa5619ec36cf6fb5a0475fb19df",
+    "profile.py": "62b373b184953f2a405d282a90e257c676aa3e116c6754673e36010836aa0166",
+    "profile_stages.py": "e51d83791830286871d812f75adae33e5aed41f9b6636bc5ff9ff2156743b038"
+  },
+  "native_module_sha256": "e5e269e4d5f144c00bffffb837d9745b91feca2eeccc79eb719b297373400ff4",
+  "seed": 0,
+  "queries": 1000,
+  "threads": 8,
+  "batch": 32,
+  "cpu_affinity": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "compiler_commands": [
+    {
+      "directory": "/home/sean/experiments/TieredQ-issue12-recall/benchmark/build-native",
+      "command": "/usr/bin/c++ -DNB_BUILD -DNB_COMPACT_ASSERTIONS -I/home/sean/.local/share/uv/python/cpython-3.12-linux-x86_64-gnu/include/python3.12 -I/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/include -isystem /home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/ext/robin_map/include -O3 -DNDEBUG -std=gnu++20 -fPIC -fvisibility=hidden -O3 -march=native -ffp-contract=off -ffunction-sections -fdata-sections -fno-strict-aliasing -mtls-dialect=gnu2 -fno-stack-protector -o CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_internals.cpp.o -c /home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_internals.cpp",
+      "file": "/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_internals.cpp",
+      "output": "CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_internals.cpp.o"
+    },
+    {
+      "directory": "/home/sean/experiments/TieredQ-issue12-recall/benchmark/build-native",
+      "command": "/usr/bin/c++ -DNB_BUILD -DNB_COMPACT_ASSERTIONS -I/home/sean/.local/share/uv/python/cpython-3.12-linux-x86_64-gnu/include/python3.12 -I/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/include -isystem /home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/ext/robin_map/include -O3 -DNDEBUG -std=gnu++20 -fPIC -fvisibility=hidden -O3 -march=native -ffp-contract=off -ffunction-sections -fdata-sections -fno-strict-aliasing -mtls-dialect=gnu2 -fno-stack-protector -o CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_func.cpp.o -c /home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_func.cpp",
+      "file": "/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_func.cpp",
+      "output": "CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_func.cpp.o"
+    },
+    {
+      "directory": "/home/sean/experiments/TieredQ-issue12-recall/benchmark/build-native",
+      "command": "/usr/bin/c++ -DNB_BUILD -DNB_COMPACT_ASSERTIONS -I/home/sean/.local/share/uv/python/cpython-3.12-linux-x86_64-gnu/include/python3.12 -I/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/include -isystem /home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/ext/robin_map/include -O3 -DNDEBUG -std=gnu++20 -fPIC -fvisibility=hidden -O3 -march=native -ffp-contract=off -ffunction-sections -fdata-sections -fno-strict-aliasing -mtls-dialect=gnu2 -fno-stack-protector -o CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_type.cpp.o -c /home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_type.cpp",
+      "file": "/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_type.cpp",
+      "output": "CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_type.cpp.o"
+    },
+    {
+      "directory": "/home/sean/experiments/TieredQ-issue12-recall/benchmark/build-native",
+      "command": "/usr/bin/c++ -DNB_BUILD -DNB_COMPACT_ASSERTIONS -I/home/sean/.local/share/uv/python/cpython-3.12-linux-x86_64-gnu/include/python3.12 -I/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/include -isystem /home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/ext/robin_map/include -O3 -DNDEBUG -std=gnu++20 -fPIC -fvisibility=hidden -O3 -march=native -ffp-contract=off -ffunction-sections -fdata-sections -fno-strict-aliasing -mtls-dialect=gnu2 -fno-stack-protector -o CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_enum.cpp.o -c /home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_enum.cpp",
+      "file": "/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_enum.cpp",
+      "output": "CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_enum.cpp.o"
+    },
+    {
+      "directory": "/home/sean/experiments/TieredQ-issue12-recall/benchmark/build-native",
+      "command": "/usr/bin/c++ -DNB_BUILD -DNB_COMPACT_ASSERTIONS -I/home/sean/.local/share/uv/python/cpython-3.12-linux-x86_64-gnu/include/python3.12 -I/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/include -isystem /home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/ext/robin_map/include -O3 -DNDEBUG -std=gnu++20 -fPIC -fvisibility=hidden -O3 -march=native -ffp-contract=off -ffunction-sections -fdata-sections -fno-strict-aliasing -mtls-dialect=gnu2 -fno-stack-protector -o CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_ndarray.cpp.o -c /home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_ndarray.cpp",
+      "file": "/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_ndarray.cpp",
+      "output": "CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_ndarray.cpp.o"
+    },
+    {
+      "directory": "/home/sean/experiments/TieredQ-issue12-recall/benchmark/build-native",
+      "command": "/usr/bin/c++ -DNB_BUILD -DNB_COMPACT_ASSERTIONS -I/home/sean/.local/share/uv/python/cpython-3.12-linux-x86_64-gnu/include/python3.12 -I/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/include -isystem /home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/ext/robin_map/include -O3 -DNDEBUG -std=gnu++20 -fPIC -fvisibility=hidden -O3 -march=native -ffp-contract=off -ffunction-sections -fdata-sections -fno-strict-aliasing -mtls-dialect=gnu2 -fno-stack-protector -o CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_static_property.cpp.o -c /home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_static_property.cpp",
+      "file": "/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_static_property.cpp",
+      "output": "CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_static_property.cpp.o"
+    },
+    {
+      "directory": "/home/sean/experiments/TieredQ-issue12-recall/benchmark/build-native",
+      "command": "/usr/bin/c++ -DNB_BUILD -DNB_COMPACT_ASSERTIONS -I/home/sean/.local/share/uv/python/cpython-3.12-linux-x86_64-gnu/include/python3.12 -I/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/include -isystem /home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/ext/robin_map/include -O3 -DNDEBUG -std=gnu++20 -fPIC -fvisibility=hidden -O3 -march=native -ffp-contract=off -ffunction-sections -fdata-sections -fno-strict-aliasing -mtls-dialect=gnu2 -fno-stack-protector -o CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_datetime.cpp.o -c /home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_datetime.cpp",
+      "file": "/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_datetime.cpp",
+      "output": "CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_datetime.cpp.o"
+    },
+    {
+      "directory": "/home/sean/experiments/TieredQ-issue12-recall/benchmark/build-native",
+      "command": "/usr/bin/c++ -DNB_BUILD -DNB_COMPACT_ASSERTIONS -I/home/sean/.local/share/uv/python/cpython-3.12-linux-x86_64-gnu/include/python3.12 -I/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/include -isystem /home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/ext/robin_map/include -O3 -DNDEBUG -std=gnu++20 -fPIC -fvisibility=hidden -O3 -march=native -ffp-contract=off -ffunction-sections -fdata-sections -fno-strict-aliasing -mtls-dialect=gnu2 -fno-stack-protector -o CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/common.cpp.o -c /home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/common.cpp",
+      "file": "/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/common.cpp",
+      "output": "CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/common.cpp.o"
+    },
+    {
+      "directory": "/home/sean/experiments/TieredQ-issue12-recall/benchmark/build-native",
+      "command": "/usr/bin/c++ -DNB_BUILD -DNB_COMPACT_ASSERTIONS -I/home/sean/.local/share/uv/python/cpython-3.12-linux-x86_64-gnu/include/python3.12 -I/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/include -isystem /home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/ext/robin_map/include -O3 -DNDEBUG -std=gnu++20 -fPIC -fvisibility=hidden -O3 -march=native -ffp-contract=off -ffunction-sections -fdata-sections -fno-strict-aliasing -mtls-dialect=gnu2 -fno-stack-protector -o CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/error.cpp.o -c /home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/error.cpp",
+      "file": "/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/error.cpp",
+      "output": "CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/error.cpp.o"
+    },
+    {
+      "directory": "/home/sean/experiments/TieredQ-issue12-recall/benchmark/build-native",
+      "command": "/usr/bin/c++ -DNB_BUILD -DNB_COMPACT_ASSERTIONS -I/home/sean/.local/share/uv/python/cpython-3.12-linux-x86_64-gnu/include/python3.12 -I/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/include -isystem /home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/ext/robin_map/include -O3 -DNDEBUG -std=gnu++20 -fPIC -fvisibility=hidden -O3 -march=native -ffp-contract=off -ffunction-sections -fdata-sections -fno-strict-aliasing -mtls-dialect=gnu2 -fno-stack-protector -o CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/trampoline.cpp.o -c /home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/trampoline.cpp",
+      "file": "/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/trampoline.cpp",
+      "output": "CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/trampoline.cpp.o"
+    },
+    {
+      "directory": "/home/sean/experiments/TieredQ-issue12-recall/benchmark/build-native",
+      "command": "/usr/bin/c++ -DNB_BUILD -DNB_COMPACT_ASSERTIONS -I/home/sean/.local/share/uv/python/cpython-3.12-linux-x86_64-gnu/include/python3.12 -I/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/include -isystem /home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/ext/robin_map/include -O3 -DNDEBUG -std=gnu++20 -fPIC -fvisibility=hidden -O3 -march=native -ffp-contract=off -ffunction-sections -fdata-sections -fno-strict-aliasing -mtls-dialect=gnu2 -fno-stack-protector -o CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/implicit.cpp.o -c /home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/implicit.cpp",
+      "file": "/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/implicit.cpp",
+      "output": "CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/implicit.cpp.o"
+    },
+    {
+      "directory": "/home/sean/experiments/TieredQ-issue12-recall/benchmark/build-native",
+      "command": "/usr/bin/c++ -DBENCH_FULL_SCORE=0 -Dcodec_native_EXPORTS -I/home/sean/experiments/TieredQ-issue12-recall/benchmark/.deps/rabitq-native/include -I/home/sean/.local/share/uv/python/cpython-3.12-linux-x86_64-gnu/include/python3.12 -I/home/sean/experiments/TieredQ-issue12-recall/benchmark/.venv/lib/python3.12/site-packages/nanobind/include -I/home/sean/experiments/TieredQ-issue12-recall/include -O3 -DNDEBUG -std=gnu++20 -fPIC -fvisibility=hidden -O3 -march=native -ffp-contract=off -fno-stack-protector -ffunction-sections -fdata-sections -fopenmp -o CMakeFiles/codec_native.dir/module.cpp.o -c /home/sean/experiments/TieredQ-issue12-recall/benchmark/native/module.cpp",
+      "file": "/home/sean/experiments/TieredQ-issue12-recall/benchmark/native/module.cpp",
+      "output": "CMakeFiles/codec_native.dir/module.cpp.o"
+    },
+    {
+      "directory": "/home/sean/experiments/TieredQ-issue12-recall/benchmark/build-native",
+      "command": "/usr/bin/c++  -I/home/sean/experiments/TieredQ-issue12-recall/benchmark/.deps/rabitq-native/include -O3 -DNDEBUG -std=gnu++20 -O3 -march=native -ffp-contract=off -fopenmp -o CMakeFiles/codec_reference.dir/reference.cpp.o -c /home/sean/experiments/TieredQ-issue12-recall/benchmark/native/reference.cpp",
+      "file": "/home/sean/experiments/TieredQ-issue12-recall/benchmark/native/reference.cpp",
+      "output": "CMakeFiles/codec_reference.dir/reference.cpp.o"
+    },
+    {
+      "directory": "/home/sean/experiments/TieredQ-issue12-recall/benchmark/build-native/tieredq",
+      "command": "/usr/bin/c++  -I/home/sean/experiments/TieredQ-issue12-recall/include -O3 -DNDEBUG -std=gnu++20 -fPIC -O3 -march=native -ffp-contract=off -Wall -Wextra -Wno-misleading-indentation -fopenmp -o CMakeFiles/dv_tieredq.dir/src/tieredq.cpp.o -c /home/sean/experiments/TieredQ-issue12-recall/src/tieredq.cpp",
+      "file": "/home/sean/experiments/TieredQ-issue12-recall/src/tieredq.cpp",
+      "output": "tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq.cpp.o"
+    },
+    {
+      "directory": "/home/sean/experiments/TieredQ-issue12-recall/benchmark/build-native/tieredq",
+      "command": "/usr/bin/c++  -I/home/sean/experiments/TieredQ-issue12-recall/include -O3 -DNDEBUG -std=gnu++20 -fPIC -O3 -march=native -ffp-contract=off -Wall -Wextra -Wno-misleading-indentation -fopenmp -o CMakeFiles/dv_tieredq.dir/src/tieredq_index.cpp.o -c /home/sean/experiments/TieredQ-issue12-recall/src/tieredq_index.cpp",
+      "file": "/home/sean/experiments/TieredQ-issue12-recall/src/tieredq_index.cpp",
+      "output": "tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_index.cpp.o"
+    },
+    {
+      "directory": "/home/sean/experiments/TieredQ-issue12-recall/benchmark/build-native/tieredq",
+      "command": "/usr/bin/c++  -I/home/sean/experiments/TieredQ-issue12-recall/include -O3 -DNDEBUG -std=gnu++20 -fPIC -O3 -march=native -ffp-contract=off -Wall -Wextra -Wno-misleading-indentation -fopenmp -o CMakeFiles/dv_tieredq.dir/src/tieredq_index_io.cpp.o -c /home/sean/experiments/TieredQ-issue12-recall/src/tieredq_index_io.cpp",
+      "file": "/home/sean/experiments/TieredQ-issue12-recall/src/tieredq_index_io.cpp",
+      "output": "tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_index_io.cpp.o"
+    }
+  ],
+  "note": "Independent TieredQ-only repetition after equivalent cache-layout constants were centralized; same query/scoring contract as primary run."
+}

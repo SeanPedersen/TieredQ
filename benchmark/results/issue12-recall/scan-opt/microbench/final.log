@@ -1,0 +1,248 @@
+=== 2026-10-25T20:18:35+01:00 validate
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue12-recall/benchmark/build-native
+[  5%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq.cpp.o
+[ 10%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_index.cpp.o
+[ 15%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_index_io.cpp.o
+[ 20%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 80%] Built target nanobind-static
+[ 85%] Linking CXX static library libdv_tieredq.a
+[ 85%] Built target dv_tieredq
+[ 90%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 95%] Linking CXX executable codec_reference
+[ 95%] Built target codec_reference
+[100%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[100%] Built target codec_native
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+.FhtKacRotator is selected
+FhtKacRotator is selected
+.FhtKacRotator is selected
+.FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+.............
+----------------------------------------------------------------------
+Ran 16 tests in 5.323s
+
+OK
+Native compiler options, direct-kernel rankings and flat storage accounting verified.
+=== 2026-10-25T20:19:01+01:00 primary
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue12-recall/benchmark/build-native
+[  5%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 25%] Built target dv_tieredq
+[ 85%] Built target nanobind-static
+[ 90%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 95%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[ 95%] Built target codec_native
+[100%] Linking CXX executable codec_reference
+[100%] Built target codec_reference
+sift tieredq b=4 seed=0 t=8 batch=32: {'recall10': 0.9333, 'qps': 1771.0863494233422, 'p50_ms': 17.536958679556847, 'p95_ms': 20.479718688875437}
+sift tieredq b=4 seed=1 t=8 batch=32: {'recall10': 0.9332, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift tieredq b=4 seed=2 t=8 batch=32: {'recall10': 0.9350000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift tieredq b=8 seed=0 t=8 batch=32: {'recall10': 0.9894000000000001, 'qps': 1568.7650402384356, 'p50_ms': 19.82276001945138, 'p95_ms': 21.12768916413188}
+sift tieredq b=8 seed=1 t=8 batch=32: {'recall10': 0.9866, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift tieredq b=8 seed=2 t=8 batch=32: {'recall10': 0.9896000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+FhtKacRotator is selected
+sift rabitq b=4 seed=0 t=8 batch=32: {'recall10': 0.8493, 'qps': 1763.1985239397263, 'p50_ms': 18.06265115737915, 'p95_ms': 20.120506174862385}
+FhtKacRotator is selected
+sift rabitq b=4 seed=1 t=8 batch=32: {'recall10': 0.8430000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+FhtKacRotator is selected
+sift rabitq b=4 seed=2 t=8 batch=32: {'recall10': 0.8428000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+FhtKacRotator is selected
+sift rabitq b=8 seed=0 t=8 batch=32: {'recall10': 0.989, 'qps': 1643.983776078458, 'p50_ms': 19.421706907451153, 'p95_ms': 21.88515104353428}
+FhtKacRotator is selected
+sift rabitq b=8 seed=1 t=8 batch=32: {'recall10': 0.9882000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+FhtKacRotator is selected
+sift rabitq b=8 seed=2 t=8 batch=32: {'recall10': 0.9874, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove tieredq b=4 seed=0 t=8 batch=32: {'recall10': 0.9011000000000001, 'qps': 11071.58211535336, 'p50_ms': 2.8081629425287247, 'p95_ms': 3.108737990260124}
+glove tieredq b=4 seed=1 t=8 batch=32: {'recall10': 0.9045000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove tieredq b=4 seed=2 t=8 batch=32: {'recall10': 0.8990000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove tieredq b=8 seed=0 t=8 batch=32: {'recall10': 0.9921, 'qps': 7026.201623525934, 'p50_ms': 4.347454756498337, 'p95_ms': 5.950300954282284}
+glove tieredq b=8 seed=1 t=8 batch=32: {'recall10': 0.9927999999999999, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove tieredq b=8 seed=2 t=8 batch=32: {'recall10': 0.9927999999999999, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+FhtKacRotator is selected
+glove rabitq b=4 seed=0 t=8 batch=32: {'recall10': 0.8821000000000001, 'qps': 11883.300814435348, 'p50_ms': 2.691286150366068, 'p95_ms': 2.9045729897916317}
+FhtKacRotator is selected
+glove rabitq b=4 seed=1 t=8 batch=32: {'recall10': 0.8808000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+FhtKacRotator is selected
+glove rabitq b=4 seed=2 t=8 batch=32: {'recall10': 0.8826000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+FhtKacRotator is selected
+glove rabitq b=8 seed=0 t=8 batch=32: {'recall10': 0.9878000000000001, 'qps': 10995.758903923894, 'p50_ms': 2.9222266748547554, 'p95_ms': 3.2641058787703514}
+FhtKacRotator is selected
+glove rabitq b=8 seed=1 t=8 batch=32: {'recall10': 0.988, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+FhtKacRotator is selected
+glove rabitq b=8 seed=2 t=8 batch=32: {'recall10': 0.9897, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai tieredq b=4 seed=0 t=8 batch=32: {'recall10': 0.9839000000000001, 'qps': 1037.463505165902, 'p50_ms': 29.856406152248383, 'p95_ms': 36.284894682466984}
+openai tieredq b=4 seed=1 t=8 batch=32: {'recall10': 0.9852000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai tieredq b=4 seed=2 t=8 batch=32: {'recall10': 0.9825, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai tieredq b=8 seed=0 t=8 batch=32: {'recall10': 0.9980999999999999, 'qps': 868.0577224517413, 'p50_ms': 34.99764297157526, 'p95_ms': 50.412368029356}
+openai tieredq b=8 seed=1 t=8 batch=32: {'recall10': 0.9981, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai tieredq b=8 seed=2 t=8 batch=32: {'recall10': 0.9985999999999999, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+FhtKacRotator is selected
+openai rabitq b=4 seed=0 t=8 batch=32: {'recall10': 0.9664, 'qps': 4048.374190142576, 'p50_ms': 7.377582136541605, 'p95_ms': 13.285652734339237}
+FhtKacRotator is selected
+openai rabitq b=4 seed=1 t=8 batch=32: {'recall10': 0.9678000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+FhtKacRotator is selected
+openai rabitq b=4 seed=2 t=8 batch=32: {'recall10': 0.9679, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+FhtKacRotator is selected
+openai rabitq b=8 seed=0 t=8 batch=32: {'recall10': 0.9966999999999999, 'qps': 4021.2814337895657, 'p50_ms': 7.780437823385, 'p95_ms': 8.493042085319757}
+FhtKacRotator is selected
+openai rabitq b=8 seed=1 t=8 batch=32: {'recall10': 0.9962000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+FhtKacRotator is selected
+openai rabitq b=8 seed=2 t=8 batch=32: {'recall10': 0.9972, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue12-recall/benchmark/.deps/profile/build
+[  5%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq.cpp.o
+[ 10%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_index.cpp.o
+[ 15%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 20%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_index_io.cpp.o
+[ 80%] Built target nanobind-static
+[ 85%] Linking CXX static library libdv_tieredq.a
+[ 85%] Built target dv_tieredq
+[ 90%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 95%] Linking CXX executable codec_reference
+[ 95%] Built target codec_reference
+[100%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[100%] Built target codec_native
+Profiled glove tieredq 4-bit
+Profiled glove tieredq 8-bit
+FhtKacRotator is selected
+Profiled glove rabitq 4-bit
+FhtKacRotator is selected
+Profiled glove rabitq 8-bit
+Profiled openai tieredq 4-bit
+Profiled openai tieredq 8-bit
+FhtKacRotator is selected
+Profiled openai rabitq 4-bit
+FhtKacRotator is selected
+Profiled openai rabitq 8-bit
+Profiled sift tieredq 4-bit
+Profiled sift tieredq 8-bit
+FhtKacRotator is selected
+Profiled sift rabitq 4-bit
+FhtKacRotator is selected
+Profiled sift rabitq 8-bit
+=== 2026-10-25T20:26:37+01:00 stages
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue12-recall/benchmark/.deps/profile-stages/build
+[  5%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq.cpp.o
+[ 10%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_index.cpp.o
+[ 15%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_index_io.cpp.o
+[ 20%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 80%] Built target nanobind-static
+[ 85%] Linking CXX static library libdv_tieredq.a
+[ 85%] Built target dv_tieredq
+[ 90%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 95%] Linking CXX executable codec_reference
+[ 95%] Built target codec_reference
+[100%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[100%] Built target codec_native
+Profiled glove tieredq 4-bit
+Profiled glove tieredq 8-bit
+FhtKacRotator is selected
+Profiled glove rabitq 4-bit
+FhtKacRotator is selected
+Profiled glove rabitq 8-bit
+Profiled openai tieredq 4-bit
+Profiled openai tieredq 8-bit
+FhtKacRotator is selected
+Profiled openai rabitq 4-bit
+FhtKacRotator is selected
+Profiled openai rabitq 8-bit
+Profiled sift tieredq 4-bit
+Profiled sift tieredq 8-bit
+FhtKacRotator is selected
+Profiled sift rabitq 4-bit
+FhtKacRotator is selected
+Profiled sift rabitq 8-bit
+=== 2026-10-25T20:28:31+01:00 single
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue12-recall/benchmark/build-native
+[ 20%] Built target dv_tieredq
+[ 25%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 85%] Built target nanobind-static
+[ 90%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 95%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[ 95%] Built target codec_native
+[100%] Linking CXX executable codec_reference
+[100%] Built target codec_reference
+sift tieredq b=8 seed=0 t=1 batch=1: {'recall10': 0.9894000000000001, 'qps': 24.980301413670592, 'p50_ms': 39.471504744142294, 'p95_ms': 42.844022740609944}
+sift tieredq b=8 seed=0 t=8 batch=1: {'recall10': 0.9894000000000001, 'qps': 184.06317916905394, 'p50_ms': 5.45427156612277, 'p95_ms': 5.693627358414233}
+FhtKacRotator is selected
+sift rabitq b=8 seed=0 t=1 batch=1: {'recall10': 0.989, 'qps': 225.64670184929267, 'p50_ms': 4.334185505285859, 'p95_ms': 5.714546563103794}
+sift rabitq b=8 seed=0 t=8 batch=1: {'recall10': 0.989, 'qps': 222.19506900203234, 'p50_ms': 4.385434091091156, 'p95_ms': 5.793039640411735}
+glove tieredq b=8 seed=0 t=1 batch=1: {'recall10': 0.9921, 'qps': 168.87289173251207, 'p50_ms': 5.750905489549041, 'p95_ms': 6.584432953968644}
+glove tieredq b=8 seed=0 t=8 batch=1: {'recall10': 0.9921, 'qps': 959.2127054484272, 'p50_ms': 1.051153987646103, 'p95_ms': 1.11836320720613}
+FhtKacRotator is selected
+glove rabitq b=8 seed=0 t=1 batch=1: {'recall10': 0.9878000000000001, 'qps': 1628.0580368210278, 'p50_ms': 0.6003112066537142, 'p95_ms': 0.8056402206420898}
+glove rabitq b=8 seed=0 t=8 batch=1: {'recall10': 0.9878000000000001, 'qps': 1642.8560150619167, 'p50_ms': 0.598908169195056, 'p95_ms': 0.7983992109075189}
+openai tieredq b=8 seed=0 t=1 batch=1: {'recall10': 0.9980999999999999, 'qps': 21.25305101088284, 'p50_ms': 46.50895553641021, 'p95_ms': 50.20649516955018}
+openai tieredq b=8 seed=0 t=8 batch=1: {'recall10': 0.9980999999999999, 'qps': 112.25041852165897, 'p50_ms': 8.910202654078603, 'p95_ms': 9.337222040630877}
+FhtKacRotator is selected
+openai rabitq b=8 seed=0 t=1 batch=1: {'recall10': 0.9966999999999999, 'qps': 545.044308608925, 'p50_ms': 1.799265155568719, 'p95_ms': 2.029388141818344}
+openai rabitq b=8 seed=0 t=8 batch=1: {'recall10': 0.9966999999999999, 'qps': 545.6856814430766, 'p50_ms': 1.7974772490561008, 'p95_ms': 2.020411239936948}
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue12-recall/benchmark/.deps/profile/build
+[  5%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_index.cpp.o
+[ 10%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 70%] Built target nanobind-static
+[ 75%] Linking CXX static library libdv_tieredq.a
+[ 85%] Built target dv_tieredq
+[ 90%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 95%] Linking CXX executable codec_reference
+[ 95%] Built target codec_reference
+[100%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[100%] Built target codec_native
+Profiled glove tieredq 8-bit
+FhtKacRotator is selected
+Profiled glove rabitq 8-bit
+Profiled openai tieredq 8-bit
+FhtKacRotator is selected
+Profiled openai rabitq 8-bit
+Profiled sift tieredq 8-bit
+FhtKacRotator is selected
+Profiled sift rabitq 8-bit
+=== 2026-10-25T20:37:41+01:00 done

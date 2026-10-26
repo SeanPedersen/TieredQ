@@ -33,9 +33,10 @@ def measure(index, queries, truth, threads, batch):
 
 class L2Search:
     """Include the common query lift in each measured end-to-end call."""
-    def __init__(self, index, scale):
-        self.index, self.scale = index, scale
+    def __init__(self, index, scale, transform=None):
+        self.index, self.scale, self.transform = index, scale, transform
 
     def search(self, queries, output, threads):
-        probes = np.ascontiguousarray(np.column_stack([queries / self.scale, np.ones(len(queries))]), dtype=np.float32)
+        probes = self.transform.queries(queries) if self.transform is not None else np.ascontiguousarray(
+            np.column_stack([queries / self.scale, np.ones(len(queries))]), dtype=np.float32)
         self.index.search(probes, output, threads)

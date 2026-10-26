@@ -1,0 +1,59 @@
+diff --git a/src/tieredq_encode.h b/src/tieredq_encode.h
+index f7f1ab8..ddb1051 100644
+--- a/src/tieredq_encode.h
++++ b/src/tieredq_encode.h
+@@ -3,6 +3,7 @@
+ #include "tieredq_layout.h"
+ #include "tieredq_profile.h"
+ #include "tieredq_encode_grid.h"
++#include "tieredq_encode_refine.h"
+ #include "tieredq_encode_float.h"
+ #include <algorithm>
+ #include <array>
+@@ -55,7 +56,8 @@ inline double scale_grid_search(const EncodingModel& model,double rms,EncodingWo
+     const unsigned code=quantize_code(work.z[r]*scale_grid()[best_point],work.thresholds[tier.bits]);
+     work.chosen_codes[r]=code; work.chosen[r]=double(model.levels[tier.bits][code])*model.sigma[r];
+   }
+-  return dots[best_point];
++  const bool high_precision=std::any_of(model.tiers.begin(),model.tiers.end(),[](const auto& tier){return tier.bits>=7;});
++  return high_precision ? refine_high_precision_codes(model,work,dots[best_point]) : dots[best_point];
+ }
+ inline void quantize_row(const EncodingModel& model,const Layout& layout,const double* projection,
+                              size_t cid,uint8_t* doc,EncodingWorkspace& work,TieredQKernel kernel) {
+diff --git a/src/tieredq_encode_refine.h b/src/tieredq_encode_refine.h
+new file mode 100644
+index 0000000..61887a4
+--- /dev/null
++++ b/src/tieredq_encode_refine.h
+@@ -0,0 +1,31 @@
++// Alternating code assignment and least-squares scale improves the high-bit grid solution.
++#pragma once
++#include "tieredq_encode_grid.h"
++
++namespace dv::tieredq_detail {
++constexpr size_t high_precision_refinement_steps=8;
++template<class Model,class Work>
++double refine_high_precision_codes(const Model& model,Work& work,double dot) {
++  double norm=0;
++  for (double value:work.chosen) norm+=value*value;
++  if (!(dot>0 && norm>0)) return dot;
++  double best_energy=dot*dot/norm;
++  std::vector<double> chosen(work.chosen.size());
++  std::vector<uint32_t> codes(work.chosen_codes.size());
++  for (size_t step=0;step<high_precision_refinement_steps;++step) {
++    const double factor=dot/norm;
++    double next_dot=0,next_norm=0;
++    for (const auto& tier:model.tiers) for (size_t j=0;j<tier.dimensions;++j) {
++      const size_t rank=tier.start+j;
++      const auto code=quantize_code(work.v[rank]/(factor*model.sigma[rank]),work.thresholds[tier.bits]);
++      codes[rank]=code;chosen[rank]=double(model.levels[tier.bits][code])*model.sigma[rank];
++      next_dot+=work.v[rank]*chosen[rank];next_norm+=chosen[rank]*chosen[rank];
++    }
++    const double energy=next_norm>0 ? next_dot*next_dot/next_norm : 0;
++    if (!(energy>best_energy)) break;
++    best_energy=energy;dot=next_dot;norm=next_norm;
++    work.chosen.swap(chosen);work.chosen_codes.swap(codes);
++  }
++  return dot;
++}
++} // namespace dv::tieredq_detail

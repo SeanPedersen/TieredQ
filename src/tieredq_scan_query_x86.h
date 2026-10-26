@@ -4,6 +4,7 @@
 #include "tieredq_fast_dispatch.h"
 namespace dv::tieredq_detail {
 struct FastScanQueryX86 {
+  TieredQQuery codes;
   FastScanLookupQuery lookup;
   std::vector<int32_t> qwords;
   std::vector<float> centroid_scores, correction_weights;
@@ -17,6 +18,7 @@ inline bool fast_scan_available() {
 inline FastScanQueryX86 fast_scan_query_x86(const FastScanCache& cache, const TieredQQuery& q) {
   if (q.weights.size() != cache.dimensions)
     throw std::runtime_error("TieredQ: int8 query weight shape mismatch");
+  if (cache.code_lookup()) { FastScanQueryX86 prepared; prepared.codes=q; return prepared; }
   float peak = 0;
   for (size_t r=0; r<cache.dimensions; ++r) {
     const size_t ti = cache.tier_of[r];
@@ -47,7 +49,7 @@ inline FastScanQueryX86 fast_scan_query_x86(const FastScanCache& cache, const Ti
 
 inline FastScanQueryX86 fast_scan_query_x86(const FastScanCache& cache,
     const TieredQ& codec,const float* vector) {
-  if (!cache.lookup) return fast_scan_query_x86(cache,codec.query(vector));
+  if (!cache.lookup) return fast_scan_query_x86(cache,codec.query_weights(vector));
   FastScanQueryX86 query;
   query.lookup=prepare_fast_lookup_query(*cache.lookup,vector);
   return query;

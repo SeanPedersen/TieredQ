@@ -1,0 +1,7 @@
+{
+  "full_sift_maps_byte_identical": true,
+  "normalization_scale_identical": true,
+  "base_map_sha256": "6572b6b91ecdd588ec7a6d06591945d088e9bf388e7762811489cb04834376f3",
+  "query_map_sha256": "e34e7b20797b36875c3323b5c227ba59b3eb9af473cfe426923eef14a2825aea",
+  "note": "Added rank-deficient numerical fallback leaves full-data calibration maps byte-identical to the primary measurement."
+}

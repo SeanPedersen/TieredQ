@@ -1,0 +1,160 @@
+{
+  "operating_points": [
+    {
+      "dataset": "glove",
+      "threads": 8,
+      "codec": "tieredq",
+      "points": [
+        {
+          "bits": 5,
+          "recall_mean": 0.9482,
+          "recall_std": 0.002060744202143124,
+          "bytes_per_vector": 140.7742,
+          "qps_seed0": 8798.82518966987,
+          "build_s_seed0": 0.6824976610951126,
+          "p50_ms_seed0": null,
+          "p95_ms_seed0": null,
+          "encode_vps_seed0": 375590.3684342076
+        },
+        {
+          "bits": 6,
+          "recall_mean": 0.9732,
+          "recall_std": 0.000898146239020445,
+          "bytes_per_vector": 164.77548,
+          "qps_seed0": 7910.866167190809,
+          "build_s_seed0": 0.9226448470726609,
+          "p50_ms_seed0": null,
+          "p95_ms_seed0": null,
+          "encode_vps_seed0": 203444.64994524166
+        }
+      ],
+      "minimum_measured_at_095": {
+        "bits": 6,
+        "recall_mean": 0.9732,
+        "recall_std": 0.000898146239020445,
+        "bytes_per_vector": 164.77548,
+        "qps_seed0": 7910.866167190809,
+        "build_s_seed0": 0.9226448470726609,
+        "p50_ms_seed0": null,
+        "p95_ms_seed0": null,
+        "encode_vps_seed0": 203444.64994524166
+      }
+    },
+    {
+      "dataset": "glove",
+      "threads": 8,
+      "codec": "rabitq",
+      "points": [
+        {
+          "bits": 5,
+          "recall_mean": 0.9366666666666669,
+          "recall_std": 0.000946337971105256,
+          "bytes_per_vector": 180.012,
+          "qps_seed0": 13002.476128266038,
+          "build_s_seed0": 0.7862894483841956,
+          "p50_ms_seed0": null,
+          "p95_ms_seed0": null,
+          "encode_vps_seed0": 128689.39597138
+        },
+        {
+          "bits": 6,
+          "recall_mean": 0.9645333333333334,
+          "recall_std": 0.0018624953392931782,
+          "bytes_per_vector": 212.012,
+          "qps_seed0": 12230.332789329177,
+          "build_s_seed0": 0.9488663813099265,
+          "p50_ms_seed0": null,
+          "p95_ms_seed0": null,
+          "encode_vps_seed0": 106401.58190806916
+        }
+      ],
+      "minimum_measured_at_095": {
+        "bits": 6,
+        "recall_mean": 0.9645333333333334,
+        "recall_std": 0.0018624953392931782,
+        "bytes_per_vector": 212.012,
+        "qps_seed0": 12230.332789329177,
+        "build_s_seed0": 0.9488663813099265,
+        "p50_ms_seed0": null,
+        "p95_ms_seed0": null,
+        "encode_vps_seed0": 106401.58190806916
+      }
+    }
+  ],
+  "comparisons": [
+    {
+      "dataset": "glove",
+      "threads": 8,
+      "rabitq_anchor": {
+        "bits": 5,
+        "recall_mean": 0.9366666666666669,
+        "recall_std": 0.000946337971105256,
+        "bytes_per_vector": 180.012,
+        "qps_seed0": 13002.476128266038,
+        "build_s_seed0": 0.7862894483841956,
+        "p50_ms_seed0": null,
+        "p95_ms_seed0": null,
+        "encode_vps_seed0": 128689.39597138
+      },
+      "tieredq_best_recall_within_budget": {
+        "bits": 6,
+        "recall_mean": 0.9732,
+        "recall_std": 0.000898146239020445,
+        "bytes_per_vector": 164.77548,
+        "qps_seed0": 7910.866167190809,
+        "build_s_seed0": 0.9226448470726609,
+        "p50_ms_seed0": null,
+        "p95_ms_seed0": null,
+        "encode_vps_seed0": 203444.64994524166
+      },
+      "tieredq_fastest_at_least_anchor_recall": {
+        "bits": 5,
+        "recall_mean": 0.9482,
+        "recall_std": 0.002060744202143124,
+        "bytes_per_vector": 140.7742,
+        "qps_seed0": 8798.82518966987,
+        "build_s_seed0": 0.6824976610951126,
+        "p50_ms_seed0": null,
+        "p95_ms_seed0": null,
+        "encode_vps_seed0": 375590.3684342076
+      }
+    },
+    {
+      "dataset": "glove",
+      "threads": 8,
+      "rabitq_anchor": {
+        "bits": 6,
+        "recall_mean": 0.9645333333333334,
+        "recall_std": 0.0018624953392931782,
+        "bytes_per_vector": 212.012,
+        "qps_seed0": 12230.332789329177,
+        "build_s_seed0": 0.9488663813099265,
+        "p50_ms_seed0": null,
+        "p95_ms_seed0": null,
+        "encode_vps_seed0": 106401.58190806916
+      },
+      "tieredq_best_recall_within_budget": {
+        "bits": 6,
+        "recall_mean": 0.9732,
+        "recall_std": 0.000898146239020445,
+        "bytes_per_vector": 164.77548,
+        "qps_seed0": 7910.866167190809,
+        "build_s_seed0": 0.9226448470726609,
+        "p50_ms_seed0": null,
+        "p95_ms_seed0": null,
+        "encode_vps_seed0": 203444.64994524166
+      },
+      "tieredq_fastest_at_least_anchor_recall": {
+        "bits": 6,
+        "recall_mean": 0.9732,
+        "recall_std": 0.000898146239020445,
+        "bytes_per_vector": 164.77548,
+        "qps_seed0": 7910.866167190809,
+        "build_s_seed0": 0.9226448470726609,
+        "p50_ms_seed0": null,
+        "p95_ms_seed0": null,
+        "encode_vps_seed0": 203444.64994524166
+      }
+    }
+  ]
+}

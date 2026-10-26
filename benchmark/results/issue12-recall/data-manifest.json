@@ -1,0 +1,39 @@
+{
+  "sift": {
+    "source": {
+      "url": "https://ann-benchmarks.com/sift-128-euclidean.hdf5",
+      "sha256": "dd6f0a6ed6b7ebb8934680f861a33ed01ff33991eaee4fd60914d854a0ca5984"
+    },
+    "dataset": "sift",
+    "split_seed": 42,
+    "base_n": 1000000,
+    "queries": 1000,
+    "base_sha256": "ac8e11ed111b09e882bcf0ef1a77ebdd36c89f495bce8fd596603f69c35148e6",
+    "queries_sha256": "bd4faea0cbb6d80054ef3b7554cef8298001ee9c15ce798352b86bc1a206d598"
+  },
+  "glove": {
+    "source": {
+      "url": "https://ann-benchmarks.com/glove-200-angular.hdf5",
+      "sha256": "4839085e5a8bb293434a1a66e1aa0193afc3f07c6797a85f1dbd91656172da20"
+    },
+    "dataset": "glove",
+    "split_seed": 42,
+    "base_n": 100000,
+    "queries": 1000,
+    "base_sha256": "dbef767dd011fb713d9951e8b65d3ba1d3a008bc98f56a5815d6a810c2606c8a",
+    "queries_sha256": "39bbfe76c243fb3628e3fd002feaea49cd547416ac9474d476e1a3eb293a78d2"
+  },
+  "openai": {
+    "source": {
+      "repo": "Qdrant/dbpedia-entities-openai3-text-embedding-3-large-1536-1M",
+      "revision": "4a9731217921bc476a0f03544f11f22ae4903fa5",
+      "column": "text-embedding-3-large-1536-embedding"
+    },
+    "dataset": "openai",
+    "split_seed": 42,
+    "base_n": 100000,
+    "queries": 1000,
+    "base_sha256": "09bf358f7e818a69aac33aaf8888a702e2843c4ff2904b9cfdf3bbfd5ab6a948",
+    "queries_sha256": "59f90bed24086c0a74d4d80a626a8945e6718ab373807063b089d4a4477ef1cd"
+  }
+}

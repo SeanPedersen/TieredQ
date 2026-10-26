@@ -9,6 +9,8 @@ import subprocess
 import sys
 
 HERE = Path(__file__).resolve().parent
+PROFILE_QUERY_LIMIT = 32
+MILLISECONDS_PER_SECOND = 1000
 HEADER = r'''
 // Diagnostic counters live only in the separately built profiling extension.
 #pragma once
@@ -32,8 +34,8 @@ def replace_once(text, old, new):
     return text.replace(old, new)
 
 
-def build(full_score):
-    root = HERE / ".deps/profile"
+def build(full_score, stages=False):
+    root = HERE / ".deps" / ("profile-stages" if stages else "profile")
     source, native = root/"source", root/"native"
     native.mkdir(parents=True, exist_ok=True)
     header = native/"profile.h"
@@ -61,6 +63,9 @@ def build(full_score):
     module = replace_once(module, 'NB_MODULE(codec_native, m) {', '''NB_MODULE(codec_native, m) {
   m.def("profile_reset", []{ bench_profile::prep_s.store(0); bench_profile::total_s.store(0); });
   m.def("profile_read", []{ return nb::make_tuple(bench_profile::prep_s.load(), bench_profile::total_s.load()); });''')
+    if stages:
+        from profile_stages import instrument
+        module = instrument(source, module, header, replace_once)
     (native/"module.cpp").write_text(module)
     cmake = (HERE/"native/CMakeLists.txt").read_text().replace("add_subdirectory(../.. tieredq)", f'add_subdirectory("{source}" tieredq)')
     (native/"CMakeLists.txt").write_text(cmake)
@@ -77,17 +82,20 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", type=Path)
     parser.add_argument("--data", type=Path, default=HERE/"data")
+    parser.add_argument("--legacy-l2-lift", action="store_true")
+    parser.add_argument("--stages", action="store_true", help="Add intrusive worker-time counters for TieredQ scan and selection")
     args = parser.parse_args()
     with (args.output/"results.csv").open() as handle:
         results = [r for r in csv.DictReader(handle) if int(r["seed"]) == 0]
-    build_dir = build(any("full-score" in r["config"] for r in results))
+    build_dir = build(any("full-score" in r["config"] for r in results), stages=args.stages)
     sys.path.insert(0, str(build_dir))
     os.environ["BENCH_SEED"] = "0"
     import codec_native
     import numpy as np
     from threadpoolctl import threadpool_limits
     from data import prepare, codec_vectors
-    from measure import L2Search, measure
+    from measure import L2Search, measure, REPEATS, WARMUPS
+    from l2_transform import L2Transform
     rows = []
     with threadpool_limits(limits=1):
         for dataset in sorted({r["dataset"] for r in results}):
@@ -95,18 +103,25 @@ def main():
             base, queries, truth = prepare(args.data, dataset, int(selected[0]["base_n"]), int(selected[0]["queries"]))
             for codec in ("tieredq", "rabitq"):
                 lift = dataset == "sift" and codec == "tieredq"
-                vectors, probes = codec_vectors(base, queries, lift)
+                transform = L2Transform.fit(base) if lift and not args.legacy_l2_lift else None
+                vectors, probes = (transform.base_vectors(base), transform.queries(queries)) if transform else codec_vectors(base, queries, lift)
                 for bits in sorted({int(r["target_bits"]) for r in selected}):
                     codec_native.set_threads(8)
                     index = codec_native.Index(vectors, bits, 0, codec == "tieredq", dataset == "sift")
-                    search, q = (L2Search(index, float(np.max(np.linalg.norm(base, axis=1)))) ,queries) if lift else (index,probes)
+                    search, q = (L2Search(index, float(np.max(np.linalg.norm(base, axis=1))), transform),queries) if lift else (index,probes)
                     for config in [r for r in selected if r["codec"] == codec and int(r["target_bits"]) == bits]:
                         codec_native.profile_reset()
-                        measure(search, q[:32], truth[:32], int(config["threads"]), int(config["batch"]))
-                        prep, total = codec_native.profile_read()
+                        measure(search, q[:PROFILE_QUERY_LIMIT], truth[:PROFILE_QUERY_LIMIT], int(config["threads"]), int(config["batch"]))
+                        query_calls = REPEATS * min(PROFILE_QUERY_LIMIT, len(q)) + WARMUPS
+                        counters = codec_native.profile_read()
+                        prep, total = counters[:2]
                         rows.append(dict(dataset=dataset,codec=codec,bits=bits,threads=config["threads"],batch=config["batch"],
-                                         native_preprocessing_ms=prep*1000/(3*min(32,len(q))+3),
-                                         native_total_ms=total*1000/(3*min(32,len(q))+3), preprocessing_fraction=prep/total))
+                                         native_preprocessing_ms=prep*MILLISECONDS_PER_SECOND/query_calls,
+                                         native_total_ms=total*MILLISECONDS_PER_SECOND/query_calls, preprocessing_fraction=prep/total))
+                        if args.stages:
+                            from profile_stages import COUNTERS
+                            rows[-1].update({f"{name}_worker_ms":value*MILLISECONDS_PER_SECOND/query_calls if codec == "tieredq" else None
+                                             for name,value in zip(COUNTERS,counters[2:],strict=True)})
                     print(f"Profiled {dataset} {codec} {bits}-bit", flush=True)
     with (args.output/"preprocessing.csv").open("w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(rows[0]))

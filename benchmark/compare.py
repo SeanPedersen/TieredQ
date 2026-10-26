@@ -7,10 +7,10 @@ def operating_points(rows):
     summary = []
     # Recall means across seeds; timing comes only from seed zero, by thread count.
     for dataset in datasets:
-        for threads in (1,8):
+        for threads in sorted({int(row["threads"]) for row in rows}):
             for codec in ("tieredq", "rabitq"):
                 operating = []
-                for bits in (1,2,4,8):
+                for bits in sorted({int(r["target_bits"]) for r in rows}):
                     group = [r for r in rows if r["dataset"]==dataset and r["codec"]==codec
                              and int(r["threads"])==threads and int(r["batch"])==32 and int(r["target_bits"])==bits]
                     if not group:
@@ -18,14 +18,15 @@ def operating_points(rows):
                     timed = next((r for r in group if int(r["seed"])==0), None)
                     if timed is None:
                         continue
-                    single = next(r for r in rows if r["dataset"]==dataset and r["codec"]==codec
+                    single = next((r for r in rows if r["dataset"]==dataset and r["codec"]==codec
                                   and int(r["threads"])==threads and int(r["batch"])==1
-                                  and int(r["target_bits"])==bits and int(r["seed"])==0)
+                                  and int(r["target_bits"])==bits and int(r["seed"])==0), None)
                     recalls = [float(r["recall10"]) for r in group]
                     operating.append({"bits":bits, "recall_mean":float(np.mean(recalls)),
                                       "recall_std":float(np.std(recalls)), "bytes_per_vector":max(float(r["effective_bytes_per_vector"]) for r in group),
                                       "qps_seed0":float(timed["qps"]), "build_s_seed0":float(timed["build_s"]),
-                                      "p50_ms_seed0":float(single["p50_ms"]), "p95_ms_seed0":float(single["p95_ms"]),
+                                      "p50_ms_seed0":float(single["p50_ms"]) if single else None,
+                                      "p95_ms_seed0":float(single["p95_ms"]) if single else None,
                                       "encode_vps_seed0":float(timed["encode_vps"])})
                 reached = [r for r in operating if r["recall_mean"]>=.95]
                 summary.append({"dataset":dataset,"threads":threads,"codec":codec,"points":operating,

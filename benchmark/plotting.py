@@ -1,4 +1,4 @@
-"""Plot all four measured budgets per codec, keeping scheduling panels separate."""
+"""Plot all measured budgets per codec, keeping scheduling panels separate."""
 from collections import defaultdict
 import matplotlib
 matplotlib.use('Agg')
@@ -8,7 +8,7 @@ import numpy as np
 
 DATASET_NAMES = {'sift': 'SIFT1M', 'glove': 'GloVe-200', 'openai': 'OpenAI3-1536'}
 CODEC_STYLES = {'tieredq': ('TieredQ', '#1769aa'), 'rabitq': ('RaBitQ', '#d95f02')}
-BUDGET_MARKERS = {1: 'o', 2: 's', 4: '^', 8: 'D'}
+BUDGET_MARKERS = {1: 'o', 2: 's', 3: 'v', 4: '^', 5: 'P', 6: 'X', 7: 'h', 8: 'D'}
 FIGURES = (
     ('recall-storage', 'effective_bytes_per_vector', 'recall10', 'Measured bytes / vector', 'Recall@10'),
     ('qps-recall', 'recall10', 'qps', 'Recall@10', 'Queries / second · batch 32'),
@@ -50,13 +50,20 @@ def plot_results(root, rows):
     datasets = [name for name in DATASET_NAMES if any(r['dataset'] == name for r in rows)]
     seeds = sorted({int(r['seed']) for r in rows})
     seed_note = f'Fixed seed {seeds[0]}; one run' if len(seeds) == 1 else f'Recall averaged over {len(seeds)} seeds; timing seed 0'
+    batches = {int(row['batch']) for row in rows}
+    budgets = ' → '.join(str(bits) for bits in sorted({int(row['target_bits']) for row in rows}))
     for name, xkey, ykey, xlabel, ylabel in FIGURES:
-        thread_counts = [1] if name == 'recall-storage' else [1, 8]
+        batch = 32 if name == 'qps-recall' else 1 if name == 'latency-recall' else min(batches)
+        if batch not in batches:
+            continue
+        thread_counts = sorted({int(row['threads']) for row in rows if int(row['batch']) == batch})
+        if name == 'recall-storage':
+            thread_counts = thread_counts[:1]
         fig, axes = plt.subplots(len(thread_counts), len(datasets), figsize=(6 * len(datasets), 4.4 * len(thread_counts)), squeeze=False)
         for row_index, threads in enumerate(thread_counts):
             for dataset, ax in zip(datasets, axes[row_index], strict=True):
                 for codec in CODEC_STYLES:
-                    points = budget_points(rows, dataset, codec, threads, 32 if name == 'qps-recall' else 1)
+                    points = budget_points(rows, dataset, codec, threads, batch)
                     if points:
                         draw_series(ax, points, codec, xkey, ykey, name == 'latency-recall')
                 suffix = '' if name == 'recall-storage' else f' · {threads} thread' + ('s' if threads > 1 else '')
@@ -67,7 +74,7 @@ def plot_results(root, rows):
                 if name == 'latency-recall':
                     handles += [Line2D([], [], color='#555', label='p50'), Line2D([], [], color='#555', linestyle='--', label='p95')]
                 ax.legend(handles=handles, fontsize=9)
-        fig.suptitle(f'{seed_note} · lines connect 1 → 2 → 4 → 8 bits per original dimension', fontsize=12)
+        fig.suptitle(f'{seed_note} · lines connect {budgets} bits per original dimension', fontsize=12)
         fig.tight_layout(rect=(0, 0, 1, .95 if len(thread_counts) == 1 else .97))
         fig.savefig(root / f'{name}.png', dpi=160)
         plt.close(fig)

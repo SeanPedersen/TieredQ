@@ -1,6 +1,7 @@
 // AVX2 fast scans over the persisted lookup and int8-level layouts, with bounded tail stores.
 #pragma once
 #include "tieredq_scan_query_x86.h"
+#include "tieredq_scan_codes_x86.h"
 #include <immintrin.h>
 
 namespace dv::tieredq_detail {
@@ -64,6 +65,11 @@ template<size_t query_tile>
 __attribute__((target("avx2")))
 inline void scan_fast_avx2_tile_impl(const FastScanCache& cache,const FastScanQueryX86* queries,
     size_t rows,size_t first,size_t count,float* scores,size_t stride) {
+  if (cache.code_lookup()) {
+    scan_codes_avx2_tile(cache,rows,first,count,scores,stride,
+        [&](size_t row)->const TieredQQuery& {return queries[row].codes;});
+    return;
+  }
   if (cache.lookup) {
     for (size_t row=0;row<rows;++row)
       scan_fast_lookup_avx2_range(cache,queries[row].lookup,first,count,scores+row*stride);

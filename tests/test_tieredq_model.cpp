@@ -14,6 +14,7 @@
 #include <bit>
 #include <cmath>
 #include <fstream>
+#include <future>
 #include <iostream>
 #include <numeric>
 #include <random>
@@ -337,6 +338,28 @@ void parity(const std::string& prefix,unsigned d,unsigned bits) {
   }
   std::vector<float> huge(rows*d,1e10f); rejects([&]{codec.encode(huge.data(),rows);});
 }
+// Loaded models omit encoder state until encode(); the lazily built state encodes identically.
+void lazy_encoder() {
+  constexpr size_t d=24,rows=64;
+  std::mt19937 rng(5); std::normal_distribution<float> normal;
+  std::vector<float> sample(rows*d);
+  for (auto& value:sample) value=normal(rng);
+  const auto trained=TieredQ::train(TieredQConfig{.dimensions=uint32_t(d),.code_bits=uint32_t(d*8),.num_centroids=8,.rotate_tiers=true},sample.data(),rows,42);
+  const size_t trained_serving=trained.memory_bytes();
+  const auto expected=trained.encode(sample.data(),rows);
+  const size_t encoder=trained.memory_bytes()-trained_serving;
+  require(encoder>0,"encode() builds encoder state");
+  auto loaded=TieredQ::deserialize(trained.serialize());
+  const auto copy=loaded;
+  const size_t loaded_serving=loaded.memory_bytes(),copy_serving=copy.memory_bytes();
+  constexpr size_t concurrent_encodes=4;
+  std::vector<std::future<std::vector<uint8_t>>> encodes;
+  for (size_t worker=0;worker<concurrent_encodes;++worker)
+    encodes.push_back(std::async(std::launch::async,[&,model=loaded] { return model.encode(sample.data(),rows); }));
+  for (auto& encoded:encodes) require(encoded.get()==expected,"concurrent lazy encoder parity");
+  require(loaded.memory_bytes()-loaded_serving==encoder,"loaded models build encoder state on encode()");
+  require(copy.memory_bytes()-copy_serving==encoder,"copies share the built encoder");
+}
 // Multi-tier model: the grouped FP32 plane scan matches the scalar scorer, and its plan is validated.
 void grouped_scan() {
   constexpr size_t d=64,rows=150,sample_rows=512;
@@ -400,7 +423,7 @@ void tieredq_model_tests(const std::string& prefix) {
   half_tests(); encoder_boundaries(); encoder_reductions(); grid_kernels(); tieredq_encoder_tests();
   parity(prefix+".model",7,1); parity(prefix+".model",16,4); parity(prefix+".model",65,2);
   for (unsigned bits:{3u,5u,6u,7u,8u}) parity(prefix+".model",16,bits);
-  grouped_scan(); wide_dims_cap();
+  grouped_scan(); wide_dims_cap(); lazy_encoder();
   parity(prefix+".model",3072,2); parity(prefix+".model",3072,4);
   std::vector<float> sample(128*16); std::mt19937 rng(7); std::normal_distribution<float> normal;
   for (auto& value:sample) value=normal(rng);

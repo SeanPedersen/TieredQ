@@ -28,12 +28,15 @@ TieredQIndex TieredQIndex::load(const std::string& path) {
     tieredq_detail::Reader reader{file.payload};
     if (reader.u32()!=tieredq_detail::fast_payload_version) bad("unsupported fast payload version");
     const uint32_t kind=reader.u32(),level_max=reader.u32();
-    if (kind!=tieredq_detail::fast_lookup_kind && kind!=tieredq_detail::fast_levels_kind) bad("invalid fast payload kind");
+    const bool byte_codes=kind==tieredq_detail::fast_byte_code_kind;
+    const bool code_lookup=byte_codes || kind==tieredq_detail::fast_packed_code_kind;
+    if (kind!=tieredq_detail::fast_lookup_kind && kind!=tieredq_detail::fast_levels_kind && !code_lookup) bad("invalid fast payload kind");
     const bool lookup=kind==tieredq_detail::fast_lookup_kind;
     if ((lookup && (level_max || !tieredq_detail::fast_lookup_supported(index.codec_.tiers_))) ||
-        (!lookup && level_max!=tieredq_detail::x86_fast_level_max && level_max!=tieredq_detail::arm_fast_level_max)) bad("invalid fast level configuration");
+        (code_lookup && level_max!=tieredq_detail::fast_code_lookup_levels) ||
+        (!lookup && !code_lookup && level_max!=tieredq_detail::x86_fast_level_max && level_max!=tieredq_detail::arm_fast_level_max)) bad("invalid fast level configuration");
     auto storage=index.make_fast_storage(nullptr,0,lookup,int(level_max));
-    tieredq_detail::read_fast_storage(reader,*storage,size_t(file.rows),index.codec_.config().num_centroids);
+    tieredq_detail::read_fast_storage(reader,*storage,size_t(file.rows),index.codec_.config().num_centroids,byte_codes);
     index.fast_=std::move(storage);index.count_=size_t(file.rows);
     return index;
   }

@@ -1,0 +1,33 @@
+{
+  "operating_points": [
+    {
+      "dataset": "glove",
+      "threads": 1,
+      "codec": "tieredq",
+      "points": [],
+      "minimum_measured_at_095": null
+    },
+    {
+      "dataset": "glove",
+      "threads": 1,
+      "codec": "rabitq",
+      "points": [],
+      "minimum_measured_at_095": null
+    },
+    {
+      "dataset": "glove",
+      "threads": 8,
+      "codec": "tieredq",
+      "points": [],
+      "minimum_measured_at_095": null
+    },
+    {
+      "dataset": "glove",
+      "threads": 8,
+      "codec": "rabitq",
+      "points": [],
+      "minimum_measured_at_095": null
+    }
+  ],
+  "comparisons": []
+}

@@ -1,0 +1,19 @@
+{
+  "status": "passed",
+  "primary_rows": 36,
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "queries": 1000,
+  "native_bounds_primary": true,
+  "archived_source_and_harness_hashes": true,
+  "normal_fast_recall_parity": true,
+  "repeated_seed0_recall": true,
+  "reconstructed_original_storage_points": 12,
+  "phase_profiles": 12,
+  "full_score_diagnostic_separate": true,
+  "recovered_scan_snapshot_hashes": true,
+  "corrected_storage_rows": 33
+}

@@ -1,0 +1,140 @@
+{
+  "operating_points": [
+    {
+      "dataset": "openai",
+      "threads": 8,
+      "codec": "tieredq",
+      "points": [
+        {
+          "bits": 2,
+          "recall_mean": 0.9468333333333335,
+          "recall_std": 0.00040276819911982676,
+          "bytes_per_vector": 493.83272,
+          "qps_seed0": 1213.1638870781733,
+          "build_s_seed0": 14.705144023988396,
+          "p50_ms_seed0": null,
+          "p95_ms_seed0": null,
+          "encode_vps_seed0": 71903.01737697693
+        },
+        {
+          "bits": 3,
+          "recall_mean": 0.9732,
+          "recall_std": 0.00021602468994690488,
+          "bytes_per_vector": 695.47304,
+          "qps_seed0": 1084.6580913029743,
+          "build_s_seed0": 15.345357961952686,
+          "p50_ms_seed0": null,
+          "p95_ms_seed0": null,
+          "encode_vps_seed0": 55363.012072948375
+        }
+      ],
+      "minimum_measured_at_095": {
+        "bits": 3,
+        "recall_mean": 0.9732,
+        "recall_std": 0.00021602468994690488,
+        "bytes_per_vector": 695.47304,
+        "qps_seed0": 1084.6580913029743,
+        "build_s_seed0": 15.345357961952686,
+        "p50_ms_seed0": null,
+        "p95_ms_seed0": null,
+        "encode_vps_seed0": 55363.012072948375
+      }
+    },
+    {
+      "dataset": "openai",
+      "threads": 8,
+      "codec": "rabitq",
+      "points": [
+        {
+          "bits": 2,
+          "recall_mean": 0.9012666666666669,
+          "recall_std": 0.002212590236703463,
+          "bytes_per_vector": 404.0696,
+          "qps_seed0": 4389.613625351611,
+          "build_s_seed0": 2.4207047689706087,
+          "p50_ms_seed0": null,
+          "p95_ms_seed0": null,
+          "encode_vps_seed0": 42095.80142197437
+        },
+        {
+          "bits": 3,
+          "recall_mean": 0.9434666666666667,
+          "recall_std": 0.0007408703590298189,
+          "bytes_per_vector": 596.0696,
+          "qps_seed0": 4015.684111881211,
+          "build_s_seed0": 4.2640500529669225,
+          "p50_ms_seed0": null,
+          "p95_ms_seed0": null,
+          "encode_vps_seed0": 23734.80000770441
+        }
+      ],
+      "minimum_measured_at_095": null
+    }
+  ],
+  "comparisons": [
+    {
+      "dataset": "openai",
+      "threads": 8,
+      "rabitq_anchor": {
+        "bits": 2,
+        "recall_mean": 0.9012666666666669,
+        "recall_std": 0.002212590236703463,
+        "bytes_per_vector": 404.0696,
+        "qps_seed0": 4389.613625351611,
+        "build_s_seed0": 2.4207047689706087,
+        "p50_ms_seed0": null,
+        "p95_ms_seed0": null,
+        "encode_vps_seed0": 42095.80142197437
+      },
+      "tieredq_best_recall_within_budget": null,
+      "tieredq_fastest_at_least_anchor_recall": {
+        "bits": 2,
+        "recall_mean": 0.9468333333333335,
+        "recall_std": 0.00040276819911982676,
+        "bytes_per_vector": 493.83272,
+        "qps_seed0": 1213.1638870781733,
+        "build_s_seed0": 14.705144023988396,
+        "p50_ms_seed0": null,
+        "p95_ms_seed0": null,
+        "encode_vps_seed0": 71903.01737697693
+      }
+    },
+    {
+      "dataset": "openai",
+      "threads": 8,
+      "rabitq_anchor": {
+        "bits": 3,
+        "recall_mean": 0.9434666666666667,
+        "recall_std": 0.0007408703590298189,
+        "bytes_per_vector": 596.0696,
+        "qps_seed0": 4015.684111881211,
+        "build_s_seed0": 4.2640500529669225,
+        "p50_ms_seed0": null,
+        "p95_ms_seed0": null,
+        "encode_vps_seed0": 23734.80000770441
+      },
+      "tieredq_best_recall_within_budget": {
+        "bits": 2,
+        "recall_mean": 0.9468333333333335,
+        "recall_std": 0.00040276819911982676,
+        "bytes_per_vector": 493.83272,
+        "qps_seed0": 1213.1638870781733,
+        "build_s_seed0": 14.705144023988396,
+        "p50_ms_seed0": null,
+        "p95_ms_seed0": null,
+        "encode_vps_seed0": 71903.01737697693
+      },
+      "tieredq_fastest_at_least_anchor_recall": {
+        "bits": 2,
+        "recall_mean": 0.9468333333333335,
+        "recall_std": 0.00040276819911982676,
+        "bytes_per_vector": 493.83272,
+        "qps_seed0": 1213.1638870781733,
+        "build_s_seed0": 14.705144023988396,
+        "p50_ms_seed0": null,
+        "p95_ms_seed0": null,
+        "encode_vps_seed0": 71903.01737697693
+      }
+    }
+  ]
+}

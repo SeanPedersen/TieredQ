@@ -10,7 +10,7 @@
 #include "tieredq/detail/tieredq_scan_plan.h"
 
 namespace dv {
-namespace tieredq_detail { class StageProfile; struct FastScanCache; }
+namespace tieredq_detail { class StageProfile; struct FastScanCache; struct EncoderData; class LazyEncoder; }
 enum class TieredQKernel { automatic, scalar, avx2, avx512, neon };
 struct TieredQConfig {
   uint32_t dimensions = 512;
@@ -69,6 +69,7 @@ class TieredQ {
   size_t metadata_bytes_per_vector() const;
   size_t bytes_per_vector() const { return code_bytes() + metadata_bytes_per_vector(); }
   size_t model_bytes() const;
+  // Resident model memory: serving state, plus encoder state once encode() has built it.
   size_t memory_bytes() const;
   uint32_t model_id() const;
   void decode(const uint8_t* payload, size_t count, float* rows) const;
@@ -93,6 +94,11 @@ class TieredQ {
   // Metadata uses round-to-nearest-even binary16 and rejects overflow/nonfinite values.
   void encode(const float* rows, size_t count, uint8_t* out, float* corrections = nullptr) const;
   TieredQQuery query(const float* vector) const;
+  // Projection and centroid terms without LUTs or scan groups, for weight-based fast scans.
+  // Use query() to prepare input for score() and score_planes().
+  TieredQQuery query_weights(const float* vector) const;
+  // Batched query_weights over contiguous rows; results equal per-row calls exactly.
+  std::vector<TieredQQuery> query_weights(const float* vectors, size_t rows) const;
   void score(const uint8_t* payload, size_t count, const TieredQQuery& query,
              float* scores, TieredQKernel kernel = TieredQKernel::automatic) const;
   static constexpr uint32_t model_format = 2;
@@ -110,17 +116,18 @@ class TieredQ {
   std::vector<TieredQTier> tiers_;
   std::vector<float> centroids_, basis_, mean_, sigma_;
   std::vector<std::vector<float>> levels_;
-  // Derived state (not serialized): fused FP32 panels and exact centroid projections.
-  // Float half norms also supply query correction weights.
-  TieredQPanels encode_panels_;
+  // Derived serving state (not serialized): float half norms supply query correction weights.
   std::vector<float> centroid_half_norms_;
-  // retains FP64 centroid projections and half norms for residuals and correction.
-  std::vector<double> centroid_projections_, exact_centroid_half_norms_;
   // Derived scan geometry (not serialized): window and shift per grouped FP32 lookup, built from tiers_.
   std::vector<tieredq_detail::ScanGroupPlan> scan_plan_;
-  void prepare_encoder();
+  // Encoder-only state (fused panels, FP64 centroid projections), built on first encode().
+  std::shared_ptr<tieredq_detail::LazyEncoder> encoder_;
+  void prepare_serving();
+  tieredq_detail::EncoderData build_encoder() const;
   void encode_block(const float* rows, size_t count, uint8_t* out, float* corrections, tieredq_detail::StageProfile* profile = nullptr) const;
   void encode_rows(const float* rows, size_t count, uint8_t* out, float* corrections) const;
+  // Up to eight validated rows; shares basis traffic and vectorizes centroid dots across rows.
+  void project_query_tile(const float* vectors, size_t rows, TieredQQuery* out) const;
   void validate_model() const;
 };
 class TieredQIndex {
@@ -148,14 +155,16 @@ class TieredQIndex {
   bool uses_scalar_fast_scan() const;
   static bool native_fast_scan_available();
   size_t payload_bytes() const;
-  // Allocated vector-data storage; excludes shared models, query state and top-k scratch.
+  // Allocated vector data and fast-cache state, including its derived query projection/codebooks.
+  // Excludes codec memory, allocator bookkeeping, query state and top-k scratch.
   size_t storage_bytes() const;
   size_t bytes_per_vector() const;
   void add(const float* rows, size_t count);
   std::vector<TieredQHit> search(const float* query, size_t k,
                                 TieredQKernel kernel = TieredQKernel::automatic) const;
   // Optional auxiliary cache for exact-mode indexes; fast-only indexes need no rebuild.
-  // ARM uses int8 levels; x86 uses compact lookups for tiers up to four bits.
+  // Models containing tiers wider than 4 bits preserve code IDs for FP32 scoring. Other models
+  // use int8 levels on ARM and compact lookups on x86 when all tiers fit four bits.
   // Successful nonempty appends invalidate only an exact-mode auxiliary cache.
   // No supported native kernel leaves exact-mode indexes without this optional cache.
   void build_fast_scan();

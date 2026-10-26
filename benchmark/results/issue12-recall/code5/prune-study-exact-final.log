@@ -1,0 +1,21 @@
+sift 4-bit tiers=[(8, 2), (7, 12), (6, 16), (5, 20), (4, 22), (3, 28), (2, 18), (1, 8)] top-10 overlap with native search 0.9990
+  prefix [8]: ranks 0.02 pruned oracle 0.153 stream 0.132 cs 0.480 | blocks stream 0.999 | speedup stream 1.00x cs 1.01x
+  prefix [8, 7]: ranks 0.11 pruned oracle 0.528 stream 0.482 cs 0.771 | blocks stream 0.987 | speedup stream 1.01x cs 1.12x
+  prefix [8, 7, 6]: ranks 0.24 pruned oracle 0.863 stream 0.801 cs 0.953 | blocks stream 0.845 | speedup stream 1.13x cs 1.85x
+  prefix [8, 7, 6, 5]: ranks 0.40 pruned oracle 0.992 stream 0.971 cs 0.991 | blocks stream 0.285 | speedup stream 1.76x cs 2.22x
+  prefix [8, 7, 6, 5, 4]: ranks 0.57 pruned oracle 1.000 stream 0.994 cs 0.996 | blocks stream 0.050 | speedup stream 1.69x cs 1.71x
+  prefix [8, 7, 6, 5, 4, 3]: ranks 0.79 pruned oracle 1.000 stream 0.997 cs 0.997 | blocks stream 0.015 | speedup stream 1.26x cs 1.26x
+  prefix [8, 7, 6, 5, 4, 3, 2]: ranks 0.94 pruned oracle 1.000 stream 0.997 cs 0.997 | blocks stream 0.011 | speedup stream 1.07x cs 1.07x
+sift 8-bit tiers=[(8, 122), (7, 6), (6, 1)] top-10 overlap with native search 1.0000
+  prefix [8]: ranks 0.95 pruned oracle 1.000 stream 0.997 cs 0.997 | blocks stream 0.012 | speedup stream 1.06x cs 1.06x
+  prefix [8, 7]: ranks 0.99 pruned oracle 1.000 stream 0.997 cs 0.997 | blocks stream 0.011 | speedup stream 1.01x cs 1.01x
+glove 4-bit tiers=[(4, 200)] top-10 overlap with native search 1.0000
+glove 8-bit tiers=[(8, 200)] top-10 overlap with native search 1.0000
+openai 4-bit tiers=[(7, 13), (6, 129), (5, 316), (4, 536), (3, 477), (2, 61), (1, 2)] top-10 overlap with native search 1.0000
+  prefix [7]: ranks 0.01 pruned oracle 0.000 stream 0.000 cs 0.000 | blocks stream 1.000 | speedup stream 1.00x cs 1.00x
+  prefix [7, 6]: ranks 0.09 pruned oracle 0.000 stream 0.000 cs 0.001 | blocks stream 1.000 | speedup stream 1.00x cs 1.00x
+  prefix [7, 6, 5]: ranks 0.30 pruned oracle 0.697 stream 0.181 cs 0.785 | blocks stream 0.997 | speedup stream 1.00x cs 1.15x
+  prefix [7, 6, 5, 4]: ranks 0.65 pruned oracle 0.999 stream 0.962 cs 0.970 | blocks stream 0.217 | speedup stream 1.38x cs 1.43x
+  prefix [7, 6, 5, 4, 3]: ranks 0.96 pruned oracle 1.000 stream 0.976 cs 0.976 | blocks stream 0.077 | speedup stream 1.04x cs 1.04x
+  prefix [7, 6, 5, 4, 3, 2]: ranks 1.00 pruned oracle 1.000 stream 0.976 cs 0.976 | blocks stream 0.074 | speedup stream 1.00x cs 1.00x
+openai 8-bit tiers=[(8, 1536)] top-10 overlap with native search 1.0000

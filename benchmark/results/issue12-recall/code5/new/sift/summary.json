@@ -1,0 +1,81 @@
+{
+  "operating_points": [
+    {
+      "dataset": "sift",
+      "threads": 8,
+      "codec": "tieredq",
+      "points": [
+        {
+          "bits": 2,
+          "recall_mean": 0.7639,
+          "recall_std": 0.0014306175822583111,
+          "bytes_per_vector": 41.319482,
+          "qps_seed0": 2368.091254535023,
+          "build_s_seed0": 1.9058637963607907,
+          "p50_ms_seed0": null,
+          "p95_ms_seed0": null,
+          "encode_vps_seed0": 1098834.8439900496
+        }
+      ],
+      "minimum_measured_at_095": null
+    },
+    {
+      "dataset": "sift",
+      "threads": 8,
+      "codec": "rabitq",
+      "points": [
+        {
+          "bits": 2,
+          "recall_mean": 0.5484,
+          "recall_std": 0.0024913182588072575,
+          "bytes_per_vector": 52.000624,
+          "qps_seed0": 1991.2341788668032,
+          "build_s_seed0": 1.7314717820845544,
+          "p50_ms_seed0": null,
+          "p95_ms_seed0": null,
+          "encode_vps_seed0": 591849.0905461627
+        }
+      ],
+      "minimum_measured_at_095": null
+    }
+  ],
+  "comparisons": [
+    {
+      "dataset": "sift",
+      "threads": 8,
+      "rabitq_anchor": {
+        "bits": 2,
+        "recall_mean": 0.5484,
+        "recall_std": 0.0024913182588072575,
+        "bytes_per_vector": 52.000624,
+        "qps_seed0": 1991.2341788668032,
+        "build_s_seed0": 1.7314717820845544,
+        "p50_ms_seed0": null,
+        "p95_ms_seed0": null,
+        "encode_vps_seed0": 591849.0905461627
+      },
+      "tieredq_best_recall_within_budget": {
+        "bits": 2,
+        "recall_mean": 0.7639,
+        "recall_std": 0.0014306175822583111,
+        "bytes_per_vector": 41.319482,
+        "qps_seed0": 2368.091254535023,
+        "build_s_seed0": 1.9058637963607907,
+        "p50_ms_seed0": null,
+        "p95_ms_seed0": null,
+        "encode_vps_seed0": 1098834.8439900496
+      },
+      "tieredq_fastest_at_least_anchor_recall": {
+        "bits": 2,
+        "recall_mean": 0.7639,
+        "recall_std": 0.0014306175822583111,
+        "bytes_per_vector": 41.319482,
+        "qps_seed0": 2368.091254535023,
+        "build_s_seed0": 1.9058637963607907,
+        "p50_ms_seed0": null,
+        "p95_ms_seed0": null,
+        "encode_vps_seed0": 1098834.8439900496
+      }
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+-- The CXX compiler identification is GNU 16.2.1
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP: TRUE (found version "5.2")
+-- Looking for sgemm_
+-- Looking for sgemm_ - not found
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE
+-- Looking for sgemm_
+-- Looking for sgemm_ - found
+-- Found BLAS: /usr/lib/libblas.so
+-- Looking for cheev_
+-- Looking for cheev_ - not found
+-- Looking for cheev_
+-- Looking for cheev_ - found
+-- Found LAPACK: /usr/lib/liblapack.so;/usr/lib/libblas.so
+-- Configuring done (2.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue12-final-review-LibSHX6y/build-tests
+[  7%] Building CXX object CMakeFiles/dv_tieredq.dir/src/tieredq.cpp.o
+[ 14%] Building CXX object CMakeFiles/test_training_rng.dir/tests/test_training_rng.cpp.o
+[ 21%] Building CXX object CMakeFiles/dv_tieredq.dir/src/tieredq_index_io.cpp.o
+[ 28%] Building CXX object CMakeFiles/dv_tieredq.dir/src/tieredq_index.cpp.o
+[ 35%] Linking CXX executable test_training_rng
+[ 35%] Built target test_training_rng
+[ 42%] Linking CXX static library libdv_tieredq.a
+[ 42%] Built target dv_tieredq
+[ 50%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq_fast_mode.cpp.o
+[ 57%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq_encoder.cpp.o
+[ 64%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq_lookup.cpp.o
+[ 71%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq.cpp.o
+[ 78%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq_search.cpp.o
+[ 85%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq_model.cpp.o
+[ 92%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq_neon.cpp.o
+[100%] Linking CXX executable test_tieredq
+[100%] Built target test_tieredq
+PASS D=1 bits=8 rotate=1
+PASS D=7 bits=56 rotate=1
+PASS D=65 bits=257 rotate=1
+PASS D=384 bits=257 rotate=0
+PASS D=511 bits=257 rotate=0
+PASS D=512 bits=257 rotate=0
+PASS D=768 bits=257 rotate=0
+PASS D=1024 bits=257 rotate=0
+PASS D=1536 bits=257 rotate=0
+PASS D=512 bits=256 rotate=0
+PASS D=512 bits=384 rotate=0
+PASS D=512 bits=512 rotate=1
+PASS D=512 bits=768 rotate=0
+PASS D=512 bits=1024 rotate=0
+PASS D=768 bits=512 rotate=1
+PASS D=768 bits=1024 rotate=0
+PASS D=7 bits=1 rotate=1
+PASS D=7 bits=56 rotate=0
+OK
+__FINAL_X86_VALIDATION_COMPLETE__

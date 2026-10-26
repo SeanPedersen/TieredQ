@@ -1,0 +1,71 @@
+{
+  "operating_points": [
+    {
+      "dataset": "sift",
+      "threads": 8,
+      "codec": "tieredq",
+      "points": [
+        {
+          "bits": 2,
+          "recall_mean": 0.7601000000000001,
+          "recall_std": 8.164965809280893e-05,
+          "bytes_per_vector": 101.318786,
+          "qps_seed0": 2314.5564488564023,
+          "build_s_seed0": 2.1511749657802284,
+          "p50_ms_seed0": null,
+          "p95_ms_seed0": null,
+          "encode_vps_seed0": 881361.0206740203
+        }
+      ],
+      "minimum_measured_at_095": null
+    },
+    {
+      "dataset": "sift",
+      "threads": 8,
+      "codec": "rabitq",
+      "points": [
+        {
+          "bits": 2,
+          "recall_mean": 0.5484,
+          "recall_std": 0.0024913182588072575,
+          "bytes_per_vector": 52.000624,
+          "qps_seed0": 1982.6713390139735,
+          "build_s_seed0": 1.5357133778743446,
+          "p50_ms_seed0": null,
+          "p95_ms_seed0": null,
+          "encode_vps_seed0": 669306.01693794
+        }
+      ],
+      "minimum_measured_at_095": null
+    }
+  ],
+  "comparisons": [
+    {
+      "dataset": "sift",
+      "threads": 8,
+      "rabitq_anchor": {
+        "bits": 2,
+        "recall_mean": 0.5484,
+        "recall_std": 0.0024913182588072575,
+        "bytes_per_vector": 52.000624,
+        "qps_seed0": 1982.6713390139735,
+        "build_s_seed0": 1.5357133778743446,
+        "p50_ms_seed0": null,
+        "p95_ms_seed0": null,
+        "encode_vps_seed0": 669306.01693794
+      },
+      "tieredq_best_recall_within_budget": null,
+      "tieredq_fastest_at_least_anchor_recall": {
+        "bits": 2,
+        "recall_mean": 0.7601000000000001,
+        "recall_std": 8.164965809280893e-05,
+        "bytes_per_vector": 101.318786,
+        "qps_seed0": 2314.5564488564023,
+        "build_s_seed0": 2.1511749657802284,
+        "p50_ms_seed0": null,
+        "p95_ms_seed0": null,
+        "encode_vps_seed0": 881361.0206740203
+      }
+    }
+  ]
+}

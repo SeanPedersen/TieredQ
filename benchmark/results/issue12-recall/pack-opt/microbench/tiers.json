@@ -1,0 +1,706 @@
+[
+ {
+  "dataset": "sift",
+  "bits": 1,
+  "n": 1000000,
+  "storage_bytes_per_vector": 26.184188,
+  "tiers": [
+   [
+    3,
+    4
+   ],
+   [
+    2,
+    39
+   ],
+   [
+    1,
+    38
+   ]
+  ],
+  "coded_dimensions": 81,
+  "packed_code_bytes": 16,
+  "vector_bytes": 26,
+  "allocated_vector_bytes": 26004992,
+  "model_serialized_bytes": 176780,
+  "model_memory_bytes": 575828,
+  "model_serving_memory_bytes": 179196,
+  "scalar_fast_scan": false
+ },
+ {
+  "dataset": "sift",
+  "bits": 2,
+  "n": 1000000,
+  "storage_bytes_per_vector": 47.212392,
+  "tiers": [
+   [
+    4,
+    2
+   ],
+   [
+    3,
+    41
+   ],
+   [
+    2,
+    46
+   ],
+   [
+    1,
+    33
+   ]
+  ],
+  "coded_dimensions": 122,
+  "packed_code_bytes": 32,
+  "vector_bytes": 47,
+  "allocated_vector_bytes": 47009024,
+  "model_serialized_bytes": 198284,
+  "model_memory_bytes": 698304,
+  "model_serving_memory_bytes": 203368,
+  "scalar_fast_scan": false
+ },
+ {
+  "dataset": "sift",
+  "bits": 3,
+  "n": 1000000,
+  "storage_bytes_per_vector": 64.2188,
+  "tiers": [
+   [
+    4,
+    41
+   ],
+   [
+    3,
+    49
+   ],
+   [
+    2,
+    35
+   ],
+   [
+    1,
+    3
+   ]
+  ],
+  "coded_dimensions": 128,
+  "packed_code_bytes": 48,
+  "vector_bytes": 64,
+  "allocated_vector_bytes": 64012288,
+  "model_serialized_bytes": 201428,
+  "model_memory_bytes": 701448,
+  "model_serving_memory_bytes": 206512,
+  "scalar_fast_scan": false
+ },
+ {
+  "dataset": "sift",
+  "bits": 4,
+  "n": 1000000,
+  "storage_bytes_per_vector": 137.206512,
+  "tiers": [
+   [
+    5,
+    40
+   ],
+   [
+    4,
+    50
+   ],
+   [
+    3,
+    36
+   ],
+   [
+    2,
+    2
+   ]
+  ],
+  "coded_dimensions": 128,
+  "packed_code_bytes": 64,
+  "vector_bytes": 137,
+  "allocated_vector_bytes": 137000000,
+  "model_serialized_bytes": 201428,
+  "model_memory_bytes": 701448,
+  "model_serving_memory_bytes": 206512,
+  "scalar_fast_scan": false
+ },
+ {
+  "dataset": "sift",
+  "bits": 5,
+  "n": 1000000,
+  "storage_bytes_per_vector": 137.206512,
+  "tiers": [
+   [
+    6,
+    38
+   ],
+   [
+    5,
+    53
+   ],
+   [
+    4,
+    36
+   ],
+   [
+    3,
+    1
+   ]
+  ],
+  "coded_dimensions": 128,
+  "packed_code_bytes": 80,
+  "vector_bytes": 137,
+  "allocated_vector_bytes": 137000000,
+  "model_serialized_bytes": 201428,
+  "model_memory_bytes": 701448,
+  "model_serving_memory_bytes": 206512,
+  "scalar_fast_scan": false
+ },
+ {
+  "dataset": "sift",
+  "bits": 6,
+  "n": 1000000,
+  "storage_bytes_per_vector": 105.207568,
+  "tiers": [
+   [
+    7,
+    37
+   ],
+   [
+    6,
+    55
+   ],
+   [
+    5,
+    35
+   ],
+   [
+    4,
+    1
+   ]
+  ],
+  "coded_dimensions": 128,
+  "packed_code_bytes": 96,
+  "vector_bytes": 105,
+  "allocated_vector_bytes": 105001056,
+  "model_serialized_bytes": 201428,
+  "model_memory_bytes": 701448,
+  "model_serving_memory_bytes": 206512,
+  "scalar_fast_scan": false
+ },
+ {
+  "dataset": "sift",
+  "bits": 7,
+  "n": 1000000,
+  "storage_bytes_per_vector": 121.212828,
+  "tiers": [
+   [
+    8,
+    39
+   ],
+   [
+    7,
+    49
+   ],
+   [
+    6,
+    39
+   ],
+   [
+    5,
+    1
+   ],
+   [
+    2,
+    1
+   ]
+  ],
+  "coded_dimensions": 129,
+  "packed_code_bytes": 112,
+  "vector_bytes": 121,
+  "allocated_vector_bytes": 121002128,
+  "model_serialized_bytes": 201972,
+  "model_memory_bytes": 730404,
+  "model_serving_memory_bytes": 210700,
+  "scalar_fast_scan": false
+ },
+ {
+  "dataset": "sift",
+  "bits": 8,
+  "n": 1000000,
+  "storage_bytes_per_vector": 137.212316,
+  "tiers": [
+   [
+    8,
+    124
+   ],
+   [
+    7,
+    4
+   ],
+   [
+    4,
+    1
+   ]
+  ],
+  "coded_dimensions": 129,
+  "packed_code_bytes": 128,
+  "vector_bytes": 137,
+  "allocated_vector_bytes": 137001696,
+  "model_serialized_bytes": 201932,
+  "model_memory_bytes": 730324,
+  "model_serving_memory_bytes": 210620,
+  "scalar_fast_scan": false
+ },
+ {
+  "dataset": "glove",
+  "bits": 1,
+  "n": 100000,
+  "storage_bytes_per_vector": 38.74464,
+  "tiers": [
+   [
+    2,
+    1
+   ],
+   [
+    1,
+    198
+   ]
+  ],
+  "coded_dimensions": 199,
+  "packed_code_bytes": 25,
+  "vector_bytes": 35,
+  "allocated_vector_bytes": 3503360,
+  "model_serialized_bytes": 367812,
+  "model_memory_bytes": 1248504,
+  "model_serving_memory_bytes": 371104,
+  "scalar_fast_scan": false
+ },
+ {
+  "dataset": "glove",
+  "bits": 2,
+  "n": 100000,
+  "storage_bytes_per_vector": 63.79504,
+  "tiers": [
+   [
+    3,
+    1
+   ],
+   [
+    2,
+    198
+   ],
+   [
+    1,
+    1
+   ]
+  ],
+  "coded_dimensions": 200,
+  "packed_code_bytes": 50,
+  "vector_bytes": 60,
+  "allocated_vector_bytes": 6005760,
+  "model_serialized_bytes": 368640,
+  "model_memory_bytes": 1251144,
+  "model_serving_memory_bytes": 373744,
+  "scalar_fast_scan": false
+ },
+ {
+  "dataset": "glove",
+  "bits": 3,
+  "n": 100000,
+  "storage_bytes_per_vector": 112.87732,
+  "tiers": [
+   [
+    3,
+    200
+   ]
+  ],
+  "coded_dimensions": 200,
+  "packed_code_bytes": 75,
+  "vector_bytes": 109,
+  "allocated_vector_bytes": 10910464,
+  "model_serialized_bytes": 368600,
+  "model_memory_bytes": 1254668,
+  "model_serving_memory_bytes": 377268,
+  "scalar_fast_scan": false
+ },
+ {
+  "dataset": "glove",
+  "bits": 4,
+  "n": 100000,
+  "storage_bytes_per_vector": 112.87732,
+  "tiers": [
+   [
+    4,
+    200
+   ]
+  ],
+  "coded_dimensions": 200,
+  "packed_code_bytes": 100,
+  "vector_bytes": 109,
+  "allocated_vector_bytes": 10910464,
+  "model_serialized_bytes": 368600,
+  "model_memory_bytes": 1254668,
+  "model_serving_memory_bytes": 377268,
+  "scalar_fast_scan": false
+ },
+ {
+  "dataset": "glove",
+  "bits": 5,
+  "n": 100000,
+  "storage_bytes_per_vector": 212.77268,
+  "tiers": [
+   [
+    5,
+    200
+   ]
+  ],
+  "coded_dimensions": 200,
+  "packed_code_bytes": 125,
+  "vector_bytes": 209,
+  "allocated_vector_bytes": 20900000,
+  "model_serialized_bytes": 368600,
+  "model_memory_bytes": 1254668,
+  "model_serving_memory_bytes": 377268,
+  "scalar_fast_scan": false
+ },
+ {
+  "dataset": "glove",
+  "bits": 6,
+  "n": 100000,
+  "storage_bytes_per_vector": 212.77268,
+  "tiers": [
+   [
+    6,
+    200
+   ]
+  ],
+  "coded_dimensions": 200,
+  "packed_code_bytes": 150,
+  "vector_bytes": 209,
+  "allocated_vector_bytes": 20900000,
+  "model_serialized_bytes": 368600,
+  "model_memory_bytes": 1254668,
+  "model_serving_memory_bytes": 377268,
+  "scalar_fast_scan": false
+ },
+ {
+  "dataset": "glove",
+  "bits": 7,
+  "n": 100000,
+  "storage_bytes_per_vector": 188.77804,
+  "tiers": [
+   [
+    7,
+    200
+   ]
+  ],
+  "coded_dimensions": 200,
+  "packed_code_bytes": 175,
+  "vector_bytes": 185,
+  "allocated_vector_bytes": 18500536,
+  "model_serialized_bytes": 368600,
+  "model_memory_bytes": 1254668,
+  "model_serving_memory_bytes": 377268,
+  "scalar_fast_scan": false
+ },
+ {
+  "dataset": "glove",
+  "bits": 8,
+  "n": 100000,
+  "storage_bytes_per_vector": 212.78316,
+  "tiers": [
+   [
+    8,
+    200
+   ]
+  ],
+  "coded_dimensions": 200,
+  "packed_code_bytes": 200,
+  "vector_bytes": 209,
+  "allocated_vector_bytes": 20901048,
+  "model_serialized_bytes": 368600,
+  "model_memory_bytes": 1254668,
+  "model_serving_memory_bytes": 377268,
+  "scalar_fast_scan": false
+ },
+ {
+  "dataset": "openai",
+  "bits": 1,
+  "n": 100000,
+  "storage_bytes_per_vector": 287.41184,
+  "tiers": [
+   [
+    4,
+    40
+   ],
+   [
+    3,
+    143
+   ],
+   [
+    2,
+    280
+   ],
+   [
+    1,
+    387
+   ]
+  ],
+  "coded_dimensions": 850,
+  "packed_code_bytes": 192,
+  "vector_bytes": 219,
+  "allocated_vector_bytes": 21921024,
+  "model_serialized_bytes": 6804324,
+  "model_memory_bytes": 15669400,
+  "model_serving_memory_bytes": 6820160,
+  "scalar_fast_scan": false
+ },
+ {
+  "dataset": "openai",
+  "bits": 2,
+  "n": 100000,
+  "storage_bytes_per_vector": 1489.82832,
+  "tiers": [
+   [
+    5,
+    35
+   ],
+   [
+    4,
+    150
+   ],
+   [
+    3,
+    321
+   ],
+   [
+    2,
+    462
+   ],
+   [
+    1,
+    410
+   ]
+  ],
+  "coded_dimensions": 1378,
+  "packed_code_bytes": 384,
+  "vector_bytes": 1389,
+  "allocated_vector_bytes": 138900000,
+  "model_serialized_bytes": 10052600,
+  "model_memory_bytes": 23257448,
+  "model_serving_memory_bytes": 10082832,
+  "scalar_fast_scan": false
+ },
+ {
+  "dataset": "openai",
+  "bits": 3,
+  "n": 100000,
+  "storage_bytes_per_vector": 1651.46608,
+  "tiers": [
+   [
+    6,
+    24
+   ],
+   [
+    5,
+    134
+   ],
+   [
+    4,
+    321
+   ],
+   [
+    3,
+    505
+   ],
+   [
+    2,
+    449
+   ],
+   [
+    1,
+    97
+   ]
+  ],
+  "coded_dimensions": 1530,
+  "packed_code_bytes": 576,
+  "vector_bytes": 1541,
+  "allocated_vector_bytes": 154100000,
+  "model_serialized_bytes": 10987724,
+  "model_memory_bytes": 25400872,
+  "model_serving_memory_bytes": 11046608,
+  "scalar_fast_scan": false
+ },
+ {
+  "dataset": "openai",
+  "bits": 4,
+  "n": 100000,
+  "storage_bytes_per_vector": 887.72424,
+  "tiers": [
+   [
+    7,
+    13
+   ],
+   [
+    6,
+    129
+   ],
+   [
+    5,
+    316
+   ],
+   [
+    4,
+    536
+   ],
+   [
+    3,
+    477
+   ],
+   [
+    2,
+    61
+   ],
+   [
+    1,
+    2
+   ]
+  ],
+  "coded_dimensions": 1534,
+  "packed_code_bytes": 768,
+  "vector_bytes": 777,
+  "allocated_vector_bytes": 77701208,
+  "model_serialized_bytes": 11012352,
+  "model_memory_bytes": 25425480,
+  "model_serving_memory_bytes": 11071216,
+  "scalar_fast_scan": false
+ },
+ {
+  "dataset": "openai",
+  "bits": 5,
+  "n": 100000,
+  "storage_bytes_per_vector": 1079.73424,
+  "tiers": [
+   [
+    8,
+    15
+   ],
+   [
+    7,
+    111
+   ],
+   [
+    6,
+    319
+   ],
+   [
+    5,
+    555
+   ],
+   [
+    4,
+    492
+   ],
+   [
+    3,
+    42
+   ]
+  ],
+  "coded_dimensions": 1534,
+  "packed_code_bytes": 960,
+  "vector_bytes": 969,
+  "allocated_vector_bytes": 96902208,
+  "model_serialized_bytes": 11012332,
+  "model_memory_bytes": 25425480,
+  "model_serving_memory_bytes": 11071216,
+  "scalar_fast_scan": false
+ },
+ {
+  "dataset": "openai",
+  "bits": 6,
+  "n": 100000,
+  "storage_bytes_per_vector": 1271.73392,
+  "tiers": [
+   [
+    8,
+    141
+   ],
+   [
+    7,
+    285
+   ],
+   [
+    6,
+    581
+   ],
+   [
+    5,
+    499
+   ],
+   [
+    4,
+    28
+   ]
+  ],
+  "coded_dimensions": 1534,
+  "packed_code_bytes": 1152,
+  "vector_bytes": 1161,
+  "allocated_vector_bytes": 116102176,
+  "model_serialized_bytes": 11012312,
+  "model_memory_bytes": 25425480,
+  "model_serving_memory_bytes": 11071216,
+  "scalar_fast_scan": false
+ },
+ {
+  "dataset": "openai",
+  "bits": 7,
+  "n": 100000,
+  "storage_bytes_per_vector": 1463.73152,
+  "tiers": [
+   [
+    8,
+    513
+   ],
+   [
+    7,
+    536
+   ],
+   [
+    6,
+    471
+   ],
+   [
+    5,
+    14
+   ]
+  ],
+  "coded_dimensions": 1534,
+  "packed_code_bytes": 1344,
+  "vector_bytes": 1353,
+  "allocated_vector_bytes": 135302016,
+  "model_serialized_bytes": 11012292,
+  "model_memory_bytes": 25425400,
+  "model_serving_memory_bytes": 11071136,
+  "scalar_fast_scan": false
+ },
+ {
+  "dataset": "openai",
+  "bits": 8,
+  "n": 100000,
+  "storage_bytes_per_vector": 1655.84428,
+  "tiers": [
+   [
+    8,
+    1536
+   ]
+  ],
+  "coded_dimensions": 1536,
+  "packed_code_bytes": 1536,
+  "vector_bytes": 1545,
+  "allocated_vector_bytes": 154501048,
+  "model_serialized_bytes": 11024536,
+  "model_memory_bytes": 25437644,
+  "model_serving_memory_bytes": 11083380,
+  "scalar_fast_scan": false
+ }
+]

@@ -1,0 +1,24 @@
+{
+  "status": "complete",
+  "primary_matrix": "36 rows, 3 seeds, full original datasets and 1000 queries, native RaBitQ pruning/HACC",
+  "core_matrix_wall_seconds": 385.68361687194556,
+  "primary_auxiliary_profile_exit": 1,
+  "profiling_recovery": "Initial auxiliary profile used a copied CMake cache with the old source path. Cache was preserved under a new name, and a fresh separately instrumented stage build completed all 12 profiles.",
+  "independent_high_bit_repetition": "3 TieredQ points, seed 0, full 1000 queries; source snapshot supplied",
+  "full_score_diagnostic": "3 separate RaBitQ points, native extra-bit pruning disabled, HACC retained",
+  "normal_fast_recall_parity": "Matched at all 3 full-data 8-bit seed-0 points",
+  "validation": {
+    "cpp_arm": "passed",
+    "cpp_x86": "passed",
+    "python_api_tests": 42,
+    "linux_benchmark_tests": 16,
+    "artifact_audit": "passed"
+  },
+  "limitations": [
+    "Three seeds do not establish statistical significance, especially for SIFT.",
+    "Nominal budgets are not exact equal-memory comparisons.",
+    "Primary timing measures 8 threads/batch 32, not single-query latency.",
+    "Precision-preserving fast mode is slower than the previous int8 approximation.",
+    "Public TieredQ API remains inner-product search; the L2 adapter is in the benchmark harness."
+  ]
+}

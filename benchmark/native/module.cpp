@@ -25,7 +25,7 @@ class Index {
   size_t width_, count_;
   double encode_s_ = 0;
  public:
-  Index(Matrix base, size_t bits, uint64_t seed, bool tieredq, bool l2)
+  Index(Matrix base, size_t bits, uint64_t seed, bool tieredq, bool l2, bool fast = true)
       : width_(base.shape(1)), count_(base.shape(0)) {
     if (count_ < top_k || !width_ || bits < 1 || bits > 8) throw std::invalid_argument("invalid index shape/bits");
     if (tieredq) {
@@ -39,7 +39,7 @@ class Index {
       std::vector<float> sample(train_count * width_);
       for (size_t i=0; i<train_count; ++i)
         std::copy_n(base.data()+order[i]*width_, width_, sample.data()+i*width_);
-      tq_ = std::make_unique<dv::TieredQIndex>(dv::TieredQ::train(config, sample.data(), train_count, seed), true);
+      tq_ = std::make_unique<dv::TieredQIndex>(dv::TieredQ::train(config, sample.data(), train_count, seed), fast);
       const auto start = std::chrono::steady_clock::now();
       tq_->add(base.data(), count_);
       encode_s_ = std::chrono::duration<double>(std::chrono::steady_clock::now()-start).count();
@@ -49,6 +49,29 @@ class Index {
     encode_s_ = rq_->encode_seconds();
   }
   double encode_seconds() const { return encode_s_; }
+  nb::dict diagnostics() const {
+    if (!tq_) throw std::invalid_argument("TieredQ diagnostics require a TieredQ index");
+    const auto& codec = tq_->codec();
+    nb::list tiers;
+    for (const auto& tier : codec.tiers()) {
+      nb::dict entry;
+      entry["start"] = tier.start;
+      entry["dimensions"] = tier.dimensions;
+      entry["bits"] = tier.bits;
+      tiers.append(entry);
+    }
+    nb::dict result;
+    result["tiers"] = tiers;
+    result["coded_dimensions"] = codec.coded_dimensions();
+    result["packed_code_bytes"] = codec.code_bytes();
+    result["vector_bytes"] = tq_->bytes_per_vector();
+    result["allocated_vector_bytes"] = tq_->storage_bytes();
+    result["model_serialized_bytes"] = codec.model_bytes();
+    result["model_memory_bytes"] = codec.memory_bytes();
+    result["model_serving_memory_bytes"] = dv::TieredQ::deserialize(codec.serialize()).memory_bytes();
+    result["scalar_fast_scan"] = tq_->uses_scalar_fast_scan();
+    return result;
+  }
   void search(Matrix queries, Ids ids, int threads) const {
     const size_t rows=queries.shape(0);
     if (queries.shape(1)!=width_ || ids.shape(0)!=rows || ids.shape(1)!=top_k || threads<1)
@@ -65,8 +88,9 @@ class Index {
   size_t storage(const std::string& path) const {
     if (rq_) { rq_->save(path.c_str()); return std::max<size_t>(std::filesystem::file_size(path),rq_->storage_bytes()); }
     tq_->save(path);
-    // Persisted models omit derived encoder state; include the allocated model too.
-    return std::max<size_t>(std::filesystem::file_size(path), tq_->storage_bytes()+tq_->codec().memory_bytes());
+    // Serving footprint: a reloaded index holds the model's serving state; encoder state is built only on append.
+    const auto served=dv::TieredQIndex::load(path);
+    return std::max<size_t>(std::filesystem::file_size(path), served.storage_bytes()+served.codec().memory_bytes());
   }
 };
 NB_MODULE(codec_native, m) {
@@ -86,6 +110,8 @@ NB_MODULE(codec_native, m) {
   m.def("set_threads", [](int n){ omp_set_dynamic(0); omp_set_num_threads(n); });
   nb::class_<Index>(m,"Index")
     .def(nb::init<Matrix,size_t,uint64_t,bool,bool>(), nb::call_guard<nb::gil_scoped_release>())
+    .def(nb::init<Matrix,size_t,uint64_t,bool,bool,bool>(), nb::call_guard<nb::gil_scoped_release>())
+    .def("diagnostics", &Index::diagnostics)
     .def_prop_ro("encode_seconds", &Index::encode_seconds)
     .def("search", &Index::search, nb::call_guard<nb::gil_scoped_release>())
     .def("storage", &Index::storage);

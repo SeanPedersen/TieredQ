@@ -5,6 +5,7 @@
 #include "tieredq_scan_int8.h"
 #include "tieredq_scan_query_x86.h"
 #include "tieredq_scan_lookup_avx512.h"
+#include "tieredq_scan_codes_x86.h"
 #include <immintrin.h>
 #include <omp.h>
 
@@ -21,6 +22,11 @@ __attribute__((target("avx512f,avx512bw")))
 inline void scan_fast_avx512_tile_impl(const FastScanCache& cache, const FastScanQueryX86* queries,
     size_t rows, size_t first, size_t count, float* scores, size_t stride) {
   const size_t query_count=query_tile==1 ? 1 : rows;
+  if (cache.code_lookup()) {
+    scan_codes_avx512_tile(cache,query_count,first,count,scores,stride,
+        [&](size_t row)->const TieredQQuery& {return queries[row].codes;});
+    return;
+  }
   if (cache.lookup) {
     for (size_t row=0; row<query_count; ++row)
       scan_fast_lookup_avx512_range(cache,queries[row].lookup,first,count,scores+row*stride);
@@ -66,7 +72,7 @@ inline void scan_fast_avx512(const FastScanCache& cache, const FastScanQueryX86&
 }
 inline void scan_fast_avx512_batch(const FastScanCache& cache,
     const std::vector<FastScanQueryX86>& queries,float* scores) {
-  const size_t tile=cache.lookup ? 1 : fast_scan_query_tile_x86;
+  const size_t tile=cache.lookup ? 1 : cache.code_lookup() ? fast_code_query_group : fast_scan_query_tile_x86;
 #pragma omp parallel for schedule(static) if(queries.size()>tile && !omp_in_parallel())
   for (size_t first=0;first<queries.size();first+=tile)
     scan_fast_avx512_tile(cache,queries.data()+first,std::min(tile,queries.size()-first),

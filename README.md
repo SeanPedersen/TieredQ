@@ -48,6 +48,11 @@ index = TieredQIndex.load("index.tq")
   to control parallelism.
 
 See [fast-mode measurements](docs/glove200-fast-scan.md) for accuracy and speed.
+Models with tiers wider than 4 bits now retain original codebook precision in fast mode.
+This improves recall at a throughput cost; existing numerical-level fast indexes
+need rebuilding to recover that precision. Their fast storage keeps codes at tier
+width; files saved with the earlier one-byte-per-coordinate layout still load and are
+repacked. See the [high-bit investigation](docs/high-bit-recall.md).
 
 ## C++
 

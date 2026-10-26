@@ -1,17 +1,23 @@
 // Fast-only representation ownership, transactional append and versioned cache persistence.
+// Code-lookup caches persist packed code rows; legacy byte-per-coordinate payloads are repacked on load.
 #pragma once
 #include "tieredq_io.h"
 #include "tieredq_scan_lookup_x86.h"
+#include <climits>
 
 namespace dv::tieredq_detail {
-constexpr uint32_t fast_payload_version=1,fast_lookup_kind=1,fast_levels_kind=2;
+constexpr uint32_t fast_payload_version=1,fast_lookup_kind=1,fast_levels_kind=2,fast_byte_code_kind=3,fast_packed_code_kind=4;
 constexpr size_t fast_metadata_bytes=sizeof(float)*2+sizeof(uint8_t);
 inline size_t fast_storage_bytes(const FastScanCache& cache) {
-  return cache.levels.capacity()+cache.factor.capacity()*sizeof(float)+cache.correction.capacity()*sizeof(float)+
-      cache.centroid.capacity()+(cache.lookup ? cache.lookup->codes.capacity() : 0);
+  size_t bytes=sizeof(cache)+cache.levels.capacity()+cache.factor.capacity()*sizeof(float)+cache.correction.capacity()*sizeof(float)+
+      cache.centroid.capacity()+(cache.lookup ? cache.lookup->allocated_bytes() : 0);
+  bytes+=cache.code_offset.capacity()*sizeof(uint32_t)+cache.level_scale.capacity()*sizeof(float)+cache.tier_of.capacity();
+  bytes+=cache.codebooks.capacity()*sizeof(std::vector<float>);
+  for (const auto& book:cache.codebooks) bytes+=book.capacity()*sizeof(float);
+  return bytes;
 }
 inline size_t fast_vector_bytes(const FastScanCache& cache) {
-  return (cache.lookup ? cache.lookup->pairs() : cache.groups*4)+fast_metadata_bytes;
+  return (cache.lookup ? cache.lookup->pairs() : cache.level_block_bytes()/fast_scan_block_docs)+fast_metadata_bytes;
 }
 inline std::shared_ptr<FastScanCache> copy_fast_storage(const FastScanCache& cache) {
   auto copy=std::make_shared<FastScanCache>(cache);
@@ -26,7 +32,7 @@ inline void append_fast_rows(FastScanCache& cache,const std::vector<std::vector<
   const size_t blocks=(total+block_docs-1)/block_docs,padded=blocks*block_docs;
   const Layout layout{code_bytes};
   std::vector<std::vector<int8_t>> levels(tiers.size());
-  if (!cache.lookup) for (size_t ti=0;ti<tiers.size();++ti) {
+  if (!cache.lookup && !cache.code_lookup()) for (size_t ti=0;ti<tiers.size();++ti) {
     const auto& book=books[tiers[ti].bits]; levels[ti].resize(book.size());
     for (size_t code=0;code<book.size();++code)
       levels[ti][code]=int8_t(std::clamp<long>(std::lround(book[code]/cache.level_scale[ti]),-cache.level_max,cache.level_max));
@@ -44,10 +50,10 @@ inline void append_fast_rows(FastScanCache& cache,const std::vector<std::vector<
   };
   reserve(cache.factor,padded);reserve(cache.correction,padded);reserve(cache.centroid,padded);
   if (cache.lookup) reserve(cache.lookup->codes,product(product(blocks,cache.lookup->pairs()),block_docs));
-  else reserve(cache.levels,product(product(blocks,cache.groups),64));
+  else reserve(cache.levels,product(blocks,cache.level_block_bytes()));
   cache.factor.resize(padded,0);cache.correction.resize(padded,0);cache.centroid.resize(padded,0);
   if (cache.lookup) cache.lookup->codes.resize(product(product(blocks,cache.lookup->pairs()),block_docs),0);
-  else cache.levels.resize(product(product(blocks,cache.groups),64),0);
+  else cache.levels.resize(product(blocks,cache.level_block_bytes()),0);
   for (size_t i=0;i<count;++i) {
     const uint8_t* row=rows+i*stride;const size_t doc=cache.count+i;
     cache.factor[doc]=layout.factor(row);cache.correction[doc]=layout.correction(row);cache.centroid[doc]=row[code_bytes];
@@ -60,7 +66,8 @@ inline void append_fast_rows(FastScanCache& cache,const std::vector<std::vector<
         const size_t shift=g%lookup_pair_groups*lookup_code_bits;
         lookup.codes[position]=uint8_t((lookup.codes[position]&~((lookup_table_entries-1)<<shift))|(code<<shift));
       }
-    } else for (size_t rank=0;rank<cache.dimensions;++rank) {
+    } else if (cache.code_lookup()) store_code_row(cache,doc,row);
+    else for (size_t rank=0;rank<cache.dimensions;++rank) {
       const size_t ti=cache.tier_of[rank];const auto& tier=tiers[ti];
       const auto code=read_code(row,tier.bit_offset+(rank-tier.start)*tier.bits,tier.bits);
       cache.levels[fast_level_position(cache.groups,doc,rank)]=levels[ti][code];
@@ -80,13 +87,36 @@ template<class T> void read_fast_bytes(Reader& reader,std::vector<T>& bytes,size
   reader.pos+=expected;
 }
 inline std::vector<uint8_t> serialize_fast_storage(const FastScanCache& cache) {
-  Writer writer;writer.u32(fast_payload_version);writer.u32(cache.lookup ? fast_lookup_kind : fast_levels_kind);
+  Writer writer;writer.u32(fast_payload_version);
+  writer.u32(cache.lookup ? fast_lookup_kind : cache.code_lookup() ? fast_packed_code_kind : fast_levels_kind);
   writer.u32(cache.lookup ? 0 : uint32_t(cache.level_max));
   writer.floats(cache.factor);writer.floats(cache.correction);write_fast_bytes(writer,cache.centroid);
   if (cache.lookup) write_fast_bytes(writer,cache.lookup->codes); else write_fast_bytes(writer,cache.levels);
   return std::move(writer.data);
 }
-inline void read_fast_storage(Reader& reader,FastScanCache& cache,size_t count,size_t centroids) {
+// Legacy payloads store one byte per coordinate in 4-coordinate groups; padding documents are dropped.
+inline void repack_byte_codes(FastScanCache& cache,const std::vector<int8_t>& bytes) {
+  std::vector<uint8_t> row((cache.code_bits+CHAR_BIT-1)/CHAR_BIT);
+  for (size_t doc=0;doc<cache.blocks*fast_scan_block_docs;++doc) {
+    std::fill(row.begin(),row.end(),0);
+    for (size_t rank=0;rank<cache.dimensions;++rank) {
+      const uint8_t code=uint8_t(bytes[fast_level_position(cache.groups,doc,rank)]);
+      const size_t width=fast_code_width(cache,rank);
+      if (code>>width) bad("invalid fast code");
+      write_code(row.data(),cache.code_offset[rank],unsigned(width),code);
+    }
+    if (doc<cache.count) store_code_row(cache,doc,row.data());
+  }
+}
+// Packed words hold no bits past code_bits, and padding documents are all zero.
+inline void validate_packed_codes(const FastScanCache& cache) {
+  for (size_t doc=0;doc<cache.blocks*fast_scan_block_docs;++doc) for (size_t word=0;word<cache.code_words();++word) {
+    const size_t used=doc<cache.count ? std::min(fast_code_word_bits,cache.code_bits-word*fast_code_word_bits) : 0;
+    const uint64_t allowed=(uint64_t(1)<<used)-1;
+    if (load_code_word(cache.levels.data()+fast_code_word_position(cache.code_words(),doc,word))&~allowed) bad("nonzero fast code padding");
+  }
+}
+inline void read_fast_storage(Reader& reader,FastScanCache& cache,size_t count,size_t centroids,bool byte_codes=false) {
   const size_t block_docs=cache.lookup ? lookup_block_docs : fast_scan_block_docs;
   cache.count=count;cache.blocks=(count+block_docs-1)/block_docs;
   const size_t padded=product(cache.blocks,block_docs);
@@ -97,9 +127,15 @@ inline void read_fast_storage(Reader& reader,FastScanCache& cache,size_t count,s
   floats(cache.factor);floats(cache.correction);read_fast_bytes(reader,cache.centroid,padded);
   if (std::any_of(cache.centroid.begin(),cache.centroid.end(),[&](uint8_t id){return id>=centroids;})) bad("invalid fast centroid id");
   if (cache.lookup) read_fast_bytes(reader,cache.lookup->codes,product(product(cache.blocks,cache.lookup->pairs()),block_docs));
-  else {
-    read_fast_bytes(reader,cache.levels,product(product(cache.blocks,cache.groups),64));
-    if (std::any_of(cache.levels.begin(),cache.levels.end(),[&](int value){return value<-cache.level_max || value>cache.level_max;})) bad("invalid fast level");
+  else if (byte_codes) {
+    std::vector<int8_t> bytes;
+    read_fast_bytes(reader,bytes,product(product(cache.blocks,cache.groups),fast_scan_group_bytes));
+    cache.levels.assign(product(cache.blocks,cache.level_block_bytes()),0);
+    repack_byte_codes(cache,bytes);
+  } else {
+    read_fast_bytes(reader,cache.levels,product(cache.blocks,cache.level_block_bytes()));
+    if (cache.code_lookup()) validate_packed_codes(cache);
+    else if (std::any_of(cache.levels.begin(),cache.levels.end(),[&](int value){return value<-cache.level_max || value>cache.level_max;})) bad("invalid fast level");
   }
   if (reader.pos!=reader.data.size()) bad("trailing fast payload bytes");
 }

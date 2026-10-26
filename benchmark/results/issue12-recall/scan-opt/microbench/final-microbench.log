@@ -1,0 +1,108 @@
+# isabench: single core (taskset -c 2), 65536 docs, 256 centroids, all-8-bit; ns per doc*dim*query
+== baseline dims 132
+avx2   rows= 1 1.408 ns/(doc*dim*query)
+avx2   rows= 8 0.360 ns/(doc*dim*query)
+avx2   rows=32 0.358 ns/(doc*dim*query)
+avx512 rows= 1 0.740 ns/(doc*dim*query)
+avx512 rows= 8 0.206 ns/(doc*dim*query)
+avx512 rows=32 0.205 ns/(doc*dim*query)
+== new dims 132
+avx2   rows= 1 0.481 ns/(doc*dim*query)
+avx2   rows= 8 0.109 ns/(doc*dim*query)
+avx2   rows=32 0.074 ns/(doc*dim*query)
+avx512 rows= 1 0.279 ns/(doc*dim*query)
+avx512 rows= 8 0.055 ns/(doc*dim*query)
+avx512 rows=32 0.032 ns/(doc*dim*query)
+== baseline dims 200
+avx2   rows= 1 1.247 ns/(doc*dim*query)
+avx2   rows= 8 0.348 ns/(doc*dim*query)
+avx2   rows=32 0.367 ns/(doc*dim*query)
+avx512 rows= 1 0.732 ns/(doc*dim*query)
+avx512 rows= 8 0.210 ns/(doc*dim*query)
+avx512 rows=32 0.217 ns/(doc*dim*query)
+== new dims 200
+avx2   rows= 1 0.482 ns/(doc*dim*query)
+avx2   rows= 8 0.103 ns/(doc*dim*query)
+avx2   rows=32 0.066 ns/(doc*dim*query)
+avx512 rows= 1 0.281 ns/(doc*dim*query)
+avx512 rows= 8 0.055 ns/(doc*dim*query)
+avx512 rows=32 0.031 ns/(doc*dim*query)
+== baseline dims 1536
+avx2   rows= 1 1.230 ns/(doc*dim*query)
+avx2   rows= 8 0.341 ns/(doc*dim*query)
+avx2   rows=32 0.365 ns/(doc*dim*query)
+avx512 rows= 1 0.733 ns/(doc*dim*query)
+avx512 rows= 8 0.202 ns/(doc*dim*query)
+avx512 rows=32 0.210 ns/(doc*dim*query)
+== new dims 1536
+avx2   rows= 1 0.474 ns/(doc*dim*query)
+avx2   rows= 8 0.095 ns/(doc*dim*query)
+avx2   rows=32 0.055 ns/(doc*dim*query)
+avx512 rows= 1 0.303 ns/(doc*dim*query)
+avx512 rows= 8 0.059 ns/(doc*dim*query)
+avx512 rows=32 0.034 ns/(doc*dim*query)
+# pbench: production kernel phases (cycles assume 3.19 GHz; perf measured ~3.4 GHz)
+dims 132 decode 13.44 cyc/rank-block  accumulate 1.19 cyc/(rank-block-row)  32-row total 0.032 ns/doc-dim-query
+dims 200 decode 12.73 cyc/rank-block  accumulate 1.08 cyc/(rank-block-row)  32-row total 0.029 ns/doc-dim-query
+dims 1536 decode 13.55 cyc/rank-block  accumulate 1.24 cyc/(rank-block-row)  32-row total 0.033 ns/doc-dim-query
+# qbench: query_weights, 1 thread, 256 centroids
+== baseline
+dims 200 query_weights 0.063 ms/query (-1.22039)
+dims 200 query_weights 0.062 ms/query (-1.22039)
+dims 1536 query_weights 0.899 ms/query (-16.5026)
+dims 1536 query_weights 0.876 ms/query (-16.5026)
+== new
+dims 200 query_weights 0.042 ms/query (-1.22039)
+dims 200 query_weights 0.040 ms/query (-1.22039)
+dims 1536 query_weights 0.673 ms/query (-16.5026)
+dims 1536 query_weights 0.668 ms/query (-16.5026)
+# kbench: exploratory variants (baseline, gather register tiles, table, decoded)
+== dims 132
+baseline(tile4)        rows= 1  0.732 ns/(doc*dim*query)  6.3 ms
+baseline(tile4)        rows= 4  0.262 ns/(doc*dim*query)  9.1 ms
+new R1 B4              rows= 1  0.601 ns/(doc*dim*query)  5.2 ms
+new R4 B1              rows= 4  0.156 ns/(doc*dim*query)  5.4 ms
+new R8 B1              rows= 8  0.094 ns/(doc*dim*query)  6.5 ms
+new R16 B1             rows=16  0.075 ns/(doc*dim*query)  10.3 ms
+table R1 B1            rows= 1  0.305 ns/(doc*dim*query)  2.6 ms
+table R4 B1            rows= 4  0.097 ns/(doc*dim*query)  3.3 ms
+table R8 B1            rows= 8  0.069 ns/(doc*dim*query)  4.7 ms
+table R12 B1           rows=12  0.055 ns/(doc*dim*query)  5.7 ms
+table R16 B1           rows=16  0.051 ns/(doc*dim*query)  7.0 ms
+decoded R1 T1          rows= 1  0.337 ns/(doc*dim*query)  2.9 ms
+decoded R4 T1          rows= 4  0.092 ns/(doc*dim*query)  3.2 ms
+decoded R8 T1          rows= 8  0.061 ns/(doc*dim*query)  4.2 ms
+decoded R16 T1         rows=16  0.046 ns/(doc*dim*query)  6.4 ms
+decoded R8 T4          rows=32  0.039 ns/(doc*dim*query)  10.7 ms
+decoded R16 T2         rows=32  0.039 ns/(doc*dim*query)  10.8 ms
+decoded R12 T1         rows=12  0.050 ns/(doc*dim*query)  5.2 ms
+table R16 x2 tiles     rows=32  0.051 ns/(doc*dim*query)  14.1 ms
+== dims 1536
+baseline(tile4)        rows= 1  0.720 ns/(doc*dim*query)  72.5 ms
+baseline(tile4)        rows= 4  0.200 ns/(doc*dim*query)  80.4 ms
+new R1 B4              rows= 1  0.568 ns/(doc*dim*query)  57.1 ms
+new R4 B1              rows= 4  0.151 ns/(doc*dim*query)  60.9 ms
+new R8 B1              rows= 8  0.086 ns/(doc*dim*query)  69.5 ms
+new R16 B1             rows=16  0.060 ns/(doc*dim*query)  96.2 ms
+table R1 B1            rows= 1  0.295 ns/(doc*dim*query)  29.7 ms
+table R4 B1            rows= 4  0.090 ns/(doc*dim*query)  36.3 ms
+table R8 B1            rows= 8  0.060 ns/(doc*dim*query)  48.6 ms
+table R12 B1           rows=12  0.048 ns/(doc*dim*query)  58.0 ms
+table R16 B1           rows=16  0.043 ns/(doc*dim*query)  69.6 ms
+decoded R1 T1          rows= 1  0.347 ns/(doc*dim*query)  34.9 ms
+decoded R4 T1          rows= 4  0.096 ns/(doc*dim*query)  38.5 ms
+decoded R8 T1          rows= 8  0.059 ns/(doc*dim*query)  47.9 ms
+decoded R16 T1         rows=16  0.042 ns/(doc*dim*query)  67.1 ms
+decoded R8 T4          rows=32  0.034 ns/(doc*dim*query)  110.8 ms
+decoded R16 T2         rows=32  0.033 ns/(doc*dim*query)  107.9 ms
+decoded R12 T1         rows=12  0.043 ns/(doc*dim*query)  52.3 ms
+table R16 x2 tiles     rows=32  0.043 ns/(doc*dim*query)  138.5 ms
+# qbench (batched build of new library), 1 thread
+dims 200 query_weights 0.040 ms/query (-1.22039)
+dims 200 query_weights 0.038 ms/query (-1.22039)
+dims 200 batched query_weights 0.011 ms/query (0.277896)
+dims 200 batched query_weights 0.011 ms/query (0.277896)
+dims 1536 query_weights 0.679 ms/query (-16.5026)
+dims 1536 query_weights 0.651 ms/query (-16.5026)
+dims 1536 batched query_weights 0.379 ms/query (0.400979)
+dims 1536 batched query_weights 0.373 ms/query (0.400979)

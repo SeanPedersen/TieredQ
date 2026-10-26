@@ -407,30 +407,35 @@ TieredQ TieredQ::train(TieredQConfig config,const float* sample,size_t rows,uint
     tieredq_detail::projection_stats(projected,rows,m,c.mean_,c.sigma_);
   }
   profile.mark("projection_stats");
-  c.prepare_encoder();
-  profile.mark("prepare_encoder");
+  c.prepare_serving();
+  profile.mark("prepare_serving");
   c.validate_model(); return c;
 }
 
-void TieredQ::prepare_encoder() {
+void TieredQ::prepare_serving() {
+  centroid_half_norms_=half_norms(centroids_,config_.num_centroids,config_.dimensions);
+  tieredq_detail::build_scan_plan(tiers_,scan_plan_);
+  encoder_=std::make_shared<tieredq_detail::LazyEncoder>();
+}
+tieredq_detail::EncoderData TieredQ::build_encoder() const {
   const size_t d=config_.dimensions,m=coded_dimensions(),k=config_.num_centroids;
-  encode_panels_=pack_panels(d,m+k,[&](size_t j,size_t r) {
+  tieredq_detail::EncoderData encoder;
+  encoder.fused_panels=pack_panels(d,m+k,[&](size_t j,size_t r) {
     return r<m ? basis_[j*m+r] : centroids_[(r-m)*d+j];
   });
   const auto projection=pack_panels(d,m,[&](size_t j,size_t r) { return basis_[j*m+r]; });
   const std::vector<double> centers(centroids_.begin(),centroids_.end());
-  centroid_projections_.resize(product(k,projection.padded_columns()));
-  tieredq_detail::ordered_matrix(centers.data(),k,projection,centroid_projections_.data());
-  exact_centroid_half_norms_=exact_half_norms(centroids_,k,d);
-  centroid_half_norms_.assign(exact_centroid_half_norms_.begin(),exact_centroid_half_norms_.end());
-  tieredq_detail::build_scan_plan(tiers_,scan_plan_);
+  encoder.centroid_projections.resize(product(k,projection.padded_columns()));
+  tieredq_detail::ordered_matrix(centers.data(),k,projection,encoder.centroid_projections.data());
+  encoder.half_norms=exact_half_norms(centroids_,k,d);
+  return encoder;
 }
 // One fused GEMM yields the basis projection [0, m) and centroid dots [m, m+K) per row;
 // the residual projection is x*basis - c*basis.
 void TieredQ::encode_block(const float* rows,size_t count,uint8_t* out,float* corrections,tieredq_detail::StageProfile* profile) const {
   const Layout layout{code_bytes()};
   const tieredq_detail::EncodingModel model{config_.dimensions,centroids_,mean_,sigma_,levels_,tiers_};
-  const tieredq_detail::EncoderState encoder{encode_panels_,centroid_projections_,exact_centroid_half_norms_};
+  const auto encoder=encoder_->get([&] { return build_encoder(); }).view();
   const TieredQKernel kernel=kernel_available(TieredQKernel::neon) ? TieredQKernel::neon : TieredQKernel::automatic;
   tieredq_detail::encode_block(model,encoder,layout,rows,count,out,corrections,kernel,profile);
 }
@@ -460,24 +465,98 @@ std::vector<uint8_t> TieredQ::encode(const float* rows,size_t count) const {
   return out;
 }
 TieredQQuery TieredQ::query(const float* vector) const {
-  finite_rows(vector,config_.dimensions); TieredQQuery q; const size_t m=coded_dimensions(),d=config_.dimensions;
-  std::vector<float> transformed(m,0);
-  for (size_t i=0;i<d;++i) for (size_t j=0;j<m;++j) transformed[j]+=vector[i]*basis_[i*m+j];
-  q.offsets.resize(m); q.weights.resize(m);
+  auto q=query_weights(vector);
+  q.offsets.resize(coded_dimensions());
   for (const auto& t:tiers_) for (uint32_t j=0;j<t.dimensions;++j) {
-    const size_t rank=t.start+j; q.offsets[rank]=q.lut.size();
-    q.weights[rank]=transformed[rank]*sigma_[rank];
+    const size_t rank=t.start+j;q.offsets[rank]=q.lut.size();
     for (float level:levels_[t.bits]) q.lut.push_back(q.weights[rank]*level);
-  }
-  q.centroid_scores.assign(config_.num_centroids,0); q.correction_weights.assign(config_.num_centroids,0);
-  // Quantization removes the projected residual mean; restore it in the score.
-  float correction=0; for (size_t j=0;j<m;++j) correction+=transformed[j]*mean_[j];
-  for (uint32_t id=0;id<config_.num_centroids;++id) {
-    float s=0; for (size_t j=0;j<d;++j) s+=vector[j]*centroids_[size_t(id)*d+j]; q.centroid_scores[id]=s+correction;
-    const float norm=2*centroid_half_norms_[id]; q.correction_weights[id]=norm>0 ? s/norm : 0;
   }
   tieredq_detail::build_scan_groups(tiers_,q);
   return q;
+}
+namespace {
+// Queries per projection tile and interleaved centroid reductions; tiles share each basis row and run
+// centroid dots across query lanes. Every output keeps its per-query summation order (input dimensions
+// ascending), so batching never changes a weight or score.
+constexpr size_t query_weight_tile=8,query_centroid_chains=4;
+template<size_t Chains>
+void centroid_dot_tile(const float* lanes,const float* centroids,size_t d,size_t first,float (&dots)[Chains][query_weight_tile]) {
+  for (auto& chain:dots) std::fill(std::begin(chain),std::end(chain),0.0f);
+  for (size_t i=0;i<d;++i) {
+    const float* lane=lanes+i*query_weight_tile;
+    for (size_t chain=0;chain<Chains;++chain) {
+      const float value=centroids[(first+chain)*d+i];
+      for (size_t row=0;row<query_weight_tile;++row) dots[chain][row]+=lane[row]*value;
+    }
+  }
+}
+} // namespace
+void TieredQ::project_query_tile(const float* vectors,size_t rows,TieredQQuery* out) const {
+  const size_t m=coded_dimensions(),d=config_.dimensions,centroids=config_.num_centroids;
+  std::vector<float> transformed(rows*m,0);
+  for (size_t i=0;i<d;++i) for (size_t row=0;row<rows;++row) {
+    const float value=vectors[row*d+i];
+    float* projected=transformed.data()+row*m;
+    const float* basis=basis_.data()+i*m;
+    for (size_t j=0;j<m;++j) projected[j]+=value*basis[j];
+  }
+  std::array<float,query_weight_tile> correction{};
+  for (size_t row=0;row<rows;++row) {
+    const float* projected=transformed.data()+row*m;
+    auto& q=out[row];
+    q.weights.resize(m);
+    for (size_t rank=0;rank<m;++rank) q.weights[rank]=projected[rank]*sigma_[rank];
+    // Quantization removes the projected residual mean; restore it in the score.
+    for (size_t j=0;j<m;++j) correction[row]+=projected[j]*mean_[j];
+  }
+  for (size_t row=0;row<rows;++row) {
+    out[row].centroid_scores.assign(centroids,0); out[row].correction_weights.assign(centroids,0);
+  }
+  std::vector<float> lanes(d*query_weight_tile,0); // input dimension major, zero padded query lanes
+  for (size_t row=0;row<rows;++row) for (size_t i=0;i<d;++i) lanes[i*query_weight_tile+row]=vectors[row*d+i];
+  auto finish=[&](size_t id,const float* dots) {
+    const float norm=2*centroid_half_norms_[id];
+    for (size_t row=0;row<rows;++row) {
+      out[row].centroid_scores[id]=dots[row]+correction[row];
+      out[row].correction_weights[id]=norm>0 ? dots[row]/norm : 0;
+    }
+  };
+  size_t id=0;
+  for (;id+query_centroid_chains<=centroids;id+=query_centroid_chains) {
+    float dots[query_centroid_chains][query_weight_tile];
+    centroid_dot_tile(lanes.data(),centroids_.data(),d,id,dots);
+    for (size_t chain=0;chain<query_centroid_chains;++chain) finish(id+chain,dots[chain]);
+  }
+  for (;id<centroids;++id) {
+    float dots[1][query_weight_tile];
+    centroid_dot_tile(lanes.data(),centroids_.data(),d,id,dots);
+    finish(id,dots[0]);
+  }
+}
+TieredQQuery TieredQ::query_weights(const float* vector) const {
+  finite_rows(vector,config_.dimensions);
+  TieredQQuery q;
+  project_query_tile(vector,1,&q);
+  return q;
+}
+std::vector<TieredQQuery> TieredQ::query_weights(const float* vectors,size_t rows) const {
+  finite_rows(vectors,product(rows,config_.dimensions));
+  std::vector<TieredQQuery> queries(rows);
+  const size_t tiles=(rows+query_weight_tile-1)/query_weight_tile;
+  const size_t workers=std::max<size_t>(1,std::min(tiles,size_t(omp_get_max_threads())));
+  std::exception_ptr failure; std::mutex failure_mutex;
+#pragma omp parallel for schedule(static) num_threads(workers) if(tiles>1 && !omp_in_parallel())
+  for (size_t tile=0;tile<tiles;++tile) {
+    try {
+      const size_t first=tile*query_weight_tile;
+      project_query_tile(vectors+first*config_.dimensions,std::min(query_weight_tile,rows-first),queries.data()+first);
+    } catch (...) {
+      std::lock_guard<std::mutex> lock(failure_mutex);
+      if (!failure) failure=std::current_exception();
+    }
+  }
+  if (failure) std::rethrow_exception(failure);
+  return queries;
 }
 bool TieredQ::kernel_available(TieredQKernel kernel) {
   if (kernel==TieredQKernel::automatic || kernel==TieredQKernel::scalar) return true;
@@ -570,7 +649,7 @@ TieredQ TieredQ::deserialize(const std::vector<uint8_t>& data) {
   for (auto* v:{&c.basis_,&c.mean_,&c.sigma_}) *v=r.floats();
   if (r.u32()!=9) bad("table count mismatch"); for (int i=0;i<9;++i) c.levels_.push_back(r.floats());
   if (r.pos!=data.size() || pb!=c.bytes_per_vector()) bad("metadata length mismatch");
-  c.validate_model(); c.prepare_encoder(); return c;
+  c.validate_model(); c.prepare_serving(); return c;
 }
 void TieredQ::save(const std::string& path) const { save_file(path,serialize(),{},0,tieredq_detail::codec_file_kind); }
 TieredQ TieredQ::load(const std::string& path) { return deserialize(load_file(path,tieredq_detail::codec_file_kind).model); }
@@ -695,9 +774,8 @@ size_t TieredQ::memory_bytes() const {
   for (const auto* v:{&centroids_,&basis_,&mean_,&sigma_}) n+=v->capacity()*sizeof(float);
   n+=levels_.capacity()*sizeof(std::vector<float>);
   for (const auto& v:levels_) n+=v.capacity()*sizeof(float);
-  n+=(encode_panels_.data.capacity()+centroid_half_norms_.capacity())*sizeof(float);
-  n+=(centroid_projections_.capacity()+exact_centroid_half_norms_.capacity())*sizeof(double);
-  return n;
+  n+=centroid_half_norms_.capacity()*sizeof(float)+scan_plan_.capacity()*sizeof(tieredq_detail::ScanGroupPlan);
+  return n+encoder_->bytes();
 }
 uint32_t TieredQ::model_id() const {
   const auto data=serialize(); uint32_t h=2166136261u;

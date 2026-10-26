@@ -7,7 +7,6 @@
 #include <limits>
 
 namespace dv::tieredq_detail {
-constexpr uint32_t lookup_code_bits=4;
 constexpr size_t lookup_pair_groups=2, lookup_vector_docs=16, lookup_chunk_docs=64;
 constexpr size_t lookup_block_docs=256, lookup_table_entries=size_t(1)<<lookup_code_bits, lookup_scale_groups=32;
 constexpr int lookup_quant_max=127;
@@ -19,6 +18,12 @@ struct FastScanLookupCache {
   std::vector<uint8_t> codes;
   std::vector<std::vector<float>> levels;
   size_t pairs() const { return (groups.size()+lookup_pair_groups-1)/lookup_pair_groups; }
+  size_t allocated_bytes() const {
+    size_t bytes=sizeof(*this)+projection.allocated_bytes()+groups.capacity()*sizeof(FastLookupGroup)+codes.capacity();
+    bytes+=levels.capacity()*sizeof(std::vector<float>);
+    for (const auto& book:levels) bytes+=book.capacity()*sizeof(float);
+    return bytes;
+  }
 };
 inline size_t fast_lookup_position(const FastScanLookupCache& cache,size_t doc,size_t group) {
   return (doc/lookup_block_docs*cache.pairs()+group/lookup_pair_groups)*lookup_block_docs+doc%lookup_block_docs;

@@ -3,11 +3,13 @@
 #pragma once
 #include "tieredq_scan_int8.h"
 #include "tieredq_fast_dispatch.h"
+#include "tieredq_scan_codes_neon.h"
 #include <arm_neon.h>
 
 namespace dv::tieredq_detail {
 inline bool fast_scan_available() { return native_fast_scan_available(); }
 struct FastScanQuery {
+  TieredQQuery codes;
   std::vector<int8x16_t> qvecs;
   std::vector<float> centroid_scores, correction_weights;
   float scale = 1;
@@ -16,6 +18,7 @@ struct FastScanQuery {
 inline FastScanQuery fast_scan_query(const FastScanCache& cache, const TieredQQuery& q) {
   if (q.weights.size() != cache.dimensions)
     throw std::runtime_error("TieredQ: int8 query weight shape mismatch");
+  if (cache.code_lookup()) { FastScanQuery prepared; prepared.codes=q; return prepared; }
   float peak = 0;
   for (size_t r=0; r<cache.dimensions; ++r) {
     const size_t ti = cache.tier_of[r];
@@ -46,6 +49,11 @@ inline FastScanQuery fast_scan_query(const FastScanCache& cache, const TieredQQu
 constexpr size_t fast_scan_query_tile_neon = 4;
 inline void scan_fast_neon_tile(const FastScanCache& cache,const FastScanQuery* queries,
     size_t query_count,size_t first,size_t count,float* scores,size_t stride) {
+  if (cache.code_lookup()) {
+    scan_codes_neon_tile(cache,query_count,first,count,scores,stride,
+        [&](size_t row)->const TieredQQuery& {return queries[row].codes;});
+    return;
+  }
   for (size_t block=first/fast_scan_block_docs; block<(first+count+fast_scan_block_docs-1)/fast_scan_block_docs; ++block) {
     int32x4_t sums[fast_scan_query_tile_neon][4];
     for (size_t t=0;t<query_count;++t) for (auto& sum:sums[t]) sum=vdupq_n_s32(0);

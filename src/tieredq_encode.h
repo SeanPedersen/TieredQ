@@ -6,7 +6,9 @@
 #include "tieredq_encode_float.h"
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cmath>
+#include <mutex>
 #include <vector>
 
 namespace dv::tieredq_detail {
@@ -23,6 +25,28 @@ struct EncoderState {
   const std::vector<double>& centroid_projections;
   const std::vector<double>& half_norms;
   size_t projection_stride() const { return centroid_projections.size()/half_norms.size(); }
+};
+// Owned encoder-only state derived from an immutable model; serving never reads it.
+struct EncoderData {
+  TieredQPanels fused_panels;
+  std::vector<double> centroid_projections, half_norms;
+  EncoderState view() const { return {fused_panels,centroid_projections,half_norms}; }
+  size_t bytes() const {
+    return fused_panels.data.capacity()*sizeof(float)+(centroid_projections.capacity()+half_norms.capacity())*sizeof(double);
+  }
+};
+// Builds EncoderData on first use and keeps it; copies of one model share the instance.
+class LazyEncoder {
+ public:
+  template<class Build> const EncoderData& get(Build build) {
+    std::call_once(once_,[&] { data_=build(); ready_.store(true,std::memory_order_release); });
+    return data_;
+  }
+  size_t bytes() const { return sizeof(*this)+(ready_.load(std::memory_order_acquire) ? data_.bytes() : 0); }
+ private:
+  std::once_flag once_;
+  std::atomic<bool> ready_{false};
+  EncoderData data_;
 };
 struct EncodingWorkspace {
   std::vector<double> v, z, chosen;

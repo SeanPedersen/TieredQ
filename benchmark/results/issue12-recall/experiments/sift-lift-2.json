@@ -1,0 +1,95 @@
+{
+  "affinity": [
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15
+  ],
+  "seed": 0,
+  "rows": [
+    {
+      "dataset": "sift",
+      "bits": 8,
+      "fast": true,
+      "layout": {
+        "tiers": [
+          {
+            "start": 0,
+            "dimensions": 123,
+            "bits": 8
+          },
+          {
+            "start": 123,
+            "dimensions": 5,
+            "bits": 7
+          },
+          {
+            "start": 128,
+            "dimensions": 1,
+            "bits": 5
+          }
+        ],
+        "coded_dimensions": 129,
+        "packed_code_bytes": 128,
+        "vector_bytes": 141,
+        "allocated_vector_bytes": 141001736,
+        "model_serialized_bytes": 201932,
+        "model_memory_bytes": 723228,
+        "scalar_fast_scan": false
+      },
+      "lift_scale": 2.0,
+      "timed_lift": false,
+      "bytes_per_vector": 141.724964,
+      "recall10": 0.9862000000000001
+    }
+  ],
+  "source_sha256": {
+    "src/tieredq.cpp": "fbc5ebc41fd754c859901cbce504b776875dcbd3049373f0585d8574fd82cf05",
+    "src/tieredq_encode.h": "62a45d56994d60003b5e2857a919cb26960b7500f814e0405d3b606efb6040be",
+    "src/tieredq_encode_float.h": "eb84bced3a1e931ff12b94f89bec130de829784c3dbf8ca0313951770419867c",
+    "src/tieredq_encode_grid.h": "d36a190ec56e0806b195e581bd8584b1151b8d7d0b7389b5376a966ef0a8299f",
+    "src/tieredq_encode_matrix.h": "1e16df2a2d6902be3a6aef27847ae561888bc8ccb01de9fb79755de5c3f18366",
+    "src/tieredq_fast_dispatch.h": "dbcc0ca75551edd31d3a6101d594aa99428de371449c432d517d6d937d5f26f7",
+    "src/tieredq_io.h": "e1469d651f12e9061e6742c2bae2b3c1535e608e15c64cd8534a35858690313b",
+    "src/tieredq_layout.h": "d6030e7a2a312a632343abf8735b975057b1df43a7f259a0ce1e59ebdfb56ce6",
+    "src/tieredq_profile.h": "eb0ce6b211a372eb61a45a028d301c4db1b91343219854dcfd676b8e97cdabed",
+    "src/tieredq_query_projection_x86.h": "5e629989e38da02482548a0fffc9a3713c7a3a07da2e5d30fdd6f42cbdad44d8",
+    "src/tieredq_scan_avx512.h": "fcd3324e6ada2493c6adff23f278eb951e403bbfd1eb6a3c2c459e2d546bece2",
+    "src/tieredq_scan_groups.h": "daa9d64c6d6a38b42a11cc02ce74aadea3138b665e37e8848b48a23d7870c7e7",
+    "src/tieredq_scan_lookup_avx512.h": "c09fe148d85e7827ece0c6d2aa103018a87650039de906ce80cc303decc1c95f",
+    "src/tieredq_scan_lookup_x86.h": "51e8eb2f5c898bdf9c54ff7015eadf973f7feb71a3353b99cc6c214bb075854a",
+    "src/tieredq_scan_neon.h": "bda54c151a984be8c045f8d278322a6a43c67750480fc5f95730d7291b7c1812",
+    "src/tieredq_search.h": "e5cb9d13cf04f112cd9bd0117ef000d5e3d84ce00f318a661d30fda8a128ec11",
+    "src/tieredq_search_fast.h": "d5dc350519137ad07240dcda6afb0fa4391e196d1124a50d1bf67dc76383ac63",
+    "src/tieredq_train_codebook.h": "5988570c02e2fe6dd7f8b56bc029f67ccc00b1631730968a6d91fa8f6ebb7eb7",
+    "src/tieredq_train_codebook_data.h": "6f79753ad23d6d73f8d7d51b185f7cd4ff0d48dcc35003e9f167f23d87bc951b",
+    "src/tieredq_train_covariance.h": "7d6f9d32d6de1db36f635b5763602d7870f8714453634b0a3f7bdafb9544c146",
+    "src/tieredq_train_kmeans.h": "788def94d30f4bed18f7a91313e6507d8964dddd8ceeb581a8435437b33516fd",
+    "src/tieredq_train_linalg.h": "7b2291c2fb2396f998ae0b7284b842a4016c51aecdcc7d5e7cec1dd95ccfee4c",
+    "src/tieredq_train_residuals.h": "3a97f61a987a3fdb05a72b0fab9d2bf1b5d3a609dfb09a8c2abe51d1ef3a1cd8",
+    "src/tieredq_train_stats.h": "e9b9eb26ffb05bfd677e30d3e21eb8b061f131b3c1867b10f272fa469cf557b4",
+    "src/training_rng.h": "3cc5602e62a8e3e6ba1d2c6ba8b90a7ec2a61137972ab8125d4babe4a1d2865e",
+    "src/tieredq_index_io.cpp": "10b6f4b312fc259270c3a3b84c4459db73cbf1375dac06f9c9c8cf6a0600f307",
+    "src/tieredq_scan_codes_neon.h": "06dc37edbf3457b230e0798221bda91d14016313e3bb8d23d4d800b463917b53",
+    "src/tieredq_scan_fast_scalar.h": "6456b28b95eefe08d4d7f55d95e1693358e3d4e5e95a027e35114a36094aa536",
+    "src/tieredq_scan_int8_neon.h": "3ee6ff05578057f5fa74ffab252d92a9b379824cd47b95320fec8c38e849c279",
+    "src/tieredq_scan_query_x86.h": "87753fd0058749a68944a0ea8e4fd772ef8582e9e7894a37ef20473273b69a8a",
+    "src/tieredq_fast_storage.h": "0a0c900734ddc53d74d0495675ef72fe93b7df4b1c0e64f762ae235e96c7cc67",
+    "src/tieredq_index.cpp": "78a9b84db50213aece2f3dd6e24a828dfddba3ea08cd8ba38f97d631c2eaa118",
+    "src/tieredq_scan_codes.h": "f491d677d5b17e5ee9b04fb110497f049ef6f58fcf667431742e61c3bf0ce636",
+    "src/tieredq_scan_codes_x86.h": "16d7bd52e50591cb48b2e43c23e433ca2a4756c5a322e660cebf4ceb870f47a4",
+    "src/tieredq_scan_int8.h": "73fd272f985af1b07568fb4987fc8a305a442ae7d1fdbc36d8202dd876ad1560",
+    "src/tieredq_scan_int8_avx2.h": "4c211ccc4b5cd4d05e5fd573a9728ab7c77c9deef9b5e2cf209d129b6bfd62f1",
+    "src/tieredq_scan_int8_avx512.h": "a8b40a475020bd91902779c0b4d331f915f0c608a46732691f511a13a41e239a",
+    "include/tieredq/tieredq.h": "5904a660ba24fa64345cd67887f4643158f0b3e30ad55de1ee7108a651b01fea",
+    "include/tieredq/detail/tieredq_scan_plan.h": "49de530237801b7c7ef61aa9cdb23893de0fc5270945617a00cd0716c3195e7f",
+    "benchmark/native/CMakeLists.txt": "6e646fac385d166ffdda6fe596048e4b6bb949e199556adb1e404a6d6d430780",
+    "benchmark/native/rabitq_flat.h": "435d1df8b4fb33517e03b8e159c04561b2a4e2b5993ba097292c47b835864907",
+    "benchmark/native/reference.cpp": "b1b17c45b6623967411f97ab6e0bfd050e8afcb8048e1176f935639d151d8333",
+    "benchmark/native/module.cpp": "3a84abcdfd9a93d51142f425729e82ad3a4ba3a2e1de1892131587b224b44e14"
+  }
+}

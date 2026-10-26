@@ -1,0 +1,96 @@
+== baseline 129 1000000
+tiers: 129x8
+result-hash b6cfc1ef7712b89b
+qps t8 b32 233.7
+qps t8 b1  11.2
+qps t1 b1  11.1
+qps t1 b32 35.8
+exit 0
+== new 129 1000000
+tiers: 129x8
+result-hash b6cfc1ef7712b89b
+qps t8 b32 882.5
+qps t8 b1  147.4
+qps t1 b1  20.1
+qps t1 b32 125.2
+exit 0
+== baseline 200 100000
+tiers: 200x8
+result-hash 1d27b51b81788bc3
+qps t8 b32 1578.9
+qps t8 b1  69.8
+qps t1 b1  70.5
+qps t1 b32 240.8
+exit 0
+== new 200 100000
+tiers: 200x8
+result-hash 1d27b51b81788bc3
+qps t8 b32 4966.9
+qps t8 b1  756.9
+qps t1 b1  135.3
+qps t1 b32 880.5
+exit 0
+== baseline 1536 100000
+tiers: 1536x8
+result-hash f91deae05cc0a2ae
+qps t8 b32 201.8
+qps t8 b1  9.4
+qps t1 b1  9.4
+qps t1 b32 30.9
+exit 0
+== new 1536 100000
+tiers: 1536x8
+result-hash f91deae05cc0a2ae
+qps t8 b32 788.6
+qps t8 b1  87.3
+qps t1 b1  16.6
+qps t1 b32 152.8
+exit 0
+== baseline 129 1000000 4
+tiers: 11x5 107x4 11x3
+result-hash 5fbd0333645c94db
+qps t8 b32 558.8
+qps t8 b1  106.4
+qps t1 b1  107.1
+qps t1 b32 290.7
+exit 0
+== new 129 1000000 4
+tiers: 11x5 107x4 11x3
+result-hash 5fbd0333645c94db
+qps t8 b32 2151.2
+qps t8 b1  594.5
+qps t1 b1  106.8
+qps t1 b32 293.5
+exit 0
+== baseline 200 100000 4
+tiers: 32x5 136x4 32x3
+result-hash 83b8263d735b1d86
+qps t8 b32 3719.7
+qps t8 b1  1022.9
+qps t1 b1  1010.1
+qps t1 b32 1991.0
+exit 0
+== new 200 100000 4
+tiers: 32x5 136x4 32x3
+result-hash 83b8263d735b1d86
+qps t8 b32 12995.2
+qps t8 b1  4058.2
+qps t1 b1  982.6
+qps t1 b32 2066.5
+exit 0
+== baseline 1536 100000 4
+tiers: 79x6 285x5 729x4 443x3
+result-hash dc61c1ab3881058f
+qps t8 b32 675.2
+qps t8 b1  87.7
+qps t1 b1  86.6
+qps t1 b32 313.6
+exit 0
+== new 1536 100000 4
+tiers: 79x6 285x5 729x4 443x3
+result-hash dc61c1ab3881058f
+qps t8 b32 2165.1
+qps t8 b1  303.2
+qps t1 b1  85.6
+qps t1 b32 323.0
+exit 0

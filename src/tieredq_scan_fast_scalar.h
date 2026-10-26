@@ -1,10 +1,12 @@
 // Portable execution of persisted fast representations; preserves fast storage without exact fallback.
 #pragma once
 #include "tieredq_scan_lookup_x86.h"
+#include "tieredq_scan_codes.h"
 #include <bit>
 
 namespace dv::tieredq_detail {
 struct FastScanScalarQuery {
+  TieredQQuery codes;
   FastScanLookupQuery lookup;
   std::vector<int8_t> weights;
   std::vector<float> centroid_scores,correction_weights;
@@ -12,8 +14,9 @@ struct FastScanScalarQuery {
 };
 inline FastScanScalarQuery fast_scan_query_scalar(const FastScanCache& cache,const TieredQ& codec,const float* vector) {
   FastScanScalarQuery result;
+  if (cache.code_lookup()) { result.codes=codec.query_weights(vector); return result; }
   if (cache.lookup) { result.lookup=prepare_fast_lookup_query(*cache.lookup,vector); return result; }
-  const auto query=codec.query(vector);
+  const auto query=codec.query_weights(vector);
   float peak=0;
   for (size_t rank=0;rank<cache.dimensions;++rank)
     peak=std::max(peak,std::fabs(query.weights[rank]*cache.level_scale[cache.tier_of[rank]]));
@@ -28,6 +31,10 @@ inline void scan_fast_scalar_tile(const FastScanCache& cache,const FastScanScala
     size_t rows,size_t first,size_t count,float* scores,size_t stride) {
   for (size_t row=0;row<rows;++row) for (size_t doc=first;doc<first+count;++doc) {
     const auto& q=queries[row];
+    if (cache.code_lookup()) {
+      scores[row*stride+doc-first]=fast_code_score(cache,q.codes,doc);
+      continue;
+    }
     float dot=0;
     if (cache.lookup) {
       const auto& lookup=*cache.lookup;

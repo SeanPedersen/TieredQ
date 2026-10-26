@@ -1,0 +1,48 @@
+== baseline 129 1000000
+tiers: 129x8
+result-hash 73c44da445fe5cee
+qps t8 b32 228.3
+qps t8 b1  10.3
+qps t1 b1  10.3
+qps t1 b32 29.0
+exit 0
+== new 129 1000000
+tiers: 129x8
+result-hash 73c44da445fe5cee
+qps t8 b32 1347.1
+qps t8 b1  152.6
+qps t1 b1  20.9
+qps t1 b32 183.0
+exit 0
+== baseline 200 100000
+tiers: 200x8
+result-hash 4c8128970f713e12
+qps t8 b32 1465.7
+qps t8 b1  71.8
+qps t1 b1  72.1
+qps t1 b32 186.0
+exit 0
+== new 200 100000
+tiers: 200x8
+result-hash 4c8128970f713e12
+qps t8 b32 6960.6
+qps t8 b1  782.0
+qps t1 b1  137.3
+qps t1 b32 1271.1
+exit 0
+== baseline 1536 100000
+tiers: 1536x8
+result-hash 34224e412ee73a2f
+qps t8 b32 202.4
+qps t8 b1  9.4
+qps t1 b1  9.4
+qps t1 b32 31.1
+exit 0
+== new 1536 100000
+tiers: 1536x8
+result-hash 34224e412ee73a2f
+qps t8 b32 1079.5
+qps t8 b1  89.9
+qps t1 b1  16.7
+qps t1 b32 167.6
+exit 0

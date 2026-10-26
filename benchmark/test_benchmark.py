@@ -6,6 +6,7 @@ import tempfile
 import numpy as np
 from data import codec_vectors, ground_truth, download
 from measure import measure
+from l2_transform import L2Transform
 
 
 class BenchmarkTests(unittest.TestCase):
@@ -26,6 +27,35 @@ class BenchmarkTests(unittest.TestCase):
         queries = rng.normal(size=(4, 8)).astype(np.float32)
         vectors, probes = codec_vectors(base, queries, True)
         np.testing.assert_array_equal(ground_truth(base, queries, True), ground_truth(vectors, probes, False))
+
+    def test_query_metric_lift_preserves_scores_and_times_the_query_transform(self):
+        from measure import L2Search
+        rng = np.random.default_rng(17)
+        base = rng.normal(size=(128, 8)).astype(np.float32)
+        queries = rng.normal(size=(7, 8)).astype(np.float32)
+        transform = L2Transform.fit(base)
+        vectors, probes = codec_vectors(base, queries, True)
+        np.testing.assert_allclose(transform.base_vectors(base) @ transform.queries(queries).T,
+                                   vectors @ probes.T, rtol=2e-5, atol=2e-6)
+        np.testing.assert_array_equal(ground_truth(base, queries, True),
+                                     ground_truth(transform.base_vectors(base), transform.queries(queries), False))
+        self.assertGreaterEqual(transform.storage_bytes, transform.base_map.nbytes + transform.query_map.nbytes)
+
+        class Capture:
+            def search(self, actual, output, threads):
+                np.testing.assert_array_equal(actual, transform.queries(queries))
+        L2Search(Capture(), transform.scale, transform).search(queries, None, 8)
+
+    def test_query_metric_lift_handles_rank_deficient_calibration(self):
+        queries = np.random.default_rng(23).normal(size=(7, 8)).astype(np.float32)
+        for base in (np.zeros((16, 8), dtype=np.float32), np.ones((16, 8), dtype=np.float32)):
+            transform = L2Transform.fit(base)
+            self.assertTrue(np.isfinite(transform.query_map).all())
+            vectors = transform.base_vectors(base)
+            self.assertTrue(np.isfinite(vectors).all())
+            scaled = base / transform.scale
+            expected = queries / transform.scale @ scaled.T - np.sum(scaled * scaled, axis=1) / 2
+            np.testing.assert_allclose(transform.queries(queries) @ vectors.T, expected, rtol=2e-5, atol=2e-6)
 
     def test_download_checks_cached_source_without_overwriting(self):
         payload = b"verified source"

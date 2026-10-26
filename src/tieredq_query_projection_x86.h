@@ -15,6 +15,7 @@ constexpr size_t query_projection_lanes = 16;
 struct FastQueryProjection {
   size_t dimensions = 0, weights = 0, centroids = 0, width = 0;
   std::vector<float> panels;
+  size_t allocated_bytes() const { return panels.capacity()*sizeof(float); }
 };
 inline FastQueryProjection build_fast_query_projection(size_t dimensions,
     const std::vector<float>& basis, const std::vector<float>& sigma,

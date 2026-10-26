@@ -1,0 +1,53 @@
+Start testing: Oct 25 05:34 CET
+----------------------------------------------------------
+1/2 Testing: tieredq
+1/2 Test: tieredq
+Command: "/home/sean/experiments/TieredQ-issue12-recall/build-tests/test_tieredq"
+Directory: /home/sean/experiments/TieredQ-issue12-recall/build-tests
+"tieredq" start time: Oct 25 05:34 CET
+Output:
+----------------------------------------------------------
+PASS D=1 bits=8 rotate=1
+PASS D=7 bits=56 rotate=1
+PASS D=65 bits=257 rotate=1
+PASS D=384 bits=257 rotate=0
+PASS D=511 bits=257 rotate=0
+PASS D=512 bits=257 rotate=0
+PASS D=768 bits=257 rotate=0
+PASS D=1024 bits=257 rotate=0
+PASS D=1536 bits=257 rotate=0
+PASS D=512 bits=256 rotate=0
+PASS D=512 bits=384 rotate=0
+PASS D=512 bits=512 rotate=1
+PASS D=512 bits=768 rotate=0
+PASS D=512 bits=1024 rotate=0
+PASS D=768 bits=512 rotate=1
+PASS D=768 bits=1024 rotate=0
+PASS D=7 bits=1 rotate=1
+PASS D=7 bits=56 rotate=0
+OK
+<end of output>
+Test time =  22.98 sec
+----------------------------------------------------------
+Test Passed.
+"tieredq" end time: Oct 25 05:35 CET
+"tieredq" time elapsed: 00:00:22
+----------------------------------------------------------
+
+2/2 Testing: training_rng
+2/2 Test: training_rng
+Command: "/home/sean/experiments/TieredQ-issue12-recall/build-tests/test_training_rng"
+Directory: /home/sean/experiments/TieredQ-issue12-recall/build-tests
+"training_rng" start time: Oct 25 05:35 CET
+Output:
+----------------------------------------------------------
+PASS training RNG
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"training_rng" end time: Oct 25 05:35 CET
+"training_rng" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Oct 25 05:35 CET

@@ -1,0 +1,20 @@
+PASS D=1 bits=8 rotate=1
+PASS D=7 bits=56 rotate=1
+PASS D=65 bits=257 rotate=1
+PASS D=384 bits=257 rotate=0
+PASS D=511 bits=257 rotate=0
+PASS D=512 bits=257 rotate=0
+PASS D=768 bits=257 rotate=0
+PASS D=1024 bits=257 rotate=0
+PASS D=1536 bits=257 rotate=0
+PASS D=512 bits=256 rotate=0
+PASS D=512 bits=384 rotate=0
+PASS D=512 bits=512 rotate=1
+PASS D=512 bits=768 rotate=0
+PASS D=512 bits=1024 rotate=0
+PASS D=768 bits=512 rotate=1
+PASS D=768 bits=1024 rotate=0
+PASS D=7 bits=1 rotate=1
+PASS D=7 bits=56 rotate=0
+OK
+exit 0

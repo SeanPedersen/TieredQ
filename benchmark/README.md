@@ -120,8 +120,13 @@ saved flat representation includes padded code blocks, all native factor arrays,
 extra-bit payload, the required global mean and rotation state. No explicit row
 IDs or IVF metadata are stored. A regression test checks that adding vectors adds
 exactly the native code/factor bytes, excluding a per-vector ID surcharge.
-TieredQ uses the larger of saved index size and native vector storage plus
-`codec.memory_bytes()` (including derived encoder buffers). Storage excludes input
+TieredQ uses the larger of saved index size and the serving footprint of the
+reloaded index: vector storage and fast-cache allocations (including lookup
+projection panels, groups and codebooks), plus `codec.memory_bytes()`. A reloaded model
+holds basis, mean, sigma, centroids, codebooks and half norms; encoder buffers
+(fused panels, FP64 centroid projections) are built on the first append and are
+reported separately in diagnostics (`model_memory_bytes` minus
+`model_serving_memory_bytes`). Storage excludes input
 FP32 arrays and transient query/top-k scratch. This conservative TieredQ measure
 and serialized RaBitQ measure are not process RSS; allocator bookkeeping is excluded.
 Per-row native representations are fixed-stride for each built configuration, so
@@ -178,3 +183,35 @@ Hartmut-specific paths appear only in the validation notes, not executable setup
 ## Fixed-seed full run (2026-10-23)
 
 [Measured results and audit](results/hartmut-full-single-run-20261023/README.md): 24 codec configurations, 96 scheduling rows, seed 0 only. Core matrix time: 881.97 seconds; separate preprocessing diagnostics: 171.07 seconds. All 13 pre-run validation tests passed. Figures connect every measured 1/2/4/8-bit budget in order, label each budget, and separate thread counts into panels. The fixed-seed figures have no seed-variance error bars. Archived `summary.json` retains the generic `recall_mean`/`recall_std` field names; with one seed the latter is zero by construction and is not an uncertainty estimate.
+
+## High-bit recall correction (#12)
+
+[Investigation and verified results](results/issue12-recall/README.md): fast models
+containing tiers wider than 4 bits preserve original code IDs and FP32 query weights. The
+SIFT TieredQ adapter now fits a metric-preserving query-sensitive transform from
+base vectors. Its fit, query transformation and stored maps are included in costs.
+`--legacy-l2-lift` selects the original adapter; reproducing the original fast
+approximation also requires its archived source snapshot. Native RaBitQ bounds
+and HACC remain the primary comparison.
+
+Use `--batches 32 --threads 8` for the primary serving point, or omit those flags
+for the full scheduling grid. Single-query latencies are absent from a batch-only
+run. `profile.py --stages` uses a separate instrumented build for projection,
+centroid, LUT, fused scan/accumulation and selection worker-time counters.
+
+To refresh the eleven reported TieredQ serving-memory points without running
+searches or collecting new timings, build the benchmark extension and use:
+
+```sh
+uv run --locked --python 3.12 python -c 'from native_build import build_native; build_native()'
+uv run --locked --python 3.12 python measure_storage.py --output output-storage/results.json
+```
+
+Run from `benchmark/` with the original full-dataset caches available. The report
+records all three seeds, source and binary hashes, cached dataset manifests,
+compiler commands, per-seed diagnostics, and maximum bytes/vector across seeds.
+Historical performance measurements remain separate.
+
+[Corrected full-dataset serving-memory results](results/issue12-recall/storage-refresh/README.md)
+cover the eleven reported configurations at seeds 0/1/2. Historical figures and
+equal-memory summaries retain the earlier accounting and are labeled accordingly.

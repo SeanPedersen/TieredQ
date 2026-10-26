@@ -1,0 +1,265 @@
+== baseline
+tiers 8:10 dims 129 code_bits 576 levels_bytes_per_doc 132.00
+rows 1: 0.135 ns per doc*dim*query (1.14 ms per pass)
+rows 32: 0.028 ns per doc*dim*query (7.66 ms per pass)
+== new
+tiers 8:10 dims 129 code_bits 576 levels_bytes_per_doc 72.00
+rows 1: 0.143 ns per doc*dim*query (1.21 ms per pass)
+rows 32: 0.029 ns per doc*dim*query (7.78 ms per pass)
+== new2
+tiers 8:10 dims 129 code_bits 576 levels_bytes_per_doc 72.00
+rows 1: 0.150 ns per doc*dim*query (1.26 ms per pass)
+rows 32: 0.029 ns per doc*dim*query (7.73 ms per pass)
+== new3
+tiers 8:10 dims 129 code_bits 576 levels_bytes_per_doc 72.00
+rows 1: 0.147 ns per doc*dim*query (1.24 ms per pass)
+rows 32: 0.028 ns per doc*dim*query (7.53 ms per pass)
+== baseline
+tiers 8:10 dims 129 code_bits 576 levels_bytes_per_doc 132.00
+rows 1: 0.118 ns per doc*dim*query (1.00 ms per pass)
+rows 32: 0.027 ns per doc*dim*query (7.33 ms per pass)
+== new
+tiers 8:10 dims 129 code_bits 576 levels_bytes_per_doc 72.00
+rows 1: 0.140 ns per doc*dim*query (1.18 ms per pass)
+rows 32: 0.029 ns per doc*dim*query (7.91 ms per pass)
+== new2
+tiers 8:10 dims 129 code_bits 576 levels_bytes_per_doc 72.00
+rows 1: 0.151 ns per doc*dim*query (1.27 ms per pass)
+rows 32: 0.028 ns per doc*dim*query (7.64 ms per pass)
+== new3
+tiers 8:10 dims 129 code_bits 576 levels_bytes_per_doc 72.00
+rows 1: 0.156 ns per doc*dim*query (1.32 ms per pass)
+rows 32: 0.028 ns per doc*dim*query (7.66 ms per pass)
+== baseline
+tiers 8:10 dims 129 code_bits 576 levels_bytes_per_doc 132.00
+rows 1: 0.118 ns per doc*dim*query (1.00 ms per pass)
+rows 32: 0.029 ns per doc*dim*query (7.92 ms per pass)
+== new
+tiers 8:10 dims 129 code_bits 576 levels_bytes_per_doc 72.00
+rows 1: 0.142 ns per doc*dim*query (1.20 ms per pass)
+rows 32: 0.028 ns per doc*dim*query (7.68 ms per pass)
+== new2
+tiers 8:10 dims 129 code_bits 576 levels_bytes_per_doc 72.00
+rows 1: 0.151 ns per doc*dim*query (1.27 ms per pass)
+rows 32: 0.029 ns per doc*dim*query (7.96 ms per pass)
+== new3
+tiers 8:10 dims 129 code_bits 576 levels_bytes_per_doc 72.00
+rows 1: 0.138 ns per doc*dim*query (1.17 ms per pass)
+rows 32: 0.028 ns per doc*dim*query (7.44 ms per pass)
+== baseline
+tiers 5:128 dims 128 code_bits 640 levels_bytes_per_doc 128.00
+rows 1: 0.091 ns per doc*dim*query (0.76 ms per pass)
+rows 32: 0.028 ns per doc*dim*query (7.50 ms per pass)
+== new
+tiers 5:128 dims 128 code_bits 640 levels_bytes_per_doc 80.00
+rows 1: 0.090 ns per doc*dim*query (0.75 ms per pass)
+rows 32: 0.028 ns per doc*dim*query (7.42 ms per pass)
+== new2
+tiers 5:128 dims 128 code_bits 640 levels_bytes_per_doc 80.00
+rows 1: 0.106 ns per doc*dim*query (0.89 ms per pass)
+rows 32: 0.026 ns per doc*dim*query (7.02 ms per pass)
+== new3
+tiers 5:128 dims 128 code_bits 640 levels_bytes_per_doc 80.00
+rows 1: 0.123 ns per doc*dim*query (1.03 ms per pass)
+rows 32: 0.027 ns per doc*dim*query (7.18 ms per pass)
+== baseline
+tiers 5:128 dims 128 code_bits 640 levels_bytes_per_doc 128.00
+rows 1: 0.088 ns per doc*dim*query (0.74 ms per pass)
+rows 32: 0.026 ns per doc*dim*query (7.04 ms per pass)
+== new
+tiers 5:128 dims 128 code_bits 640 levels_bytes_per_doc 80.00
+rows 1: 0.092 ns per doc*dim*query (0.77 ms per pass)
+rows 32: 0.026 ns per doc*dim*query (6.99 ms per pass)
+== new2
+tiers 5:128 dims 128 code_bits 640 levels_bytes_per_doc 80.00
+rows 1: 0.110 ns per doc*dim*query (0.92 ms per pass)
+rows 32: 0.026 ns per doc*dim*query (6.90 ms per pass)
+== new3
+tiers 5:128 dims 128 code_bits 640 levels_bytes_per_doc 80.00
+rows 1: 0.105 ns per doc*dim*query (0.88 ms per pass)
+rows 32: 0.026 ns per doc*dim*query (7.01 ms per pass)
+== baseline
+tiers 5:128 dims 128 code_bits 640 levels_bytes_per_doc 128.00
+rows 1: 0.091 ns per doc*dim*query (0.76 ms per pass)
+rows 32: 0.026 ns per doc*dim*query (7.10 ms per pass)
+== new
+tiers 5:128 dims 128 code_bits 640 levels_bytes_per_doc 80.00
+rows 1: 0.090 ns per doc*dim*query (0.76 ms per pass)
+rows 32: 0.027 ns per doc*dim*query (7.38 ms per pass)
+== new2
+tiers 5:128 dims 128 code_bits 640 levels_bytes_per_doc 80.00
+rows 1: 0.108 ns per doc*dim*query (0.91 ms per pass)
+rows 32: 0.026 ns per doc*dim*query (7.03 ms per pass)
+== new3
+tiers 5:128 dims 128 code_bits 640 levels_bytes_per_doc 80.00
+rows 1: 0.108 ns per doc*dim*query (0.91 ms per pass)
+rows 32: 0.029 ns per doc*dim*query (7.81 ms per pass)
+== baseline
+tiers 7:128 dims 128 code_bits 896 levels_bytes_per_doc 128.00
+rows 1: 0.167 ns per doc*dim*query (1.40 ms per pass)
+rows 32: 0.030 ns per doc*dim*query (8.14 ms per pass)
+== new
+tiers 7:128 dims 128 code_bits 896 levels_bytes_per_doc 112.00
+rows 1: 0.186 ns per doc*dim*query (1.56 ms per pass)
+rows 32: 0.028 ns per doc*dim*query (7.64 ms per pass)
+== new2
+tiers 7:128 dims 128 code_bits 896 levels_bytes_per_doc 112.00
+rows 1: 0.184 ns per doc*dim*query (1.54 ms per pass)
+rows 32: 0.030 ns per doc*dim*query (7.99 ms per pass)
+== new3
+tiers 7:128 dims 128 code_bits 896 levels_bytes_per_doc 112.00
+rows 1: 0.188 ns per doc*dim*query (1.58 ms per pass)
+rows 32: 0.028 ns per doc*dim*query (7.64 ms per pass)
+== baseline
+tiers 7:128 dims 128 code_bits 896 levels_bytes_per_doc 128.00
+rows 1: 0.167 ns per doc*dim*query (1.40 ms per pass)
+rows 32: 0.030 ns per doc*dim*query (7.96 ms per pass)
+== new
+tiers 7:128 dims 128 code_bits 896 levels_bytes_per_doc 112.00
+rows 1: 0.206 ns per doc*dim*query (1.73 ms per pass)
+rows 32: 0.031 ns per doc*dim*query (8.45 ms per pass)
+== new2
+tiers 7:128 dims 128 code_bits 896 levels_bytes_per_doc 112.00
+rows 1: 0.210 ns per doc*dim*query (1.77 ms per pass)
+rows 32: 0.029 ns per doc*dim*query (7.69 ms per pass)
+== new3
+tiers 7:128 dims 128 code_bits 896 levels_bytes_per_doc 112.00
+rows 1: 0.191 ns per doc*dim*query (1.60 ms per pass)
+rows 32: 0.028 ns per doc*dim*query (7.60 ms per pass)
+== baseline
+tiers 7:128 dims 128 code_bits 896 levels_bytes_per_doc 128.00
+rows 1: 0.166 ns per doc*dim*query (1.39 ms per pass)
+rows 32: 0.028 ns per doc*dim*query (7.64 ms per pass)
+== new
+tiers 7:128 dims 128 code_bits 896 levels_bytes_per_doc 112.00
+rows 1: 0.185 ns per doc*dim*query (1.55 ms per pass)
+rows 32: 0.030 ns per doc*dim*query (8.02 ms per pass)
+== new2
+tiers 7:128 dims 128 code_bits 896 levels_bytes_per_doc 112.00
+rows 1: 0.184 ns per doc*dim*query (1.55 ms per pass)
+rows 32: 0.030 ns per doc*dim*query (8.01 ms per pass)
+== new3
+tiers 7:128 dims 128 code_bits 896 levels_bytes_per_doc 112.00
+rows 1: 0.190 ns per doc*dim*query (1.60 ms per pass)
+rows 32: 0.029 ns per doc*dim*query (7.72 ms per pass)
+== baseline
+tiers 8:128 dims 128 code_bits 1024 levels_bytes_per_doc 128.00
+rows 1: 0.284 ns per doc*dim*query (2.38 ms per pass)
+rows 32: 0.032 ns per doc*dim*query (8.63 ms per pass)
+== new
+tiers 8:128 dims 128 code_bits 1024 levels_bytes_per_doc 128.00
+rows 1: 0.288 ns per doc*dim*query (2.42 ms per pass)
+rows 32: 0.033 ns per doc*dim*query (8.77 ms per pass)
+== new2
+tiers 8:128 dims 128 code_bits 1024 levels_bytes_per_doc 128.00
+rows 1: 0.269 ns per doc*dim*query (2.26 ms per pass)
+rows 32: 0.033 ns per doc*dim*query (8.73 ms per pass)
+== new3
+tiers 8:128 dims 128 code_bits 1024 levels_bytes_per_doc 128.00
+rows 1: 0.288 ns per doc*dim*query (2.42 ms per pass)
+rows 32: 0.034 ns per doc*dim*query (9.02 ms per pass)
+== baseline
+tiers 8:128 dims 128 code_bits 1024 levels_bytes_per_doc 128.00
+rows 1: 0.283 ns per doc*dim*query (2.38 ms per pass)
+rows 32: 0.032 ns per doc*dim*query (8.57 ms per pass)
+== new
+tiers 8:128 dims 128 code_bits 1024 levels_bytes_per_doc 128.00
+rows 1: 0.294 ns per doc*dim*query (2.47 ms per pass)
+rows 32: 0.034 ns per doc*dim*query (9.15 ms per pass)
+== new2
+tiers 8:128 dims 128 code_bits 1024 levels_bytes_per_doc 128.00
+rows 1: 0.301 ns per doc*dim*query (2.53 ms per pass)
+rows 32: 0.036 ns per doc*dim*query (9.73 ms per pass)
+== new3
+tiers 8:128 dims 128 code_bits 1024 levels_bytes_per_doc 128.00
+rows 1: 0.269 ns per doc*dim*query (2.25 ms per pass)
+rows 32: 0.032 ns per doc*dim*query (8.51 ms per pass)
+== baseline
+tiers 8:128 dims 128 code_bits 1024 levels_bytes_per_doc 128.00
+rows 1: 0.281 ns per doc*dim*query (2.36 ms per pass)
+rows 32: 0.033 ns per doc*dim*query (8.98 ms per pass)
+== new
+tiers 8:128 dims 128 code_bits 1024 levels_bytes_per_doc 128.00
+rows 1: 0.290 ns per doc*dim*query (2.44 ms per pass)
+rows 32: 0.033 ns per doc*dim*query (8.73 ms per pass)
+== new2
+tiers 8:128 dims 128 code_bits 1024 levels_bytes_per_doc 128.00
+rows 1: 0.272 ns per doc*dim*query (2.28 ms per pass)
+rows 32: 0.033 ns per doc*dim*query (8.98 ms per pass)
+== new3
+tiers 8:128 dims 128 code_bits 1024 levels_bytes_per_doc 128.00
+rows 1: 0.271 ns per doc*dim*query (2.27 ms per pass)
+rows 32: 0.033 ns per doc*dim*query (8.92 ms per pass)
+== baseline
+tiers 7:13 dims 1534 code_bits 6144 levels_bytes_per_doc 1536.00
+rows 1: 0.112 ns per doc*dim*query (11.26 ms per pass)
+rows 32: 0.030 ns per doc*dim*query (97.20 ms per pass)
+== new
+tiers 7:13 dims 1534 code_bits 6144 levels_bytes_per_doc 768.00
+rows 1: 0.094 ns per doc*dim*query (9.45 ms per pass)
+rows 32: 0.024 ns per doc*dim*query (78.03 ms per pass)
+== new2
+tiers 7:13 dims 1534 code_bits 6144 levels_bytes_per_doc 768.00
+rows 1: 0.097 ns per doc*dim*query (9.79 ms per pass)
+rows 32: 0.024 ns per doc*dim*query (78.34 ms per pass)
+== new3
+tiers 7:13 dims 1534 code_bits 6144 levels_bytes_per_doc 768.00
+rows 1: 0.095 ns per doc*dim*query (9.51 ms per pass)
+rows 32: 0.024 ns per doc*dim*query (78.42 ms per pass)
+== baseline
+tiers 7:13 dims 1534 code_bits 6144 levels_bytes_per_doc 1536.00
+rows 1: 0.116 ns per doc*dim*query (11.67 ms per pass)
+rows 32: 0.030 ns per doc*dim*query (97.59 ms per pass)
+== new
+tiers 7:13 dims 1534 code_bits 6144 levels_bytes_per_doc 768.00
+rows 1: 0.091 ns per doc*dim*query (9.17 ms per pass)
+rows 32: 0.024 ns per doc*dim*query (77.68 ms per pass)
+== new2
+tiers 7:13 dims 1534 code_bits 6144 levels_bytes_per_doc 768.00
+rows 1: 0.096 ns per doc*dim*query (9.61 ms per pass)
+rows 32: 0.024 ns per doc*dim*query (78.38 ms per pass)
+== new3
+tiers 7:13 dims 1534 code_bits 6144 levels_bytes_per_doc 768.00
+rows 1: 0.095 ns per doc*dim*query (9.58 ms per pass)
+rows 32: 0.024 ns per doc*dim*query (78.73 ms per pass)
+== baseline
+tiers 7:13 dims 1534 code_bits 6144 levels_bytes_per_doc 1536.00
+rows 1: 0.110 ns per doc*dim*query (11.04 ms per pass)
+rows 32: 0.030 ns per doc*dim*query (96.77 ms per pass)
+== new
+tiers 7:13 dims 1534 code_bits 6144 levels_bytes_per_doc 768.00
+rows 1: 0.092 ns per doc*dim*query (9.24 ms per pass)
+rows 32: 0.024 ns per doc*dim*query (77.37 ms per pass)
+== new2
+tiers 7:13 dims 1534 code_bits 6144 levels_bytes_per_doc 768.00
+rows 1: 0.105 ns per doc*dim*query (10.58 ms per pass)
+rows 32: 0.024 ns per doc*dim*query (78.33 ms per pass)
+== new3
+tiers 7:13 dims 1534 code_bits 6144 levels_bytes_per_doc 768.00
+rows 1: 0.095 ns per doc*dim*query (9.51 ms per pass)
+rows 32: 0.024 ns per doc*dim*query (77.33 ms per pass)
+# real SIFT 4-bit tiers, core 17
+== baseline
+tiers 8:2 dims 126 code_bits 512 levels_bytes_per_doc 128.00
+rows 1: 0.106 ns per doc*dim*query (0.88 ms per pass)
+rows 32: 0.027 ns per doc*dim*query (7.13 ms per pass)
+== new
+tiers 8:2 dims 126 code_bits 512 levels_bytes_per_doc 64.00
+rows 1: 0.136 ns per doc*dim*query (1.13 ms per pass)
+rows 32: 0.028 ns per doc*dim*query (7.51 ms per pass)
+== baseline
+tiers 8:2 dims 126 code_bits 512 levels_bytes_per_doc 128.00
+rows 1: 0.111 ns per doc*dim*query (0.91 ms per pass)
+rows 32: 0.029 ns per doc*dim*query (7.59 ms per pass)
+== new
+tiers 8:2 dims 126 code_bits 512 levels_bytes_per_doc 64.00
+rows 1: 0.140 ns per doc*dim*query (1.15 ms per pass)
+rows 32: 0.028 ns per doc*dim*query (7.41 ms per pass)
+== baseline
+tiers 8:2 dims 126 code_bits 512 levels_bytes_per_doc 128.00
+rows 1: 0.110 ns per doc*dim*query (0.91 ms per pass)
+rows 32: 0.026 ns per doc*dim*query (7.00 ms per pass)
+== new
+tiers 8:2 dims 126 code_bits 512 levels_bytes_per_doc 64.00
+rows 1: 0.154 ns per doc*dim*query (1.28 ms per pass)
+rows 32: 0.028 ns per doc*dim*query (7.49 ms per pass)

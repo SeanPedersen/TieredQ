@@ -1,0 +1,3 @@
+dataset,codec,bits,threads,batch,native_preprocessing_ms,native_total_ms,preprocessing_fraction
+sift,tieredq,2,8,32,0.004193040404040404,0.5833831717171717,0.007187455187811313
+sift,rabitq,2,8,32,0.0028665858585858574,3.9853464949494963,0.0007192814632852102

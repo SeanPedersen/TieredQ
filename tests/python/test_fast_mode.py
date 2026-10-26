@@ -8,6 +8,22 @@ from tieredq import TieredQIndex
 
 DIMENSIONS = 32
 INITIAL_ROWS = 257
+CODE_WORD_BITS = 32
+CODE_WORD_BYTES = 4
+CODE_BLOCK_ROWS = 16
+CODE_BLOCK_WORD_BYTES = CODE_WORD_BYTES * CODE_BLOCK_ROWS
+# High-bit tiers plus trailing bits in each row's last packed code word.
+PACKED_CODE_BITS = DIMENSIONS * 7 + 4
+PACKED_CODE_KIND = 4
+FAST_METADATA_BYTES = 2 * np.dtype(np.float32).itemsize + np.dtype(np.uint8).itemsize
+
+
+def fast_codes_offset(payload, padded_rows):
+    import struct
+
+    header = struct.calcsize("<III")
+    array_lengths = struct.calcsize("<QQQQ")
+    return payload + header + array_lengths + padded_rows * FAST_METADATA_BYTES
 
 
 def assert_same(actual, expected):
@@ -88,6 +104,26 @@ def test_failed_append_empty_shapes_and_concurrent_calls():
     assert len(index) == INITIAL_ROWS + 6 and index.has_fast_scan
 
 
+# Budgets whose widest learned tier has 5 or 6 bits (wider budgets add 7-bit tiers).
+MID_WIDTH_CODE_BITS = [DIMENSIONS * 4 + 8, DIMENSIONS * 5 + 16]
+
+
+@pytest.mark.parametrize("code_bits", MID_WIDTH_CODE_BITS)
+def test_mid_width_models_store_packed_codes(code_bits, tmp_path):
+    """Tiers wider than the 4-bit lookup cache scan exact packed code rows on every backend."""
+    import struct
+
+    rows = np.random.default_rng(37).normal(size=(INITIAL_ROWS, DIMENSIONS)).astype(np.float32)
+    index = TieredQIndex(dimensions=DIMENSIONS, code_bits=code_bits, fast_mode=True)
+    index.add(rows)
+    assert index.bytes_per_vector == -(-code_bits // CODE_WORD_BITS) * CODE_WORD_BYTES + FAST_METADATA_BYTES
+    path = tmp_path / "index.tq"
+    index.save(str(path))
+    data = path.read_bytes()
+    payload = struct.unpack_from("<Q", data, 32)[0]
+    assert struct.unpack_from("<I", data, payload + 4)[0] == PACKED_CODE_KIND
+
+
 def rewrite_payload_checksum(data):
     import struct
 
@@ -98,12 +134,12 @@ def rewrite_payload_checksum(data):
     struct.pack_into("<Q", data, 64, value)
 
 
-@pytest.mark.parametrize("corruption", ["version", "kind", "level_max", "length", "nonfinite", "centroid", "level", "trailing"])
+@pytest.mark.parametrize("corruption", ["version", "kind", "level_max", "length", "nonfinite", "centroid", "code_padding", "padded_code", "trailing"])
 def test_rejects_malformed_fast_only_files(tmp_path, corruption):
     import struct
 
     rows = np.random.default_rng(41).normal(size=(INITIAL_ROWS, DIMENSIONS)).astype(np.float32)
-    index = TieredQIndex(dimensions=DIMENSIONS, code_bits=DIMENSIONS * 8, fast_mode=True)
+    index = TieredQIndex(dimensions=DIMENSIONS, code_bits=PACKED_CODE_BITS, fast_mode=True)
     index.add(rows)
     path = tmp_path / "index.tq"
     index.save(str(path))
@@ -122,8 +158,11 @@ def test_rejects_malformed_fast_only_files(tmp_path, corruption):
         struct.pack_into("<f", data, payload + 20, np.nan)
     elif corruption == "centroid":
         data[payload + 36 + padded * 8] = 255
-    elif corruption == "level":
-        data[-1] = 128
+    elif corruption == "code_padding":
+        last_word = PACKED_CODE_BITS // CODE_WORD_BITS
+        data[fast_codes_offset(payload, padded) + last_word * CODE_BLOCK_WORD_BYTES + CODE_WORD_BYTES - 1] = 255
+    elif corruption == "padded_code":
+        data[-1] = 255
     else:
         data.append(0)
         struct.pack_into("<Q", data, 40, len(data) - payload)
@@ -158,8 +197,13 @@ def foreign_fast_file(tmp_path):
         data[payload:] = encoded
         struct.pack_into("<Q", data, 40, len(encoded))
     else:
-        # The saved signed levels are valid inside the wider ARM quantization range.
+        # 8-bit packed code words have the signed-level payload's length; zero levels are valid
+        # inside the wider ARM quantization range, which the x86 kernels cannot consume.
+        struct.pack_into("<I", data, payload + 4, 2)
         struct.pack_into("<I", data, payload + 8, 127)
+        padded = struct.unpack_from("<Q", data, payload + 12)[0]
+        codes = fast_codes_offset(payload, padded)
+        data[codes:] = bytes(len(data) - codes)
     rewrite_payload_checksum(data)
     path.write_bytes(data)
     return path, vectors

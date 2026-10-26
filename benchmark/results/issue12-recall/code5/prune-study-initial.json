@@ -1,0 +1,482 @@
+{
+ "seed": 0,
+ "queries": 200,
+ "top_k": 10,
+ "stream_segments": 8,
+ "stream_chunk_docs": 256,
+ "scan_block_docs": 16,
+ "rows": [
+  {
+   "dataset": "sift",
+   "bits": 4,
+   "tiers": [
+    [
+     8,
+     2
+    ],
+    [
+     7,
+     12
+    ],
+    [
+     6,
+     16
+    ],
+    [
+     5,
+     20
+    ],
+    [
+     4,
+     22
+    ],
+    [
+     3,
+     28
+    ],
+    [
+     2,
+     18
+    ],
+    [
+     1,
+     8
+    ]
+   ],
+   "top_overlap": 0.9990000000000001,
+   "prefixes": [
+    {
+     "prefix_bits": [
+      8
+     ],
+     "prefix_ranks": 2,
+     "rank_fraction": 0.015873015873015872,
+     "bit_fraction": 0.03125,
+     "pruned_oracle": 0.15311184000000005,
+     "pruned_stream": 0.131528605,
+     "blocks_oracle": 0.9989927200000001,
+     "blocks_stream": 0.9992156,
+     "pruned_stream_cs": 0.48028517499999973,
+     "blocks_stream_cs": 0.9870355200000005,
+     "speedup_oracle_ranks": 1.0009922750623352,
+     "speedup_oracle_bits": 1.0009767556205764,
+     "speedup_stream_ranks": 1.0007725455722905,
+     "speedup_stream_bits": 1.0007604653681275,
+     "speedup_stream_cs_ranks": 1.0129235826473506,
+     "speedup_stream_cs_bits": 1.0127190832915463
+    },
+    {
+     "prefix_bits": [
+      8,
+      7
+     ],
+     "prefix_ranks": 14,
+     "rank_fraction": 0.1111111111111111,
+     "bit_fraction": 0.1953125,
+     "pruned_oracle": 0.5276013700000001,
+     "pruned_stream": 0.4818977700000001,
+     "blocks_oracle": 0.9834414399999999,
+     "blocks_stream": 0.9868437600000003,
+     "pruned_stream_cs": 0.7711192399999999,
+     "blocks_stream_cs": 0.8778078400000001,
+     "speedup_oracle_ranks": 1.0149385970268308,
+     "speedup_oracle_bits": 1.0135044052418718,
+     "speedup_stream_ranks": 1.0118328136320158,
+     "speedup_stream_bits": 1.0106999385060467,
+     "speedup_stream_cs_ranks": 1.1218500246268517,
+     "speedup_stream_cs_bits": 1.109048900914725
+    },
+    {
+     "prefix_bits": [
+      8,
+      7,
+      6
+     ],
+     "prefix_ranks": 30,
+     "rank_fraction": 0.23809523809523808,
+     "bit_fraction": 0.3828125,
+     "pruned_oracle": 0.8628350450000005,
+     "pruned_stream": 0.8015208949999998,
+     "blocks_oracle": 0.7401732799999998,
+     "blocks_stream": 0.8450829599999998,
+     "pruned_stream_cs": 0.9535061450000003,
+     "blocks_stream_cs": 0.3986086399999999,
+     "speedup_oracle_ranks": 1.2468256057568028,
+     "speedup_oracle_bits": 1.1909891718435506,
+     "speedup_stream_ranks": 1.1338280238679397,
+     "speedup_stream_bits": 1.1057211634953985,
+     "speedup_stream_cs_ranks": 1.8457095388406481,
+     "speedup_stream_cs_bits": 1.5902580284295837
+    },
+    {
+     "prefix_bits": [
+      8,
+      7,
+      6,
+      5
+     ],
+     "prefix_ranks": 50,
+     "rank_fraction": 0.3968253968253968,
+     "bit_fraction": 0.578125,
+     "pruned_oracle": 0.9918726449999999,
+     "pruned_stream": 0.9713933800000001,
+     "blocks_oracle": 0.10863624000000006,
+     "blocks_stream": 0.28527776,
+     "pruned_stream_cs": 0.991277505,
+     "blocks_stream_cs": 0.08973968000000003,
+     "speedup_oracle_ranks": 2.1628541923669817,
+     "speedup_oracle_bits": 1.6026773333871618,
+     "speedup_stream_ranks": 1.7577852857170944,
+     "speedup_stream_bits": 1.4316872811858372,
+     "speedup_stream_cs_ranks": 2.217520621702786,
+     "speedup_stream_cs_bits": 1.623418981171388
+    },
+    {
+     "prefix_bits": [
+      8,
+      7,
+      6,
+      5,
+      4
+     ],
+     "prefix_ranks": 72,
+     "rank_fraction": 0.5714285714285714,
+     "bit_fraction": 0.75,
+     "pruned_oracle": 0.9996847599999998,
+     "pruned_stream": 0.9944648649999999,
+     "blocks_oracle": 0.00494896,
+     "blocks_stream": 0.050196799999999986,
+     "pruned_stream_cs": 0.9960466199999999,
+     "blocks_stream_cs": 0.028947679999999986,
+     "speedup_oracle_ranks": 1.7435285103575358,
+     "speedup_oracle_bits": 1.331137418054515,
+     "speedup_stream_ranks": 1.6865070569237575,
+     "speedup_stream_bits": 1.31139079288261,
+     "speedup_stream_cs_ranks": 1.7128135168117444,
+     "speedup_stream_cs_bits": 1.320590654771561
+    },
+    {
+     "prefix_bits": [
+      8,
+      7,
+      6,
+      5,
+      4,
+      3
+     ],
+     "prefix_ranks": 100,
+     "rank_fraction": 0.7936507936507936,
+     "bit_fraction": 0.9140625,
+     "pruned_oracle": 0.9999769599999992,
+     "pruned_stream": 0.9970714799999999,
+     "blocks_oracle": 0.00036648000000000014,
+     "blocks_stream": 0.01474768,
+     "pruned_stream_cs": 0.9971265849999995,
+     "blocks_stream_cs": 0.013965920000000005,
+     "speedup_oracle_ranks": 1.2598799525906934,
+     "speedup_oracle_bits": 1.0939794005360872,
+     "speedup_stream_ranks": 1.2551871145445892,
+     "speedup_stream_bits": 1.0925023024110474,
+     "speedup_stream_cs_ranks": 1.255441317817573,
+     "speedup_stream_cs_bits": 1.0925824947276714
+    },
+    {
+     "prefix_bits": [
+      8,
+      7,
+      6,
+      5,
+      4,
+      3,
+      2
+     ],
+     "prefix_ranks": 118,
+     "rank_fraction": 0.9365079365079365,
+     "bit_fraction": 0.984375,
+     "pruned_oracle": 0.9999888649999995,
+     "pruned_stream": 0.997333485,
+     "blocks_oracle": 0.00017728,
+     "blocks_stream": 0.01103544000000001,
+     "pruned_stream_cs": 0.997333485,
+     "blocks_stream_cs": 0.01103544000000001,
+     "speedup_oracle_ranks": 1.0677837764943798,
+     "speedup_oracle_bits": 1.015870157246643,
+     "speedup_stream_ranks": 1.0669983189200987,
+     "speedup_stream_bits": 1.0156951009151676,
+     "speedup_stream_cs_ranks": 1.0669983189200987,
+     "speedup_stream_cs_bits": 1.0156951009151676
+    }
+   ]
+  },
+  {
+   "dataset": "sift",
+   "bits": 8,
+   "tiers": [
+    [
+     8,
+     122
+    ],
+    [
+     7,
+     6
+    ],
+    [
+     6,
+     1
+    ]
+   ],
+   "top_overlap": 0.9995,
+   "prefixes": [
+    {
+     "prefix_bits": [
+      8
+     ],
+     "prefix_ranks": 122,
+     "rank_fraction": 0.9457364341085271,
+     "bit_fraction": 0.953125,
+     "pruned_oracle": 0.9999864050000014,
+     "pruned_stream": 0.9972797950000002,
+     "blocks_oracle": 0.00021623999999999987,
+     "blocks_stream": 0.011807920000000005,
+     "pruned_stream_cs": 0.9973311549999998,
+     "blocks_stream_cs": 0.011072640000000002,
+     "speedup_oracle_ranks": 1.0573639302407054,
+     "speedup_oracle_bits": 1.0491691702127197,
+     "speedup_stream_ranks": 1.0566611574352562,
+     "speedup_stream_bits": 1.0485714042333374,
+     "speedup_stream_cs_ranks": 1.0567057077605257,
+     "speedup_stream_cs_bits": 1.0486093013134052
+    },
+    {
+     "prefix_bits": [
+      8,
+      7
+     ],
+     "prefix_ranks": 128,
+     "rank_fraction": 0.9922480620155039,
+     "bit_fraction": 0.994140625,
+     "pruned_oracle": 0.9999898649999978,
+     "pruned_stream": 0.9973604250000001,
+     "blocks_oracle": 0.00016144000000000022,
+     "blocks_stream": 0.010655599999999989,
+     "pruned_stream_cs": 0.9973628950000004,
+     "blocks_stream_cs": 0.010620239999999994,
+     "speedup_oracle_ranks": 1.0078112288980876,
+     "speedup_oracle_bits": 1.0058929525067293,
+     "speedup_stream_ranks": 1.0077286097423908,
+     "speedup_stream_bits": 1.0058307402944815,
+     "speedup_stream_cs_ranks": 1.0077288881043234,
+     "speedup_stream_cs_bits": 1.0058309499051823
+    }
+   ]
+  },
+  {
+   "dataset": "glove",
+   "bits": 4,
+   "tiers": [
+    [
+     4,
+     200
+    ]
+   ],
+   "top_overlap": 1.0,
+   "prefixes": []
+  },
+  {
+   "dataset": "glove",
+   "bits": 8,
+   "tiers": [
+    [
+     8,
+     200
+    ]
+   ],
+   "top_overlap": 1.0,
+   "prefixes": []
+  },
+  {
+   "dataset": "openai",
+   "bits": 4,
+   "tiers": [
+    [
+     7,
+     13
+    ],
+    [
+     6,
+     129
+    ],
+    [
+     5,
+     316
+    ],
+    [
+     4,
+     536
+    ],
+    [
+     3,
+     477
+    ],
+    [
+     2,
+     61
+    ],
+    [
+     1,
+     2
+    ]
+   ],
+   "top_overlap": 1.0,
+   "prefixes": [
+    {
+     "prefix_bits": [
+      7
+     ],
+     "prefix_ranks": 13,
+     "rank_fraction": 0.00847457627118644,
+     "bit_fraction": 0.014811197916666666,
+     "pruned_oracle": 0.0,
+     "pruned_stream": 0.0,
+     "blocks_oracle": 1.0,
+     "blocks_stream": 1.0,
+     "pruned_stream_cs": 0.0,
+     "blocks_stream_cs": 1.0,
+     "speedup_oracle_ranks": 1.0,
+     "speedup_oracle_bits": 1.0,
+     "speedup_stream_ranks": 1.0,
+     "speedup_stream_bits": 1.0,
+     "speedup_stream_cs_ranks": 1.0,
+     "speedup_stream_cs_bits": 1.0
+    },
+    {
+     "prefix_bits": [
+      7,
+      6
+     ],
+     "prefix_ranks": 142,
+     "rank_fraction": 0.09256844850065189,
+     "bit_fraction": 0.14078776041666666,
+     "pruned_oracle": 1.6500000000002625e-06,
+     "pruned_stream": 0.0,
+     "blocks_oracle": 1.0,
+     "blocks_stream": 1.0,
+     "pruned_stream_cs": 0.0015038999999999968,
+     "blocks_stream_cs": 1.0,
+     "speedup_oracle_ranks": 1.0,
+     "speedup_oracle_bits": 1.0,
+     "speedup_stream_ranks": 1.0,
+     "speedup_stream_bits": 1.0,
+     "speedup_stream_cs_ranks": 1.0,
+     "speedup_stream_cs_bits": 1.0
+    },
+    {
+     "prefix_bits": [
+      7,
+      6,
+      5
+     ],
+     "prefix_ranks": 458,
+     "rank_fraction": 0.2985658409387223,
+     "bit_fraction": 0.39794921875,
+     "pruned_oracle": 0.7005496999999998,
+     "pruned_stream": 0.1839797,
+     "blocks_oracle": 0.8903952000000003,
+     "blocks_stream": 0.9965527999999999,
+     "pruned_stream_cs": 0.7882147499999997,
+     "blocks_stream_cs": 0.8056496000000002,
+     "speedup_oracle_ranks": 1.0832834264046762,
+     "speedup_oracle_bits": 1.0706496609548206,
+     "speedup_stream_ranks": 1.0024238446502944,
+     "speedup_stream_bits": 1.0020797056523014,
+     "speedup_stream_cs_ranks": 1.1578416105911442,
+     "speedup_stream_cs_bits": 1.1325141309472806
+    },
+    {
+     "prefix_bits": [
+      7,
+      6,
+      5,
+      4
+     ],
+     "prefix_ranks": 994,
+     "rank_fraction": 0.6479791395045632,
+     "bit_fraction": 0.7469075520833334,
+     "pruned_oracle": 0.9994587,
+     "pruned_stream": 0.9621034000000002,
+     "blocks_oracle": 0.008615999999999995,
+     "blocks_stream": 0.21374960000000012,
+     "pruned_stream_cs": 0.9703591500000007,
+     "blocks_stream_cs": 0.13680880000000004,
+     "speedup_oracle_ranks": 1.5360696387885182,
+     "speedup_oracle_bits": 1.3349562902197407,
+     "speedup_stream_ranks": 1.3826985137912693,
+     "speedup_stream_bits": 1.2484301590175642,
+     "speedup_stream_cs_ranks": 1.4364953606556274,
+     "speedup_stream_cs_bits": 1.2795367852918305
+    },
+    {
+     "prefix_bits": [
+      7,
+      6,
+      5,
+      4,
+      3
+     ],
+     "prefix_ranks": 1471,
+     "rank_fraction": 0.9589308996088657,
+     "bit_fraction": 0.9798177083333334,
+     "pruned_oracle": 0.9998932499999964,
+     "pruned_stream": 0.9757157999999998,
+     "blocks_oracle": 0.0017063999999999968,
+     "blocks_stream": 0.07542320000000005,
+     "pruned_stream_cs": 0.9757698499999996,
+     "blocks_stream_cs": 0.07473759999999997,
+     "speedup_oracle_ranks": 1.0427518020696613,
+     "speedup_oracle_bits": 1.0205621354790249,
+     "speedup_stream_ranks": 1.039470284815297,
+     "speedup_stream_bits": 1.019014898140579,
+     "speedup_stream_cs_ranks": 1.0395007092745092,
+     "speedup_stream_cs_bits": 1.0190292665428264
+    },
+    {
+     "prefix_bits": [
+      7,
+      6,
+      5,
+      4,
+      3,
+      2
+     ],
+     "prefix_ranks": 1532,
+     "rank_fraction": 0.9986962190352021,
+     "bit_fraction": 0.9996744791666666,
+     "pruned_oracle": 0.9999009999999976,
+     "pruned_stream": 0.9759560499999993,
+     "blocks_oracle": 0.001582399999999995,
+     "blocks_stream": 0.0723432,
+     "pruned_stream_cs": 0.9759560499999993,
+     "blocks_stream_cs": 0.0723432,
+     "speedup_oracle_ranks": 1.001303414539787,
+     "speedup_oracle_bits": 1.0003251113922318,
+     "speedup_stream_ranks": 1.0012109258456257,
+     "speedup_stream_bits": 1.0003020628289836,
+     "speedup_stream_cs_ranks": 1.0012109258456257,
+     "speedup_stream_cs_bits": 1.0003020628289836
+    }
+   ]
+  },
+  {
+   "dataset": "openai",
+   "bits": 8,
+   "tiers": [
+    [
+     8,
+     1536
+    ]
+   ],
+   "top_overlap": 1.0,
+   "prefixes": []
+  }
+ ]
+}
