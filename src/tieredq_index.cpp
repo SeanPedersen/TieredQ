@@ -12,6 +12,7 @@
 #define DV_TIEREDQ_X86 1
 #include "tieredq_scan_int8_avx512.h"
 #include "tieredq_scan_int8_avx2.h"
+#include "tieredq_range_checkpoint_avx512.h"
 #endif
 #if defined(__aarch64__) || defined(_M_ARM64)
 #define DV_TIEREDQ_NEON 1
@@ -130,6 +131,21 @@ auto fast_search_queries(const tieredq_detail::FastScanCache& cache,const Tiered
   for (size_t row=0;row<rows;++row) prepared[row].codes=std::move(weights[row]);
   return prepared;
 }
+#ifdef DV_TIEREDQ_X86
+// Keep checkpoint preparation and selection scheduling separate from CPU/layout dispatch.
+template<class Finish>
+void fast_range_search(const tieredq_detail::FastScanCache& cache,const TieredQ& codec,
+    const float* query,size_t k,Finish finish) {
+  const auto prepared=codec.query_weights(query,1);
+  const auto bounds=tieredq_detail::prepare_fast_range_bounds(cache,codec.tiers(),prepared[0]);
+  const size_t prefix_rank=codec.tiers()[tieredq_detail::fast_range_prefix_tiers].start;
+  auto scan=[&](const TieredQQuery* queries,size_t,size_t first,size_t documents,
+      float* scores,size_t,TopK* top) {
+    tieredq_detail::scan_fast_range_avx512(cache,*queries,bounds,prefix_rank,first,documents,scores,top->threshold());
+  };
+  tieredq_detail::search_fast_tiles(prepared,cache.count,k,1,scan,finish);
+}
+#endif
 template<class Finish>
 void fast_search(const tieredq_detail::FastScanCache& cache,const TieredQ& codec,
     const float* queries,size_t rows,size_t k,Finish finish) {
@@ -146,6 +162,11 @@ void fast_search(const tieredq_detail::FastScanCache& cache,const TieredQ& codec
   }
 #endif
 #ifdef DV_TIEREDQ_X86
+  if (rows==1 && backend==tieredq_detail::FastScanBackend::avx512 &&
+      tieredq_detail::fast_range_checkpoint_supported(cache,codec.tiers())) {
+    fast_range_search(cache,codec,queries,k,finish);
+    return;
+  }
   if (backend==tieredq_detail::FastScanBackend::avx512 || backend==tieredq_detail::FastScanBackend::avx2) {
     auto prepare=[&](const float* vector) { return tieredq_detail::fast_scan_query_x86(cache,codec,vector); };
     auto scan=[&](const auto* prepared,size_t count,size_t first,size_t documents,float* scores,size_t stride) {

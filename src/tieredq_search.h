@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <array>
 #include <exception>
+#include <limits>
 #include <mutex>
 #include <numeric>
 #include <omp.h>
@@ -56,6 +57,10 @@ class TopK {
         std::pop_heap(hits_.begin(),hits_.end(),better_hit); hits_.back()=hit; std::push_heap(hits_.begin(),hits_.end(),better_hit);
       }
     }
+  }
+  // Until the heap is full, every document remains eligible.
+  float threshold() const {
+    return hits_.size()<k_ ? -std::numeric_limits<float>::infinity() : hits_.front().score;
   }
   std::vector<TieredQHit> finish() { std::sort(hits_.begin(),hits_.end(),better_hit); return std::move(hits_); }
  private:

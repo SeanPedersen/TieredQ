@@ -4,3 +4,9 @@ example.tq
 __pycache__/
 .pytest_cache/
 *.egg-info/
+
+# Local pruning research and provenance; production range pruning lives in src/.
+/benchmark/experiments/error_bound_pruning/
+/benchmark/experiments/lowbit_rabitq/
+/benchmark/results/pruning-decision-20261026/
+/benchmark/results/pruning-scanner-ablation-20261026/

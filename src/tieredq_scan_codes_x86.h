@@ -7,6 +7,7 @@
 #include "tieredq_scan_codes.h"
 #include <immintrin.h>
 #include <numeric>
+#include <limits>
 #include <utility>
 
 namespace dv::tieredq_detail {
@@ -102,10 +103,8 @@ inline void walk_segment_phase_avx512(const int8_t* base,const CodeTableSegment&
 }
 template<class Sink>
 __attribute__((target("avx512f,avx512bw"),always_inline))
-inline void walk_code_block_avx512(const FastScanCache& cache,const std::vector<CodeTableSegment>& segments,
-    size_t block,Sink& sink) {
-  const int8_t* base=cache.levels.data()+block*cache.level_block_bytes();
-  for (const auto& segment:segments) switch (segment.width) {
+inline void walk_code_segment_avx512(const int8_t* base,const CodeTableSegment& segment,Sink& sink) {
+  switch (segment.width) {
     case 1: walk_segment_phase_avx512<1>(base,segment,sink); break;
     case 2: walk_segment_phase_avx512<2>(base,segment,sink); break;
     case 3: walk_segment_phase_avx512<3>(base,segment,sink); break;
@@ -115,6 +114,13 @@ inline void walk_code_block_avx512(const FastScanCache& cache,const std::vector<
     case 7: walk_segment_phase_avx512<7>(base,segment,sink); break;
     default: walk_segment_phase_avx512<fast_scan_code_bits>(base,segment,sink); break;
   }
+}
+template<class Sink>
+__attribute__((target("avx512f,avx512bw"),always_inline))
+inline void walk_code_block_avx512(const FastScanCache& cache,const std::vector<CodeTableSegment>& segments,
+    size_t block,Sink& sink) {
+  const int8_t* base=cache.levels.data()+block*cache.level_block_bytes();
+  for (const auto& segment:segments) walk_code_segment_avx512(base,segment,sink);
 }
 struct DecodeLevelsAvx512 {
   float* decoded;
@@ -190,23 +196,32 @@ inline void transpose_tile_terms_avx512(const __m256* by_document,__m512* by_row
   }
 }
 
-// Same rounding sequence as the scalar codec: (center + weight*correction) + factor*dot.
-template<size_t Rows>
 __attribute__((target("avx512f,avx512bw"),always_inline))
-inline void store_code_scores_avx512(const FastScanCache& cache,const __m512* dots,const float* centers,
-    const float* corrections,size_t doc,size_t valid,float* scores,size_t stride) {
+inline void code_base_terms_avx512(const FastScanCache& cache,const float* centers,
+    const float* corrections,size_t doc,__m512* terms) {
   __m256 by_document[fast_scan_block_docs];
   for (size_t lane=0;lane<fast_scan_block_docs;++lane) {
     const size_t at=size_t(cache.centroid[doc+lane])*fast_code_query_tile_avx512;
     by_document[lane]=_mm256_add_ps(_mm256_loadu_ps(centers+at),
         _mm256_mul_ps(_mm256_loadu_ps(corrections+at),_mm256_set1_ps(cache.correction[doc+lane])));
   }
-  __m512 terms[fast_code_query_tile_avx512];
   transpose_tile_terms_avx512(by_document,terms);
+}
+// Same rounding sequence as the scalar codec: (center + weight*correction) + factor*dot.
+template<size_t Rows,bool Filter=false>
+__attribute__((target("avx512f,avx512bw"),always_inline))
+inline void store_code_scores_avx512(const FastScanCache& cache,const __m512* dots,const float* centers,
+    const float* corrections,size_t doc,size_t valid,float* scores,size_t stride,const uint16_t* keep=nullptr,const __m512* cached_terms=nullptr) {
+  __m512 generated[fast_code_query_tile_avx512];
+  if constexpr (!Filter) code_base_terms_avx512(cache,centers,corrections,doc,generated);
+  const __m512* terms=Filter ? cached_terms : generated;
   const __m512 factor=_mm512_loadu_ps(cache.factor.data()+doc);
   const auto mask=__mmask16((1u<<valid)-1);
-  for (size_t row=0;row<Rows;++row)
-    _mm512_mask_storeu_ps(scores+row*stride,mask,_mm512_add_ps(terms[row],_mm512_mul_ps(factor,dots[row])));
+  for (size_t row=0;row<Rows;++row) {
+    auto score=_mm512_add_ps(terms[row],_mm512_mul_ps(factor,dots[row]));
+    if constexpr (Filter) score=_mm512_mask_blend_ps(keep[row],_mm512_set1_ps(-std::numeric_limits<float>::infinity()),score);
+    _mm512_mask_storeu_ps(scores+row*stride,mask,score);
+  }
 }
 template<size_t Rows>
 __attribute__((target("avx512f,avx512bw")))

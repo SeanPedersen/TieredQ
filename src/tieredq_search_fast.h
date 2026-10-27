@@ -41,7 +41,9 @@ void search_fast_tiles(const std::vector<Prepared>& queries,size_t documents,siz
       for (size_t row=0;row<rows;++row) top.emplace_back(k);
       for (size_t begin=begin_document;begin<end_document;begin+=stride) {
         const size_t count=std::min(stride,end_document-begin);
-        scan(queries.data()+first,rows,begin,count,scratch.data(),stride);
+        if constexpr (requires {scan(queries.data()+first,rows,begin,count,scratch.data(),stride,top.data());})
+          scan(queries.data()+first,rows,begin,count,scratch.data(),stride,top.data());
+        else scan(queries.data()+first,rows,begin,count,scratch.data(),stride);
         for (size_t row=0;row<rows;++row) for (size_t block=0;block<count;block+=selection_block)
           top[row].add(scratch.data()+row*stride+block,std::min(selection_block,count-block),begin+block);
       }

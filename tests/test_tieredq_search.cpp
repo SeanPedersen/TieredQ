@@ -320,7 +320,9 @@ void streaming_search_test(uint32_t code_bits,uint32_t max_bits,bool fast_mode=f
   }
 }
 } // namespace
+void tieredq_range_checkpoint_tests();
 void tieredq_search_tests() {
+  tieredq_range_checkpoint_tests();
   fast_cache_accounting_test();
   high_bit_reference_test(5);high_bit_reference_test(6);high_bit_reference_test(7);high_bit_reference_test(8);
   high_bit_reference_test(5,0.5f,100);
