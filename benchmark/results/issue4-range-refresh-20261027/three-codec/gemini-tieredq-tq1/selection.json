@@ -1,0 +1,43 @@
+{
+  "dataset": "gemini",
+  "anchor_bits": 1,
+  "cap_bytes": 104.26682828282829,
+  "selected_code_bits": 467,
+  "selected_bytes_per_vector": 103.3380202020202,
+  "in_target_band": true,
+  "attempts": [
+    {
+      "code_bits": 237,
+      "bytes_per_vector": 68.73995959595959
+    },
+    {
+      "code_bits": 3191,
+      "bytes_per_vector": 441.2480404040404
+    },
+    {
+      "code_bits": 1714,
+      "bytes_per_vector": 253.78272727272727
+    },
+    {
+      "code_bits": 975,
+      "bytes_per_vector": 189.88759595959596
+    },
+    {
+      "code_bits": 606,
+      "bytes_per_vector": 126.0279595959596
+    },
+    {
+      "code_bits": 421,
+      "bytes_per_vector": 95.77292929292929
+    },
+    {
+      "code_bits": 513,
+      "bytes_per_vector": 110.92379797979798
+    },
+    {
+      "code_bits": 467,
+      "bytes_per_vector": 103.3380202020202
+    }
+  ],
+  "policy": "Seed-0 storage only before recall; 99.0\u201399.5% target band, up to 16 attempts; largest measured feasible fallback; integer code budgets 1..8*d"
+}

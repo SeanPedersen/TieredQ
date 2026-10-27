@@ -1,0 +1,34 @@
+{
+  "dataset": "gemini",
+  "anchor_bits": 4,
+  "cap_bytes": 404.04412121212124,
+  "policy": "Storage only; affine initial estimate from first two main budgets, then integer bisection",
+  "target_low": 0.99,
+  "target_high": 0.995,
+  "max_attempts": 16,
+  "attempts": [
+    {
+      "code_bits": 3072,
+      "bytes_per_vector": 425.24674747474745
+    },
+    {
+      "code_bits": 1536,
+      "bytes_per_vector": 228.472
+    },
+    {
+      "code_bits": 2304,
+      "bytes_per_vector": 328.9248686868687
+    },
+    {
+      "code_bits": 2688,
+      "bytes_per_vector": 377.2429898989899
+    },
+    {
+      "code_bits": 2880,
+      "bytes_per_vector": 401.24492929292927
+    }
+  ],
+  "selected_code_bits": 2880,
+  "in_target_band": true,
+  "selected_bytes_per_vector": 401.24492929292927
+}

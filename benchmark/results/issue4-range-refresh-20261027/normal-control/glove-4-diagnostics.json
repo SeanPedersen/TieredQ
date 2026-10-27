@@ -1,0 +1,36 @@
+{
+  "fast": {
+    "tiers": [
+      {
+        "start": 0,
+        "dimensions": 200,
+        "bits": 4
+      }
+    ],
+    "coded_dimensions": 200,
+    "packed_code_bytes": 100,
+    "vector_bytes": 109,
+    "allocated_vector_bytes": 11326800,
+    "model_serialized_bytes": 368600,
+    "model_memory_bytes": 1254764,
+    "model_serving_memory_bytes": 377364,
+    "scalar_fast_scan": false
+  },
+  "normal": {
+    "tiers": [
+      {
+        "start": 0,
+        "dimensions": 200,
+        "bits": 4
+      }
+    ],
+    "coded_dimensions": 200,
+    "packed_code_bytes": 100,
+    "vector_bytes": 105,
+    "allocated_vector_bytes": 10500000,
+    "model_serialized_bytes": 368600,
+    "model_memory_bytes": 1254764,
+    "model_serving_memory_bytes": 377364,
+    "scalar_fast_scan": false
+  }
+}

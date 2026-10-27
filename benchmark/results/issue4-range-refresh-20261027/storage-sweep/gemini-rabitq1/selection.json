@@ -1,0 +1,62 @@
+{
+  "dataset": "gemini",
+  "anchor_bits": 1,
+  "cap_bytes": 108.04412121212121,
+  "policy": "Storage only; affine initial estimate from first two main budgets, then integer bisection",
+  "target_low": 0.99,
+  "target_high": 0.995,
+  "max_attempts": 16,
+  "attempts": [
+    {
+      "code_bits": 276,
+      "bytes_per_vector": 74.40727272727273
+    },
+    {
+      "code_bits": 1674,
+      "bytes_per_vector": 249.50194949494949
+    },
+    {
+      "code_bits": 975,
+      "bytes_per_vector": 189.88759595959596
+    },
+    {
+      "code_bits": 625,
+      "bytes_per_vector": 130.18642424242424
+    },
+    {
+      "code_bits": 450,
+      "bytes_per_vector": 100.14917171717171
+    },
+    {
+      "code_bits": 537,
+      "bytes_per_vector": 115.21179797979798
+    },
+    {
+      "code_bits": 493,
+      "bytes_per_vector": 107.64161616161616
+    },
+    {
+      "code_bits": 471,
+      "bytes_per_vector": 103.36913131313132
+    },
+    {
+      "code_bits": 482,
+      "bytes_per_vector": 105.52614141414142
+    },
+    {
+      "code_bits": 487,
+      "bytes_per_vector": 106.5579797979798
+    },
+    {
+      "code_bits": 490,
+      "bytes_per_vector": 106.58909090909091
+    },
+    {
+      "code_bits": 491,
+      "bytes_per_vector": 107.61050505050505
+    }
+  ],
+  "selected_code_bits": 493,
+  "in_target_band": false,
+  "selected_bytes_per_vector": 107.64161616161616
+}

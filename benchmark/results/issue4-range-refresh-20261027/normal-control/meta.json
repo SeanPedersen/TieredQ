@@ -1,0 +1,14 @@
+{
+  "status": "complete",
+  "wall_s": 190.41478004539385,
+  "query_count": 100,
+  "threads": 8,
+  "seeds": [
+    0
+  ],
+  "timing_repeats": 3,
+  "warmups": 3,
+  "full_corpora": true,
+  "source_revision": "575e167a0ad66920119bd0d0836b6c0c92c0a4e5",
+  "note": "Matched first 100 held-out queries; independent deterministic builds with matching tier allocations. Build time excludes shared SIFT transform preparation."
+}

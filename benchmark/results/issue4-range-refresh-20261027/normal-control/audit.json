@@ -1,0 +1,7 @@
+{
+  "status": "passed",
+  "rows": 48,
+  "unique_cells": 48,
+  "queries": 100,
+  "finite_positive_timings": true
+}

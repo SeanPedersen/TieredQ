@@ -1,0 +1,5 @@
+{
+  "file": "src/tieredq_index.cpp",
+  "before": "if (rows==1 && backend==tieredq_detail::FastScanBackend::avx512 &&",
+  "after": "if (false && rows==1 && backend==tieredq_detail::FastScanBackend::avx512 &&"
+}

@@ -1,0 +1,4 @@
+   Compiling common v0.0.0 (/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/three-codec/qdrant/lib/common/common)
+   Compiling quantization v0.1.0 (/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/three-codec/qdrant/lib/quantization)
+   Compiling qdrant_bench v0.1.0 (/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/three-codec/native)
+    Finished `release` profile [optimized] target(s) in 14.96s

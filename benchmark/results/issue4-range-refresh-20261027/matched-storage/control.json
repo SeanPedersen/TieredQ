@@ -1,0 +1,6 @@
+{
+  "code_bits": 1536,
+  "identical_ids": true,
+  "bytes_per_vector": 318.9784,
+  "recall10": 0.8939000000000002
+}

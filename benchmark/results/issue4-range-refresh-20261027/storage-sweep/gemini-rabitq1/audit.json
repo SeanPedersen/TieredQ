@@ -1,0 +1,7 @@
+{
+  "status": "passed",
+  "rows": 12,
+  "timed_rows": 4,
+  "seed0_within_cap": true,
+  "storage_selected_before_recall": true
+}

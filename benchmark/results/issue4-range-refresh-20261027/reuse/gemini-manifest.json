@@ -1,0 +1,33 @@
+{
+  "source": {
+    "repo": "nirantk/dbpedia-entities-google-palm-gemini-embedding-001-100K",
+    "revision": "e14a0f193988e9efb7ccc57b4c615418e6540f62",
+    "files": {
+      "data/train-00000-of-00002.parquet": "73d3b212a797fdd6239edcef92616dfcb791a6660a9d15127fa3ff02afc4c488",
+      "data/train-00001-of-00002.parquet": "4acbd56186ea9afc9410becac479b7c41309dfcb8e601ccea97bbe0a8fbfdaef"
+    }
+  },
+  "source_checksums": {
+    "data/train-00000-of-00002.parquet": "73d3b212a797fdd6239edcef92616dfcb791a6660a9d15127fa3ff02afc4c488",
+    "data/train-00001-of-00002.parquet": "4acbd56186ea9afc9410becac479b7c41309dfcb8e601ccea97bbe0a8fbfdaef"
+  },
+  "original_shape": [
+    100000,
+    768
+  ],
+  "finite": true,
+  "split_seed": 0,
+  "corpus_n": 99000,
+  "query_n": 1000,
+  "query_semantics": "held-out document vectors, not independently embedded search queries",
+  "normalization": "FP32 L2 normalization for both corpus and queries",
+  "truth": "exhaustive chunked FP32 dot product top-10",
+  "array_sha256": {
+    "raw": "7eb513310fc448762f72ffb2b8924588e615ca497c62fdb5d8c06c5250b0d989",
+    "base": "89744af8576116555f3e8ac384b1d318c5f3da192ebd193a76f03606b007fa1a",
+    "queries": "fa594bfbaebf5a68681f42b8570c6908df94db48f114e117e6e6185eda49d6b9",
+    "truth": "8eaa35bafe1ed4806fbd0182f75476ba5f12803e0d84959b01966b231dd70240",
+    "corpus_ids": "008cb79eeed37ee08f8ae66e9ce8d66a8c7c26bde656dca95bb8f866e1e065b0",
+    "query_ids": "baf6c50001f4ad4773222f9021b4ac0a2723c569c6ec9f54d586817c50a4ca86"
+  }
+}

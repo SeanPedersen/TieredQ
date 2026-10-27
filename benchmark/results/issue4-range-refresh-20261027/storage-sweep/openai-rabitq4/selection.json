@@ -1,0 +1,46 @@
+{
+  "dataset": "openai",
+  "anchor_bits": 4,
+  "cap_bytes": 788.0696,
+  "policy": "Storage only; affine initial estimate from first two main budgets, then integer bisection",
+  "target_low": 0.99,
+  "target_high": 0.995,
+  "max_attempts": 16,
+  "attempts": [
+    {
+      "code_bits": 5620,
+      "bytes_per_vector": 823.79958
+    },
+    {
+      "code_bits": 2810,
+      "bytes_per_vector": 457.53387
+    },
+    {
+      "code_bits": 4215,
+      "bytes_per_vector": 647.30702
+    },
+    {
+      "code_bits": 4917,
+      "bytes_per_vector": 735.61487
+    },
+    {
+      "code_bits": 5268,
+      "bytes_per_vector": 779.79958
+    },
+    {
+      "code_bits": 5444,
+      "bytes_per_vector": 803.79958
+    },
+    {
+      "code_bits": 5356,
+      "bytes_per_vector": 791.79958
+    },
+    {
+      "code_bits": 5312,
+      "bytes_per_vector": 783.79958
+    }
+  ],
+  "selected_code_bits": 5312,
+  "in_target_band": true,
+  "selected_bytes_per_vector": 783.79958
+}

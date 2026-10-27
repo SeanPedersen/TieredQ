@@ -1,0 +1,19 @@
+{
+  "disk_bytes": 10312258,
+  "resident_bytes": 10322416,
+  "serving_bytes": 10322416,
+  "codes_allocated_bytes": 10296000,
+  "rotation_calibration_bytes": 26112,
+  "shell_bytes": 304,
+  "vector_bytes": 104,
+  "files": {
+    "metadata.json": {
+      "bytes": 16258,
+      "sha256": "d73d8f2f11348eb1bdaa9111eb8bd652af9cecfe5ff9205ef4d2e616d9a3d439"
+    },
+    "codes.bin": {
+      "bytes": 10296000,
+      "sha256": "0fc30adba3926ded8df52ce82fbacaf9e7f235d3837b62ef49f9d674856008fc"
+    }
+  }
+}

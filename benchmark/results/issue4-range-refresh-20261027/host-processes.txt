@@ -1,0 +1,8 @@
+    PID %CPU COMMAND
+3499441  124 python
+3363735  101 uvicorn
+3361077 72.7 uvicorn
+3501412 12.5 tailscaled
+   1620  4.5 dockerd
+3310227  4.1 python
+3489253  4.1 python

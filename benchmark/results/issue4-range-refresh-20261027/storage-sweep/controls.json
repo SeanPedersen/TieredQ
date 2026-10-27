@@ -1,0 +1,14 @@
+[
+  {
+    "dataset": "openai",
+    "code_bits": 1536,
+    "identical_ids": true,
+    "bytes_per_vector": 318.9784
+  },
+  {
+    "dataset": "gemini",
+    "code_bits": 768,
+    "identical_ids": true,
+    "bytes_per_vector": 154.75870707070706
+  }
+]

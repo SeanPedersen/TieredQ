@@ -1,0 +1,116 @@
+INPUT VERIFIED openai base=(100000, 1536), queries=(1000, 1536)
+CONTROL VERIFIED openai: identical archived IDs and storage
+SELECT openai RaBitQ 1bit cap=204.06960000 B/vector
+STORAGE openai cap=1: {'code_bits': 518, 'bytes_per_vector': 146.56544}
+STORAGE openai cap=1: {'code_bits': 3331, 'bytes_per_vector': 533.59954}
+STORAGE openai cap=1: {'code_bits': 1924, 'bytes_per_vector': 382.89384}
+STORAGE openai cap=1: {'code_bits': 1221, 'bytes_per_vector': 267.32432}
+STORAGE openai cap=1: {'code_bits': 869, 'bytes_per_vector': 208.58416}
+STORAGE openai cap=1: {'code_bits': 693, 'bytes_per_vector': 177.65424}
+STORAGE openai cap=1: {'code_bits': 781, 'bytes_per_vector': 193.55816}
+STORAGE openai cap=1: {'code_bits': 825, 'bytes_per_vector': 201.10192}
+STORAGE openai cap=1: {'code_bits': 847, 'bytes_per_vector': 204.90456}
+STORAGE openai cap=1: {'code_bits': 836, 'bytes_per_vector': 203.53448}
+STORAGE openai cap=1: {'code_bits': 830, 'bytes_per_vector': 201.348}
+STORAGE openai cap=1: {'code_bits': 833, 'bytes_per_vector': 202.41048}
+MEASURED openai cap=1 seed=0 threads=1 batch=1 recall=0.820300 qps=923.73
+MEASURED openai cap=1 seed=0 threads=1 batch=32 recall=0.820300 qps=993.47
+MEASURED openai cap=1 seed=0 threads=8 batch=1 recall=0.820300 qps=1964.84
+MEASURED openai cap=1 seed=0 threads=8 batch=32 recall=0.820300 qps=7189.95
+MEASURED openai cap=1 seed=1 threads=1 batch=1 recall=0.827100 qps=nan
+MEASURED openai cap=1 seed=1 threads=1 batch=32 recall=0.827100 qps=nan
+MEASURED openai cap=1 seed=1 threads=8 batch=1 recall=0.827100 qps=nan
+MEASURED openai cap=1 seed=1 threads=8 batch=32 recall=0.827100 qps=nan
+MEASURED openai cap=1 seed=2 threads=1 batch=1 recall=0.823500 qps=nan
+MEASURED openai cap=1 seed=2 threads=1 batch=32 recall=0.823500 qps=nan
+MEASURED openai cap=1 seed=2 threads=8 batch=1 recall=0.823500 qps=nan
+MEASURED openai cap=1 seed=2 threads=8 batch=32 recall=0.823500 qps=nan
+SELECT openai RaBitQ 4bit cap=788.06960000 B/vector
+STORAGE openai cap=4: {'code_bits': 5620, 'bytes_per_vector': 823.79958}
+STORAGE openai cap=4: {'code_bits': 2810, 'bytes_per_vector': 457.53387}
+STORAGE openai cap=4: {'code_bits': 4215, 'bytes_per_vector': 647.30702}
+STORAGE openai cap=4: {'code_bits': 4917, 'bytes_per_vector': 735.61487}
+STORAGE openai cap=4: {'code_bits': 5268, 'bytes_per_vector': 779.79958}
+STORAGE openai cap=4: {'code_bits': 5444, 'bytes_per_vector': 803.79958}
+STORAGE openai cap=4: {'code_bits': 5356, 'bytes_per_vector': 791.79958}
+STORAGE openai cap=4: {'code_bits': 5312, 'bytes_per_vector': 783.79958}
+MEASURED openai cap=4 seed=0 threads=1 batch=1 recall=0.978500 qps=74.37
+MEASURED openai cap=4 seed=0 threads=1 batch=32 recall=0.978500 qps=198.66
+MEASURED openai cap=4 seed=0 threads=8 batch=1 recall=0.978500 qps=314.50
+MEASURED openai cap=4 seed=0 threads=8 batch=32 recall=0.978500 qps=1067.21
+MEASURED openai cap=4 seed=1 threads=1 batch=1 recall=0.977500 qps=nan
+MEASURED openai cap=4 seed=1 threads=1 batch=32 recall=0.977500 qps=nan
+MEASURED openai cap=4 seed=1 threads=8 batch=1 recall=0.977500 qps=nan
+MEASURED openai cap=4 seed=1 threads=8 batch=32 recall=0.977500 qps=nan
+MEASURED openai cap=4 seed=2 threads=1 batch=1 recall=0.978000 qps=nan
+MEASURED openai cap=4 seed=2 threads=1 batch=32 recall=0.978000 qps=nan
+MEASURED openai cap=4 seed=2 threads=8 batch=1 recall=0.978000 qps=nan
+MEASURED openai cap=4 seed=2 threads=8 batch=32 recall=0.978000 qps=nan
+INPUT VERIFIED gemini base=(99000, 768), queries=(1000, 768)
+CONTROL VERIFIED gemini: identical archived IDs and storage
+SELECT gemini RaBitQ 1bit cap=108.04412121 B/vector
+STORAGE gemini cap=1: {'code_bits': 276, 'bytes_per_vector': 74.40727272727273}
+STORAGE gemini cap=1: {'code_bits': 1674, 'bytes_per_vector': 249.50194949494949}
+STORAGE gemini cap=1: {'code_bits': 975, 'bytes_per_vector': 189.88759595959596}
+STORAGE gemini cap=1: {'code_bits': 625, 'bytes_per_vector': 130.18642424242424}
+STORAGE gemini cap=1: {'code_bits': 450, 'bytes_per_vector': 100.14917171717171}
+STORAGE gemini cap=1: {'code_bits': 537, 'bytes_per_vector': 115.21179797979798}
+STORAGE gemini cap=1: {'code_bits': 493, 'bytes_per_vector': 107.64161616161616}
+STORAGE gemini cap=1: {'code_bits': 471, 'bytes_per_vector': 103.36913131313132}
+STORAGE gemini cap=1: {'code_bits': 482, 'bytes_per_vector': 105.52614141414142}
+STORAGE gemini cap=1: {'code_bits': 487, 'bytes_per_vector': 106.5579797979798}
+STORAGE gemini cap=1: {'code_bits': 490, 'bytes_per_vector': 106.58909090909091}
+STORAGE gemini cap=1: {'code_bits': 491, 'bytes_per_vector': 107.61050505050505}
+MEASURED gemini cap=1 seed=0 threads=1 batch=1 recall=0.750400 qps=1802.49
+MEASURED gemini cap=1 seed=0 threads=1 batch=32 recall=0.750400 qps=1810.81
+MEASURED gemini cap=1 seed=0 threads=8 batch=1 recall=0.750400 qps=4495.38
+MEASURED gemini cap=1 seed=0 threads=8 batch=32 recall=0.750400 qps=12957.50
+MEASURED gemini cap=1 seed=1 threads=1 batch=1 recall=0.748900 qps=nan
+MEASURED gemini cap=1 seed=1 threads=1 batch=32 recall=0.748900 qps=nan
+MEASURED gemini cap=1 seed=1 threads=8 batch=1 recall=0.748900 qps=nan
+MEASURED gemini cap=1 seed=1 threads=8 batch=32 recall=0.748900 qps=nan
+MEASURED gemini cap=1 seed=2 threads=1 batch=1 recall=0.750100 qps=nan
+MEASURED gemini cap=1 seed=2 threads=1 batch=32 recall=0.750100 qps=nan
+MEASURED gemini cap=1 seed=2 threads=8 batch=1 recall=0.750100 qps=nan
+MEASURED gemini cap=1 seed=2 threads=8 batch=32 recall=0.750100 qps=nan
+SELECT gemini RaBitQ 2bit cap=212.04412121 B/vector
+STORAGE gemini cap=2: {'code_bits': 1354, 'bytes_per_vector': 244.16024242424243}
+STORAGE gemini cap=2: {'code_bits': 677, 'bytes_per_vector': 138.7522424242424}
+STORAGE gemini cap=2: {'code_bits': 1015, 'bytes_per_vector': 195.26456565656565}
+STORAGE gemini cap=2: {'code_bits': 1184, 'bytes_per_vector': 219.71240404040404}
+STORAGE gemini cap=2: {'code_bits': 1099, 'bytes_per_vector': 208.0199595959596}
+STORAGE gemini cap=2: {'code_bits': 1141, 'bytes_per_vector': 213.36581818181818}
+STORAGE gemini cap=2: {'code_bits': 1120, 'bytes_per_vector': 211.20880808080807}
+STORAGE gemini cap=2: {'code_bits': 1109, 'bytes_per_vector': 209.1140202020202}
+STORAGE gemini cap=2: {'code_bits': 1114, 'bytes_per_vector': 210.2080808080808}
+MEASURED gemini cap=2 seed=0 threads=1 batch=1 recall=0.884200 qps=776.66
+MEASURED gemini cap=2 seed=0 threads=1 batch=32 recall=0.884200 qps=816.33
+MEASURED gemini cap=2 seed=0 threads=8 batch=1 recall=0.884200 qps=1395.09
+MEASURED gemini cap=2 seed=0 threads=8 batch=32 recall=0.884200 qps=5733.52
+MEASURED gemini cap=2 seed=1 threads=1 batch=1 recall=0.888100 qps=nan
+MEASURED gemini cap=2 seed=1 threads=1 batch=32 recall=0.888100 qps=nan
+MEASURED gemini cap=2 seed=1 threads=8 batch=1 recall=0.888100 qps=nan
+MEASURED gemini cap=2 seed=1 threads=8 batch=32 recall=0.888100 qps=nan
+MEASURED gemini cap=2 seed=2 threads=1 batch=1 recall=0.886800 qps=nan
+MEASURED gemini cap=2 seed=2 threads=1 batch=32 recall=0.886800 qps=nan
+MEASURED gemini cap=2 seed=2 threads=8 batch=1 recall=0.886800 qps=nan
+MEASURED gemini cap=2 seed=2 threads=8 batch=32 recall=0.886800 qps=nan
+SELECT gemini RaBitQ 4bit cap=404.04412121 B/vector
+STORAGE gemini cap=4: {'code_bits': 3072, 'bytes_per_vector': 425.24674747474745}
+STORAGE gemini cap=4: {'code_bits': 1536, 'bytes_per_vector': 228.472}
+STORAGE gemini cap=4: {'code_bits': 2304, 'bytes_per_vector': 328.9248686868687}
+STORAGE gemini cap=4: {'code_bits': 2688, 'bytes_per_vector': 377.2429898989899}
+STORAGE gemini cap=4: {'code_bits': 2880, 'bytes_per_vector': 401.24492929292927}
+MEASURED gemini cap=4 seed=0 threads=1 batch=1 recall=0.975000 qps=148.35
+MEASURED gemini cap=4 seed=0 threads=1 batch=32 recall=0.975000 qps=435.18
+MEASURED gemini cap=4 seed=0 threads=8 batch=1 recall=0.975000 qps=665.45
+MEASURED gemini cap=4 seed=0 threads=8 batch=32 recall=0.975000 qps=2026.99
+MEASURED gemini cap=4 seed=1 threads=1 batch=1 recall=0.975500 qps=nan
+MEASURED gemini cap=4 seed=1 threads=1 batch=32 recall=0.975500 qps=nan
+MEASURED gemini cap=4 seed=1 threads=8 batch=1 recall=0.975500 qps=nan
+MEASURED gemini cap=4 seed=1 threads=8 batch=32 recall=0.975500 qps=nan
+MEASURED gemini cap=4 seed=2 threads=1 batch=1 recall=0.972100 qps=nan
+MEASURED gemini cap=4 seed=2 threads=1 batch=32 recall=0.972100 qps=nan
+MEASURED gemini cap=4 seed=2 threads=8 batch=1 recall=0.972100 qps=nan
+MEASURED gemini cap=4 seed=2 threads=8 batch=32 recall=0.972100 qps=nan
+COMPLETE: 60 rows, five new storage-selected points

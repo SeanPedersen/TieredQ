@@ -1,0 +1,148 @@
+{
+  "status": "complete",
+  "purpose": "OpenAI fast point below RaBitQ 2-bit serving storage",
+  "cap_bytes": 404.0696,
+  "target_fraction": 0.995,
+  "source_commit": "575e167a0ad66920119bd0d0836b6c0c92c0a4e5",
+  "source_hashes_match": true,
+  "affinity": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "compiler_commands": [
+    {
+      "file": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/matched-storage/native/module.cpp",
+      "arguments": [
+        "/usr/bin/c++",
+        "-DBENCH_FULL_SCORE=0",
+        "-Dcodec_native_EXPORTS",
+        "-I/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.deps/rabitq-native/include",
+        "-I/home/sean/.local/share/uv/python/cpython-3.12-linux-x86_64-gnu/include/python3.12",
+        "-I/home/sean/experiments/TieredQ-issue4-current-20261026-tpj3ze/benchmark/.venv/lib/python3.12/site-packages/nanobind/include",
+        "-I/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/include",
+        "-O3",
+        "-DNDEBUG",
+        "-std=gnu++20",
+        "-fPIC",
+        "-fvisibility=hidden",
+        "-O3",
+        "-march=native",
+        "-ffp-contract=off",
+        "-fno-stack-protector",
+        "-ffunction-sections",
+        "-fdata-sections",
+        "-fopenmp",
+        "-o",
+        "CMakeFiles/codec_native.dir/module.cpp.o",
+        "-c",
+        "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/matched-storage/native/module.cpp"
+      ],
+      "effective_optimization": "-O3"
+    },
+    {
+      "file": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/matched-storage/native/reference.cpp",
+      "arguments": [
+        "/usr/bin/c++",
+        "-I/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.deps/rabitq-native/include",
+        "-O3",
+        "-DNDEBUG",
+        "-std=gnu++20",
+        "-O3",
+        "-march=native",
+        "-ffp-contract=off",
+        "-fopenmp",
+        "-o",
+        "CMakeFiles/codec_reference.dir/reference.cpp.o",
+        "-c",
+        "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/matched-storage/native/reference.cpp"
+      ],
+      "effective_optimization": "-O3"
+    },
+    {
+      "file": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/src/tieredq.cpp",
+      "arguments": [
+        "/usr/bin/c++",
+        "-I/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/include",
+        "-O3",
+        "-DNDEBUG",
+        "-std=gnu++20",
+        "-fPIC",
+        "-O3",
+        "-march=native",
+        "-ffp-contract=off",
+        "-Wall",
+        "-Wextra",
+        "-Wno-misleading-indentation",
+        "-fopenmp",
+        "-o",
+        "CMakeFiles/dv_tieredq.dir/src/tieredq.cpp.o",
+        "-c",
+        "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/src/tieredq.cpp"
+      ],
+      "effective_optimization": "-O3"
+    },
+    {
+      "file": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/src/tieredq_index.cpp",
+      "arguments": [
+        "/usr/bin/c++",
+        "-I/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/include",
+        "-O3",
+        "-DNDEBUG",
+        "-std=gnu++20",
+        "-fPIC",
+        "-O3",
+        "-march=native",
+        "-ffp-contract=off",
+        "-Wall",
+        "-Wextra",
+        "-Wno-misleading-indentation",
+        "-fopenmp",
+        "-o",
+        "CMakeFiles/dv_tieredq.dir/src/tieredq_index.cpp.o",
+        "-c",
+        "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/src/tieredq_index.cpp"
+      ],
+      "effective_optimization": "-O3"
+    },
+    {
+      "file": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/src/tieredq_index_io.cpp",
+      "arguments": [
+        "/usr/bin/c++",
+        "-I/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/include",
+        "-O3",
+        "-DNDEBUG",
+        "-std=gnu++20",
+        "-fPIC",
+        "-O3",
+        "-march=native",
+        "-ffp-contract=off",
+        "-Wall",
+        "-Wextra",
+        "-Wno-misleading-indentation",
+        "-fopenmp",
+        "-o",
+        "CMakeFiles/dv_tieredq.dir/src/tieredq_index_io.cpp.o",
+        "-c",
+        "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/src/tieredq_index_io.cpp"
+      ],
+      "effective_optimization": "-O3"
+    }
+  ],
+  "host": "hartmut",
+  "date": "2026-10-27T13:25:27.909755+00:00",
+  "input_sha256": {
+    "base": "09bf358f7e818a69aac33aaf8888a702e2843c4ff2904b9cfdf3bbfd5ab6a948",
+    "queries": "59f90bed24086c0a74d4d80a626a8945e6718ab373807063b089d4a4477ef1cd",
+    "truth": "3c170137a11342f3936a2dfda21feaf2061ade02b2c540278b43c634574a3c3a"
+  },
+  "selected_code_bits": 2411,
+  "control_ids_match": true,
+  "rows": 12,
+  "timed_rows": 4
+}

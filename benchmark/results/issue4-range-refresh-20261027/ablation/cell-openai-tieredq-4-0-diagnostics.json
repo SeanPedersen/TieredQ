@@ -1,0 +1,47 @@
+{
+  "tiers": [
+    {
+      "start": 0,
+      "dimensions": 13,
+      "bits": 7
+    },
+    {
+      "start": 13,
+      "dimensions": 129,
+      "bits": 6
+    },
+    {
+      "start": 142,
+      "dimensions": 316,
+      "bits": 5
+    },
+    {
+      "start": 458,
+      "dimensions": 536,
+      "bits": 4
+    },
+    {
+      "start": 994,
+      "dimensions": 477,
+      "bits": 3
+    },
+    {
+      "start": 1471,
+      "dimensions": 61,
+      "bits": 2
+    },
+    {
+      "start": 1532,
+      "dimensions": 2,
+      "bits": 1
+    }
+  ],
+  "coded_dimensions": 1534,
+  "packed_code_bytes": 768,
+  "vector_bytes": 777,
+  "allocated_vector_bytes": 77709162,
+  "model_serialized_bytes": 11012352,
+  "model_memory_bytes": 25425576,
+  "model_serving_memory_bytes": 11071312,
+  "scalar_fast_scan": false
+}

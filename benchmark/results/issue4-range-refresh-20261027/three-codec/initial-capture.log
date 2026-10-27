@@ -1,0 +1,17 @@
+INPUT VERIFIED gemini (99000, 768)
+MEASURED gemini-turboquant1 0 1 1 {'recall10': 0.698, 'qps': 223.85146095154823, 'p50_ms': 4.441478988155723, 'p95_ms': 4.720501787960529}
+MEASURED gemini-turboquant1 0 1 32 {'recall10': 0.698, 'qps': 243.4869169931058, 'p50_ms': 130.7293390855193, 'p95_ms': 136.4461942575872}
+MEASURED gemini-turboquant1 0 8 1 {'recall10': 0.698, 'qps': 242.17530986476908, 'p50_ms': 4.072804003953934, 'p95_ms': 4.335451521910727}
+MEASURED gemini-turboquant1 0 8 32 {'recall10': 0.698, 'qps': 1730.5829302617854, 'p50_ms': 17.049459274858236, 'p95_ms': 21.743338089436293}
+MEASURED gemini-turboquant1 1 1 1 {'recall10': 0.699, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-turboquant1 1 1 32 {'recall10': 0.699, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-turboquant1 1 8 1 {'recall10': 0.699, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-turboquant1 1 8 32 {'recall10': 0.699, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-turboquant1 2 1 1 {'recall10': 0.6987000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-turboquant1 2 1 32 {'recall10': 0.6987000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-turboquant1 2 8 1 {'recall10': 0.6987000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-turboquant1 2 8 32 {'recall10': 0.6987000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+STORAGE gemini 1 {'code_bits': 237, 'bytes_per_vector': 68.73995959595959}
+STORAGE gemini 1 {'code_bits': 1655, 'bytes_per_vector': 245.3769797979798}
+STORAGE gemini 1 {'code_bits': 946, 'bytes_per_vector': 185.63579797979799}
+STORAGE gemini 1 {'code_bits': 591, 'bytes_per_vector': 123.83983838383838}

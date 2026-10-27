@@ -1,0 +1,27 @@
+{
+  "tiers": [
+    {
+      "start": 0,
+      "dimensions": 21,
+      "bits": 3
+    },
+    {
+      "start": 21,
+      "dimensions": 141,
+      "bits": 2
+    },
+    {
+      "start": 162,
+      "dimensions": 148,
+      "bits": 1
+    }
+  ],
+  "coded_dimensions": 310,
+  "packed_code_bytes": 62,
+  "vector_bytes": 74,
+  "allocated_vector_bytes": 8910928,
+  "model_serialized_bytes": 1743472,
+  "model_memory_bytes": 4208152,
+  "model_serving_memory_bytes": 1748672,
+  "scalar_fast_scan": false
+}

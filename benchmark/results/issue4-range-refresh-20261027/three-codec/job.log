@@ -1,0 +1,37 @@
+INPUT VERIFIED gemini (99000, 768)
+REUSED completed native capture gemini 1 0
+REUSED completed native capture gemini 1 1
+REUSED completed native capture gemini 1 2
+STORAGE gemini 1 {'code_bits': 237, 'bytes_per_vector': 68.73995959595959}
+STORAGE gemini 1 {'code_bits': 3191, 'bytes_per_vector': 441.2480404040404}
+STORAGE gemini 1 {'code_bits': 1714, 'bytes_per_vector': 253.78272727272727}
+STORAGE gemini 1 {'code_bits': 975, 'bytes_per_vector': 189.88759595959596}
+STORAGE gemini 1 {'code_bits': 606, 'bytes_per_vector': 126.0279595959596}
+STORAGE gemini 1 {'code_bits': 421, 'bytes_per_vector': 95.77292929292929}
+STORAGE gemini 1 {'code_bits': 513, 'bytes_per_vector': 110.92379797979798}
+STORAGE gemini 1 {'code_bits': 467, 'bytes_per_vector': 103.3380202020202}
+MEASURED gemini-tieredq-tq1 0 1 1 {'recall10': 0.7394000000000001, 'qps': 1996.039971540631, 'p50_ms': 0.4807075019925833, 'p95_ms': 0.5457524908706546}
+MEASURED gemini-tieredq-tq1 0 1 32 {'recall10': 0.7394000000000001, 'qps': 2023.3875018157037, 'p50_ms': 15.746704768389463, 'p95_ms': 17.10039097815752}
+MEASURED gemini-tieredq-tq1 0 8 1 {'recall10': 0.7394000000000001, 'qps': 4831.716979013067, 'p50_ms': 0.2059335820376873, 'p95_ms': 0.22221480030566454}
+MEASURED gemini-tieredq-tq1 0 8 32 {'recall10': 0.7394000000000001, 'qps': 13625.789186656333, 'p50_ms': 2.3169247433543205, 'p95_ms': 2.472375985234976}
+MEASURED gemini-tieredq-tq1 1 1 1 {'recall10': 0.7374, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-tieredq-tq1 1 1 32 {'recall10': 0.7374, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-tieredq-tq1 1 8 1 {'recall10': 0.7374, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-tieredq-tq1 1 8 32 {'recall10': 0.7374, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-tieredq-tq1 2 1 1 {'recall10': 0.7397, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-tieredq-tq1 2 1 32 {'recall10': 0.7397, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-tieredq-tq1 2 8 1 {'recall10': 0.7397, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-tieredq-tq1 2 8 32 {'recall10': 0.7397, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-turboquant2 0 1 1 {'recall10': 0.8398000000000002, 'qps': 223.17499086985111, 'p50_ms': 4.449844593182206, 'p95_ms': 4.756098426878452}
+MEASURED gemini-turboquant2 0 1 32 {'recall10': 0.8398000000000002, 'qps': 222.97342066446865, 'p50_ms': 142.97505421563983, 'p95_ms': 149.4002011604607}
+MEASURED gemini-turboquant2 0 8 1 {'recall10': 0.8398000000000002, 'qps': 222.4022666905123, 'p50_ms': 4.4570358004421, 'p95_ms': 4.764394415542483}
+MEASURED gemini-turboquant2 0 8 32 {'recall10': 0.8398000000000002, 'qps': 1608.293556587731, 'p50_ms': 18.746242858469486, 'p95_ms': 24.916643742471933}
+MEASURED gemini-turboquant2 1 1 1 {'recall10': 0.8376000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-turboquant2 1 1 32 {'recall10': 0.8376000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-turboquant2 1 8 1 {'recall10': 0.8376000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-turboquant2 1 8 32 {'recall10': 0.8376000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-turboquant2 2 1 1 {'recall10': 0.8379000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-turboquant2 2 1 32 {'recall10': 0.8379000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-turboquant2 2 8 1 {'recall10': 0.8379000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-turboquant2 2 8 32 {'recall10': 0.8379000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+STORAGE gemini 2 {'code_bits': 1232, 'bytes_per_vector': 227.15305050505052}

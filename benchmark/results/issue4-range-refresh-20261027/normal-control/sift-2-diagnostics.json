@@ -1,0 +1,86 @@
+{
+  "fast": {
+    "tiers": [
+      {
+        "start": 0,
+        "dimensions": 2,
+        "bits": 6
+      },
+      {
+        "start": 2,
+        "dimensions": 13,
+        "bits": 5
+      },
+      {
+        "start": 15,
+        "dimensions": 16,
+        "bits": 4
+      },
+      {
+        "start": 31,
+        "dimensions": 18,
+        "bits": 3
+      },
+      {
+        "start": 49,
+        "dimensions": 20,
+        "bits": 2
+      },
+      {
+        "start": 69,
+        "dimensions": 21,
+        "bits": 1
+      }
+    ],
+    "coded_dimensions": 90,
+    "packed_code_bytes": 32,
+    "vector_bytes": 41,
+    "allocated_vector_bytes": 41001426,
+    "model_serialized_bytes": 181556,
+    "model_memory_bytes": 581616,
+    "model_serving_memory_bytes": 184984,
+    "scalar_fast_scan": false
+  },
+  "normal": {
+    "tiers": [
+      {
+        "start": 0,
+        "dimensions": 2,
+        "bits": 6
+      },
+      {
+        "start": 2,
+        "dimensions": 13,
+        "bits": 5
+      },
+      {
+        "start": 15,
+        "dimensions": 16,
+        "bits": 4
+      },
+      {
+        "start": 31,
+        "dimensions": 18,
+        "bits": 3
+      },
+      {
+        "start": 49,
+        "dimensions": 20,
+        "bits": 2
+      },
+      {
+        "start": 69,
+        "dimensions": 21,
+        "bits": 1
+      }
+    ],
+    "coded_dimensions": 90,
+    "packed_code_bytes": 32,
+    "vector_bytes": 37,
+    "allocated_vector_bytes": 37000000,
+    "model_serialized_bytes": 181556,
+    "model_memory_bytes": 581616,
+    "model_serving_memory_bytes": 184984,
+    "scalar_fast_scan": false
+  }
+}

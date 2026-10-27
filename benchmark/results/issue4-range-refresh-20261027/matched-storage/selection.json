@@ -1,0 +1,26 @@
+{
+  "policy": "Storage only; target 99.0\u201399.5% of baseline cap; initial code budget 2259; integer bisection within 1536\u20133072",
+  "attempts": [
+    {
+      "code_bits": 2259,
+      "bytes_per_vector": 378.88226
+    },
+    {
+      "code_bits": 2665,
+      "bytes_per_vector": 438.94793
+    },
+    {
+      "code_bits": 2462,
+      "bytes_per_vector": 407.00745
+    },
+    {
+      "code_bits": 2360,
+      "bytes_per_vector": 392.97564
+    },
+    {
+      "code_bits": 2411,
+      "bytes_per_vector": 401.96076
+    }
+  ],
+  "selected_code_bits": 2411
+}

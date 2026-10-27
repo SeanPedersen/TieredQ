@@ -1,0 +1,379 @@
+-- The CXX compiler identification is GNU 16.2.1
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP: TRUE (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Looking for sgemm_
+-- Looking for sgemm_ - not found
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE
+-- Looking for sgemm_
+-- Looking for sgemm_ - found
+-- Found BLAS: /usr/lib/libblas.so
+-- Looking for cheev_
+-- Looking for cheev_ - not found
+-- Looking for cheev_
+-- Looking for cheev_ - found
+-- Found LAPACK: /usr/lib/liblapack.so;/usr/lib/libblas.so
+-- Found Python: /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python (found version "3.12.13") found components: Interpreter Development.Module
+-- Performing Test NB_HAS_MTLS_GNU2
+-- Performing Test NB_HAS_MTLS_GNU2 - Success
+-- Configuring done (2.4s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/build-native
+[  5%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 10%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_index.cpp.o
+[ 15%] Building CXX object CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue4-current-20261026-tpj3ze/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_internals.cpp.o
+[ 20%] Building CXX object CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue4-current-20261026-tpj3ze/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_type.cpp.o
+[ 25%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_index_io.cpp.o
+[ 30%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq.cpp.o
+[ 35%] Building CXX object CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue4-current-20261026-tpj3ze/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_func.cpp.o
+[ 40%] Building CXX object CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue4-current-20261026-tpj3ze/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_enum.cpp.o
+[ 45%] Building CXX object CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue4-current-20261026-tpj3ze/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_ndarray.cpp.o
+[ 50%] Building CXX object CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue4-current-20261026-tpj3ze/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_static_property.cpp.o
+[ 55%] Building CXX object CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue4-current-20261026-tpj3ze/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/nb_datetime.cpp.o
+[ 60%] Building CXX object CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue4-current-20261026-tpj3ze/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/common.cpp.o
+[ 65%] Building CXX object CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue4-current-20261026-tpj3ze/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/error.cpp.o
+[ 70%] Building CXX object CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue4-current-20261026-tpj3ze/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/trampoline.cpp.o
+[ 75%] Building CXX object CMakeFiles/nanobind-static.dir/home/sean/experiments/TieredQ-issue4-current-20261026-tpj3ze/benchmark/.venv/lib/python3.12/site-packages/nanobind/src/implicit.cpp.o
+[ 80%] Linking CXX static library libnanobind-static.a
+[ 80%] Built target nanobind-static
+[ 85%] Linking CXX executable codec_reference
+[ 85%] Built target codec_reference
+[ 90%] Linking CXX static library libdv_tieredq.a
+[ 90%] Built target dv_tieredq
+[ 95%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[100%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[100%] Built target codec_native
+Verified input sift {'base_shape': [1000000, 128], 'query_shape': [1000, 128], 'sha256': {'base': 'ac8e11ed111b09e882bcf0ef1a77ebdd36c89f495bce8fd596603f69c35148e6', 'queries': 'bd4faea0cbb6d80054ef3b7554cef8298001ee9c15ce798352b86bc1a206d598', 'truth': 'b052425178b193b82bd1a7ab6e62446aaeca33202e98c0b57b4ae1db617d9a49'}}
+Verified input glove {'base_shape': [100000, 200], 'query_shape': [1000, 200], 'sha256': {'base': 'dbef767dd011fb713d9951e8b65d3ba1d3a008bc98f56a5815d6a810c2606c8a', 'queries': '39bbfe76c243fb3628e3fd002feaea49cd547416ac9474d476e1a3eb293a78d2', 'truth': '71058b7b59408346c816a7acd0c7e4475b472f98925fcfcf12dd9734f1e74439'}}
+Verified input openai {'base_shape': [100000, 1536], 'query_shape': [1000, 1536], 'sha256': {'base': '09bf358f7e818a69aac33aaf8888a702e2843c4ff2904b9cfdf3bbfd5ab6a948', 'queries': '59f90bed24086c0a74d4d80a626a8945e6718ab373807063b089d4a4477ef1cd', 'truth': '3c170137a11342f3936a2dfda21feaf2061ade02b2c540278b43c634574a3c3a'}}
+Verified input gemini {'base_shape': [99000, 768], 'query_shape': [1000, 768], 'sha256': {'base': '89744af8576116555f3e8ac384b1d318c5f3da192ebd193a76f03606b007fa1a', 'queries': 'fa594bfbaebf5a68681f42b8570c6908df94db48f114e117e6e6185eda49d6b9', 'truth': '8eaa35bafe1ed4806fbd0182f75476ba5f12803e0d84959b01966b231dd70240'}}
+RUN cmake -S /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source -B /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/tests-build -DTIEREDQ_EXAMPLES=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS=-march=native
+-- The CXX compiler identification is GNU 16.2.1
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP: TRUE (found version "5.2")
+-- Looking for sgemm_
+-- Looking for sgemm_ - not found
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE
+-- Looking for sgemm_
+-- Looking for sgemm_ - found
+-- Found BLAS: /usr/lib/libblas.so
+-- Looking for cheev_
+-- Looking for cheev_ - not found
+-- Looking for cheev_
+-- Looking for cheev_ - found
+-- Found LAPACK: /usr/lib/liblapack.so;/usr/lib/libblas.so
+-- Configuring done (2.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/tests-build
+RUN cmake --build /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/tests-build -j 8
+[  6%] Building CXX object CMakeFiles/dv_tieredq.dir/src/tieredq_index.cpp.o
+[ 12%] Building CXX object CMakeFiles/test_training_rng.dir/tests/test_training_rng.cpp.o
+[ 18%] Building CXX object CMakeFiles/dv_tieredq.dir/src/tieredq.cpp.o
+[ 25%] Building CXX object CMakeFiles/dv_tieredq.dir/src/tieredq_index_io.cpp.o
+[ 31%] Linking CXX executable test_training_rng
+[ 31%] Built target test_training_rng
+[ 37%] Linking CXX static library libdv_tieredq.a
+[ 37%] Built target dv_tieredq
+[ 43%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq.cpp.o
+[ 50%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq_encoder.cpp.o
+[ 62%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq_neon.cpp.o
+[ 62%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq_lookup.cpp.o
+[ 68%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq_projection.cpp.o
+[ 81%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq_search.cpp.o
+[ 81%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq_model.cpp.o
+[ 87%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq_fast_mode.cpp.o
+[ 93%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq_range_checkpoint.cpp.o
+[100%] Linking CXX executable test_tieredq
+[100%] Built target test_tieredq
+RUN ctest --test-dir /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/tests-build --output-on-failure
+Test project /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/tests-build
+    Start 1: tieredq
+1/2 Test #1: tieredq ..........................   Passed   22.62 sec
+    Start 2: training_rng
+2/2 Test #2: training_rng .....................   Passed    0.00 sec
+
+100% tests passed out of 2
+
+Total Test time (real) =  22.63 sec
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python -c import codec_native, numpy as np; x=np.random.default_rng(0).normal(size=(1024,32)).astype('f'); i=codec_native.Index(x,2,0,True,False); o=np.empty((2,10),dtype='uint32'); i.search(x[:2],o,8); print('native smoke passed')
+native smoke passed
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python -c import codec_native, numpy as np; x=np.random.default_rng(0).normal(size=(1024,32)).astype('f'); i=codec_native.Index(x,2,0,True,False); o=np.empty((2,10),dtype='uint32'); i.search(x[:2],o,8); print('native smoke passed')
+native smoke passed
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python -c import codec_native, numpy as np; x=np.random.default_rng(0).normal(size=(1024,32)).astype('f'); i=codec_native.Index(x,2,0,True,False); o=np.empty((2,10),dtype='uint32'); i.search(x[:2],o,8); print('native smoke passed')
+native smoke passed
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python -c import codec_native, numpy as np; x=np.random.default_rng(0).normal(size=(1024,32)).astype('f'); i=codec_native.Index(x,2,0,True,False); o=np.empty((2,10),dtype='uint32'); i.search(x[:2],o,8); print('native smoke passed')
+native smoke passed
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["sift"], "codec": "tieredq", "bits": [1], "seeds": [0], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-sift-tieredq-1-0.json"}
+sift tieredq b=1 seed=0 t=1 batch=1: {'recall10': 0.5005, 'qps': 363.0274754410288, 'p50_ms': 2.719274489209056, 'p95_ms': 3.004861017689109}
+sift tieredq b=1 seed=0 t=1 batch=32: {'recall10': 0.5005999999999999, 'qps': 371.5155771154466, 'p50_ms': 85.48399060964584, 'p95_ms': 90.49742110073566}
+sift tieredq b=1 seed=0 t=8 batch=1: {'recall10': 0.5005, 'qps': 2203.271868008468, 'p50_ms': 0.4523990210145712, 'p95_ms': 0.4823192721232772}
+sift tieredq b=1 seed=0 t=8 batch=32: {'recall10': 0.5005999999999999, 'qps': 2690.2776007120156, 'p50_ms': 11.906738858669996, 'p95_ms': 12.297991197556257}
+PROGRESS 1/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["sift"], "codec": "tieredq", "bits": [1], "seeds": [1], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-sift-tieredq-1-1.json"}
+sift tieredq b=1 seed=1 t=1 batch=1: {'recall10': 0.498, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift tieredq b=1 seed=1 t=1 batch=32: {'recall10': 0.498, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift tieredq b=1 seed=1 t=8 batch=1: {'recall10': 0.498, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift tieredq b=1 seed=1 t=8 batch=32: {'recall10': 0.498, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 2/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["sift"], "codec": "tieredq", "bits": [1], "seeds": [2], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-sift-tieredq-1-2.json"}
+sift tieredq b=1 seed=2 t=1 batch=1: {'recall10': 0.4943000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift tieredq b=1 seed=2 t=1 batch=32: {'recall10': 0.4943000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift tieredq b=1 seed=2 t=8 batch=1: {'recall10': 0.4943000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift tieredq b=1 seed=2 t=8 batch=32: {'recall10': 0.4943000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 3/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["sift"], "codec": "tieredq", "bits": [2], "seeds": [0], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-sift-tieredq-2-0.json"}
+sift tieredq b=2 seed=0 t=1 batch=1: {'recall10': 0.7622000000000001, 'qps': 107.50579328200924, 'p50_ms': 9.032491128891706, 'p95_ms': 10.30872103292495}
+sift tieredq b=2 seed=0 t=1 batch=32: {'recall10': 0.7622000000000001, 'qps': 342.9615189213422, 'p50_ms': 91.83614794164896, 'p95_ms': 102.5693891569972}
+sift tieredq b=2 seed=0 t=8 batch=1: {'recall10': 0.7622000000000001, 'qps': 722.5663315475518, 'p50_ms': 1.3821239117532969, 'p95_ms': 1.479719206690788}
+sift tieredq b=2 seed=0 t=8 batch=32: {'recall10': 0.7622000000000001, 'qps': 2269.661887421294, 'p50_ms': 13.529019895941019, 'p95_ms': 19.360237289220095}
+PROGRESS 4/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["sift"], "codec": "tieredq", "bits": [2], "seeds": [1], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-sift-tieredq-2-1.json"}
+sift tieredq b=2 seed=1 t=1 batch=1: {'recall10': 0.7637999999999999, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift tieredq b=2 seed=1 t=1 batch=32: {'recall10': 0.7637999999999999, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift tieredq b=2 seed=1 t=8 batch=1: {'recall10': 0.7637999999999999, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift tieredq b=2 seed=1 t=8 batch=32: {'recall10': 0.7637999999999999, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 5/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["sift"], "codec": "tieredq", "bits": [2], "seeds": [2], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-sift-tieredq-2-2.json"}
+sift tieredq b=2 seed=2 t=1 batch=1: {'recall10': 0.7657, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift tieredq b=2 seed=2 t=1 batch=32: {'recall10': 0.7657, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift tieredq b=2 seed=2 t=8 batch=1: {'recall10': 0.7657, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift tieredq b=2 seed=2 t=8 batch=32: {'recall10': 0.7657, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 6/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["sift"], "codec": "tieredq", "bits": [4], "seeds": [0], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-sift-tieredq-4-0.json"}
+sift tieredq b=4 seed=0 t=1 batch=1: {'recall10': 0.9333, 'qps': 63.89166028771134, 'p50_ms': 15.405839774757624, 'p95_ms': 18.36954839527607}
+sift tieredq b=4 seed=0 t=1 batch=32: {'recall10': 0.9333, 'qps': 254.3043357692383, 'p50_ms': 123.62295296043158, 'p95_ms': 133.35227174684405}
+sift tieredq b=4 seed=0 t=8 batch=1: {'recall10': 0.9333, 'qps': 406.9325555255081, 'p50_ms': 2.427322557196021, 'p95_ms': 2.8747782111167903}
+sift tieredq b=4 seed=0 t=8 batch=32: {'recall10': 0.9333, 'qps': 1666.0549125050113, 'p50_ms': 18.59629387035966, 'p95_ms': 21.11711399629712}
+PROGRESS 7/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["sift"], "codec": "tieredq", "bits": [4], "seeds": [1], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-sift-tieredq-4-1.json"}
+sift tieredq b=4 seed=1 t=1 batch=1: {'recall10': 0.9332, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift tieredq b=4 seed=1 t=1 batch=32: {'recall10': 0.9332, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift tieredq b=4 seed=1 t=8 batch=1: {'recall10': 0.9332, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift tieredq b=4 seed=1 t=8 batch=32: {'recall10': 0.9332, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 8/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["sift"], "codec": "tieredq", "bits": [4], "seeds": [2], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-sift-tieredq-4-2.json"}
+sift tieredq b=4 seed=2 t=1 batch=1: {'recall10': 0.9350000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift tieredq b=4 seed=2 t=1 batch=32: {'recall10': 0.9350000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift tieredq b=4 seed=2 t=8 batch=1: {'recall10': 0.9350000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift tieredq b=4 seed=2 t=8 batch=32: {'recall10': 0.9350000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 9/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["glove"], "codec": "tieredq", "bits": [1], "seeds": [0], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-glove-tieredq-1-0.json"}
+glove tieredq b=1 seed=0 t=1 batch=1: {'recall10': 0.41209999999999997, 'qps': 3395.426492075615, 'p50_ms': 0.2886224538087845, 'p95_ms': 0.32828105613589287}
+glove tieredq b=1 seed=0 t=1 batch=32: {'recall10': 0.41209999999999997, 'qps': 3248.4633564714363, 'p50_ms': 9.605691768229008, 'p95_ms': 12.787472922354937}
+glove tieredq b=1 seed=0 t=8 batch=1: {'recall10': 0.41209999999999997, 'qps': 10107.567512071724, 'p50_ms': 0.09736395440995693, 'p95_ms': 0.11386570986360306}
+glove tieredq b=1 seed=0 t=8 batch=32: {'recall10': 0.41209999999999997, 'qps': 24353.449434478924, 'p50_ms': 1.330384984612465, 'p95_ms': 1.395106315612793}
+PROGRESS 10/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["glove"], "codec": "tieredq", "bits": [1], "seeds": [1], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-glove-tieredq-1-1.json"}
+glove tieredq b=1 seed=1 t=1 batch=1: {'recall10': 0.4019, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove tieredq b=1 seed=1 t=1 batch=32: {'recall10': 0.4019, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove tieredq b=1 seed=1 t=8 batch=1: {'recall10': 0.4019, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove tieredq b=1 seed=1 t=8 batch=32: {'recall10': 0.4019, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 11/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["glove"], "codec": "tieredq", "bits": [1], "seeds": [2], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-glove-tieredq-1-2.json"}
+glove tieredq b=1 seed=2 t=1 batch=1: {'recall10': 0.3992, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove tieredq b=1 seed=2 t=1 batch=32: {'recall10': 0.3992, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove tieredq b=1 seed=2 t=8 batch=1: {'recall10': 0.3992, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove tieredq b=1 seed=2 t=8 batch=32: {'recall10': 0.3992, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 12/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["glove"], "codec": "tieredq", "bits": [2], "seeds": [0], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-glove-tieredq-2-0.json"}
+glove tieredq b=2 seed=0 t=1 batch=1: {'recall10': 0.6718999999999999, 'qps': 2400.36527589421, 'p50_ms': 0.4060836508870125, 'p95_ms': 0.45218344312161207}
+glove tieredq b=2 seed=0 t=1 batch=32: {'recall10': 0.6718999999999999, 'qps': 2389.9426609753573, 'p50_ms': 13.114838860929012, 'p95_ms': 14.634578954428434}
+glove tieredq b=2 seed=0 t=8 batch=1: {'recall10': 0.6718999999999999, 'qps': 8246.232110421603, 'p50_ms': 0.11879904195666313, 'p95_ms': 0.14196659903973335}
+glove tieredq b=2 seed=0 t=8 batch=32: {'recall10': 0.6718999999999999, 'qps': 16931.1262871223, 'p50_ms': 1.893916167318821, 'p95_ms': 1.9507543183863163}
+PROGRESS 13/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["glove"], "codec": "tieredq", "bits": [2], "seeds": [1], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-glove-tieredq-2-1.json"}
+glove tieredq b=2 seed=1 t=1 batch=1: {'recall10': 0.6633999999999999, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove tieredq b=2 seed=1 t=1 batch=32: {'recall10': 0.6633999999999999, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove tieredq b=2 seed=1 t=8 batch=1: {'recall10': 0.6633999999999999, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove tieredq b=2 seed=1 t=8 batch=32: {'recall10': 0.6633999999999999, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 14/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["glove"], "codec": "tieredq", "bits": [2], "seeds": [2], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-glove-tieredq-2-2.json"}
+glove tieredq b=2 seed=2 t=1 batch=1: {'recall10': 0.6643000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove tieredq b=2 seed=2 t=1 batch=32: {'recall10': 0.6643000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove tieredq b=2 seed=2 t=8 batch=1: {'recall10': 0.6643000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove tieredq b=2 seed=2 t=8 batch=32: {'recall10': 0.6643000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 15/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["glove"], "codec": "tieredq", "bits": [4], "seeds": [0], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-glove-tieredq-4-0.json"}
+glove tieredq b=4 seed=0 t=1 batch=1: {'recall10': 0.9011000000000001, 'qps': 1599.612385579792, 'p50_ms': 0.620061531662941, 'p95_ms': 0.6804006407037377}
+glove tieredq b=4 seed=0 t=1 batch=32: {'recall10': 0.9011000000000001, 'qps': 1633.6173324162553, 'p50_ms': 19.37161898240447, 'p95_ms': 21.075321827083826}
+glove tieredq b=4 seed=0 t=8 batch=1: {'recall10': 0.9011000000000001, 'qps': 5933.185517531378, 'p50_ms': 0.1671991776674986, 'p95_ms': 0.18495963886380193}
+glove tieredq b=4 seed=0 t=8 batch=32: {'recall10': 0.9011000000000001, 'qps': 10886.56788517137, 'p50_ms': 2.9676700942218304, 'p95_ms': 2.9982812702655792}
+PROGRESS 16/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["glove"], "codec": "tieredq", "bits": [4], "seeds": [1], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-glove-tieredq-4-1.json"}
+glove tieredq b=4 seed=1 t=1 batch=1: {'recall10': 0.9045000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove tieredq b=4 seed=1 t=1 batch=32: {'recall10': 0.9045000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove tieredq b=4 seed=1 t=8 batch=1: {'recall10': 0.9045000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove tieredq b=4 seed=1 t=8 batch=32: {'recall10': 0.9045000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 17/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["glove"], "codec": "tieredq", "bits": [4], "seeds": [2], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-glove-tieredq-4-2.json"}
+glove tieredq b=4 seed=2 t=1 batch=1: {'recall10': 0.8990000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove tieredq b=4 seed=2 t=1 batch=32: {'recall10': 0.8990000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove tieredq b=4 seed=2 t=8 batch=1: {'recall10': 0.8990000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove tieredq b=4 seed=2 t=8 batch=32: {'recall10': 0.8990000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 18/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["openai"], "codec": "tieredq", "bits": [1], "seeds": [0], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-openai-tieredq-1-0.json"}
+openai tieredq b=1 seed=0 t=1 batch=1: {'recall10': 0.8939000000000002, 'qps': 473.4579853160986, 'p50_ms': 2.0724597852677107, 'p95_ms': 2.349170297384262}
+openai tieredq b=1 seed=0 t=1 batch=32: {'recall10': 0.8939000000000002, 'qps': 559.0081742099206, 'p50_ms': 56.87395017594099, 'p95_ms': 64.00782382115722}
+openai tieredq b=1 seed=0 t=8 batch=1: {'recall10': 0.8939000000000002, 'qps': 1114.9632964916802, 'p50_ms': 0.8806474506855011, 'p95_ms': 0.9830108610913157}
+openai tieredq b=1 seed=0 t=8 batch=32: {'recall10': 0.8939000000000002, 'qps': 3833.2389453902, 'p50_ms': 8.226275909692049, 'p95_ms': 9.256887249648571}
+PROGRESS 19/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["openai"], "codec": "tieredq", "bits": [1], "seeds": [1], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-openai-tieredq-1-1.json"}
+openai tieredq b=1 seed=1 t=1 batch=1: {'recall10': 0.8939000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai tieredq b=1 seed=1 t=1 batch=32: {'recall10': 0.8939000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai tieredq b=1 seed=1 t=8 batch=1: {'recall10': 0.8939000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai tieredq b=1 seed=1 t=8 batch=32: {'recall10': 0.8939000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 20/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["openai"], "codec": "tieredq", "bits": [1], "seeds": [2], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-openai-tieredq-1-2.json"}
+openai tieredq b=1 seed=2 t=1 batch=1: {'recall10': 0.8973000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai tieredq b=1 seed=2 t=1 batch=32: {'recall10': 0.8973000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai tieredq b=1 seed=2 t=8 batch=1: {'recall10': 0.8973000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai tieredq b=1 seed=2 t=8 batch=32: {'recall10': 0.8973000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 21/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["openai"], "codec": "tieredq", "bits": [2], "seeds": [0], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-openai-tieredq-2-0.json"}
+openai tieredq b=2 seed=0 t=1 batch=1: {'recall10': 0.9474000000000001, 'qps': 99.01287256738088, 'p50_ms': 9.843033505603671, 'p95_ms': 11.177666648291051}
+openai tieredq b=2 seed=0 t=1 batch=32: {'recall10': 0.9474000000000001, 'qps': 239.99004318598188, 'p50_ms': 137.65735598281026, 'p95_ms': 147.60926319286227}
+openai tieredq b=2 seed=0 t=8 batch=1: {'recall10': 0.9474000000000001, 'qps': 385.5631360681394, 'p50_ms': 2.596553647890687, 'p95_ms': 2.747619361616671}
+openai tieredq b=2 seed=0 t=8 batch=32: {'recall10': 0.9474000000000001, 'qps': 1234.3831791022285, 'p50_ms': 25.079436134546995, 'p95_ms': 29.753694776445627}
+PROGRESS 22/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["openai"], "codec": "tieredq", "bits": [2], "seeds": [1], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-openai-tieredq-2-1.json"}
+openai tieredq b=2 seed=1 t=1 batch=1: {'recall10': 0.9465000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai tieredq b=2 seed=1 t=1 batch=32: {'recall10': 0.9465000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai tieredq b=2 seed=1 t=8 batch=1: {'recall10': 0.9465000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai tieredq b=2 seed=1 t=8 batch=32: {'recall10': 0.9465000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 23/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["openai"], "codec": "tieredq", "bits": [2], "seeds": [2], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-openai-tieredq-2-2.json"}
+openai tieredq b=2 seed=2 t=1 batch=1: {'recall10': 0.9466000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai tieredq b=2 seed=2 t=1 batch=32: {'recall10': 0.9466000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai tieredq b=2 seed=2 t=8 batch=1: {'recall10': 0.9466000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai tieredq b=2 seed=2 t=8 batch=32: {'recall10': 0.9466000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 24/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["openai"], "codec": "tieredq", "bits": [4], "seeds": [0], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-openai-tieredq-4-0.json"}
+openai tieredq b=4 seed=0 t=1 batch=1: {'recall10': 0.9839000000000001, 'qps': 86.99028302029551, 'p50_ms': 11.303427163511515, 'p95_ms': 12.764111370779574}
+openai tieredq b=4 seed=0 t=1 batch=32: {'recall10': 0.9839000000000001, 'qps': 213.41806895994674, 'p50_ms': 154.49176682159305, 'p95_ms': 168.13698690384626}
+openai tieredq b=4 seed=0 t=8 batch=1: {'recall10': 0.9839000000000001, 'qps': 327.5046195837858, 'p50_ms': 3.0423065181821585, 'p95_ms': 3.1966549810022116}
+openai tieredq b=4 seed=0 t=8 batch=32: {'recall10': 0.9839000000000001, 'qps': 1086.125259422804, 'p50_ms': 28.696716763079166, 'p95_ms': 32.781430054455996}
+PROGRESS 25/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["openai"], "codec": "tieredq", "bits": [4], "seeds": [1], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-openai-tieredq-4-1.json"}
+openai tieredq b=4 seed=1 t=1 batch=1: {'recall10': 0.9852000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai tieredq b=4 seed=1 t=1 batch=32: {'recall10': 0.9852000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai tieredq b=4 seed=1 t=8 batch=1: {'recall10': 0.9852000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai tieredq b=4 seed=1 t=8 batch=32: {'recall10': 0.9852000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 26/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["openai"], "codec": "tieredq", "bits": [4], "seeds": [2], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-openai-tieredq-4-2.json"}
+openai tieredq b=4 seed=2 t=1 batch=1: {'recall10': 0.9825, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai tieredq b=4 seed=2 t=1 batch=32: {'recall10': 0.9825, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai tieredq b=4 seed=2 t=8 batch=1: {'recall10': 0.9825, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai tieredq b=4 seed=2 t=8 batch=32: {'recall10': 0.9825, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 27/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["gemini"], "codec": "tieredq", "bits": [1], "seeds": [0], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-gemini-tieredq-1-0.json"}
+gemini tieredq b=1 seed=0 t=1 batch=1: {'recall10': 0.8337, 'qps': 1125.4928922704635, 'p50_ms': 0.8678005542606115, 'p95_ms': 0.991190830245614}
+gemini tieredq b=1 seed=0 t=1 batch=32: {'recall10': 0.8337, 'qps': 1203.4099591118622, 'p50_ms': 26.027636136859655, 'p95_ms': 29.05054483562708}
+gemini tieredq b=1 seed=0 t=8 batch=1: {'recall10': 0.8337, 'qps': 3356.140490626623, 'p50_ms': 0.28561707586050034, 'p95_ms': 0.3076996421441436}
+gemini tieredq b=1 seed=0 t=8 batch=32: {'recall10': 0.8337, 'qps': 9014.619898039948, 'p50_ms': 3.548986744135618, 'p95_ms': 3.6792242899537086}
+PROGRESS 28/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["gemini"], "codec": "tieredq", "bits": [1], "seeds": [1], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-gemini-tieredq-1-1.json"}
+gemini tieredq b=1 seed=1 t=1 batch=1: {'recall10': 0.8343000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini tieredq b=1 seed=1 t=1 batch=32: {'recall10': 0.8343000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini tieredq b=1 seed=1 t=8 batch=1: {'recall10': 0.8343000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini tieredq b=1 seed=1 t=8 batch=32: {'recall10': 0.8343000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 29/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["gemini"], "codec": "tieredq", "bits": [1], "seeds": [2], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-gemini-tieredq-1-2.json"}
+gemini tieredq b=1 seed=2 t=1 batch=1: {'recall10': 0.8351000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini tieredq b=1 seed=2 t=1 batch=32: {'recall10': 0.8351000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini tieredq b=1 seed=2 t=8 batch=1: {'recall10': 0.8351000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini tieredq b=1 seed=2 t=8 batch=32: {'recall10': 0.8351000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 30/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["gemini"], "codec": "tieredq", "bits": [2], "seeds": [0], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-gemini-tieredq-2-0.json"}
+gemini tieredq b=2 seed=0 t=1 batch=1: {'recall10': 0.9252000000000001, 'qps': 211.5243034973887, 'p50_ms': 4.582330584526062, 'p95_ms': 5.2825660444796085}
+gemini tieredq b=2 seed=0 t=1 batch=32: {'recall10': 0.9252000000000001, 'qps': 545.0772431251315, 'p50_ms': 60.081814881414175, 'p95_ms': 67.09072086960077}
+gemini tieredq b=2 seed=0 t=8 batch=1: {'recall10': 0.9252000000000001, 'qps': 993.7162483441496, 'p50_ms': 1.0073832236230373, 'p95_ms': 1.093200920149684}
+gemini tieredq b=2 seed=0 t=8 batch=32: {'recall10': 0.9252000000000001, 'qps': 2552.2179545458966, 'p50_ms': 11.775457300245762, 'p95_ms': 19.467440899461508}
+PROGRESS 31/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["gemini"], "codec": "tieredq", "bits": [2], "seeds": [1], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-gemini-tieredq-2-1.json"}
+gemini tieredq b=2 seed=1 t=1 batch=1: {'recall10': 0.9231000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini tieredq b=2 seed=1 t=1 batch=32: {'recall10': 0.9231000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini tieredq b=2 seed=1 t=8 batch=1: {'recall10': 0.9231000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini tieredq b=2 seed=1 t=8 batch=32: {'recall10': 0.9231000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 32/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["gemini"], "codec": "tieredq", "bits": [2], "seeds": [2], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-gemini-tieredq-2-2.json"}
+gemini tieredq b=2 seed=2 t=1 batch=1: {'recall10': 0.9246000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini tieredq b=2 seed=2 t=1 batch=32: {'recall10': 0.9246000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini tieredq b=2 seed=2 t=8 batch=1: {'recall10': 0.9246000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini tieredq b=2 seed=2 t=8 batch=32: {'recall10': 0.9246000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 33/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["gemini"], "codec": "tieredq", "bits": [4], "seeds": [0], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-gemini-tieredq-4-0.json"}
+gemini tieredq b=4 seed=0 t=1 batch=1: {'recall10': 0.9784, 'qps': 135.75913851160448, 'p50_ms': 7.170564029365778, 'p95_ms': 8.140438492409885}
+gemini tieredq b=4 seed=0 t=1 batch=32: {'recall10': 0.9784, 'qps': 435.0482300297771, 'p50_ms': 74.88888781517744, 'p95_ms': 80.52840596064925}
+gemini tieredq b=4 seed=0 t=8 batch=1: {'recall10': 0.9784, 'qps': 646.925713772121, 'p50_ms': 1.5532164834439754, 'p95_ms': 1.6344613395631313}
+gemini tieredq b=4 seed=0 t=8 batch=32: {'recall10': 0.9784, 'qps': 2253.065881037694, 'p50_ms': 13.981930911540985, 'p95_ms': 14.988081064075232}
+PROGRESS 34/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["gemini"], "codec": "tieredq", "bits": [4], "seeds": [1], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-gemini-tieredq-4-1.json"}
+gemini tieredq b=4 seed=1 t=1 batch=1: {'recall10': 0.9804, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini tieredq b=4 seed=1 t=1 batch=32: {'recall10': 0.9804, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini tieredq b=4 seed=1 t=8 batch=1: {'recall10': 0.9804, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini tieredq b=4 seed=1 t=8 batch=32: {'recall10': 0.9804, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 35/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["gemini"], "codec": "tieredq", "bits": [4], "seeds": [2], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-gemini-tieredq-4-2.json"}
+gemini tieredq b=4 seed=2 t=1 batch=1: {'recall10': 0.9787, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini tieredq b=4 seed=2 t=1 batch=32: {'recall10': 0.9787, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini tieredq b=4 seed=2 t=8 batch=1: {'recall10': 0.9787, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini tieredq b=4 seed=2 t=8 batch=32: {'recall10': 0.9787, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 36/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["gemini"], "codec": "rabitq", "bits": [1], "seeds": [1], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-gemini-rabitq-1-1.json"}
+FhtKacRotator is selected
+gemini rabitq b=1 seed=1 t=1 batch=1: {'recall10': 0.7263999999999999, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini rabitq b=1 seed=1 t=1 batch=32: {'recall10': 0.7263999999999999, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini rabitq b=1 seed=1 t=8 batch=1: {'recall10': 0.7263999999999999, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini rabitq b=1 seed=1 t=8 batch=32: {'recall10': 0.7263999999999999, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 37/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["gemini"], "codec": "rabitq", "bits": [1], "seeds": [2], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-gemini-rabitq-1-2.json"}
+FhtKacRotator is selected
+gemini rabitq b=1 seed=2 t=1 batch=1: {'recall10': 0.7192, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini rabitq b=1 seed=2 t=1 batch=32: {'recall10': 0.7192, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini rabitq b=1 seed=2 t=8 batch=1: {'recall10': 0.7192, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini rabitq b=1 seed=2 t=8 batch=32: {'recall10': 0.7192, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 38/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["gemini"], "codec": "rabitq", "bits": [2], "seeds": [1], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-gemini-rabitq-2-1.json"}
+FhtKacRotator is selected
+gemini rabitq b=2 seed=1 t=1 batch=1: {'recall10': 0.8564, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini rabitq b=2 seed=1 t=1 batch=32: {'recall10': 0.8564, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini rabitq b=2 seed=1 t=8 batch=1: {'recall10': 0.8564, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini rabitq b=2 seed=1 t=8 batch=32: {'recall10': 0.8564, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 39/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["gemini"], "codec": "rabitq", "bits": [2], "seeds": [2], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-gemini-rabitq-2-2.json"}
+FhtKacRotator is selected
+gemini rabitq b=2 seed=2 t=1 batch=1: {'recall10': 0.8525000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini rabitq b=2 seed=2 t=1 batch=32: {'recall10': 0.8525000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini rabitq b=2 seed=2 t=8 batch=1: {'recall10': 0.8525000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini rabitq b=2 seed=2 t=8 batch=32: {'recall10': 0.8525000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 40/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["gemini"], "codec": "rabitq", "bits": [4], "seeds": [1], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-gemini-rabitq-4-1.json"}
+FhtKacRotator is selected
+gemini rabitq b=4 seed=1 t=1 batch=1: {'recall10': 0.9516000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini rabitq b=4 seed=1 t=1 batch=32: {'recall10': 0.9516000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini rabitq b=4 seed=1 t=8 batch=1: {'recall10': 0.9516000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini rabitq b=4 seed=1 t=8 batch=32: {'recall10': 0.9516000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 41/42
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/run_refresh.py {"datasets": ["gemini"], "codec": "rabitq", "bits": [4], "seeds": [2], "cell": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/output/cell-gemini-rabitq-4-2.json"}
+FhtKacRotator is selected
+gemini rabitq b=4 seed=2 t=1 batch=1: {'recall10': 0.9523, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini rabitq b=4 seed=2 t=1 batch=32: {'recall10': 0.9523, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini rabitq b=4 seed=2 t=8 batch=1: {'recall10': 0.9523, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini rabitq b=4 seed=2 t=8 batch=32: {'recall10': 0.9523, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 42/42
+MATRIX COMPLETE
+__EXIT_CODE__=0
