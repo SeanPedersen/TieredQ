@@ -24,7 +24,7 @@ class Index {
   auto config=dv::TieredQConfig::target_code_bits(d,budget);config.num_centroids=std::min(centroids,n/2);
   std::vector<size_t> order(n);std::iota(order.begin(),order.end(),0);std::mt19937_64 rng(0);std::shuffle(order.begin(),order.end(),rng);
   std::vector<float> sample(count*d);for(size_t i=0;i<count;++i)std::copy_n(base.data()+order[i]*d,d,sample.data()+i*d);
-  return dv::TieredQIndex(dv::TieredQ::train(config,sample.data(),count,0),true);
+  return dv::TieredQIndex(dv::TieredQ::train(config,sample.data(),count,0),dv::TieredQIndexMode::fast);
  }
  public:
  Index(Matrix base,uint32_t budget):index_(build(base,budget)),dim_(base.shape(1)) {

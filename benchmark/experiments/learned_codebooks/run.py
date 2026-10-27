@@ -67,7 +67,7 @@ def evaluate(native, raw, base, probes, truth, heldout, fast):
     reconstructed = np.empty_like(heldout)
     codec.reconstruct(heldout, reconstructed)
     mse = float(np.mean((heldout.astype(np.float64) - reconstructed)**2))
-    index = native.Index(codec, fast)
+    index = native.Index(codec, native.Mode.fast if fast else native.Mode.full)
     start = time.perf_counter()
     index.add(base)
     add_s = time.perf_counter() - start

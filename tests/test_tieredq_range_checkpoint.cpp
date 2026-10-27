@@ -78,7 +78,7 @@ void automatic_search_test() {
     (*values)[i]=std::ldexp(normal(random),-int(i%dimensions/8));
   auto codec=dv::TieredQ::train({dimensions,bits,centroids,false},training.data(),training_rows);
   require(codec.tiers().size()>dv::tieredq_detail::fast_range_prefix_tiers,"automatic range test needs a suffix");
-  dv::TieredQIndex index(codec,true);index.add(rows.data(),documents);
+  dv::TieredQIndex index(codec,dv::TieredQIndexMode::fast);index.add(rows.data(),documents);
   size_t code_bits=0;
   for (const auto& tier:codec.tiers()) code_bits+=size_t(tier.dimensions)*tier.bits;
   require(index.bytes_per_vector()==(code_bits+31)/32*sizeof(uint32_t)+dv::tieredq_detail::fast_metadata_bytes,

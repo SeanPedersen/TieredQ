@@ -34,12 +34,12 @@ def assert_same(actual, expected):
 @pytest.mark.parametrize("code_bits", [64, DIMENSIONS * 8])
 def test_fast_only_search_storage_append_and_roundtrip(code_bits, tmp_path):
     rows = np.random.default_rng(13).normal(size=(INITIAL_ROWS * 2, DIMENSIONS)).astype(np.float32)
-    fast = TieredQIndex(dimensions=DIMENSIONS, code_bits=code_bits, fast_mode=True)
-    exact = TieredQIndex(dimensions=DIMENSIONS, code_bits=code_bits)
-    assert fast.fast_mode and not exact.fast_mode
+    fast = TieredQIndex(dimensions=DIMENSIONS, code_bits=code_bits, mode="fast")
+    exact = TieredQIndex(dimensions=DIMENSIONS, code_bits=code_bits, mode="full")
+    assert fast.mode == "fast" and exact.mode == "full"
     assert fast.storage_bytes == 0
     with pytest.raises(AttributeError):
-        fast.fast_mode = False
+        fast.mode = "full"
     fast.add(rows[:INITIAL_ROWS])
     exact.add(rows[:INITIAL_ROWS])
     planes_bytes = exact.storage_bytes
@@ -60,7 +60,7 @@ def test_fast_only_search_storage_append_and_roundtrip(code_bits, tmp_path):
         path = str(tmp_path / f"{name}.tq")
         index.save(path)
         loaded = TieredQIndex.load(path)
-        assert loaded.fast_mode == index.fast_mode
+        assert loaded.mode == index.mode
         assert_same(loaded.search(queries), index.search(queries))
     path = str(tmp_path / "fast.tq")
     loaded = TieredQIndex.load(path)
@@ -76,7 +76,7 @@ def test_fast_only_search_storage_append_and_roundtrip(code_bits, tmp_path):
 
 def test_failed_append_empty_shapes_and_concurrent_calls():
     rows = np.random.default_rng(31).normal(size=(INITIAL_ROWS, DIMENSIONS)).astype(np.float32)
-    index = TieredQIndex(dimensions=DIMENSIONS, code_bits=64, fast_mode=True)
+    index = TieredQIndex(dimensions=DIMENSIONS, code_bits=64, mode="fast")
     index.add(rows)
     expected = index.search(rows[:3])
     storage = index.storage_bytes
@@ -114,7 +114,7 @@ def test_mid_width_models_store_packed_codes(code_bits, tmp_path):
     import struct
 
     rows = np.random.default_rng(37).normal(size=(INITIAL_ROWS, DIMENSIONS)).astype(np.float32)
-    index = TieredQIndex(dimensions=DIMENSIONS, code_bits=code_bits, fast_mode=True)
+    index = TieredQIndex(dimensions=DIMENSIONS, code_bits=code_bits, mode="fast")
     index.add(rows)
     assert index.bytes_per_vector == -(-code_bits // CODE_WORD_BITS) * CODE_WORD_BYTES + FAST_METADATA_BYTES
     path = tmp_path / "index.tq"
@@ -139,7 +139,7 @@ def test_rejects_malformed_fast_only_files(tmp_path, corruption):
     import struct
 
     rows = np.random.default_rng(41).normal(size=(INITIAL_ROWS, DIMENSIONS)).astype(np.float32)
-    index = TieredQIndex(dimensions=DIMENSIONS, code_bits=PACKED_CODE_BITS, fast_mode=True)
+    index = TieredQIndex(dimensions=DIMENSIONS, code_bits=PACKED_CODE_BITS, mode="fast")
     index.add(rows)
     path = tmp_path / "index.tq"
     index.save(str(path))
@@ -180,7 +180,7 @@ def foreign_fast_file(tmp_path):
     dimensions, rows = 8, 32
     arm = platform.machine().lower() in ("arm64", "aarch64")
     vectors = np.random.default_rng(59).normal(size=(rows, dimensions)).astype(np.float32)
-    index = TieredQIndex(dimensions=dimensions, code_bits=1 if arm else dimensions * 8, fast_mode=True)
+    index = TieredQIndex(dimensions=dimensions, code_bits=1 if arm else dimensions * 8, mode="fast")
     index.add(vectors)
     path = tmp_path / "foreign.tq"
     index.save(str(path))
@@ -237,12 +237,12 @@ def test_scalar_warning_obeys_warning_as_error(tmp_path):
             TieredQIndex.load(str(path))
 
 
-@pytest.mark.parametrize("fast_mode", [False, True])
-def test_native_and_exact_indexes_do_not_warn(tmp_path, fast_mode):
+@pytest.mark.parametrize("mode", ["full", "fast"])
+def test_native_and_exact_indexes_do_not_warn(tmp_path, mode):
     import warnings
 
     vectors = np.random.default_rng(61).normal(size=(32, 8)).astype(np.float32)
-    index = TieredQIndex(dimensions=8, code_bits=16, fast_mode=fast_mode)
+    index = TieredQIndex(dimensions=8, code_bits=16, mode=mode)
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
         index.add(vectors)

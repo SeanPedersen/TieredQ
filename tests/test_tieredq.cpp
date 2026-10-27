@@ -104,7 +104,7 @@ void exercise(unsigned d,unsigned bits,bool rotate,const std::string& prefix) {
     codec.score(codes.data(),n,lut,simd.data(),kernel); check(simd==scalar,"SIMD scores differ from scalar");
   }
   loaded.score(codes.data(),n,loaded.query(q.data()),simd.data(),TieredQKernel::scalar); check(simd==scalar,"reopened scores differ");
-  TieredQIndex index(codec); index.add(docs.data(),3); index.add(docs.data()+3*d,n-3); index.save(prefix+".index");
+  TieredQIndex index(codec,dv::TieredQIndexMode::full); index.add(docs.data(),3); index.add(docs.data()+3*d,n-3); index.save(prefix+".index");
   auto reopened=TieredQIndex::load(prefix+".index"); auto a=index.search(q.data(),n),b=reopened.search(q.data(),n);
   check(a.size()==n && b.size()==n,"top-k size mismatch");
   const auto expected=ranked_plane_scores(codec,codes,lut,TieredQKernel::automatic);
@@ -165,7 +165,7 @@ void wide_register_parity(unsigned bits) {
     codec.pack(corrupt.data(),n,planes.data());
     rejects([&]{codec.score_planes(planes.data(),n,q,scores.data(),TieredQKernel::neon);});
   }
-  TieredQIndex index(codec); index.add(docs.data(),n);
+  TieredQIndex index(codec,dv::TieredQIndexMode::full); index.add(docs.data(),n);
   for(auto kernel:{TieredQKernel::scalar,TieredQKernel::neon,TieredQKernel::avx2,TieredQKernel::avx512}) {
     if(!TieredQ::kernel_available(kernel)) continue;
     const auto expected=ranked_plane_scores(codec,encoded,codec.query(query.data()),kernel);
@@ -197,7 +197,7 @@ void fast_scan_test(unsigned code_bits=384,unsigned max_bits=8) {
   std::vector<float> sample(512*d),docs(n*d),query(d);
   for(auto& v:sample) v=normal(rng); for(auto& v:docs) v=normal(rng); for(auto& v:query) v=normal(rng);
   auto codec=TieredQ::train(TieredQConfig{d,code_bits,16,false,max_bits},sample.data(),512);
-  TieredQIndex index(codec); index.add(docs.data(),n);
+  TieredQIndex index(codec,dv::TieredQIndexMode::full); index.add(docs.data(),n);
   check(!index.has_fast_scan(),"fast scan unexpectedly present");
   auto fallback=index.search_fast(query.data(),k),exact=index.search(query.data(),k);
   check(fallback.size()==exact.size(),"fast fallback size mismatch");
@@ -294,7 +294,7 @@ int main() {
     exercise(768,512,true,prefix); exercise(768,1024,false,prefix);
     exercise(7,1,true,prefix); exercise(7,56,false,prefix);
     std::vector<float> zeros(8*7,0); auto zero=TieredQ::train(TieredQConfig{7,13,1,false},zeros.data(),8);
-    TieredQIndex ties(zero); ties.add(zeros.data(),8); auto tied=ties.search(zeros.data(),3);
+    TieredQIndex ties(zero,dv::TieredQIndexMode::full); ties.add(zeros.data(),8); auto tied=ties.search(zeros.data(),3);
     for(size_t i=0;i<tied.size();++i) check(tied[i].id==i && tied[i].score==0,"tie ordering failure");
     auto bad_input=zeros; bad_input[0]=INFINITY; rejects([&]{zero.encode(bad_input.data(),1);});
     rejects([&]{zero.query(bad_input.data());});

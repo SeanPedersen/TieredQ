@@ -22,6 +22,11 @@ constexpr uint64_t training_seed = 0;
 uint32_t auto_centroids(size_t sample_rows) {
   return std::min(maximum_auto_centroids, static_cast<uint32_t>(sample_rows / 2));
 }
+dv::TieredQIndexMode parse_index_mode(const std::string& mode) {
+  if (mode=="fast") return dv::TieredQIndexMode::fast;
+  if (mode=="full") return dv::TieredQIndexMode::full;
+  throw std::invalid_argument("mode must be 'fast' or 'full'");
+}
 struct SearchResult {
   std::vector<float> scores;
   std::vector<uint32_t> ids;
@@ -31,8 +36,8 @@ struct SearchResult {
 
 class PythonIndex {
  public:
-  PythonIndex(uint32_t dimensions, uint32_t code_bits, bool fast_mode = false)
-      : config_(dv::TieredQConfig::target_code_bits(dimensions, code_bits)), fast_mode_(fast_mode) {}
+  PythonIndex(uint32_t dimensions, uint32_t code_bits, const std::string& mode)
+      : config_(dv::TieredQConfig::target_code_bits(dimensions, code_bits)), mode_(parse_index_mode(mode)) {}
 
   size_t size() const {
     std::shared_lock lock(mutex_);
@@ -40,7 +45,7 @@ class PythonIndex {
   }
   uint32_t dimensions() const { return config_.dimensions; }
   uint32_t code_bits() const { return config_.code_bits; }
-  bool fast_mode() const { return fast_mode_; }
+  const char* mode() const { return mode_==dv::TieredQIndexMode::fast ? "fast" : "full"; }
   size_t storage_bytes() const {
     std::shared_lock lock(mutex_);
     return index_ ? index_->storage_bytes() : 0;
@@ -57,7 +62,7 @@ class PythonIndex {
       if (rows.shape(0) < 2)
         throw std::runtime_error("the first add() needs at least 2 rows to train");
       config_.num_centroids = auto_centroids(rows.shape(0));
-      index_.emplace(dv::TieredQ::train(config_, rows.data(), rows.shape(0), training_seed), fast_mode_);
+      index_.emplace(dv::TieredQ::train(config_, rows.data(), rows.shape(0), training_seed), mode_);
     }
     index_->add(rows.data(), rows.shape(0));
   }
@@ -111,7 +116,7 @@ class PythonIndex {
 
  private:
   explicit PythonIndex(dv::TieredQIndex index)
-      : config_(index.codec().config()), fast_mode_(index.fast_mode()), index_(std::move(index)) {}
+      : config_(index.codec().config()), mode_(index.mode()), index_(std::move(index)) {}
   const dv::TieredQIndex& trained() const {
     if (!index_) throw std::runtime_error("add() at least 2 rows before searching");
     return *index_;
@@ -122,7 +127,7 @@ class PythonIndex {
   }
 
   dv::TieredQConfig config_;
-  bool fast_mode_;
+  dv::TieredQIndexMode mode_;
   bool scalar_warning_emitted_ = false;
   std::optional<dv::TieredQIndex> index_;
   mutable std::shared_mutex mutex_;
@@ -139,11 +144,11 @@ nb::tuple search_result(const PythonIndex& index, FloatArray queries, size_t k, 
 
 void bind_index(nb::module_& module) {
   nb::class_<PythonIndex>(module, "TieredQIndex", "Trained exhaustive in-memory vector index.")
-      .def(nb::init<uint32_t, uint32_t, bool>(), "dimensions"_a, "code_bits"_a, nb::kw_only(), "fast_mode"_a = false)
+      .def(nb::init<uint32_t, uint32_t, const std::string&>(), "dimensions"_a, "code_bits"_a, nb::kw_only(), "mode"_a = "fast")
       .def("__len__", &PythonIndex::size, nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro("dimensions", &PythonIndex::dimensions)
       .def_prop_ro("code_bits", &PythonIndex::code_bits)
-      .def_prop_ro("fast_mode", &PythonIndex::fast_mode)
+      .def_prop_ro("mode", &PythonIndex::mode)
       .def_prop_ro("storage_bytes", &PythonIndex::storage_bytes,
                    "Allocated vector-data bytes, excluding shared models and query scratch.",
                    nb::call_guard<nb::gil_scoped_release>())

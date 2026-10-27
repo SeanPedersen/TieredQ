@@ -108,6 +108,11 @@ std::vector<TieredQHit> TieredQIndex::search(const float* vector,size_t k,Tiered
   }
   return top.finish();
 }
+TieredQIndex::TieredQIndex(TieredQ codec,TieredQIndexMode mode)
+    : codec_(std::move(codec)),fast_mode_(mode==TieredQIndexMode::fast) {
+  if (mode!=TieredQIndexMode::fast && mode!=TieredQIndexMode::full)
+    throw std::invalid_argument("TieredQ: invalid index mode");
+}
 TieredQIndex::~TieredQIndex() = default;
 void TieredQIndex::build_fast_scan() {
   if (fast_mode_) return;

@@ -23,7 +23,7 @@ TieredQIndex TieredQIndex::load(const std::string& path) {
   auto file=load_file(path,0);
   if (file.kind!=tieredq_detail::exact_index_file_kind && file.kind!=tieredq_detail::fast_index_file_kind) bad("wrong index file kind");
   if (file.rows>UINT32_MAX) bad("index exceeds uint32 document ids");
-  TieredQIndex index(TieredQ::deserialize(file.model),file.kind==tieredq_detail::fast_index_file_kind);
+  TieredQIndex index(TieredQ::deserialize(file.model),file.kind==tieredq_detail::fast_index_file_kind ? TieredQIndexMode::fast : TieredQIndexMode::full);
   if (index.fast_mode_) {
     tieredq_detail::Reader reader{file.payload};
     if (reader.u32()!=tieredq_detail::fast_payload_version) bad("unsupported fast payload version");

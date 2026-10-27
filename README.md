@@ -25,7 +25,7 @@ import gensim.downloader as api
 from tieredq import TieredQIndex
 
 vectors = api.load("glove-wiki-gigaword-100").vectors  # (400000, 100), float32
-index = TieredQIndex(dimensions=100, code_bits=200, fast_mode=True) # 2 bits per dim
+index = TieredQIndex(dimensions=100, code_bits=200) # 2 bits per dim
 index.add(vectors)  # first add trains; later adds only encode
 scores, ids = index.search(vectors[:2], k=10)  # (2, 10) float32, uint32
 
@@ -33,9 +33,14 @@ index.save("index.tq")
 index = TieredQIndex.load("index.tq")
 ```
 
-- `fast_mode` is optional and defaults to `False` (FP32 scoring of quantized
-  vectors). `True` trades some score/ranking accuracy for speed and stores only
-  the fast representation. Both modes scan every vector; saving preserves the mode.
+- `mode="fast"` is the default and stores the native fast search representation.
+  Use `mode="full"` for compact packed rows and FP32 scoring of quantized vectors,
+  with slower search. Both modes scan every vector; saving and loading preserve
+  the selected representation. Read the selection from `index.mode`.
+  The former `fast_mode` boolean argument/property has been removed; use `mode`.
+- In C++, use `dv::TieredQIndex(codec)` for fast mode or
+  `dv::TieredQIndex(codec, dv::TieredQIndexMode::full)` for full mode.
+  Inspect the enum with `index.mode()`; the boolean constructor is removed.
 - The first `add()` needs a representative batch of at least two vectors.
   Inputs must be contiguous float32 NumPy arrays.
 - Queries accept one vector or a matrix. Scores estimate inner products.

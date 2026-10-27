@@ -119,7 +119,7 @@ def allocation(args,native,base,probes,queries,truth,transform):
                     assert bytes(raw)==(args.output/f'marginal-b{budget}-s{seed}.bin').read_bytes()
                 codec=native.Codec.load(raw)
                 assert codec.roundtrip()==raw
-                index=native.Index(codec,True)
+                index=native.Index(codec,native.Mode.fast)
                 start=time.perf_counter()
                 index.add(base)
                 add_s=time.perf_counter()-start

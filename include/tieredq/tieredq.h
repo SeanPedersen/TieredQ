@@ -11,6 +11,7 @@
 
 namespace dv {
 namespace tieredq_detail { class StageProfile; struct FastScanCache; struct FastQueryBasis; struct EncoderData; class LazyEncoder; }
+enum class TieredQIndexMode { fast, full };
 enum class TieredQKernel { automatic, scalar, avx2, avx512, neon };
 struct TieredQConfig {
   uint32_t dimensions = 512;
@@ -134,8 +135,7 @@ class TieredQ {
 class TieredQIndex {
  public:
   // Fast mode owns only its approximate search representation; the mode is persisted.
-  explicit TieredQIndex(TieredQ codec, bool fast_mode = false)
-      : codec_(std::move(codec)), fast_mode_(fast_mode) {}
+  explicit TieredQIndex(TieredQ codec, TieredQIndexMode mode = TieredQIndexMode::fast);
   ~TieredQIndex();
   TieredQIndex(const TieredQIndex&) = default;
   TieredQIndex& operator=(const TieredQIndex&) = default;
@@ -151,7 +151,7 @@ class TieredQIndex {
   }
   const TieredQ& codec() const { return codec_; }
   size_t size() const { return count_; }
-  bool fast_mode() const { return fast_mode_; }
+  TieredQIndexMode mode() const { return fast_mode_ ? TieredQIndexMode::fast : TieredQIndexMode::full; }
   // Actual fast-data dispatch; false when no fast representation is present.
   bool uses_scalar_fast_scan() const;
   static bool native_fast_scan_available();

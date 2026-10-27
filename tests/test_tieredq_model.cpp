@@ -307,7 +307,7 @@ void parity(const std::string& prefix,unsigned d,unsigned bits) {
     for (size_t i=0;i<rows;++i) require(std::fabs(scores[i]-scalar[i])<.002f,"plane kernel parity");
   }
   for (size_t i=0;i<rows;++i) require(std::fabs(scalar[i]-reference[i])<.003f,"independent score reference");
-  TieredQIndex index(codec); index.add(x.data(),rows); index.save(prefix+".index");
+  TieredQIndex index(codec,dv::TieredQIndexMode::full); index.add(x.data(),rows); index.save(prefix+".index");
   auto loaded=TieredQIndex::load(prefix+".index");
   require(loaded.search(q.data(),rows).size()==rows,"index load"); loaded.save(prefix+".index2");
   require(read_bytes(prefix+".index")==read_bytes(prefix+".index2"),"index bytes");
@@ -396,7 +396,7 @@ void grouped_scan() {
   codec.score_planes(planes.data(),rows,query,scores.data());
   std::vector<uint32_t> order(rows); std::iota(order.begin(),order.end(),0u);
   std::stable_sort(order.begin(),order.end(),[&](uint32_t a,uint32_t b){ return scores[a]>scores[b]; });
-  TieredQIndex index(codec); index.add(sample.data(),rows);
+  TieredQIndex index(codec,dv::TieredQIndexMode::full); index.add(sample.data(),rows);
   constexpr size_t k=10; const auto hits=index.search(q.data(),k);
   for (size_t i=0;i<k;++i) require(hits[i].id==order[i] && hits[i].score==scores[order[i]],"filtered search equals full sort");
   auto tampered=query; tampered.scan_tables[0]+=1;

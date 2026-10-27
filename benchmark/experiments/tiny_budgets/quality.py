@@ -48,7 +48,7 @@ def representation(path, fast):
 
 
 def evaluate(native, raw, base, probes, truth, root, budget, seed, fast, adapter_bytes):
-    index = native.Index(native.Codec.load(raw), fast)
+    index = native.Index(native.Codec.load(raw), native.Mode.fast if fast else native.Mode.full)
     start = time.perf_counter()
     index.add(base)
     add_s = time.perf_counter() - start

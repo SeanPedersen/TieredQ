@@ -39,7 +39,7 @@ class Index {
       std::vector<float> sample(train_count * width_);
       for (size_t i=0; i<train_count; ++i)
         std::copy_n(base.data()+order[i]*width_, width_, sample.data()+i*width_);
-      tq_ = std::make_unique<dv::TieredQIndex>(dv::TieredQ::train(config, sample.data(), train_count, seed), fast);
+      tq_ = std::make_unique<dv::TieredQIndex>(dv::TieredQ::train(config, sample.data(), train_count, seed), fast ? dv::TieredQIndexMode::fast : dv::TieredQIndexMode::full);
       const auto start = std::chrono::steady_clock::now();
       tq_->add(base.data(), count_);
       encode_s_ = std::chrono::duration<double>(std::chrono::steady_clock::now()-start).count();

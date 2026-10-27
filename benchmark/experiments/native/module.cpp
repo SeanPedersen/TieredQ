@@ -35,8 +35,11 @@ NB_MODULE(EXPERIMENT_MODULE, m) {
   m.def("profile_reset", &experiment_profile::reset);
   m.def("profile_read", &experiment_profile::read);
 #endif
+  nb::enum_<dv::TieredQIndexMode>(m, "Mode")
+    .value("fast", dv::TieredQIndexMode::fast)
+    .value("full", dv::TieredQIndexMode::full);
   nb::class_<dv::TieredQIndex>(m, "Index")
-    .def(nb::init<dv::TieredQ, bool>())
+    .def(nb::init<dv::TieredQ, dv::TieredQIndexMode>())
     .def_static("load", &dv::TieredQIndex::load)
     .def("save", &dv::TieredQIndex::save)
     .def("stride", &dv::TieredQIndex::bytes_per_vector)
@@ -50,7 +53,7 @@ NB_MODULE(EXPERIMENT_MODULE, m) {
       if (q.shape(0)!=scores.shape(0) || q.shape(0)!=ids.shape(0) || scores.shape(1)!=ids.shape(1))
         throw std::invalid_argument("output shape mismatch");
       nb::gil_scoped_release release;
-      if (index.fast_mode()) index.search_batch_fast(q.data(), q.shape(0), ids.shape(1), scores.data(), ids.data());
+      if (index.mode()==dv::TieredQIndexMode::fast) index.search_batch_fast(q.data(), q.shape(0), ids.shape(1), scores.data(), ids.data());
       else index.search_batch(q.data(), q.shape(0), ids.shape(1), scores.data(), ids.data());
     })
     .def("storage", &dv::TieredQIndex::storage_bytes)

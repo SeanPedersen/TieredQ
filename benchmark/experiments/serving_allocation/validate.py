@@ -25,7 +25,7 @@ checks=[]
 with tempfile.TemporaryDirectory() as folder:
     for n in (1,15,16,17,255,256,257,4095,4096,4097):
         base=rng.normal(size=(n,16)).astype(np.float32)
-        index=native.Index(codec,True)
+        index=native.Index(codec,native.Mode.fast)
         split=n//2
         if split:
             index.add(base[:split])

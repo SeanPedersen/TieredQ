@@ -48,7 +48,7 @@ with threadpool_limits(limits=1,user_api='blas'):
                     if bits==8 and policy=='log':
                         assert bytes(raw)==(args.results/f'{dataset}-marginal-b8.bin').read_bytes()
                     codec=native.Codec.load(raw)
-                    index=native.Index(codec,True)
+                    index=native.Index(codec,native.Mode.fast)
                     start=time.perf_counter()
                     index.add(base)
                     add_s=time.perf_counter()-start

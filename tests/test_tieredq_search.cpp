@@ -63,7 +63,7 @@ void high_bit_reference_test(uint32_t bits,float decay=0,uint32_t centroids=4) {
   const std::vector<std::vector<float>> levels(books.begin(),books.end());
   auto cache=build_fast_scan_cache(levels,codec.tiers(),codec.coded_dimensions(),documents,
       codec.bytes_per_vector(),codec.code_bytes(),centroids,fast_code_lookup_levels,code_patterns.data());
-  dv::TieredQIndex index(codec,true);index.add(rows.data(),documents);
+  dv::TieredQIndex index(codec,dv::TieredQIndexMode::fast);index.add(rows.data(),documents);
   const auto batched=codec.query_weights(queries.data(),query_count);
   for (size_t row=0;row<query_count;++row) {
     const auto single=codec.query_weights(queries.data()+row*dimensions);
@@ -203,7 +203,7 @@ void legacy_byte_payload_test() {
   for (auto* values:{&training,&rows})
     for (size_t i=0;i<values->size();++i) (*values)[i]=normal(random)*std::exp(-0.5f*float(i%dimensions));
   auto codec=dv::TieredQ::train({dimensions,uint32_t(dimensions*5),centroids,true},training.data(),training_rows);
-  dv::TieredQIndex index(codec,true);index.add(rows.data(),documents);
+  dv::TieredQIndex index(codec,dv::TieredQIndexMode::fast);index.add(rows.data(),documents);
   const auto directory=std::filesystem::temp_directory_path();
   const auto packed_path=directory/"tieredq_packed.tq",legacy_path=directory/"tieredq_legacy.tq",resaved_path=directory/"tieredq_resaved.tq";
   index.save(packed_path.string());
@@ -300,7 +300,7 @@ void streaming_search_test(uint32_t code_bits,uint32_t max_bits,bool fast_mode=f
   std::fill_n(queries.data(),dimensions,0);
   for (size_t row=1;row<documents;row+=2) std::copy_n(rows.data(),dimensions,rows.data()+row*dimensions);
   auto codec=dv::TieredQ::train({dimensions,code_bits,centroids,false,max_bits},training.data(),training_rows);
-  dv::TieredQIndex index(std::move(codec),fast_mode);
+  dv::TieredQIndex index(std::move(codec),fast_mode ? dv::TieredQIndexMode::fast : dv::TieredQIndexMode::full);
   index.add(rows.data(),documents);
   index.build_fast_scan();
   if (!index.has_fast_scan()) return;

@@ -36,15 +36,16 @@ exhaustively, sorts descending score then ascending insertion ID for ties,
 and returns at most min(k, size()) hits. IDs are uint32. add appends borrowed
 FP32 rows and the index owns its resulting encoded storage.
 
-## Exact and fast index storage
+## Fast and full index storage
 
-Construct `dv::TieredQIndex(codec, true)` or Python
-`TieredQIndex(dimensions=d, code_bits=b, fast_mode=True)` to retain only the fast
-representation. The default constructor retains exact packed rows. `search` and
+Construct `dv::TieredQIndex(codec)` or Python
+`TieredQIndex(dimensions=d, code_bits=b)` to retain the default fast
+representation. Select `dv::TieredQIndexMode::full` in C++ or `mode="full"`
+in Python to retain compact packed rows for full scoring. `search` and
 `search_batch` honor this choice; fast-only indexes support appending and do not
 require cache rebuilding. C++ explicit exact-kernel overrides are rejected on a
-fast-only index. Mode selection is read-only (`fast_mode()` in C++, `fast_mode`
-in Python).
+fast-only index. Mode selection is read-only (`mode()` returning `dv::TieredQIndexMode` in C++, `mode`
+returning `"fast"` or `"full"` in Python).
 
 `storage_bytes()` / Python `storage_bytes` accounts for allocated vector arrays,
 including capacity and padding, but excludes model/query projection data and
@@ -67,7 +68,7 @@ not enable SIMD. C++ callers can query `uses_scalar_fast_scan()` and
 The same backend selector drives scoring and these diagnostics. Exact-mode
 auxiliary caches remain derived, unpersisted state.
 
-Optional auxiliary caching remains available on default exact-mode indexes: call
+Optional auxiliary caching remains available on full-mode indexes: call
 `build_fast_scan()` then `search_fast` / `search_batch_fast`. This retains both
 representations, leaves configured search exact, and requires rebuilding after a
 nonempty append or load. Empty and failed appends preserve the optional cache.
@@ -112,7 +113,7 @@ contract. Persist models when sharing trained results between environments.
 
 ## Python API
 
-TieredQIndex(dimensions, code_bits, *, fast_mode=False) is the only public class and the only
+TieredQIndex(dimensions, code_bits, *, mode="fast") is the only public class and the only
 configuration surface. The first non-empty add() trains the codec on that
 batch using min(256, rows // 2) centroids and seed 0, then stores the batch.
 It needs at least 2 rows; empty adds are no-ops. Later add(rows) calls only
@@ -121,9 +122,14 @@ encode. len(index) reports the count, and search(queries, k=10) returns
 2-D [queries, dimensions] array returns [queries, min(k, size)]. save(path)
 and TieredQIndex.load(path) persist the trained index.
 
-`search()` uses the selected storage mode; the default is exact scoring.
-`fast_mode=True` owns only fast data, persists the mode, and stays ready after
-appends or load. The mode is read-only. On default exact indexes,
+The former boolean constructor and `fast_mode` accessor are removed. Use `mode="full"`
+instead of `fast_mode=False`, and `mode="fast"` instead of `fast_mode=True`. In C++,
+replace boolean arguments with `dv::TieredQIndexMode::full` / `::fast`. Existing saved
+indexes retain their file format and stored mode when loaded.
+
+`search()` uses the selected storage mode; the default is fast scoring.
+`mode="fast"` owns only fast data, persists the mode, and stays ready after
+appends or load. The mode is read-only. On full-mode indexes,
 `build_fast_scan()` prepares an optional auxiliary cache for `search_fast`.
 The read-only `has_fast_scan`, `bytes_per_vector` and `storage_bytes` properties
 report fast-data availability, unpadded representation stride and allocated

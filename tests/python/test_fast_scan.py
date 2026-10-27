@@ -1,4 +1,4 @@
-"""Optional fast search preserves exact defaults, array ownership and cache lifecycle."""
+"""Full-mode optional fast search preserves configured scoring, array ownership and cache lifecycle."""
 from concurrent.futures import ThreadPoolExecutor
 import gc
 
@@ -13,7 +13,7 @@ DIMENSIONS = 32
 @pytest.fixture
 def data():
     rows = np.random.default_rng(7).normal(size=(257, DIMENSIONS)).astype(np.float32)
-    index = TieredQIndex(dimensions=DIMENSIONS, code_bits=64)
+    index = TieredQIndex(dimensions=DIMENSIONS, code_bits=64, mode="full")
     index.add(rows)
     return index, rows
 
@@ -24,7 +24,7 @@ def assert_same(actual, expected):
 
 
 @pytest.mark.parametrize("matrix", [False, True])
-def test_fast_is_optional_and_exact_remains_default(data, matrix):
+def test_fast_is_optional_and_full_search_stays_configured(data, matrix):
     index, rows = data
     queries = rows[:9] if matrix else rows[0]
     expected = index.search(queries, k=10)
@@ -111,7 +111,7 @@ def test_fast_validation_and_worker_exceptions(data):
 
 
 def test_fast_cache_requires_training():
-    index = TieredQIndex(dimensions=DIMENSIONS, code_bits=64)
+    index = TieredQIndex(dimensions=DIMENSIONS, code_bits=64, mode="full")
     assert not index.has_fast_scan
     with pytest.raises(RuntimeError):
         index.build_fast_scan()
