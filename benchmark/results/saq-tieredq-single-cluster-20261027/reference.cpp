@@ -3,15 +3,14 @@
 #include <fmt/format.h>
 #include "index/ivf.hpp"
 using namespace saqlib;
-extern "C" void saq_reference(const char *model,const float *queries,size_t count,size_t dimensions,const float *basis,const float *mean,size_t original_dims,uint32_t *output) {
+extern "C" void saq_reference(const char *model,const float *queries,size_t count,size_t dimensions,uint32_t *output) {
   IVF index;
   index.load(model);
   SearcherConfig config;
   config.dist_type=DistType::L2Sqr;
   constexpr size_t top_k=10;
   for (size_t i=0;i<count;++i) {
-    FloatVec query=FloatVec::Zero(dimensions);
-    query.head(original_dims)=(Eigen::Map<const FloatVec>(queries+i*original_dims,original_dims)-Eigen::Map<const FloatVec>(mean,original_dims))*Eigen::Map<const FloatRowMat>(basis,original_dims,original_dims);
+    FloatVec query=Eigen::Map<const FloatVec>(queries+i*dimensions,dimensions);
     std::vector<std::pair<PID,float>> distances;
     index.estimate<DistType::L2Sqr>(query,1,config,distances);
     auto compare=[](const auto &a,const auto &b){return a.second<b.second || (a.second==b.second && a.first<b.first);};
@@ -35,14 +34,4 @@ extern "C" uint32_t saq_last_block_regression() {
   SearcherConfig search;
   index.search<DistType::L2Sqr>(data.row(count-1),1,1,search,&id);
   return id;
-}
-
-extern "C" void saq_layout(const char *model,size_t *output) {
-  IVF index;index.load(model);
-  const auto &data=*index.get_saq_data();
-  output[0]=data.quant_plan.size();output[1]=index.num_dim();
-  output[2]=sizeof(QuantizeConfig);output[3]=sizeof(QuantSingleConfig);
-  for (size_t i=0;i<data.quant_plan.size();++i) {
-    output[4+2*i]=data.quant_plan[i].first;output[5+2*i]=data.quant_plan[i].second;
-  }
 }

@@ -1,0 +1,22 @@
+{
+  "status": "running",
+  "host": "hartmut",
+  "started": "2026-10-27T14:11:56.374906+00:00",
+  "affinity": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "saq_revision": "2163ebcedd0ad9c9f4de326e6ca7a860f9eafe52",
+  "tieredq_revision": "575e167a0ad66920119bd0d0836b6c0c92c0a4e5",
+  "binary_sha256": "4c3373685bc4a11443f8d37777c62878fc5c9c9c449a7a3b314d26c1512e8921",
+  "seed_mapping": "srand(seed+1) controls upstream Eigen Random rotations; full-corpus PCA is fixed",
+  "pca": "Full-corpus centered covariance in FP64, full orthonormal eigenbasis in descending variance order, serving matrix and mean FP32; no dimensional truncation",
+  "scoring": "One cluster; every compressed vector receives production compAccurateDist; native ResultPool top-10, no native pruning or FP32 backing vectors",
+  "compiler": "GCC 16.2.1, C++20, -O3 -march=native -ffp-contract=off; explicit numerical policy instead of upstream -Ofast"
+}

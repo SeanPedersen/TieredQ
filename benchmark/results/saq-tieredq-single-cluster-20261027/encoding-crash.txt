@@ -1,0 +1,211 @@
+           PID: 3896171 (python)
+           TID: 3916059 (python)
+           UID: 1000 (sean)
+           GID: 1000 (sean)
+        Signal: 11 (SEGV) si_code: SEGV_MAPERR
+     Timestamp: Tue 2026-10-27 15:16:27 CET (3min 11s ago)
+  Command Line: /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python -u run.py
+    Executable: /home/sean/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/bin/python3.12
+ Control Group: /user.slice/user-1000.slice/session-c14865.scope
+          Unit: session-c14865.scope
+         Slice: user-1000.slice
+       Session: c14865
+     Owner UID: 1000 (sean)
+       Boot ID: fdc6592d53374b338ab34c921718ceac
+    Machine ID: 526b72bb3c494c27b6ee80f37582b92c
+      Hostname: hartmut
+       Storage: /var/lib/systemd/coredump/core.python.1000.fdc6592d53374b338ab34c921718ceac.3896171.1793110587000000.zst (present)
+  Size on Disk: 335.3M
+       Message: Process 3896171 (python) of user 1000 dumped core.
+                
+                Module python3.12 without build-id.
+                Stack trace of thread 3916059:
+                #0  0x00007f31e65b0a50 _ZNK6saqlib16QuantizerCluster8quantizeERKN5Eigen6MatrixIfLin1ELin1ELi1ELin1ELin1EEERKNS2_IfLi1ELin1ELi1ELi1ELin1EEERNS_14CAQClusterDataE (libsaq_bench.so + 0x56a50)
+                #1  0x00007f31e65b416e _ZN6saqlib11SAQuantizer16quantize_clusterERKN5Eigen6MatrixIfLin1ELin1ELi1ELin1ELin1EEERKNS2_IfLi1ELin1ELi1ELi1ELin1EEERKSt6vectorIjSaIjEERNS_10SaqCluDataE (libsaq_bench.so + 0x5a16e)
+                #2  0x00007f31e65b47a8 _ZNSt17_Function_handlerIFvvEZN6saqlib3IVF9constructERKN5Eigen6MatrixIfLin1ELin1ELi1ELin1ELin1EEES7_PKjibEUlvE_E9_M_invokeERKSt9_Any_data (libsaq_bench.so + 0x5a7a8)
+                #3  0x00007f31e6597306 _ZN2BS11thread_poolILh0EE6workerERKSt10stop_tokenm (libsaq_bench.so + 0x3d306)
+                #4  0x00007f31e6306116 n/a (libstdc++.so.6 + 0x106116)
+                #5  0x00007f31e90acf9c n/a (libc.so.6 + 0xacf9c)
+                #6  0x00007f31e914df9c n/a (libc.so.6 + 0x14df9c)
+                
+                Stack trace of thread 3916027:
+                #0  0x00007f31e90b60c2 n/a (libc.so.6 + 0xb60c2)
+                #1  0x00007f31e90a9738 n/a (libc.so.6 + 0xa9738)
+                #2  0x00007f31e90ac2f0 pthread_cond_wait (libc.so.6 + 0xac2f0)
+                #3  0x00007f31e62f8cd1 _ZNSt18condition_variable4waitERSt11unique_lockISt5mutexE (libstdc++.so.6 + 0xf8cd1)
+                #4  0x00007f31e6597672 _ZN2BS11thread_poolILh0EE6workerERKSt10stop_tokenm (libsaq_bench.so + 0x3d672)
+                #5  0x00007f31e6306116 n/a (libstdc++.so.6 + 0x106116)
+                #6  0x00007f31e90acf9c n/a (libc.so.6 + 0xacf9c)
+                #7  0x00007f31e914df9c n/a (libc.so.6 + 0x14df9c)
+                
+                Stack trace of thread 3896171:
+                #0  0x00007f31e90b60c2 n/a (libc.so.6 + 0xb60c2)
+                #1  0x00007f31e90a9738 n/a (libc.so.6 + 0xa9738)
+                #2  0x00007f31e90ac2f0 pthread_cond_wait (libc.so.6 + 0xac2f0)
+                #3  0x00007f31e62f8cd1 _ZNSt18condition_variable4waitERSt11unique_lockISt5mutexE (libstdc++.so.6 + 0xf8cd1)
+                #4  0x00007f31e65ab343 _ZN6saqlib3IVF9constructERKN5Eigen6MatrixIfLin1ELin1ELi1ELin1ELin1EEES5_PKjib (libsaq_bench.so + 0x51343)
+                #5  0x00007f31e65ac8f1 _ZN5IndexC1EPKfmmS1_S1_fjPKc (libsaq_bench.so + 0x528f1)
+                #6  0x00007f31e657dd48 saq_build (libsaq_bench.so + 0x23d48)
+                #7  0x000000000084c052 ffi_call_unix64 (python3.12 + 0x44d052)
+                #8  0x000000000084ac46 ffi_call_int (python3.12 + 0x44bc46)
+                #9  0x000000000084a91a ffi_call (python3.12 + 0x44b91a)
+                #10 0x0000000000761f4f _ctypes_callproc (python3.12 + 0x362f4f)
+                #11 0x0000000000760665 PyCFuncPtr_call (python3.12 + 0x361665)
+                #12 0x0000000001813d68 _PyEval_EvalFrameDefault (python3.12 + 0x1414d68)
+                #13 0x000000000184c4a6 slot_tp_init (python3.12 + 0x144d4a6)
+                #14 0x000000000180256d type_call (python3.12 + 0x140356d)
+                #15 0x0000000001813cf7 _PyEval_EvalFrameDefault (python3.12 + 0x1414cf7)
+                #16 0x00000000018925e0 PyEval_EvalCode (python3.12 + 0x14935e0)
+                #17 0x00000000018af989 run_mod.llvm.2771815411383993048 (python3.12 + 0x14b0989)
+                #18 0x0000000001a2d705 pyrun_file (python3.12 + 0x162e705)
+                #19 0x0000000001a2d4c6 _PyRun_SimpleFileObject (python3.12 + 0x162e4c6)
+                #20 0x0000000001a2d24a _PyRun_AnyFileObject (python3.12 + 0x162e24a)
+                #21 0x0000000001a2d1d0 pymain_run_file_obj (python3.12 + 0x162e1d0)
+                #22 0x0000000001a2d0dd pymain_run_file (python3.12 + 0x162e0dd)
+                #23 0x0000000001ae2863 Py_RunMain.warm (python3.12 + 0x16e3863)
+                #24 0x000000000196c958 pymain_main.llvm.942331670543796798 (python3.12 + 0x156d958)
+                #25 0x000000000196c76c main (python3.12 + 0x156d76c)
+                #26 0x00007f31e9027cce n/a (libc.so.6 + 0x27cce)
+                #27 0x00007f31e9027e0b __libc_start_main (libc.so.6 + 0x27e0b)
+                #28 0x00000000019a34e9 _start (python3.12 + 0x15a44e9)
+                
+                Stack trace of thread 3916023:
+                #0  0x00007f31e90b60c2 n/a (libc.so.6 + 0xb60c2)
+                #1  0x00007f31e90a9738 n/a (libc.so.6 + 0xa9738)
+                #2  0x00007f31e90ac2f0 pthread_cond_wait (libc.so.6 + 0xac2f0)
+                #3  0x00007f31e62f8cd1 _ZNSt18condition_variable4waitERSt11unique_lockISt5mutexE (libstdc++.so.6 + 0xf8cd1)
+                #4  0x00007f31e6597672 _ZN2BS11thread_poolILh0EE6workerERKSt10stop_tokenm (libsaq_bench.so + 0x3d672)
+                #5  0x00007f31e6306116 n/a (libstdc++.so.6 + 0x106116)
+                #6  0x00007f31e90acf9c n/a (libc.so.6 + 0xacf9c)
+                #7  0x00007f31e914df9c n/a (libc.so.6 + 0x14df9c)
+                
+                Stack trace of thread 3916026:
+                #0  0x00007f31e90b60c2 n/a (libc.so.6 + 0xb60c2)
+                #1  0x00007f31e90a9738 n/a (libc.so.6 + 0xa9738)
+                #2  0x00007f31e90ac2f0 pthread_cond_wait (libc.so.6 + 0xac2f0)
+                #3  0x00007f31e62f8cd1 _ZNSt18condition_variable4waitERSt11unique_lockISt5mutexE (libstdc++.so.6 + 0xf8cd1)
+                #4  0x00007f31e6597672 _ZN2BS11thread_poolILh0EE6workerERKSt10stop_tokenm (libsaq_bench.so + 0x3d672)
+                #5  0x00007f31e6306116 n/a (libstdc++.so.6 + 0x106116)
+                #6  0x00007f31e90acf9c n/a (libc.so.6 + 0xacf9c)
+                #7  0x00007f31e914df9c n/a (libc.so.6 + 0x14df9c)
+                
+                Stack trace of thread 3916025:
+                #0  0x00007f31e90b60c2 n/a (libc.so.6 + 0xb60c2)
+                #1  0x00007f31e90a9738 n/a (libc.so.6 + 0xa9738)
+                #2  0x00007f31e90ac2f0 pthread_cond_wait (libc.so.6 + 0xac2f0)
+                #3  0x00007f31e62f8cd1 _ZNSt18condition_variable4waitERSt11unique_lockISt5mutexE (libstdc++.so.6 + 0xf8cd1)
+                #4  0x00007f31e6597672 _ZN2BS11thread_poolILh0EE6workerERKSt10stop_tokenm (libsaq_bench.so + 0x3d672)
+                #5  0x00007f31e6306116 n/a (libstdc++.so.6 + 0x106116)
+                #6  0x00007f31e90acf9c n/a (libc.so.6 + 0xacf9c)
+                #7  0x00007f31e914df9c n/a (libc.so.6 + 0x14df9c)
+                
+                Stack trace of thread 3916024:
+                #0  0x00007f31e90b60c2 n/a (libc.so.6 + 0xb60c2)
+                #1  0x00007f31e90a9738 n/a (libc.so.6 + 0xa9738)
+                #2  0x00007f31e90ac2f0 pthread_cond_wait (libc.so.6 + 0xac2f0)
+                #3  0x00007f31e62f8cd1 _ZNSt18condition_variable4waitERSt11unique_lockISt5mutexE (libstdc++.so.6 + 0xf8cd1)
+                #4  0x00007f31e6597672 _ZN2BS11thread_poolILh0EE6workerERKSt10stop_tokenm (libsaq_bench.so + 0x3d672)
+                #5  0x00007f31e6306116 n/a (libstdc++.so.6 + 0x106116)
+                #6  0x00007f31e90acf9c n/a (libc.so.6 + 0xacf9c)
+                #7  0x00007f31e914df9c n/a (libc.so.6 + 0x14df9c)
+                
+                Stack trace of thread 3916029:
+                #0  0x00007f31e90b60c2 n/a (libc.so.6 + 0xb60c2)
+                #1  0x00007f31e90a9738 n/a (libc.so.6 + 0xa9738)
+                #2  0x00007f31e90ac2f0 pthread_cond_wait (libc.so.6 + 0xac2f0)
+                #3  0x00007f31e62f8cd1 _ZNSt18condition_variable4waitERSt11unique_lockISt5mutexE (libstdc++.so.6 + 0xf8cd1)
+                #4  0x00007f31e6597672 _ZN2BS11thread_poolILh0EE6workerERKSt10stop_tokenm (libsaq_bench.so + 0x3d672)
+                #5  0x00007f31e6306116 n/a (libstdc++.so.6 + 0x106116)
+                #6  0x00007f31e90acf9c n/a (libc.so.6 + 0xacf9c)
+                #7  0x00007f31e914df9c n/a (libc.so.6 + 0x14df9c)
+                
+                Stack trace of thread 3916064:
+                #0  0x00007f31e90b60c2 n/a (libc.so.6 + 0xb60c2)
+                #1  0x00007f31e90a9738 n/a (libc.so.6 + 0xa9738)
+                #2  0x00007f31e90ac2f0 pthread_cond_wait (libc.so.6 + 0xac2f0)
+                #3  0x00007f31e62f8cd1 _ZNSt18condition_variable4waitERSt11unique_lockISt5mutexE (libstdc++.so.6 + 0xf8cd1)
+                #4  0x00007f31e6597672 _ZN2BS11thread_poolILh0EE6workerERKSt10stop_tokenm (libsaq_bench.so + 0x3d672)
+                #5  0x00007f31e6306116 n/a (libstdc++.so.6 + 0x106116)
+                #6  0x00007f31e90acf9c n/a (libc.so.6 + 0xacf9c)
+                #7  0x00007f31e914df9c n/a (libc.so.6 + 0x14df9c)
+                
+                Stack trace of thread 3916028:
+                #0  0x00007f31e90b60c2 n/a (libc.so.6 + 0xb60c2)
+                #1  0x00007f31e90a9738 n/a (libc.so.6 + 0xa9738)
+                #2  0x00007f31e90ac2f0 pthread_cond_wait (libc.so.6 + 0xac2f0)
+                #3  0x00007f31e62f8cd1 _ZNSt18condition_variable4waitERSt11unique_lockISt5mutexE (libstdc++.so.6 + 0xf8cd1)
+                #4  0x00007f31e6597672 _ZN2BS11thread_poolILh0EE6workerERKSt10stop_tokenm (libsaq_bench.so + 0x3d672)
+                #5  0x00007f31e6306116 n/a (libstdc++.so.6 + 0x106116)
+                #6  0x00007f31e90acf9c n/a (libc.so.6 + 0xacf9c)
+                #7  0x00007f31e914df9c n/a (libc.so.6 + 0x14df9c)
+                
+                Stack trace of thread 3916063:
+                #0  0x00007f31e90b60c2 n/a (libc.so.6 + 0xb60c2)
+                #1  0x00007f31e90a9738 n/a (libc.so.6 + 0xa9738)
+                #2  0x00007f31e90ac2f0 pthread_cond_wait (libc.so.6 + 0xac2f0)
+                #3  0x00007f31e62f8cd1 _ZNSt18condition_variable4waitERSt11unique_lockISt5mutexE (libstdc++.so.6 + 0xf8cd1)
+                #4  0x00007f31e6597672 _ZN2BS11thread_poolILh0EE6workerERKSt10stop_tokenm (libsaq_bench.so + 0x3d672)
+                #5  0x00007f31e6306116 n/a (libstdc++.so.6 + 0x106116)
+                #6  0x00007f31e90acf9c n/a (libc.so.6 + 0xacf9c)
+                #7  0x00007f31e914df9c n/a (libc.so.6 + 0x14df9c)
+                
+                Stack trace of thread 3916062:
+                #0  0x00007f31e90b60c2 n/a (libc.so.6 + 0xb60c2)
+                #1  0x00007f31e90a9738 n/a (libc.so.6 + 0xa9738)
+                #2  0x00007f31e90ac2f0 pthread_cond_wait (libc.so.6 + 0xac2f0)
+                #3  0x00007f31e62f8cd1 _ZNSt18condition_variable4waitERSt11unique_lockISt5mutexE (libstdc++.so.6 + 0xf8cd1)
+                #4  0x00007f31e6597672 _ZN2BS11thread_poolILh0EE6workerERKSt10stop_tokenm (libsaq_bench.so + 0x3d672)
+                #5  0x00007f31e6306116 n/a (libstdc++.so.6 + 0x106116)
+                #6  0x00007f31e90acf9c n/a (libc.so.6 + 0xacf9c)
+                #7  0x00007f31e914df9c n/a (libc.so.6 + 0x14df9c)
+                
+                Stack trace of thread 3916061:
+                #0  0x00007f31e90b60c2 n/a (libc.so.6 + 0xb60c2)
+                #1  0x00007f31e90a9738 n/a (libc.so.6 + 0xa9738)
+                #2  0x00007f31e90ac2f0 pthread_cond_wait (libc.so.6 + 0xac2f0)
+                #3  0x00007f31e62f8cd1 _ZNSt18condition_variable4waitERSt11unique_lockISt5mutexE (libstdc++.so.6 + 0xf8cd1)
+                #4  0x00007f31e6597672 _ZN2BS11thread_poolILh0EE6workerERKSt10stop_tokenm (libsaq_bench.so + 0x3d672)
+                #5  0x00007f31e6306116 n/a (libstdc++.so.6 + 0x106116)
+                #6  0x00007f31e90acf9c n/a (libc.so.6 + 0xacf9c)
+                #7  0x00007f31e914df9c n/a (libc.so.6 + 0x14df9c)
+                
+                Stack trace of thread 3916065:
+                #0  0x00007f31e90b60c2 n/a (libc.so.6 + 0xb60c2)
+                #1  0x00007f31e90a9738 n/a (libc.so.6 + 0xa9738)
+                #2  0x00007f31e90ac2f0 pthread_cond_wait (libc.so.6 + 0xac2f0)
+                #3  0x00007f31e62f8cd1 _ZNSt18condition_variable4waitERSt11unique_lockISt5mutexE (libstdc++.so.6 + 0xf8cd1)
+                #4  0x00007f31e6597672 _ZN2BS11thread_poolILh0EE6workerERKSt10stop_tokenm (libsaq_bench.so + 0x3d672)
+                #5  0x00007f31e6306116 n/a (libstdc++.so.6 + 0x106116)
+                #6  0x00007f31e90acf9c n/a (libc.so.6 + 0xacf9c)
+                #7  0x00007f31e914df9c n/a (libc.so.6 + 0x14df9c)
+                
+                Stack trace of thread 3916030:
+                #0  0x00007f31e90b60c2 n/a (libc.so.6 + 0xb60c2)
+                #1  0x00007f31e90a9738 n/a (libc.so.6 + 0xa9738)
+                #2  0x00007f31e90ac2f0 pthread_cond_wait (libc.so.6 + 0xac2f0)
+                #3  0x00007f31e62f8cd1 _ZNSt18condition_variable4waitERSt11unique_lockISt5mutexE (libstdc++.so.6 + 0xf8cd1)
+                #4  0x00007f31e6597672 _ZN2BS11thread_poolILh0EE6workerERKSt10stop_tokenm (libsaq_bench.so + 0x3d672)
+                #5  0x00007f31e6306116 n/a (libstdc++.so.6 + 0x106116)
+                #6  0x00007f31e90acf9c n/a (libc.so.6 + 0xacf9c)
+                #7  0x00007f31e914df9c n/a (libc.so.6 + 0x14df9c)
+                
+                Stack trace of thread 3916066:
+                #0  0x00007f31e90b60c2 n/a (libc.so.6 + 0xb60c2)
+                #1  0x00007f31e90a9738 n/a (libc.so.6 + 0xa9738)
+                #2  0x00007f31e90ac2f0 pthread_cond_wait (libc.so.6 + 0xac2f0)
+                #3  0x00007f31e62f8cd1 _ZNSt18condition_variable4waitERSt11unique_lockISt5mutexE (libstdc++.so.6 + 0xf8cd1)
+                #4  0x00007f31e6597672 _ZN2BS11thread_poolILh0EE6workerERKSt10stop_tokenm (libsaq_bench.so + 0x3d672)
+                #5  0x00007f31e6306116 n/a (libstdc++.so.6 + 0x106116)
+                #6  0x00007f31e90acf9c n/a (libc.so.6 + 0xacf9c)
+                #7  0x00007f31e914df9c n/a (libc.so.6 + 0x14df9c)
+                
+                Stack trace of thread 3916060:
+                #0  0x00007f31e90b60c2 n/a (libc.so.6 + 0xb60c2)
+                #1  0x00007f31e90a9738 n/a (libc.so.6 + 0xa9738)
+                #2  0x00007f31e90ac2f0 pthread_cond_wait (libc.so.6 + 0xac2f0)
+                #3  0x00007f31e62f8cd1 _ZNSt18condition_variable4waitERSt11unique_lockISt5mutexE (libstdc++.so.6 + 0xf8cd1)
+                #4  0x00007f31e6597672 _ZN2BS11thread_poolILh0EE6workerERKSt10stop_tokenm (libsaq_bench.so + 0x3d672)
+                #5  0x00007f31e6306116 n/a (libstdc++.so.6 + 0x106116)
+                #6  0x00007f31e90acf9c n/a (libc.so.6 + 0xacf9c)
+                #7  0x00007f31e914df9c n/a (libc.so.6 + 0x14df9c)
+                ELF object binary architecture: AMD x86-64

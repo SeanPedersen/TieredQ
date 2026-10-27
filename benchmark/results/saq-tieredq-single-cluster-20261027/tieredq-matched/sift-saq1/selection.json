@@ -1,0 +1,51 @@
+{
+  "dataset": "sift",
+  "anchor_bits": 1,
+  "saq_cap_bytes": 60.10136,
+  "selected_code_bits": 383,
+  "selected_bytes_per_vector": 57.335312,
+  "in_target_band": false,
+  "attempts": [
+    {
+      "code_bits": 428,
+      "bytes_per_vector": 65.338486
+    },
+    {
+      "code_bits": 214,
+      "bytes_per_vector": 37.3137
+    },
+    {
+      "code_bits": 321,
+      "bytes_per_vector": 53.329506
+    },
+    {
+      "code_bits": 374,
+      "bytes_per_vector": 57.334254
+    },
+    {
+      "code_bits": 401,
+      "bytes_per_vector": 61.33637
+    },
+    {
+      "code_bits": 387,
+      "bytes_per_vector": 61.335841
+    },
+    {
+      "code_bits": 380,
+      "bytes_per_vector": 57.334783
+    },
+    {
+      "code_bits": 383,
+      "bytes_per_vector": 57.335312
+    },
+    {
+      "code_bits": 385,
+      "bytes_per_vector": 61.335312
+    },
+    {
+      "code_bits": 384,
+      "bytes_per_vector": 57.335312
+    }
+  ],
+  "policy": "Match SAQ total bytes/vector; 99.0-99.5% band; seed-0 storage only"
+}

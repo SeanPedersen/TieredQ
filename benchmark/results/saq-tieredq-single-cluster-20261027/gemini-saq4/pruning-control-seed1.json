@@ -1,0 +1,6 @@
+{
+  "full_recall": 0.9761000000000002,
+  "native_recall": 0.8488000000000001,
+  "identical_rows": 654,
+  "queries": 1000
+}

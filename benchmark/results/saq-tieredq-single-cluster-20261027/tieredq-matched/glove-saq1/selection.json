@@ -1,0 +1,47 @@
+{
+  "dataset": "glove",
+  "anchor_bits": 1,
+  "saq_cap_bytes": 63.2872,
+  "selected_code_bits": 364,
+  "selected_bytes_per_vector": 62.93368,
+  "in_target_band": true,
+  "attempts": [
+    {
+      "code_bits": 360,
+      "bytes_per_vector": 61.93272
+    },
+    {
+      "code_bits": 980,
+      "bytes_per_vector": 136.78888
+    },
+    {
+      "code_bits": 670,
+      "bytes_per_vector": 117.04184
+    },
+    {
+      "code_bits": 515,
+      "bytes_per_vector": 96.02168
+    },
+    {
+      "code_bits": 437,
+      "bytes_per_vector": 76.94712
+    },
+    {
+      "code_bits": 398,
+      "bytes_per_vector": 66.93752
+    },
+    {
+      "code_bits": 379,
+      "bytes_per_vector": 64.9356
+    },
+    {
+      "code_bits": 369,
+      "bytes_per_vector": 63.93464
+    },
+    {
+      "code_bits": 364,
+      "bytes_per_vector": 62.93368
+    }
+  ],
+  "policy": "Match SAQ total bytes/vector; 99.0-99.5% band; seed-0 storage only"
+}

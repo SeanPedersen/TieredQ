@@ -1,0 +1,127 @@
+INPUT VERIFIED gemini (99000, 768)
+PCA gemini 2.025949129834771
+WARNING: Logging before InitGoogleLogging() is written to STDERR
+I20261027 15:12:00.490355 139852342515584 ivf.hpp:134] Start IVF construction...
+I20261027 15:12:01.094651 139852342515584 ivf.hpp:112] Dynamic bits allocation plan:
+I20261027 15:12:01.094680 139852342515584 ivf.hpp:120] 1bits: | 0 -> 256 (256d 3b) | 256 -> 768 (512d 0b) 
+I20261027 15:12:01.096657 139852342515584 ivf.hpp:196] Initializing done... num_points: 99000
+I20261027 15:12:02.999014 139852342515584 ivf.hpp:184] Quantization done. tm: 1.90204 S
+I20261027 15:12:03.014242 139852342515584 ivf.hpp:235] Loading IVF...
+I20261027 15:12:03.014266 139852342515584 ivf.hpp:240] 	Loading meta data...
+I20261027 15:12:03.024275 139852342515584 ivf.hpp:196] Initializing done... num_points: 99000
+I20261027 15:12:03.026386 139852342515584 ivf.hpp:265] Index loaded
+MEASURED gemini-saq1 0 1 1 {'recall10': 0.7898000000000001, 'qps': 253.9985994664877, 'p50_ms': 3.8548707962036133, 'p95_ms': 4.296308895573019}
+MEASURED gemini-saq1 0 1 32 {'recall10': 0.7898000000000001, 'qps': 258.5101034272841, 'p50_ms': 122.74947389960289, 'p95_ms': 130.43849496170878}
+MEASURED gemini-saq1 0 8 1 {'recall10': 0.7898000000000001, 'qps': 259.5332634077679, 'p50_ms': 3.8100085221230984, 'p95_ms': 4.118160088546574}
+MEASURED gemini-saq1 0 8 32 {'recall10': 0.7898000000000001, 'qps': 1433.7771929009327, 'p50_ms': 22.515479009598494, 'p95_ms': 30.84359597414732}
+I20261027 15:12:43.445515 139852342515584 ivf.hpp:134] Start IVF construction...
+I20261027 15:12:44.038099 139852342515584 ivf.hpp:112] Dynamic bits allocation plan:
+I20261027 15:12:44.038124 139852342515584 ivf.hpp:120] 1bits: | 0 -> 256 (256d 3b) | 256 -> 768 (512d 0b) 
+I20261027 15:12:44.038928 139852342515584 ivf.hpp:196] Initializing done... num_points: 99000
+I20261027 15:12:45.947961 139852342515584 ivf.hpp:184] Quantization done. tm: 1.90879 S
+I20261027 15:12:45.967346 139852342515584 ivf.hpp:235] Loading IVF...
+I20261027 15:12:45.967375 139852342515584 ivf.hpp:240] 	Loading meta data...
+I20261027 15:12:45.976204 139852342515584 ivf.hpp:196] Initializing done... num_points: 99000
+I20261027 15:12:45.978254 139852342515584 ivf.hpp:265] Index loaded
+MEASURED gemini-saq1 1 1 1 {'recall10': 0.7981000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq1 1 1 32 {'recall10': 0.7981000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq1 1 8 1 {'recall10': 0.7981000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq1 1 8 32 {'recall10': 0.7981000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+I20261027 15:12:49.223344 139852342515584 ivf.hpp:134] Start IVF construction...
+I20261027 15:12:49.829897 139852342515584 ivf.hpp:112] Dynamic bits allocation plan:
+I20261027 15:12:49.829917 139852342515584 ivf.hpp:120] 1bits: | 0 -> 256 (256d 3b) | 256 -> 768 (512d 0b) 
+I20261027 15:12:49.830808 139852342515584 ivf.hpp:196] Initializing done... num_points: 99000
+I20261027 15:12:51.719073 139852342515584 ivf.hpp:184] Quantization done. tm: 1.88806 S
+I20261027 15:12:51.728477 139852342515584 ivf.hpp:235] Loading IVF...
+I20261027 15:12:51.728496 139852342515584 ivf.hpp:240] 	Loading meta data...
+I20261027 15:12:51.737247 139852342515584 ivf.hpp:196] Initializing done... num_points: 99000
+I20261027 15:12:51.739481 139852342515584 ivf.hpp:265] Index loaded
+MEASURED gemini-saq1 2 1 1 {'recall10': 0.7901000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq1 2 1 32 {'recall10': 0.7901000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq1 2 8 1 {'recall10': 0.7901000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq1 2 8 32 {'recall10': 0.7901000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+I20261027 15:12:54.960401 139852342515584 ivf.hpp:134] Start IVF construction...
+I20261027 15:12:55.562621 139852342515584 ivf.hpp:112] Dynamic bits allocation plan:
+I20261027 15:12:55.562642 139852342515584 ivf.hpp:120] 2bits: | 0 -> 192 (192d 5b) | 192 -> 448 (256d 2b) | 448 -> 768 (320d 0b) 
+I20261027 15:12:55.563819 139852342515584 ivf.hpp:196] Initializing done... num_points: 99000
+I20261027 15:12:57.719194 139852342515584 ivf.hpp:184] Quantization done. tm: 2.15513 S
+I20261027 15:12:57.729618 139852342515584 ivf.hpp:235] Loading IVF...
+I20261027 15:12:57.729640 139852342515584 ivf.hpp:240] 	Loading meta data...
+I20261027 15:12:57.735601 139852342515584 ivf.hpp:196] Initializing done... num_points: 99000
+I20261027 15:12:57.738970 139852342515584 ivf.hpp:265] Index loaded
+MEASURED gemini-saq2 0 1 1 {'recall10': 0.9224000000000001, 'qps': 139.84320491295207, 'p50_ms': 7.084783399477601, 'p95_ms': 7.620875095017254}
+MEASURED gemini-saq2 0 1 32 {'recall10': 0.9224000000000001, 'qps': 140.88904990926696, 'p50_ms': 226.91325098276138, 'p95_ms': 238.83860604837537}
+MEASURED gemini-saq2 0 8 1 {'recall10': 0.9224000000000001, 'qps': 152.6252197161598, 'p50_ms': 6.626327289268374, 'p95_ms': 7.198977703228593}
+MEASURED gemini-saq2 0 8 32 {'recall10': 0.9224000000000001, 'qps': 875.5268564084911, 'p50_ms': 37.79521677643061, 'p95_ms': 46.58972891047597}
+I20261027 15:14:08.158012 139852342515584 ivf.hpp:134] Start IVF construction...
+I20261027 15:14:08.751110 139852342515584 ivf.hpp:112] Dynamic bits allocation plan:
+I20261027 15:14:08.751131 139852342515584 ivf.hpp:120] 2bits: | 0 -> 192 (192d 5b) | 192 -> 448 (256d 2b) | 448 -> 768 (320d 0b) 
+I20261027 15:14:08.752381 139852342515584 ivf.hpp:196] Initializing done... num_points: 99000
+I20261027 15:14:10.900364 139852342515584 ivf.hpp:184] Quantization done. tm: 2.14775 S
+I20261027 15:14:10.917892 139852342515584 ivf.hpp:235] Loading IVF...
+I20261027 15:14:10.917920 139852342515584 ivf.hpp:240] 	Loading meta data...
+I20261027 15:14:10.925458 139852342515584 ivf.hpp:196] Initializing done... num_points: 99000
+I20261027 15:14:10.928511 139852342515584 ivf.hpp:265] Index loaded
+MEASURED gemini-saq2 1 1 1 {'recall10': 0.9207000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq2 1 1 32 {'recall10': 0.9207000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq2 1 8 1 {'recall10': 0.9207000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq2 1 8 32 {'recall10': 0.9207000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+I20261027 15:14:15.503626 139852342515584 ivf.hpp:134] Start IVF construction...
+I20261027 15:14:16.091409 139852342515584 ivf.hpp:112] Dynamic bits allocation plan:
+I20261027 15:14:16.091429 139852342515584 ivf.hpp:120] 2bits: | 0 -> 192 (192d 5b) | 192 -> 448 (256d 2b) | 448 -> 768 (320d 0b) 
+I20261027 15:14:16.093915 139852342515584 ivf.hpp:196] Initializing done... num_points: 99000
+I20261027 15:14:18.238612 139852342515584 ivf.hpp:184] Quantization done. tm: 2.14448 S
+I20261027 15:14:18.253473 139852342515584 ivf.hpp:235] Loading IVF...
+I20261027 15:14:18.253503 139852342515584 ivf.hpp:240] 	Loading meta data...
+I20261027 15:14:18.265618 139852342515584 ivf.hpp:196] Initializing done... num_points: 99000
+I20261027 15:14:18.269420 139852342515584 ivf.hpp:265] Index loaded
+MEASURED gemini-saq2 2 1 1 {'recall10': 0.9229, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq2 2 1 32 {'recall10': 0.9229, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq2 2 8 1 {'recall10': 0.9229, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq2 2 8 32 {'recall10': 0.9229, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+I20261027 15:14:23.005564 139852342515584 ivf.hpp:134] Start IVF construction...
+I20261027 15:14:23.596420 139852342515584 ivf.hpp:112] Dynamic bits allocation plan:
+I20261027 15:14:23.596445 139852342515584 ivf.hpp:120] 4bits: | 0 -> 128 (128d 7b) | 128 -> 384 (256d 5b) | 384 -> 640 (256d 3b) | 640 -> 768 (128d 0b) 
+I20261027 15:14:23.600199 139852342515584 ivf.hpp:196] Initializing done... num_points: 99000
+I20261027 15:14:26.272634 139852342515584 ivf.hpp:184] Quantization done. tm: 2.6719 S
+I20261027 15:14:26.291630 139852342515584 ivf.hpp:235] Loading IVF...
+I20261027 15:14:26.291659 139852342515584 ivf.hpp:240] 	Loading meta data...
+I20261027 15:14:26.302966 139852342515584 ivf.hpp:196] Initializing done... num_points: 99000
+I20261027 15:14:26.308641 139852342515584 ivf.hpp:265] Index loaded
+MEASURED gemini-saq4 0 1 1 {'recall10': 0.9793000000000001, 'qps': 97.88115798865539, 'p50_ms': 10.176167357712984, 'p95_ms': 10.820731683634222}
+MEASURED gemini-saq4 0 1 32 {'recall10': 0.9793000000000001, 'qps': 98.11574065168507, 'p50_ms': 325.7623789831996, 'p95_ms': 335.71844501420856}
+MEASURED gemini-saq4 0 8 1 {'recall10': 0.9793000000000001, 'qps': 98.3915382997453, 'p50_ms': 10.145732900127769, 'p95_ms': 10.852960962802172}
+MEASURED gemini-saq4 0 8 32 {'recall10': 0.9793000000000001, 'qps': 579.5051124949171, 'p50_ms': 56.82158097624779, 'p95_ms': 70.95098402351141}
+I20261027 15:16:09.349630 139852342515584 ivf.hpp:134] Start IVF construction...
+I20261027 15:16:09.934613 139852342515584 ivf.hpp:112] Dynamic bits allocation plan:
+I20261027 15:16:09.934633 139852342515584 ivf.hpp:120] 4bits: | 0 -> 128 (128d 7b) | 128 -> 384 (256d 5b) | 384 -> 640 (256d 3b) | 640 -> 768 (128d 0b) 
+I20261027 15:16:09.938419 139852342515584 ivf.hpp:196] Initializing done... num_points: 99000
+I20261027 15:16:12.637960 139852342515584 ivf.hpp:184] Quantization done. tm: 2.69931 S
+I20261027 15:16:12.657548 139852342515584 ivf.hpp:235] Loading IVF...
+I20261027 15:16:12.657574 139852342515584 ivf.hpp:240] 	Loading meta data...
+I20261027 15:16:12.668701 139852342515584 ivf.hpp:196] Initializing done... num_points: 99000
+I20261027 15:16:12.676453 139852342515584 ivf.hpp:265] Index loaded
+MEASURED gemini-saq4 1 1 1 {'recall10': 0.9761000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq4 1 1 32 {'recall10': 0.9761000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq4 1 8 1 {'recall10': 0.9761000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq4 1 8 32 {'recall10': 0.9761000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+I20261027 15:16:18.525228 139852342515584 ivf.hpp:134] Start IVF construction...
+I20261027 15:16:19.116918 139852342515584 ivf.hpp:112] Dynamic bits allocation plan:
+I20261027 15:16:19.116950 139852342515584 ivf.hpp:120] 4bits: | 0 -> 128 (128d 7b) | 128 -> 384 (256d 5b) | 384 -> 640 (256d 3b) | 640 -> 768 (128d 0b) 
+I20261027 15:16:19.118908 139852342515584 ivf.hpp:196] Initializing done... num_points: 99000
+I20261027 15:16:21.712777 139852342515584 ivf.hpp:184] Quantization done. tm: 2.5936 S
+I20261027 15:16:21.731763 139852342515584 ivf.hpp:235] Loading IVF...
+I20261027 15:16:21.731792 139852342515584 ivf.hpp:240] 	Loading meta data...
+I20261027 15:16:21.740239 139852342515584 ivf.hpp:196] Initializing done... num_points: 99000
+I20261027 15:16:21.745596 139852342515584 ivf.hpp:265] Index loaded
+MEASURED gemini-saq4 2 1 1 {'recall10': 0.9794, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq4 2 1 32 {'recall10': 0.9794, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq4 2 8 1 {'recall10': 0.9794, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq4 2 8 32 {'recall10': 0.9794, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+DATASET COMPLETE gemini
+INPUT VERIFIED glove (100000, 200)
+PCA glove 0.2146814949810505
+I20261027 15:16:26.938462 139852342515584 ivf.hpp:134] Start IVF construction...
+I20261027 15:16:27.123705 139852342515584 ivf.hpp:112] Dynamic bits allocation plan:
+I20261027 15:16:27.123724 139852342515584 ivf.hpp:120] 0.78125bits: | 0 -> 192 (192d 1b) | 192 -> 256 (64d 0b) 
+I20261027 15:16:27.124174 139852342515584 ivf.hpp:196] Initializing done... num_points: 100000

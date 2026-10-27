@@ -1,0 +1,26 @@
+INPUT VERIFIED gemini (99000, 768)
+PCA gemini 2.280055410694331
+WARNING: Logging before InitGoogleLogging() is written to STDERR
+I20261027 15:11:22.411162 140069513414528 ivf.hpp:134] Start IVF construction...
+I20261027 15:11:22.997054 140069513414528 ivf.hpp:112] Dynamic bits allocation plan:
+I20261027 15:11:22.997078 140069513414528 ivf.hpp:120] 1bits: | 0 -> 256 (256d 3b) | 256 -> 768 (512d 0b) 
+I20261027 15:11:22.998910 140069513414528 ivf.hpp:196] Initializing done... num_points: 99000
+I20261027 15:11:24.916518 140069513414528 ivf.hpp:184] Quantization done. tm: 1.91732 S
+I20261027 15:11:24.937132 140069513414528 ivf.hpp:235] Loading IVF...
+I20261027 15:11:24.937161 140069513414528 ivf.hpp:240] 	Loading meta data...
+I20261027 15:11:24.950213 140069513414528 ivf.hpp:196] Initializing done... num_points: 99000
+I20261027 15:11:24.952742 140069513414528 ivf.hpp:265] Index loaded
+Traceback (most recent call last):
+  File "/home/sean/experiments/TieredQ-saq-single-cluster-20261027/run.py", line 99, in <module>
+    with threadpool_limits(limits=1):main()
+                                     ^^^^^^
+  File "/home/sean/experiments/TieredQ-saq-single-cluster-20261027/run.py", line 84, in main
+    rows+=evaluate(index,queries,truth,common,directory);write(rows)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sean/experiments/TieredQ-saq-single-cluster-20261027/evaluation.py", line 40, in evaluate
+    validation=validate(index,queries)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sean/experiments/TieredQ-saq-single-cluster-20261027/evaluation.py", line 28, in validate
+    assert np.array_equal(expected,predictions(index,probes,threads,batch))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError

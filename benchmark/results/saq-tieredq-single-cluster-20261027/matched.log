@@ -1,0 +1,255 @@
+STORAGE gemini 1 {'code_bits': 910, 'bytes_per_vector': 179.32032323232323}
+STORAGE gemini 1 {'code_bits': 455, 'bytes_per_vector': 101.21212121212122}
+STORAGE gemini 1 {'code_bits': 682, 'bytes_per_vector': 139.81519191919193}
+STORAGE gemini 1 {'code_bits': 796, 'bytes_per_vector': 160.01123232323232}
+STORAGE gemini 1 {'code_bits': 853, 'bytes_per_vector': 169.57777777777778}
+STORAGE gemini 1 {'code_bits': 824, 'bytes_per_vector': 164.32525252525252}
+STORAGE gemini 1 {'code_bits': 838, 'bytes_per_vector': 166.4511515151515}
+STORAGE gemini 1 {'code_bits': 845, 'bytes_per_vector': 168.5148282828283}
+STORAGE gemini 1 {'code_bits': 841, 'bytes_per_vector': 167.4829898989899}
+STORAGE gemini 1 {'code_bits': 843, 'bytes_per_vector': 167.4829898989899}
+STORAGE gemini 1 {'code_bits': 844, 'bytes_per_vector': 167.4829898989899}
+MEASURED gemini-saq1 0 1 1 {'recall10': 0.8490000000000001, 'qps': 978.0378592753223, 'p50_ms': 1.0001945775002241, 'p95_ms': 1.1268184520304203}
+MEASURED gemini-saq1 0 1 32 {'recall10': 0.8490000000000001, 'qps': 1093.943202171961, 'p50_ms': 28.92333222553134, 'p95_ms': 31.047676224261522}
+MEASURED gemini-saq1 0 8 1 {'recall10': 0.8490000000000001, 'qps': 3133.3912557053563, 'p50_ms': 0.3154994919896126, 'p95_ms': 0.3349252277985215}
+MEASURED gemini-saq1 0 8 32 {'recall10': 0.8490000000000001, 'qps': 7560.020535530797, 'p50_ms': 3.8864072412252426, 'p95_ms': 7.611135020852089}
+MEASURED gemini-saq1 1 1 1 {'recall10': 0.8532000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq1 1 1 32 {'recall10': 0.8532000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq1 1 8 1 {'recall10': 0.8532000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq1 1 8 32 {'recall10': 0.8532000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq1 2 1 1 {'recall10': 0.8466000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq1 2 1 32 {'recall10': 0.8466000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq1 2 8 1 {'recall10': 0.8466000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq1 2 8 32 {'recall10': 0.8466000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+STORAGE gemini 2 {'code_bits': 1936, 'bytes_per_vector': 283.2697474747475}
+STORAGE gemini 2 {'code_bits': 968, 'bytes_per_vector': 188.82464646464646}
+STORAGE gemini 2 {'code_bits': 1452, 'bytes_per_vector': 256.9467474747475}
+STORAGE gemini 2 {'code_bits': 1694, 'bytes_per_vector': 249.62659595959596}
+STORAGE gemini 2 {'code_bits': 1815, 'bytes_per_vector': 266.4069292929293}
+MEASURED gemini-saq2 0 1 1 {'recall10': 0.9395000000000001, 'qps': 186.95626416076345, 'p50_ms': 5.232873372733593, 'p95_ms': 5.951114092022181}
+MEASURED gemini-saq2 0 1 32 {'recall10': 0.9395000000000001, 'qps': 472.2014711437921, 'p50_ms': 66.47419789806008, 'p95_ms': 73.10669310390949}
+MEASURED gemini-saq2 0 8 1 {'recall10': 0.9395000000000001, 'qps': 839.8393774526312, 'p50_ms': 1.193533418700099, 'p95_ms': 1.2592070968821645}
+MEASURED gemini-saq2 0 8 32 {'recall10': 0.9395000000000001, 'qps': 1720.1866830385077, 'p50_ms': 19.80875711888075, 'p95_ms': 25.06025042384863}
+MEASURED gemini-saq2 1 1 1 {'recall10': 0.9400000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq2 1 1 32 {'recall10': 0.9400000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq2 1 8 1 {'recall10': 0.9400000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq2 1 8 32 {'recall10': 0.9400000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq2 2 1 1 {'recall10': 0.9384000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq2 2 1 32 {'recall10': 0.9384000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq2 2 8 1 {'recall10': 0.9384000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq2 2 8 32 {'recall10': 0.9384000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+STORAGE gemini 4 {'code_bits': 3993, 'bytes_per_vector': 541.2611313131313}
+STORAGE gemini 4 {'code_bits': 1996, 'bytes_per_vector': 291.5820101010101}
+STORAGE gemini 4 {'code_bits': 2994, 'bytes_per_vector': 417.24622222222223}
+STORAGE gemini 4 {'code_bits': 3493, 'bytes_per_vector': 481.25648484848483}
+STORAGE gemini 4 {'code_bits': 3243, 'bytes_per_vector': 449.2486868686869}
+STORAGE gemini 4 {'code_bits': 3368, 'bytes_per_vector': 465.25519191919193}
+STORAGE gemini 4 {'code_bits': 3305, 'bytes_per_vector': 457.25454545454545}
+STORAGE gemini 4 {'code_bits': 3336, 'bytes_per_vector': 461.2548686868687}
+STORAGE gemini 4 {'code_bits': 3352, 'bytes_per_vector': 461.2548686868687}
+STORAGE gemini 4 {'code_bits': 3360, 'bytes_per_vector': 461.2548686868687}
+STORAGE gemini 4 {'code_bits': 3364, 'bytes_per_vector': 465.25519191919193}
+STORAGE gemini 4 {'code_bits': 3362, 'bytes_per_vector': 465.25519191919193}
+STORAGE gemini 4 {'code_bits': 3361, 'bytes_per_vector': 465.25519191919193}
+MEASURED gemini-saq4 0 1 1 {'recall10': 0.9826, 'qps': 150.25464675898144, 'p50_ms': 6.525519769638777, 'p95_ms': 7.306840689852834}
+MEASURED gemini-saq4 0 1 32 {'recall10': 0.9826, 'qps': 413.9515848968071, 'p50_ms': 75.43476205319166, 'p95_ms': 84.13384202867746}
+MEASURED gemini-saq4 0 8 1 {'recall10': 0.9826, 'qps': 673.7750629413584, 'p50_ms': 1.4848648570477962, 'p95_ms': 1.5731265535578132}
+MEASURED gemini-saq4 0 8 32 {'recall10': 0.9826, 'qps': 1620.6697482354057, 'p50_ms': 18.540706019848585, 'p95_ms': 27.419809252023697}
+MEASURED gemini-saq4 1 1 1 {'recall10': 0.9823000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq4 1 1 32 {'recall10': 0.9823000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq4 1 8 1 {'recall10': 0.9823000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq4 1 8 32 {'recall10': 0.9823000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq4 2 1 1 {'recall10': 0.9833000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq4 2 1 32 {'recall10': 0.9833000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq4 2 8 1 {'recall10': 0.9833000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED gemini-saq4 2 8 32 {'recall10': 0.9833000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+STORAGE glove 1 {'code_bits': 360, 'bytes_per_vector': 61.93272}
+STORAGE glove 1 {'code_bits': 980, 'bytes_per_vector': 136.78888}
+STORAGE glove 1 {'code_bits': 670, 'bytes_per_vector': 117.04184}
+STORAGE glove 1 {'code_bits': 515, 'bytes_per_vector': 96.02168}
+STORAGE glove 1 {'code_bits': 437, 'bytes_per_vector': 76.94712}
+STORAGE glove 1 {'code_bits': 398, 'bytes_per_vector': 66.93752}
+STORAGE glove 1 {'code_bits': 379, 'bytes_per_vector': 64.9356}
+STORAGE glove 1 {'code_bits': 369, 'bytes_per_vector': 63.93464}
+STORAGE glove 1 {'code_bits': 364, 'bytes_per_vector': 62.93368}
+MEASURED glove-saq1 0 1 1 {'recall10': 0.6253, 'qps': 2161.0968929401843, 'p50_ms': 0.4566183779388666, 'p95_ms': 0.5034115631133318}
+MEASURED glove-saq1 0 1 32 {'recall10': 0.6253, 'qps': 2477.693372658454, 'p50_ms': 12.683285865932703, 'p95_ms': 13.952366076409817}
+MEASURED glove-saq1 0 8 1 {'recall10': 0.6253, 'qps': 7754.431610766085, 'p50_ms': 0.12387055903673172, 'p95_ms': 0.18809763714671088}
+MEASURED glove-saq1 0 8 32 {'recall10': 0.6253, 'qps': 17172.456635851613, 'p50_ms': 1.7662150785326958, 'p95_ms': 2.4163611233234406}
+MEASURED glove-saq1 1 1 1 {'recall10': 0.6232000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED glove-saq1 1 1 32 {'recall10': 0.6232000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED glove-saq1 1 8 1 {'recall10': 0.6232000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED glove-saq1 1 8 32 {'recall10': 0.6232000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED glove-saq1 2 1 1 {'recall10': 0.6236, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED glove-saq1 2 1 32 {'recall10': 0.6236, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED glove-saq1 2 8 1 {'recall10': 0.6236, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED glove-saq1 2 8 32 {'recall10': 0.6236, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+STORAGE glove 2 {'code_bits': 614, 'bytes_per_vector': 117.04184}
+STORAGE glove 2 {'code_bits': 307, 'bytes_per_vector': 55.92696}
+STORAGE glove 2 {'code_bits': 460, 'bytes_per_vector': 82.00824}
+STORAGE glove 2 {'code_bits': 537, 'bytes_per_vector': 102.02744}
+STORAGE glove 2 {'code_bits': 498, 'bytes_per_vector': 92.01784}
+STORAGE glove 2 {'code_bits': 517, 'bytes_per_vector': 97.02264}
+STORAGE glove 2 {'code_bits': 507, 'bytes_per_vector': 94.01976}
+STORAGE glove 2 {'code_bits': 512, 'bytes_per_vector': 95.02072}
+STORAGE glove 2 {'code_bits': 509, 'bytes_per_vector': 95.02072}
+STORAGE glove 2 {'code_bits': 508, 'bytes_per_vector': 94.01976}
+MEASURED glove-saq2 0 1 1 {'recall10': 0.7529, 'qps': 1621.0812540151412, 'p50_ms': 0.6098339799791574, 'p95_ms': 0.6683292333036661}
+MEASURED glove-saq2 0 1 32 {'recall10': 0.7529, 'qps': 1807.0581377395013, 'p50_ms': 17.564731184393167, 'p95_ms': 18.992433790117502}
+MEASURED glove-saq2 0 8 1 {'recall10': 0.7529, 'qps': 6197.956109680194, 'p50_ms': 0.15959539450705051, 'p95_ms': 0.17869228031486267}
+MEASURED glove-saq2 0 8 32 {'recall10': 0.7529, 'qps': 11393.382153323357, 'p50_ms': 2.454102970659733, 'p95_ms': 4.863218870013952}
+MEASURED glove-saq2 1 1 1 {'recall10': 0.7496, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED glove-saq2 1 1 32 {'recall10': 0.7496, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED glove-saq2 1 8 1 {'recall10': 0.7496, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED glove-saq2 1 8 32 {'recall10': 0.7496, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED glove-saq2 2 1 1 {'recall10': 0.7589, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED glove-saq2 2 1 32 {'recall10': 0.7589, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED glove-saq2 2 8 1 {'recall10': 0.7589, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED glove-saq2 2 8 32 {'recall10': 0.7589, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+STORAGE glove 4 {'code_bits': 996, 'bytes_per_vector': 140.78888}
+STORAGE glove 4 {'code_bits': 1298, 'bytes_per_vector': 176.79464}
+STORAGE glove 4 {'code_bits': 1147, 'bytes_per_vector': 156.7908}
+STORAGE glove 4 {'code_bits': 1071, 'bytes_per_vector': 148.7908}
+STORAGE glove 4 {'code_bits': 1033, 'bytes_per_vector': 144.7908}
+STORAGE glove 4 {'code_bits': 1014, 'bytes_per_vector': 140.7908}
+STORAGE glove 4 {'code_bits': 1023, 'bytes_per_vector': 140.7908}
+STORAGE glove 4 {'code_bits': 1028, 'bytes_per_vector': 144.7908}
+STORAGE glove 4 {'code_bits': 1025, 'bytes_per_vector': 144.7908}
+STORAGE glove 4 {'code_bits': 1024, 'bytes_per_vector': 140.7908}
+MEASURED glove-saq4 0 1 1 {'recall10': 0.9511000000000002, 'qps': 453.5113324844503, 'p50_ms': 2.143280580639839, 'p95_ms': 2.4648174410685897}
+MEASURED glove-saq4 0 1 32 {'recall10': 0.9511000000000002, 'qps': 1797.5775676984272, 'p50_ms': 17.38192094489932, 'p95_ms': 19.525610841810703}
+MEASURED glove-saq4 0 8 1 {'recall10': 0.9511000000000002, 'qps': 2070.924048930058, 'p50_ms': 0.4468283150345087, 'p95_ms': 0.6986878346651793}
+MEASURED glove-saq4 0 8 32 {'recall10': 0.9511000000000002, 'qps': 4134.6651112874015, 'p50_ms': 8.175812661647797, 'p95_ms': 8.45386041328311}
+MEASURED glove-saq4 1 1 1 {'recall10': 0.9488000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED glove-saq4 1 1 32 {'recall10': 0.9488000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED glove-saq4 1 8 1 {'recall10': 0.9488000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED glove-saq4 1 8 32 {'recall10': 0.9488000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED glove-saq4 2 1 1 {'recall10': 0.9492, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED glove-saq4 2 1 32 {'recall10': 0.9492, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED glove-saq4 2 8 1 {'recall10': 0.9492, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED glove-saq4 2 8 32 {'recall10': 0.9492, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+STORAGE openai 1 {'code_bits': 2034, 'bytes_per_vector': 400.69696}
+STORAGE openai 1 {'code_bits': 1017, 'bytes_per_vector': 233.33}
+STORAGE openai 1 {'code_bits': 1525, 'bytes_per_vector': 317.73136}
+STORAGE openai 1 {'code_bits': 1779, 'bytes_per_vector': 359.28608}
+STORAGE openai 1 {'code_bits': 1906, 'bytes_per_vector': 379.46032}
+STORAGE openai 1 {'code_bits': 1842, 'bytes_per_vector': 369.89424}
+STORAGE openai 1 {'code_bits': 1874, 'bytes_per_vector': 373.69688}
+STORAGE openai 1 {'code_bits': 1890, 'bytes_per_vector': 377.08928}
+STORAGE openai 1 {'code_bits': 1882, 'bytes_per_vector': 375.90376}
+STORAGE openai 1 {'code_bits': 1878, 'bytes_per_vector': 374.84128}
+MEASURED openai-saq1 0 1 1 {'recall10': 0.9137000000000001, 'qps': 387.1565618689722, 'p50_ms': 2.5482408236712217, 'p95_ms': 2.781170280650258}
+MEASURED openai-saq1 0 1 32 {'recall10': 0.9137000000000001, 'qps': 450.6298958207534, 'p50_ms': 70.31777314841747, 'p95_ms': 77.87617109715939}
+MEASURED openai-saq1 0 8 1 {'recall10': 0.9137000000000001, 'qps': 894.4091808562731, 'p50_ms': 1.114589860662818, 'p95_ms': 1.1817316524684427}
+MEASURED openai-saq1 0 8 32 {'recall10': 0.9137000000000001, 'qps': 3139.2341752799625, 'p50_ms': 10.047990828752518, 'p95_ms': 10.97738603129983}
+MEASURED openai-saq1 1 1 1 {'recall10': 0.9114000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED openai-saq1 1 1 32 {'recall10': 0.9114000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED openai-saq1 1 8 1 {'recall10': 0.9114000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED openai-saq1 1 8 32 {'recall10': 0.9114000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED openai-saq1 2 1 1 {'recall10': 0.9083000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED openai-saq1 2 1 32 {'recall10': 0.9083000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED openai-saq1 2 8 1 {'recall10': 0.9083000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED openai-saq1 2 8 32 {'recall10': 0.9083000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+STORAGE openai 2 {'code_bits': 3702, 'bytes_per_vector': 581.54002}
+STORAGE openai 2 {'code_bits': 1851, 'bytes_per_vector': 371.01824}
+STORAGE openai 2 {'code_bits': 2776, 'bytes_per_vector': 452.8566}
+STORAGE openai 2 {'code_bits': 3239, 'bytes_per_vector': 520.245}
+STORAGE openai 2 {'code_bits': 3470, 'bytes_per_vector': 551.26193}
+STORAGE openai 2 {'code_bits': 3586, 'bytes_per_vector': 568.49333}
+STORAGE openai 2 {'code_bits': 3528, 'bytes_per_vector': 559.87763}
+STORAGE openai 2 {'code_bits': 3557, 'bytes_per_vector': 564.18548}
+MEASURED openai-saq2 0 1 1 {'recall10': 0.9574000000000001, 'qps': 86.04501975296007, 'p50_ms': 11.392956133931875, 'p95_ms': 12.759424326941371}
+MEASURED openai-saq2 0 1 32 {'recall10': 0.9574000000000001, 'qps': 210.6098450290221, 'p50_ms': 149.07515700906515, 'p95_ms': 164.8727678693831}
+MEASURED openai-saq2 0 8 1 {'recall10': 0.9574000000000001, 'qps': 350.227872737039, 'p50_ms': 2.838453045114875, 'p95_ms': 3.0097377952188253}
+MEASURED openai-saq2 0 8 32 {'recall10': 0.9574000000000001, 'qps': 958.2826659920211, 'p50_ms': 29.88086687400937, 'p95_ms': 41.79940186440945}
+MEASURED openai-saq2 1 1 1 {'recall10': 0.9568000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED openai-saq2 1 1 32 {'recall10': 0.9568000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED openai-saq2 1 8 1 {'recall10': 0.9568000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED openai-saq2 1 8 32 {'recall10': 0.9568000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED openai-saq2 2 1 1 {'recall10': 0.9556000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED openai-saq2 2 1 32 {'recall10': 0.9556000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED openai-saq2 2 8 1 {'recall10': 0.9556000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED openai-saq2 2 8 32 {'recall10': 0.9556000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+STORAGE openai 4 {'code_bits': 6952, 'bytes_per_vector': 991.80462}
+STORAGE openai 4 {'code_bits': 3476, 'bytes_per_vector': 551.38507}
+STORAGE openai 4 {'code_bits': 5214, 'bytes_per_vector': 771.79958}
+STORAGE openai 4 {'code_bits': 6083, 'bytes_per_vector': 883.80474}
+STORAGE openai 4 {'code_bits': 6517, 'bytes_per_vector': 935.80462}
+MEASURED openai-saq4 0 1 1 {'recall10': 0.9883000000000001, 'qps': 73.79630168671284, 'p50_ms': 13.344788458198309, 'p95_ms': 14.662004145793617}
+MEASURED openai-saq4 0 1 32 {'recall10': 0.9883000000000001, 'qps': 202.06908189003974, 'p50_ms': 156.74438513815403, 'p95_ms': 165.76544800773263}
+MEASURED openai-saq4 0 8 1 {'recall10': 0.9883000000000001, 'qps': 293.26229369668897, 'p50_ms': 3.3549878280609846, 'p95_ms': 3.606130997650324}
+MEASURED openai-saq4 0 8 32 {'recall10': 0.9883000000000001, 'qps': 951.7719842287104, 'p50_ms': 30.444318894296885, 'p95_ms': 43.2011429220438}
+MEASURED openai-saq4 1 1 1 {'recall10': 0.987, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED openai-saq4 1 1 32 {'recall10': 0.987, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED openai-saq4 1 8 1 {'recall10': 0.987, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED openai-saq4 1 8 32 {'recall10': 0.987, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED openai-saq4 2 1 1 {'recall10': 0.9865, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED openai-saq4 2 1 32 {'recall10': 0.9865, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED openai-saq4 2 8 1 {'recall10': 0.9865, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED openai-saq4 2 8 32 {'recall10': 0.9865, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+STORAGE sift 1 {'code_bits': 428, 'bytes_per_vector': 65.338486}
+STORAGE sift 1 {'code_bits': 214, 'bytes_per_vector': 37.3137}
+STORAGE sift 1 {'code_bits': 321, 'bytes_per_vector': 53.329506}
+STORAGE sift 1 {'code_bits': 374, 'bytes_per_vector': 57.334254}
+STORAGE sift 1 {'code_bits': 401, 'bytes_per_vector': 61.33637}
+STORAGE sift 1 {'code_bits': 387, 'bytes_per_vector': 61.335841}
+STORAGE sift 1 {'code_bits': 380, 'bytes_per_vector': 57.334783}
+STORAGE sift 1 {'code_bits': 383, 'bytes_per_vector': 57.335312}
+STORAGE sift 1 {'code_bits': 385, 'bytes_per_vector': 61.335312}
+STORAGE sift 1 {'code_bits': 384, 'bytes_per_vector': 57.335312}
+MEASURED sift-saq1 0 1 1 {'recall10': 0.8756000000000002, 'qps': 82.65467146894854, 'p50_ms': 11.87599590048194, 'p95_ms': 13.365793554112313}
+MEASURED sift-saq1 0 1 32 {'recall10': 0.8756000000000002, 'qps': 276.8229196637917, 'p50_ms': 115.05465907976031, 'p95_ms': 128.65773402154446}
+MEASURED sift-saq1 0 8 1 {'recall10': 0.8756000000000002, 'qps': 537.377813146978, 'p50_ms': 1.8029543571174145, 'p95_ms': 2.1568089490756384}
+MEASURED sift-saq1 0 8 32 {'recall10': 0.8756000000000002, 'qps': 1129.1862306652463, 'p50_ms': 28.619129210710526, 'p95_ms': 31.252674758434296}
+MEASURED sift-saq1 1 1 1 {'recall10': 0.8711000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED sift-saq1 1 1 32 {'recall10': 0.8711000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED sift-saq1 1 8 1 {'recall10': 0.8711000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED sift-saq1 1 8 32 {'recall10': 0.8711000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED sift-saq1 2 1 1 {'recall10': 0.8751000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED sift-saq1 2 1 32 {'recall10': 0.8751000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED sift-saq1 2 8 1 {'recall10': 0.8751000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED sift-saq1 2 8 32 {'recall10': 0.8751000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+STORAGE sift 2 {'code_bits': 354, 'bytes_per_vector': 57.332151}
+STORAGE sift 2 {'code_bits': 177, 'bytes_per_vector': 33.30841}
+STORAGE sift 2 {'code_bits': 265, 'bytes_per_vector': 45.323158}
+STORAGE sift 2 {'code_bits': 309, 'bytes_per_vector': 49.327919}
+STORAGE sift 2 {'code_bits': 331, 'bytes_per_vector': 53.330564}
+STORAGE sift 2 {'code_bits': 320, 'bytes_per_vector': 49.329506}
+STORAGE sift 2 {'code_bits': 325, 'bytes_per_vector': 53.330035}
+STORAGE sift 2 {'code_bits': 322, 'bytes_per_vector': 53.329506}
+STORAGE sift 2 {'code_bits': 321, 'bytes_per_vector': 53.329506}
+MEASURED sift-saq2 0 1 1 {'recall10': 0.8274000000000001, 'qps': 92.01513256997903, 'p50_ms': 10.609202552586794, 'p95_ms': 11.836826358921826}
+MEASURED sift-saq2 0 1 32 {'recall10': 0.8274000000000001, 'qps': 314.74755468135623, 'p50_ms': 99.3487760424614, 'p95_ms': 109.11447228863835}
+MEASURED sift-saq2 0 8 1 {'recall10': 0.8274000000000001, 'qps': 600.7698017084998, 'p50_ms': 1.6126965638250113, 'p95_ms': 1.918808510527014}
+MEASURED sift-saq2 0 8 32 {'recall10': 0.8274000000000001, 'qps': 1264.2601551745126, 'p50_ms': 25.748966727405787, 'p95_ms': 28.10721518471837}
+MEASURED sift-saq2 1 1 1 {'recall10': 0.8278000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED sift-saq2 1 1 32 {'recall10': 0.8278000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED sift-saq2 1 8 1 {'recall10': 0.8278000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED sift-saq2 1 8 32 {'recall10': 0.8278000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED sift-saq2 2 1 1 {'recall10': 0.8247000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED sift-saq2 2 1 32 {'recall10': 0.8247000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED sift-saq2 2 8 1 {'recall10': 0.8247000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED sift-saq2 2 8 32 {'recall10': 0.8247000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+STORAGE sift 4 {'code_bits': 651, 'bytes_per_vector': 93.343746}
+STORAGE sift 4 {'code_bits': 325, 'bytes_per_vector': 53.330035}
+STORAGE sift 4 {'code_bits': 488, 'bytes_per_vector': 73.34166}
+STORAGE sift 4 {'code_bits': 569, 'bytes_per_vector': 81.343217}
+STORAGE sift 4 {'code_bits': 610, 'bytes_per_vector': 89.343746}
+STORAGE sift 4 {'code_bits': 589, 'bytes_per_vector': 85.343746}
+STORAGE sift 4 {'code_bits': 579, 'bytes_per_vector': 85.343746}
+STORAGE sift 4 {'code_bits': 574, 'bytes_per_vector': 81.343217}
+STORAGE sift 4 {'code_bits': 576, 'bytes_per_vector': 81.343217}
+STORAGE sift 4 {'code_bits': 577, 'bytes_per_vector': 85.343217}
+MEASURED sift-saq4 0 1 1 {'recall10': 0.9531000000000001, 'qps': 58.44864394388245, 'p50_ms': 16.84862724505365, 'p95_ms': 18.64887203555554}
+MEASURED sift-saq4 0 1 32 {'recall10': 0.9531000000000001, 'qps': 252.36958839176043, 'p50_ms': 124.91880636662245, 'p95_ms': 136.03512616828084}
+MEASURED sift-saq4 0 8 1 {'recall10': 0.9531000000000001, 'qps': 378.34628386182095, 'p50_ms': 2.5425145868211985, 'p95_ms': 3.2477779081091223}
+MEASURED sift-saq4 0 8 32 {'recall10': 0.9531000000000001, 'qps': 1090.0156971356876, 'p50_ms': 30.334736220538616, 'p95_ms': 32.36405737698078}
+MEASURED sift-saq4 1 1 1 {'recall10': 0.9512, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED sift-saq4 1 1 32 {'recall10': 0.9512, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED sift-saq4 1 8 1 {'recall10': 0.9512, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED sift-saq4 1 8 32 {'recall10': 0.9512, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED sift-saq4 2 1 1 {'recall10': 0.9506000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED sift-saq4 2 1 32 {'recall10': 0.9506000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED sift-saq4 2 8 1 {'recall10': 0.9506000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MEASURED sift-saq4 2 8 32 {'recall10': 0.9506000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+MATCHED COMPLETE 144

@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/home/sean/experiments/TieredQ-saq-single-cluster-20261027/continue.py", line 11, in <module>
+    descriptor=os.pidfd_open(pid)
+               ^^^^^^^^^^^^^
+AttributeError: module 'os' has no attribute 'pidfd_open'

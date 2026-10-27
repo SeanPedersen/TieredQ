@@ -1,0 +1,11 @@
+{
+  "status": "complete",
+  "resumed_datasets": [
+    "glove",
+    "openai",
+    "sift"
+  ],
+  "binary_sha256": "ad6dca919e4aee70ad1f6b4cf873fab9f39ac00cd40be5bd846ac0abc7c47d3c",
+  "rows": 144,
+  "fix": "encode_and_fac now assigns base_code.code for 1-bit segments (upstream crashed in release builds on OOB reads)"
+}

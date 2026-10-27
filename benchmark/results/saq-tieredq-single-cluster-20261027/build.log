@@ -1,0 +1,3 @@
+[ 50%] Building CXX object CMakeFiles/saq_bench.dir/adapter.cpp.o
+[100%] Linking CXX shared library libsaq_bench.so
+[100%] Built target saq_bench

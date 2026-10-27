@@ -1,0 +1,56 @@
+diff --git a/saqlib/index/ivf.hpp b/saqlib/index/ivf.hpp
+index ab38885..63a33b0 100644
+--- a/saqlib/index/ivf.hpp
++++ b/saqlib/index/ivf.hpp
+@@ -27,6 +27,7 @@ namespace saqlib
+ class IVF
+ {
+   public:
++    double benchmark_encode_seconds = 0;
+     QuantMetrics quant_metrics_; // Quantization metrics
+   protected:
+     size_t num_data_; // num of data points
+@@ -179,6 +180,7 @@ inline void IVF::construct(const FloatRowMat &data, const FloatRowMat &centroids
+         }
+         pool.wait();
+         auto tm_ms = stopw.getElapsedTimeMicro() / 1000.0;
++        benchmark_encode_seconds = tm_ms / 1000.0;
+         LOG(INFO) << "Quantization done. tm: " << tm_ms / 1e3 << " S";
+     }
+ }
+diff --git a/saqlib/quantization/cluster_data.hpp b/saqlib/quantization/cluster_data.hpp
+index 457d50c..823b4b9 100644
+--- a/saqlib/quantization/cluster_data.hpp
++++ b/saqlib/quantization/cluster_data.hpp
+@@ -293,6 +293,18 @@ class SaqCluData {
+         assert(longb_begin == longb_code_bytes_tot_ || longb_begin == longb_code_bytes_);
+     }
+ 
++    size_t benchmark_owned_bytes() const {
++        auto aligned = [](size_t n) { return utils::rd_up_to_multiple_of(n, size_t(64)); };
++        size_t total = aligned(shortb_factors_fcnt_ * num_blocks_ * sizeof(float));
++        total += aligned(shortb_code_bytes_ * num_blocks_);
++        total += aligned(longb_code_bytes_tot_);
++        total += aligned(num_vec_ * num_segments_ * sizeof(ExFactor));
++        total += aligned(ids_.capacity() * sizeof(PID));
++        total += segments_.capacity() * sizeof(CAQClusterData);
++        for (const auto &segment : segments_) total += segment.centroid().size() * sizeof(float);
++        return total;
++    }
++
+     ~SaqCluData() {
+         if (short_factors_) {
+             std::free(short_factors_);
+diff --git a/saqlib/quantization/saq_searcher.hpp b/saqlib/quantization/saq_searcher.hpp
+index d31148f..2660ba2 100644
+--- a/saqlib/quantization/saq_searcher.hpp
++++ b/saqlib/quantization/saq_searcher.hpp
+@@ -183,7 +183,7 @@ class SAQSearcher : public SaqCluEstimator<kDistType> {
+ 
+         __m512 est_dist[2];
+         for (size_t blk_idx = 0; blk_idx < num_blocks; ++blk_idx) {
+-            auto curr_num_points = (blk_idx == num_blocks - 1) ? clusters->num_vec_ % KFastScanSize : KFastScanSize;
++            auto curr_num_points = std::min(KFastScanSize, clusters->num_vec_ - blk_idx * KFastScanSize);
+ 
+             estimator.compFastDist(blk_idx, est_dist);
+ 

@@ -1,0 +1,55 @@
+{
+  "dataset": "gemini",
+  "anchor_bits": 1,
+  "saq_cap_bytes": 169.20937373737374,
+  "selected_code_bits": 845,
+  "selected_bytes_per_vector": 168.5148282828283,
+  "in_target_band": false,
+  "attempts": [
+    {
+      "code_bits": 910,
+      "bytes_per_vector": 179.32032323232323
+    },
+    {
+      "code_bits": 455,
+      "bytes_per_vector": 101.21212121212122
+    },
+    {
+      "code_bits": 682,
+      "bytes_per_vector": 139.81519191919193
+    },
+    {
+      "code_bits": 796,
+      "bytes_per_vector": 160.01123232323232
+    },
+    {
+      "code_bits": 853,
+      "bytes_per_vector": 169.57777777777778
+    },
+    {
+      "code_bits": 824,
+      "bytes_per_vector": 164.32525252525252
+    },
+    {
+      "code_bits": 838,
+      "bytes_per_vector": 166.4511515151515
+    },
+    {
+      "code_bits": 845,
+      "bytes_per_vector": 168.5148282828283
+    },
+    {
+      "code_bits": 841,
+      "bytes_per_vector": 167.4829898989899
+    },
+    {
+      "code_bits": 843,
+      "bytes_per_vector": 167.4829898989899
+    },
+    {
+      "code_bits": 844,
+      "bytes_per_vector": 167.4829898989899
+    }
+  ],
+  "policy": "Match SAQ total bytes/vector; 99.0-99.5% band; seed-0 storage only"
+}

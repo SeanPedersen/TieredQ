@@ -1,0 +1,51 @@
+{
+  "dataset": "openai",
+  "anchor_bits": 1,
+  "saq_cap_bytes": 377.6264,
+  "selected_code_bits": 1878,
+  "selected_bytes_per_vector": 374.84128,
+  "in_target_band": true,
+  "attempts": [
+    {
+      "code_bits": 2034,
+      "bytes_per_vector": 400.69696
+    },
+    {
+      "code_bits": 1017,
+      "bytes_per_vector": 233.33
+    },
+    {
+      "code_bits": 1525,
+      "bytes_per_vector": 317.73136
+    },
+    {
+      "code_bits": 1779,
+      "bytes_per_vector": 359.28608
+    },
+    {
+      "code_bits": 1906,
+      "bytes_per_vector": 379.46032
+    },
+    {
+      "code_bits": 1842,
+      "bytes_per_vector": 369.89424
+    },
+    {
+      "code_bits": 1874,
+      "bytes_per_vector": 373.69688
+    },
+    {
+      "code_bits": 1890,
+      "bytes_per_vector": 377.08928
+    },
+    {
+      "code_bits": 1882,
+      "bytes_per_vector": 375.90376
+    },
+    {
+      "code_bits": 1878,
+      "bytes_per_vector": 374.84128
+    }
+  ],
+  "policy": "Match SAQ total bytes/vector; 99.0-99.5% band; seed-0 storage only"
+}
