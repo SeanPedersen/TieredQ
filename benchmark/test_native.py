@@ -76,5 +76,17 @@ class NativeTests(unittest.TestCase):
                 np.testing.assert_array_equal(actual, expected)
                 self.assertGreater(loaded.resident_bytes(), len(base)*64*bits/8)
 
+    def test_exact_code_budget_sets_tieredq_tiers(self):
+        rng = np.random.default_rng(41)
+        base = rng.normal(size=(600, 64)).astype(np.float32)
+        sizes = []
+        with tempfile.TemporaryDirectory() as directory:
+            for code_bits in (40, 100):
+                index = codec_native.Index(base, 2, 0, True, False, True, code_bits)
+                tiers = index.diagnostics()["tiers"]
+                self.assertEqual(sum(tier["dimensions"]*tier["bits"] for tier in tiers), code_bits)
+                sizes.append(index.save(str(Path(directory)/f"{code_bits}.bin")))
+        self.assertLess(sizes[0], sizes[1])
+
 if __name__ == "__main__":
     unittest.main()

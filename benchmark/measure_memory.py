@@ -6,6 +6,7 @@ component accounting of the reloaded index, steady RSS growth after reload, and 
 their maximum. Recall is a reload check against the
 8-thread batch-32 benchmark rows; per-schedule recall is kept in each cell's serve.json. Build peak is RSS growth from the loaded
 FP32 corpus through training, encoding and packing. RSS deltas start from a reset high-water mark.
+A cell spec may carry an exact TieredQ `code_bits` budget in place of bits × dimensions (see match_memory.py).
 """
 import argparse
 import csv
@@ -24,11 +25,12 @@ REPO = HERE.parent
 DATASETS = ["sift", "glove", "openai", "gemini"]
 CODECS = ["tieredq", "rabitq"]
 BIT_BUDGETS = [1, 2, 4]
+SUPPORTED_BITS = range(1, 9)
 # Same scheduling grid as the timed matrix; the workload sets the serving high-water mark.
 SERVING_SCHEDULES = [(1, 1), (1, 32), (8, 1), (8, 32)]
 PRIMARY_SCHEDULE = "t8-b32"
 BUILD_THREADS = 8
-FIELDS = ("dataset,d,base_n,codec,target_bits,seed,disk_bytes,disk_bits_per_vector,"
+FIELDS = ("dataset,d,base_n,codec,target_bits,code_bits,seed,disk_bytes,disk_bits_per_vector,"
           "ram_accounted_bytes,ram_accounted_bits_per_vector,ram_loaded_rss_bytes,ram_loaded_bits_per_vector,"
           "ram_load_peak_rss_bytes,ram_load_peak_bits_per_vector,ram_query_peak_rss_bytes,ram_query_peak_bits_per_vector,"
           "ram_peak_rss_bytes,ram_peak_bits_per_vector,build_peak_rss_bytes,build_peak_bits_per_vector,"
@@ -69,16 +71,19 @@ def build_worker(spec, cell):
         transform = L2Transform.fit(base) if uses_lift(spec) else None
         vectors = transform.base_vectors(base) if transform else base
         index = codec_native.Index(vectors, spec["bits"], spec["seed"], spec["codec"] == "tieredq",
-                                   spec["dataset"] == "sift")
+                                   spec["dataset"] == "sift", True, spec.get("code_bits", 0))
         build_s = time.perf_counter() - start
         build_peak = memory_status()[1] - baseline
+        code_bits = (sum(tier["dimensions"] * tier["bits"] for tier in index.diagnostics()["tiers"])
+                     if spec["codec"] == "tieredq" else None)
         index_bytes = index.save(str(cell / "index.bin"))
         transform_bytes = 0
         if transform:
             np.savez(cell / "transform.npz", scale=transform.scale, base_map=transform.base_map,
                      query_map=transform.query_map)
             transform_bytes = (cell / "transform.npz").stat().st_size
-        return dict(d=base.shape[1], base_n=len(base), build_s=build_s, build_peak_rss_bytes=build_peak,
+        return dict(d=base.shape[1], base_n=len(base), code_bits=code_bits, build_s=build_s,
+                    build_peak_rss_bytes=build_peak,
                     disk_bytes=index_bytes + transform_bytes,
                     index_sha256=hashlib.sha256((cell / "index.bin").read_bytes()).hexdigest())
 
@@ -119,7 +124,7 @@ def serve_worker(spec, cell):
 
 def to_row(spec, built, served):
     row = dict(dataset=spec["dataset"], d=built["d"], base_n=built["base_n"], codec=spec["codec"],
-               target_bits=spec["bits"], seed=spec["seed"], build_s=built["build_s"], recall10=served["recall10"])
+               target_bits=spec["bits"], code_bits=built["code_bits"], seed=spec["seed"], build_s=built["build_s"], recall10=served["recall10"])
     measured = built | served
     for key in ("disk", "ram_accounted", "ram_loaded_rss", "ram_load_peak_rss", "ram_query_peak_rss",
                 "ram_peak_rss", "build_peak_rss"):
@@ -128,8 +133,13 @@ def to_row(spec, built, served):
     return row
 
 
+def cell_name(spec):
+    budget = f"c{spec['code_bits']}" if spec.get("code_bits") else spec["bits"]
+    return f"cell-{spec['dataset']}-{spec['codec']}-{budget}-{spec['seed']}"
+
+
 def run_cell(spec, output, env):
-    cell = output / f"cell-{spec['dataset']}-{spec['codec']}-{spec['bits']}-{spec['seed']}"
+    cell = output / cell_name(spec)
     cell.mkdir(exist_ok=True)
     results = {}
     for phase in ("build", "serve"):
@@ -140,7 +150,7 @@ def run_cell(spec, output, env):
     for artifact in ("index.bin", "transform.npz"):
         (cell / artifact).unlink(missing_ok=True)
     row = to_row(spec, results["build"], results["serve"])
-    print(f"{spec['dataset']} {spec['codec']} b={spec['bits']}: disk {row['disk_bits_per_vector']:.1f}, "
+    print(f"{cell_name(spec)}: disk {row['disk_bits_per_vector']:.1f}, "
           f"peak RAM {row['ram_peak_bits_per_vector']:.1f} bits/vector", flush=True)
     return row
 
@@ -158,11 +168,20 @@ def metadata(compiler_commands, arguments):
                               for p in folder.rglob("*") if p.is_file()}}
 
 
+def prepare_native():
+    """Build the native module; return the worker environment and run metadata."""
+    from native_build import build_native
+    native = build_native()
+    env = os.environ | {"PYTHONPATH": os.pathsep.join([str(native.directory), str(HERE)]),
+                        "OPENBLAS_NUM_THREADS": "1", "MKL_NUM_THREADS": "1", "OMP_NUM_THREADS": str(BUILD_THREADS)}
+    return env, metadata(native.compiler_commands, sys.argv[1:])
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--datasets", nargs="+", choices=DATASETS, default=DATASETS)
     parser.add_argument("--codecs", nargs="+", choices=CODECS, default=CODECS)
-    parser.add_argument("--bits", nargs="+", type=int, choices=BIT_BUDGETS, default=BIT_BUDGETS)
+    parser.add_argument("--bits", nargs="+", type=int, choices=SUPPORTED_BITS, default=BIT_BUDGETS)
     parser.add_argument("--seeds", nargs="+", type=int, default=[0])
     parser.add_argument("--data", type=Path, default=HERE / "data")
     parser.add_argument("--output", type=Path, default=HERE / "output-memory")
@@ -175,12 +194,8 @@ def main():
         result = worker(json.loads(args.spec), args.cell)
         (args.cell / f"{args.worker}.json").write_text(json.dumps(result, indent=2))
         return
-    from native_build import build_native
-    native = build_native()
     args.output.mkdir(parents=True, exist_ok=True)
-    env = os.environ | {"PYTHONPATH": os.pathsep.join([str(native.directory), str(HERE)]),
-                        "OPENBLAS_NUM_THREADS": "1", "MKL_NUM_THREADS": "1", "OMP_NUM_THREADS": str(BUILD_THREADS)}
-    meta = metadata(native.compiler_commands, sys.argv[1:])
+    env, meta = prepare_native()
     start = time.perf_counter()
     with (args.output / "memory.csv").open("w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=FIELDS)

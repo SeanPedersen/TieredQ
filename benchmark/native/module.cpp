@@ -37,11 +37,13 @@ class Index {
     const size_t width = tq->codec().config().dimensions, count = tq->size();
     return Index(std::move(tq), nullptr, width, count);
   }
-  Index(Matrix base, size_t bits, uint64_t seed, bool tieredq, bool l2, bool fast = true)
+  // code_bits overrides the TieredQ per-vector code budget; 0 keeps bits per effective dimension.
+  Index(Matrix base, size_t bits, uint64_t seed, bool tieredq, bool l2, bool fast = true, size_t code_bits = 0)
       : width_(base.shape(1)), count_(base.shape(0)) {
     if (count_ < top_k || !width_ || bits < 1 || bits > 8) throw std::invalid_argument("invalid index shape/bits");
     if (tieredq) {
-      auto config = dv::TieredQConfig::target_code_bits(width_, bits * (width_ - (l2 ? 1 : 0)));
+      const size_t budget = code_bits ? code_bits : bits * (width_ - (l2 ? 1 : 0));
+      auto config = dv::TieredQConfig::target_code_bits(width_, budget);
       config.num_centroids = std::min<size_t>(256, count_ / 2);
       const size_t train_count = std::min(count_, training_limit);
       std::vector<size_t> order(count_);
@@ -131,6 +133,7 @@ NB_MODULE(codec_native, m) {
   nb::class_<Index>(m,"Index")
     .def(nb::init<Matrix,size_t,uint64_t,bool,bool>(), nb::call_guard<nb::gil_scoped_release>())
     .def(nb::init<Matrix,size_t,uint64_t,bool,bool,bool>(), nb::call_guard<nb::gil_scoped_release>())
+    .def(nb::init<Matrix,size_t,uint64_t,bool,bool,bool,size_t>(), nb::call_guard<nb::gil_scoped_release>())
     .def("diagnostics", &Index::diagnostics)
     .def_prop_ro("encode_seconds", &Index::encode_seconds)
     .def("search", &Index::search, nb::call_guard<nb::gil_scoped_release>())
