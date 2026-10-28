@@ -27,13 +27,13 @@ def table(runs, reference_label):
     for index in indexes:
         reference = runs[(index, reference_label)]
         reference_ids = {row["ids_sha256"] for row in reference}
-        schedules = [key for key in reference[0] if key.startswith("t")]
+        schedules = sorted({key for row in reference for key in row if key.startswith("t")})
         for schedule in schedules:
-            base = [row[schedule] for row in reference]
+            base = [row[schedule] for row in reference if schedule in row]
             base_qps = statistics.median(m["qps"] for m in base)
             spread = max(m["qps"] for m in base) / min(m["qps"] for m in base)
             for label in labels:
-                measured = [row[schedule] for row in runs.get((index, label), [])]
+                measured = [row[schedule] for row in runs.get((index, label), []) if schedule in row]
                 if not measured:
                     continue
                 paired = [m["qps"] / b["qps"] for m, b in zip(measured, base)]

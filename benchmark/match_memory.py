@@ -28,8 +28,8 @@ CALIBRATION_FIELDS = ["dataset", "rabitq_bits", "metric", "target_bits_per_vecto
 class Cells:
     """Measured rows keyed by configuration; persisted to cells.csv so an interrupted run resumes."""
 
-    def __init__(self, output, env, data):
-        self.path, self.env, self.data, self.output = output / "cells.csv", env, data, output
+    def __init__(self, output, env, data, quick):
+        self.path, self.env, self.data, self.output, self.quick = output / "cells.csv", env, data, output, quick
         self.rows = {}
         if self.path.exists():
             with self.path.open() as handle:
@@ -45,7 +45,7 @@ class Cells:
         key = self.key(dataset, codec, bits, code_bits, seed)
         if key in self.rows:
             return self.rows[key]
-        spec = dict(dataset=dataset, codec=codec, bits=bits, seed=seed, data=str(self.data))
+        spec = dict(dataset=dataset, codec=codec, bits=bits, seed=seed, data=str(self.data), quick=self.quick)
         if code_bits:
             spec["code_bits"] = code_bits
         row = {name: str(value) for name, value in run_cell(spec, self.output, self.env).items()}
@@ -179,12 +179,13 @@ def main():
     parser.add_argument("--seeds", nargs="+", type=int, default=[0, 1, 2])
     parser.add_argument("--data", type=Path, default=HERE / "data")
     parser.add_argument("--output", type=Path, default=HERE / "output-match")
+    parser.add_argument("--quick", action="store_true", help="memory-only query workload per cell, no timing")
     args = parser.parse_args()
     if args.seeds[0] != CALIBRATION_SEED:
         raise SystemExit(f"--seeds must start with the calibration seed {CALIBRATION_SEED}")
     args.output.mkdir(parents=True, exist_ok=True)
     env, meta = prepare_native()
-    cells = Cells(args.output, env, args.data.resolve())
+    cells = Cells(args.output, env, args.data.resolve(), args.quick)
     calibration = (args.output / "calibration.csv").open("a", newline="")
     writer = csv.DictWriter(calibration, fieldnames=CALIBRATION_FIELDS)
     if calibration.tell() == 0:

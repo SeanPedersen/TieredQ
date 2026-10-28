@@ -7,6 +7,7 @@ their maximum. Recall is a reload check against the
 8-thread batch-32 benchmark rows; per-schedule recall is kept in each cell's serve.json. Build peak is RSS growth from the loaded
 FP32 corpus through training, encoding and packing. RSS deltas start from a reset high-water mark.
 A cell spec may carry an exact TieredQ `code_bits` budget in place of bits × dimensions (see match_memory.py).
+With `quick`, the query workload is one untimed pass per schedule: same allocations and peak, no timing.
 """
 import argparse
 import csv
@@ -30,7 +31,8 @@ SUPPORTED_BITS = range(1, 9)
 SERVING_SCHEDULES = [(1, 1), (1, 32), (8, 1), (8, 32)]
 PRIMARY_SCHEDULE = "t8-b32"
 BUILD_THREADS = 8
-RESET_ATTEMPTS = 10
+RESET_ATTEMPTS = 5
+RESET_PAUSE_S = 0.02
 FIELDS = ("dataset,d,base_n,codec,target_bits,code_bits,seed,disk_bytes,disk_bits_per_vector,"
           "ram_accounted_bytes,ram_accounted_bits_per_vector,ram_loaded_rss_bytes,ram_loaded_bits_per_vector,"
           "ram_load_peak_rss_bytes,ram_load_peak_bits_per_vector,ram_query_peak_rss_bytes,ram_query_peak_bits_per_vector,"
@@ -45,9 +47,11 @@ def memory_status():
 
 
 def reset_peak():
-    """Return RSS after resetting VmHWM to it (Linux clear_refs 5).
+    """Reset VmHWM to the current RSS (Linux clear_refs 5) and return that baseline.
 
-    Idle runtime threads can fault a page between the reset and the read, so the reset is retried.
+    The kernel sets VmHWM to RSS at the reset, so the post-reset VmHWM is the baseline. Pages released
+    between the reset and the status read (e.g. reclaim on a busy host) only lower RSS, so a few short
+    retries look for a quiet read before falling back to the post-reset VmHWM.
     """
     gc.collect()
     for _ in range(RESET_ATTEMPTS):
@@ -55,7 +59,8 @@ def reset_peak():
         rss, peak = memory_status()
         if peak == rss:
             return rss
-    raise RuntimeError("Kernel did not reset VmHWM")
+        time.sleep(RESET_PAUSE_S)
+    return peak
 
 
 def uses_lift(spec):
@@ -93,13 +98,21 @@ def build_worker(spec, cell):
                     index_sha256=hashlib.sha256((cell / "index.bin").read_bytes()).hexdigest())
 
 
+def single_pass(index, queries, truth, threads, batch, recall):
+    import numpy as np
+    ids = np.empty((len(queries), 10), dtype=np.uint32)
+    for start in range(0, len(queries), batch):
+        index.search(queries[start:start + batch], ids[start:start + batch], threads)
+    return {"recall10": recall(truth, ids)}
+
+
 def serve_worker(spec, cell):
     import numpy as np
     from threadpoolctl import threadpool_limits
     import codec_native
     from data import prepare
     from l2_transform import L2Transform
-    from measure import L2Search, measure
+    from measure import L2Search, measure, recall
     with threadpool_limits(limits=1):
         base, queries, truth = prepare(Path(spec["data"]), spec["dataset"])
         del base
@@ -114,7 +127,8 @@ def serve_worker(spec, cell):
         loaded_rss, load_hwm = memory_status()
         # Second reset separates the reload transient from steady query-time usage.
         reset_peak()
-        metrics = {f"t{threads}-b{batch}": measure(index, queries, truth, threads, batch)
+        metrics = {f"t{threads}-b{batch}": (single_pass(index, queries, truth, threads, batch, recall) if spec.get("quick")
+                                              else measure(index, queries, truth, threads, batch))
                    for threads, batch in SERVING_SCHEDULES}
         load_peak, query_peak = load_hwm - baseline, memory_status()[1] - baseline
         ids = np.empty((len(queries), 10), dtype=np.uint32)
@@ -193,6 +207,7 @@ def main():
     parser.add_argument("--worker", choices=["build", "serve"])
     parser.add_argument("--spec")
     parser.add_argument("--cell", type=Path)
+    parser.add_argument("--quick", action="store_true", help="memory-only query workload, no timing")
     args = parser.parse_args()
     if args.worker:
         worker = build_worker if args.worker == "build" else serve_worker
@@ -209,7 +224,8 @@ def main():
             for codec in args.codecs:
                 for bits in args.bits:
                     for seed in args.seeds:
-                        spec = dict(dataset=dataset, codec=codec, bits=bits, seed=seed, data=str(args.data.resolve()))
+                        spec = dict(dataset=dataset, codec=codec, bits=bits, seed=seed, data=str(args.data.resolve()),
+                                    quick=args.quick)
                         writer.writerow(run_cell(spec, args.output, env))
                         handle.flush()
     meta["wall_s"] = time.perf_counter() - start
