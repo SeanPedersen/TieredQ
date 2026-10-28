@@ -30,6 +30,7 @@ SUPPORTED_BITS = range(1, 9)
 SERVING_SCHEDULES = [(1, 1), (1, 32), (8, 1), (8, 32)]
 PRIMARY_SCHEDULE = "t8-b32"
 BUILD_THREADS = 8
+RESET_ATTEMPTS = 10
 FIELDS = ("dataset,d,base_n,codec,target_bits,code_bits,seed,disk_bytes,disk_bits_per_vector,"
           "ram_accounted_bytes,ram_accounted_bits_per_vector,ram_loaded_rss_bytes,ram_loaded_bits_per_vector,"
           "ram_load_peak_rss_bytes,ram_load_peak_bits_per_vector,ram_query_peak_rss_bytes,ram_query_peak_bits_per_vector,"
@@ -44,13 +45,17 @@ def memory_status():
 
 
 def reset_peak():
-    """Return RSS after resetting VmHWM to it (Linux clear_refs 5)."""
+    """Return RSS after resetting VmHWM to it (Linux clear_refs 5).
+
+    Idle runtime threads can fault a page between the reset and the read, so the reset is retried.
+    """
     gc.collect()
-    Path("/proc/self/clear_refs").write_text("5")
-    rss, peak = memory_status()
-    if peak != rss:
-        raise RuntimeError("Kernel did not reset VmHWM")
-    return rss
+    for _ in range(RESET_ATTEMPTS):
+        Path("/proc/self/clear_refs").write_text("5")
+        rss, peak = memory_status()
+        if peak == rss:
+            return rss
+    raise RuntimeError("Kernel did not reset VmHWM")
 
 
 def uses_lift(spec):
