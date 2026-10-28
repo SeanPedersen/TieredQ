@@ -80,11 +80,11 @@ template<class T> void write_fast_bytes(Writer& writer,const std::vector<T>& byt
   writer.u64(bytes.size());
   for (T value:bytes) writer.data.push_back(uint8_t(value));
 }
-template<class T> void read_fast_bytes(Reader& reader,std::vector<T>& bytes,size_t expected) {
-  if (reader.u64()!=expected || expected>reader.data.size()-reader.pos) bad("invalid fast byte length");
+template<class R,class T> void read_fast_bytes(R& reader,std::vector<T>& bytes,size_t expected) {
+  static_assert(sizeof(T)==1);
+  if (reader.u64()!=expected || expected>reader.remaining()) bad("invalid fast byte length");
   bytes.resize(expected);
-  if (expected) std::memcpy(bytes.data(),reader.data.data()+reader.pos,expected);
-  reader.pos+=expected;
+  reader.bytes(bytes.data(),expected);
 }
 inline std::vector<uint8_t> serialize_fast_storage(const FastScanCache& cache) {
   Writer writer;writer.u32(fast_payload_version);
@@ -116,13 +116,14 @@ inline void validate_packed_codes(const FastScanCache& cache) {
     if (load_code_word(cache.levels.data()+fast_code_word_position(cache.code_words(),doc,word))&~allowed) bad("nonzero fast code padding");
   }
 }
-inline void read_fast_storage(Reader& reader,FastScanCache& cache,size_t count,size_t centroids,bool byte_codes=false) {
+// Parses directly into the cache; R is an in-memory Reader or a file StreamReader.
+template<class R> void read_fast_storage(R& reader,FastScanCache& cache,size_t count,size_t centroids,bool byte_codes=false) {
   const size_t block_docs=cache.lookup ? lookup_block_docs : fast_scan_block_docs;
   cache.count=count;cache.blocks=(count+block_docs-1)/block_docs;
   const size_t padded=product(cache.blocks,block_docs);
   auto floats=[&](std::vector<float>& values) {
-    if (reader.u64()!=padded || padded>(reader.data.size()-reader.pos)/sizeof(float)) bad("invalid fast metadata length");
-    values.resize(padded);for (auto& value:values) value=reader.f32();
+    if (reader.u64()!=padded || padded>reader.remaining()/sizeof(float)) bad("invalid fast metadata length");
+    values.resize(padded);read_f32_array(reader,values.data(),padded);
   };
   floats(cache.factor);floats(cache.correction);read_fast_bytes(reader,cache.centroid,padded);
   if (std::any_of(cache.centroid.begin(),cache.centroid.end(),[&](uint8_t id){return id>=centroids;})) bad("invalid fast centroid id");
@@ -137,6 +138,6 @@ inline void read_fast_storage(Reader& reader,FastScanCache& cache,size_t count,s
     if (cache.code_lookup()) validate_packed_codes(cache);
     else if (std::any_of(cache.levels.begin(),cache.levels.end(),[&](int value){return value<-cache.level_max || value>cache.level_max;})) bad("invalid fast level");
   }
-  if (reader.pos!=reader.data.size()) bad("trailing fast payload bytes");
+  if (reader.remaining()) bad("trailing fast payload bytes");
 }
 } // namespace dv::tieredq_detail

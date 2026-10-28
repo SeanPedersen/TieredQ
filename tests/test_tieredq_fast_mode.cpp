@@ -1,6 +1,8 @@
 // Fast-only copy-on-write ownership and moved/empty index persistence.
 #include "tieredq/tieredq.h"
 #include <filesystem>
+#include <fstream>
+#include <string>
 #include <random>
 #include <stdexcept>
 #include <unistd.h>
@@ -55,5 +57,39 @@ void ownership_test(uint32_t bits) {
   require(loaded.mode()==dv::TieredQIndexMode::fast && loaded.size()==rows+2*append_rows,"loaded fast-only index cannot append");
   std::filesystem::remove(path);
 }
+// Payload larger than the 1 MiB load buffer exercises buffered, direct and checksum-only reads.
+void streamed_load_test() {
+  constexpr uint32_t dimensions=64,bits=256,centroids=16;
+  constexpr size_t training_rows=2048,rows=100000,k=10;
+  std::mt19937 random(23);std::normal_distribution<float> normal;
+  std::vector<float> data(rows*dimensions);
+  for (auto& value:data) value=normal(random);
+  auto codec=dv::TieredQ::train({dimensions,bits,centroids,false},data.data(),training_rows);
+  for (const auto mode:{dv::TieredQIndexMode::fast,dv::TieredQIndexMode::full}) {
+    dv::TieredQIndex index(codec,mode);
+    index.add(data.data(),rows);
+    const auto path=std::filesystem::temp_directory_path()/("tieredq-streamed-"+std::to_string(getpid()));
+    index.save(path.string());
+    require(std::filesystem::file_size(path)>(size_t(1)<<21),"streamed load test payload fits one buffer");
+    auto loaded=dv::TieredQIndex::load(path.string());
+    require(loaded.storage_bytes()==index.storage_bytes() && loaded.size()==rows,"streamed load changes storage");
+    for (size_t query=0;query<rows;query+=rows/8) {
+      const auto expected=index.search(data.data()+query*dimensions,k),actual=loaded.search(data.data()+query*dimensions,k);
+      for (size_t i=0;i<k;++i)
+        require(actual[i].id==expected[i].id && actual[i].score==expected[i].score,"streamed load changes scores");
+    }
+    {
+      std::fstream file(path,std::ios::binary|std::ios::in|std::ios::out);
+      file.seekg(std::streamoff(std::filesystem::file_size(path)/2));
+      const char byte=char(file.get()^1);
+      file.seekp(std::streamoff(std::filesystem::file_size(path)/2));file.put(byte);
+    }
+    bool rejected=false;
+    try { dv::TieredQIndex::load(path.string()); }
+    catch (const std::runtime_error& error) { rejected=std::string(error.what()).find("checksum mismatch")!=std::string::npos; }
+    require(rejected,"streamed load accepts a corrupted payload");
+    std::filesystem::remove(path);
+  }
+}
 } // namespace
-void tieredq_fast_mode_tests() { ownership_test(16);ownership_test(64); }
+void tieredq_fast_mode_tests() { ownership_test(16);ownership_test(64);streamed_load_test(); }

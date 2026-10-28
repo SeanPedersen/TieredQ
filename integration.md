@@ -84,7 +84,10 @@ and other index mutations require external synchronization against readers/write
 change process-wide BLAS/OpenMP/backend settings during calls. Internal OpenMP
 may add threads; set OMP_NUM_THREADS to control the budget.
 
-save/load validate checksums and model/index layouts. DiskoVec owns routing,
+save/load validate checksums and model/index layouts. TieredQIndex.load streams the
+payload from the file into its final in-memory layout, so peak load memory stays near
+the loaded index size; payload corruption is still reported as a checksum mismatch,
+and a file is fully read before a load succeeds. DiskoVec owns routing,
 disk extents, filtering, journals, reranking and engine-level zero markers.
 Keep its zero-vector bypass based on input values, including under fast-math.
 
