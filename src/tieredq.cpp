@@ -327,16 +327,21 @@ TieredQ TieredQ::train(TieredQConfig config,const float* sample,size_t rows,uint
     profile.mark("residual");
     cov=linalg.covariance_centered(centered.values,d,n);
   } else {
-    residual.resize(product(rows,d)); mean.assign(d,0);
-    for (size_t i=0;i<rows;++i) {
-      const auto id=ids[i];
-      for (int j=0;j<d;++j) { double v=double(sample[i*d+j])-c.centroids_[size_t(id)*d+j]; residual[i*d+j]=v; mean[j]+=v; }
+    // Spectral stats only need the centered transpose; recomputing differences avoids a second rows x d copy.
+    const bool keep_residual=!spectral_stats;
+    auto difference=[&](size_t i,int j) { return double(sample[i*d+j])-c.centroids_[size_t(ids[i])*d+j]; };
+    if (keep_residual) residual.resize(product(rows,d));
+    mean.assign(d,0);
+    for (size_t i=0;i<rows;++i) for (int j=0;j<d;++j) {
+      const double v=difference(i,j);
+      if (keep_residual) residual[i*d+j]=v;
+      mean[j]+=v;
     }
     for (int j=0;j<d;++j) mean[j]/=rows;
     if (linalg.syrk) cov=linalg.covariance(residual,mean,d,n,profile);
     else {
-      std::vector<double> transposed(residual.size());
-      for (size_t i=0;i<rows;++i) for (int j=0;j<d;++j) transposed[size_t(j)*rows+i]=residual[i*d+j]-mean[j];
+      std::vector<double> transposed(product(rows,d));
+      for (size_t i=0;i<rows;++i) for (int j=0;j<d;++j) transposed[size_t(j)*rows+i]=difference(i,j)-mean[j];
       profile.mark("residual");
       cov=covariance(transposed,d,rows);
     }

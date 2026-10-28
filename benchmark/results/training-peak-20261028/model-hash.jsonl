@@ -1,0 +1,6 @@
+{"label": "before", "dataset": "openai", "bits": 1, "sha256": "b95f2f39dda75027", "build_peak_mib": 982.2}
+{"label": "before", "dataset": "gemini", "bits": 2, "sha256": "88f3e396f7692885", "build_peak_mib": 478.7}
+{"label": "before", "dataset": "glove", "bits": 4, "sha256": "5302c775c8f6f8f7", "build_peak_mib": 123.5}
+{"label": "after", "dataset": "openai", "bits": 1, "sha256": "b95f2f39dda75027", "build_peak_mib": 598.1}
+{"label": "after", "dataset": "gemini", "bits": 2, "sha256": "88f3e396f7692885", "build_peak_mib": 286.5}
+{"label": "after", "dataset": "glove", "bits": 4, "sha256": "5302c775c8f6f8f7", "build_peak_mib": 73.7}

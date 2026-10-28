@@ -1,0 +1,12 @@
+{"label": "regen", "dataset": "openai", "bits": 1, "sha256": "b95f2f39dda75027", "build_peak_mib": 982.0, "build_s": 14.985}
+{"label": "trainfix", "dataset": "openai", "bits": 1, "sha256": "b95f2f39dda75027", "build_peak_mib": 598.3, "build_s": 14.502}
+Traceback (most recent call last):
+  File "/home/sean/experiments/TieredQ-issue4-build-profile-20261028/model_hash.py", line 12, in <module>
+    baseline = reset_peak()
+               ^^^^^^^^^^^^
+  File "/home/sean/experiments/TieredQ-issue4-build-profile-20261028/regen/benchmark/measure_memory.py", line 52, in reset_peak
+    raise RuntimeError("Kernel did not reset VmHWM")
+RuntimeError: Kernel did not reset VmHWM
+{"label": "trainfix", "dataset": "openai", "bits": 1, "sha256": "b95f2f39dda75027", "build_peak_mib": 598.3, "build_s": 15.437}
+{"label": "regen", "dataset": "openai", "bits": 1, "sha256": "b95f2f39dda75027", "build_peak_mib": 982.2, "build_s": 15.181}
+{"label": "trainfix", "dataset": "openai", "bits": 1, "sha256": "b95f2f39dda75027", "build_peak_mib": 598.2, "build_s": 14.817}
