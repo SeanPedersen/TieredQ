@@ -24,7 +24,19 @@ class Index {
   std::unique_ptr<benchmark::RaBitQFlat> rq_;
   size_t width_, count_;
   double encode_s_ = 0;
+  Index(std::unique_ptr<dv::TieredQIndex> tq, std::unique_ptr<benchmark::RaBitQFlat> rq, size_t width, size_t count)
+      : tq_(std::move(tq)), rq_(std::move(rq)), width_(width), count_(count) {}
  public:
+  static Index load(const std::string& path, bool tieredq) {
+    if (!tieredq) {
+      auto rq = benchmark::RaBitQFlat::load(path);
+      const size_t width = rq->dimensions(), count = rq->size();
+      return Index(nullptr, std::move(rq), width, count);
+    }
+    auto tq = std::make_unique<dv::TieredQIndex>(dv::TieredQIndex::load(path));
+    const size_t width = tq->codec().config().dimensions, count = tq->size();
+    return Index(std::move(tq), nullptr, width, count);
+  }
   Index(Matrix base, size_t bits, uint64_t seed, bool tieredq, bool l2, bool fast = true)
       : width_(base.shape(1)), count_(base.shape(0)) {
     if (count_ < top_k || !width_ || bits < 1 || bits > 8) throw std::invalid_argument("invalid index shape/bits");
@@ -85,6 +97,14 @@ class Index {
     #pragma omp parallel for schedule(static) if(rows > 1)
     for (size_t i=0; i<rows; ++i) rq_->search(queries.data()+i*width_, top_k, ids.data()+i*top_k);
   }
+  size_t save(const std::string& path) const {
+    if (rq_) rq_->save(path); else tq_->save(path);
+    return std::filesystem::file_size(path);
+  }
+  // Component allocation accounting of this instance; not RSS, excludes allocator bookkeeping.
+  size_t resident_bytes() const {
+    return rq_ ? rq_->storage_bytes() : tq_->storage_bytes()+tq_->codec().memory_bytes();
+  }
   size_t storage(const std::string& path) const {
     if (rq_) { rq_->save(path.c_str()); return std::max<size_t>(std::filesystem::file_size(path),rq_->storage_bytes()); }
     tq_->save(path);
@@ -114,5 +134,8 @@ NB_MODULE(codec_native, m) {
     .def("diagnostics", &Index::diagnostics)
     .def_prop_ro("encode_seconds", &Index::encode_seconds)
     .def("search", &Index::search, nb::call_guard<nb::gil_scoped_release>())
-    .def("storage", &Index::storage);
+    .def("storage", &Index::storage)
+    .def("save", &Index::save, nb::call_guard<nb::gil_scoped_release>())
+    .def("resident_bytes", &Index::resident_bytes)
+    .def_static("load", &Index::load, nb::call_guard<nb::gil_scoped_release>());
 }

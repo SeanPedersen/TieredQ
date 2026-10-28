@@ -1,0 +1,14 @@
+{
+  "ram_accounted_bytes": 52000624,
+  "ram_loaded_rss_bytes": 52133888,
+  "ram_load_peak_rss_bytes": 52133888,
+  "ram_query_peak_rss_bytes": 54435840,
+  "ram_peak_rss_bytes": 54435840,
+  "recall10": 0.5492999999999999,
+  "schedule_recall10": {
+    "t1-b1": 0.5492999999999999,
+    "t1-b32": 0.5492999999999999,
+    "t8-b1": 0.5492999999999999,
+    "t8-b32": 0.5492999999999999
+  }
+}

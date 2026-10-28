@@ -1,0 +1,200 @@
+"""Disk and peak-RAM bits/vector per dataset × codec × budget, each phase in a fresh process.
+
+Disk is the self-contained saved index (plus the SIFT TieredQ L2 lift). RAM is reported three ways:
+component accounting of the reloaded index, steady RSS growth after reload, and peak RSS growth
+(VmHWM) during reload and, separately, during the full timed query workload; the overall peak is
+their maximum. Recall is a reload check against the
+8-thread batch-32 benchmark rows; per-schedule recall is kept in each cell's serve.json. Build peak is RSS growth from the loaded
+FP32 corpus through training, encoding and packing. RSS deltas start from a reset high-water mark.
+"""
+import argparse
+import csv
+import gc
+import hashlib
+import json
+import os
+from pathlib import Path
+import platform
+import subprocess
+import sys
+import time
+
+HERE = Path(__file__).resolve().parent
+REPO = HERE.parent
+DATASETS = ["sift", "glove", "openai", "gemini"]
+CODECS = ["tieredq", "rabitq"]
+BIT_BUDGETS = [1, 2, 4]
+# Same scheduling grid as the timed matrix; the workload sets the serving high-water mark.
+SERVING_SCHEDULES = [(1, 1), (1, 32), (8, 1), (8, 32)]
+PRIMARY_SCHEDULE = "t8-b32"
+BUILD_THREADS = 8
+FIELDS = ("dataset,d,base_n,codec,target_bits,seed,disk_bytes,disk_bits_per_vector,"
+          "ram_accounted_bytes,ram_accounted_bits_per_vector,ram_loaded_rss_bytes,ram_loaded_bits_per_vector,"
+          "ram_load_peak_rss_bytes,ram_load_peak_bits_per_vector,ram_query_peak_rss_bytes,ram_query_peak_bits_per_vector,"
+          "ram_peak_rss_bytes,ram_peak_bits_per_vector,build_peak_rss_bytes,build_peak_bits_per_vector,"
+          "build_s,recall10").split(",")
+
+
+def memory_status():
+    fields = dict(line.split(":", 1) for line in Path("/proc/self/status").read_text().splitlines())
+    kib = lambda key: int(fields[key].split()[0]) * 1024
+    return kib("VmRSS"), kib("VmHWM")
+
+
+def reset_peak():
+    """Return RSS after resetting VmHWM to it (Linux clear_refs 5)."""
+    gc.collect()
+    Path("/proc/self/clear_refs").write_text("5")
+    rss, peak = memory_status()
+    if peak != rss:
+        raise RuntimeError("Kernel did not reset VmHWM")
+    return rss
+
+
+def uses_lift(spec):
+    return spec["dataset"] == "sift" and spec["codec"] == "tieredq"
+
+
+def build_worker(spec, cell):
+    import numpy as np
+    from threadpoolctl import threadpool_limits
+    import codec_native
+    from data import prepare
+    from l2_transform import L2Transform
+    with threadpool_limits(limits=1):
+        base, _, _ = prepare(Path(spec["data"]), spec["dataset"])
+        codec_native.set_threads(BUILD_THREADS)
+        baseline = reset_peak()
+        start = time.perf_counter()
+        transform = L2Transform.fit(base) if uses_lift(spec) else None
+        vectors = transform.base_vectors(base) if transform else base
+        index = codec_native.Index(vectors, spec["bits"], spec["seed"], spec["codec"] == "tieredq",
+                                   spec["dataset"] == "sift")
+        build_s = time.perf_counter() - start
+        build_peak = memory_status()[1] - baseline
+        index_bytes = index.save(str(cell / "index.bin"))
+        transform_bytes = 0
+        if transform:
+            np.savez(cell / "transform.npz", scale=transform.scale, base_map=transform.base_map,
+                     query_map=transform.query_map)
+            transform_bytes = (cell / "transform.npz").stat().st_size
+        return dict(d=base.shape[1], base_n=len(base), build_s=build_s, build_peak_rss_bytes=build_peak,
+                    disk_bytes=index_bytes + transform_bytes,
+                    index_sha256=hashlib.sha256((cell / "index.bin").read_bytes()).hexdigest())
+
+
+def serve_worker(spec, cell):
+    import numpy as np
+    from threadpoolctl import threadpool_limits
+    import codec_native
+    from data import prepare
+    from l2_transform import L2Transform
+    from measure import L2Search, measure
+    with threadpool_limits(limits=1):
+        base, queries, truth = prepare(Path(spec["data"]), spec["dataset"])
+        del base
+        baseline = reset_peak()
+        index = codec_native.Index.load(str(cell / "index.bin"), spec["codec"] == "tieredq")
+        accounted = index.resident_bytes()
+        if uses_lift(spec):
+            with np.load(cell / "transform.npz") as saved:
+                transform = L2Transform(float(saved["scale"]), saved["base_map"], saved["query_map"])
+            accounted += transform.storage_bytes
+            index = L2Search(index, transform.scale, transform)
+        loaded_rss, load_hwm = memory_status()
+        # Second reset separates the reload transient from steady query-time usage.
+        reset_peak()
+        metrics = {f"t{threads}-b{batch}": measure(index, queries, truth, threads, batch)
+                   for threads, batch in SERVING_SCHEDULES}
+        load_peak, query_peak = load_hwm - baseline, memory_status()[1] - baseline
+        ids = np.empty((len(queries), 10), dtype=np.uint32)
+        index.search(queries, ids, BUILD_THREADS)
+        return dict(ram_accounted_bytes=accounted, ram_loaded_rss_bytes=loaded_rss - baseline,
+                    ram_load_peak_rss_bytes=load_peak, ram_query_peak_rss_bytes=query_peak,
+                    ram_peak_rss_bytes=max(load_peak, query_peak), recall10=metrics[PRIMARY_SCHEDULE]["recall10"],
+                    ids_sha256=hashlib.sha256(ids.tobytes()).hexdigest(),
+                    # Diagnostic only: memory runs are not the headline timing runs.
+                    schedule_metrics=metrics)
+
+
+def to_row(spec, built, served):
+    row = dict(dataset=spec["dataset"], d=built["d"], base_n=built["base_n"], codec=spec["codec"],
+               target_bits=spec["bits"], seed=spec["seed"], build_s=built["build_s"], recall10=served["recall10"])
+    measured = built | served
+    for key in ("disk", "ram_accounted", "ram_loaded_rss", "ram_load_peak_rss", "ram_query_peak_rss",
+                "ram_peak_rss", "build_peak_rss"):
+        row[f"{key}_bytes"] = measured[f"{key}_bytes"]
+        row[f"{key.removesuffix('_rss')}_bits_per_vector"] = measured[f"{key}_bytes"] * 8 / built["base_n"]
+    return row
+
+
+def run_cell(spec, output, env):
+    cell = output / f"cell-{spec['dataset']}-{spec['codec']}-{spec['bits']}-{spec['seed']}"
+    cell.mkdir(exist_ok=True)
+    results = {}
+    for phase in ("build", "serve"):
+        subprocess.run([sys.executable, str(HERE / "measure_memory.py"), "--worker", phase,
+                        "--spec", json.dumps(spec), "--cell", str(cell)],
+                       env=env | {"BENCH_SEED": str(spec["seed"])}, check=True)
+        results[phase] = json.loads((cell / f"{phase}.json").read_text())
+    for artifact in ("index.bin", "transform.npz"):
+        (cell / artifact).unlink(missing_ok=True)
+    row = to_row(spec, results["build"], results["serve"])
+    print(f"{spec['dataset']} {spec['codec']} b={spec['bits']}: disk {row['disk_bits_per_vector']:.1f}, "
+          f"peak RAM {row['ram_peak_bits_per_vector']:.1f} bits/vector", flush=True)
+    return row
+
+
+def metadata(compiler_commands, arguments):
+    command = lambda args: subprocess.check_output(args, text=True).strip()
+    return {"cpu": command(["lscpu"]), "ram": command(["free", "-b"]), "os": platform.platform(),
+            "compiler": command(["c++", "--version"]), "compiler_commands": compiler_commands,
+            "tieredq_commit": subprocess.run(["git", "-C", str(REPO), "rev-parse", "HEAD"], capture_output=True,
+                                             text=True).stdout.strip() or None,
+            "cpu_affinity": sorted(os.sched_getaffinity(0)), "arguments": arguments, "python": sys.version,
+            "serving_schedules": SERVING_SCHEDULES, "build_threads": BUILD_THREADS,
+            "source_sha256": {str(p.relative_to(REPO)): hashlib.sha256(p.read_bytes()).hexdigest()
+                              for folder in [REPO / "src", REPO / "include", HERE / "native"]
+                              for p in folder.rglob("*") if p.is_file()}}
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--datasets", nargs="+", choices=DATASETS, default=DATASETS)
+    parser.add_argument("--codecs", nargs="+", choices=CODECS, default=CODECS)
+    parser.add_argument("--bits", nargs="+", type=int, choices=BIT_BUDGETS, default=BIT_BUDGETS)
+    parser.add_argument("--seeds", nargs="+", type=int, default=[0])
+    parser.add_argument("--data", type=Path, default=HERE / "data")
+    parser.add_argument("--output", type=Path, default=HERE / "output-memory")
+    parser.add_argument("--worker", choices=["build", "serve"])
+    parser.add_argument("--spec")
+    parser.add_argument("--cell", type=Path)
+    args = parser.parse_args()
+    if args.worker:
+        worker = build_worker if args.worker == "build" else serve_worker
+        result = worker(json.loads(args.spec), args.cell)
+        (args.cell / f"{args.worker}.json").write_text(json.dumps(result, indent=2))
+        return
+    from native_build import build_native
+    native = build_native()
+    args.output.mkdir(parents=True, exist_ok=True)
+    env = os.environ | {"PYTHONPATH": os.pathsep.join([str(native.directory), str(HERE)]),
+                        "OPENBLAS_NUM_THREADS": "1", "MKL_NUM_THREADS": "1", "OMP_NUM_THREADS": str(BUILD_THREADS)}
+    meta = metadata(native.compiler_commands, sys.argv[1:])
+    start = time.perf_counter()
+    with (args.output / "memory.csv").open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=FIELDS)
+        writer.writeheader()
+        for dataset in args.datasets:
+            for codec in args.codecs:
+                for bits in args.bits:
+                    for seed in args.seeds:
+                        spec = dict(dataset=dataset, codec=codec, bits=bits, seed=seed, data=str(args.data.resolve()))
+                        writer.writerow(run_cell(spec, args.output, env))
+                        handle.flush()
+    meta["wall_s"] = time.perf_counter() - start
+    (args.output / "meta.json").write_text(json.dumps(meta, indent=2))
+
+
+if __name__ == "__main__":
+    main()

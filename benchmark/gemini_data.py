@@ -19,6 +19,10 @@ def prepare_gemini(root, max_base=None, query_count=HELD_OUT):
     import pyarrow.parquet as pq
     root = Path(root)
     root.mkdir(parents=True, exist_ok=True)
+    cache = root/'gemini-prepared.npz'
+    if cache.exists() and max_base is None and query_count == HELD_OUT:
+        with np.load(cache) as arrays:
+            return arrays['base'], arrays['queries'], arrays['truth']
     source = SOURCES['gemini']
     arrays = []
     checksums = {}

@@ -57,5 +57,24 @@ class NativeTests(unittest.TestCase):
         native_bytes_per_vector = dimensions//8 + 3*np.dtype(np.float32).itemsize
         self.assertEqual(sizes[1]-sizes[0],(larger_n-smaller_n)*native_bytes_per_vector)
 
+    def test_saved_index_reloads_with_identical_results(self):
+        os.environ["BENCH_SEED"] = "0"
+        rng = np.random.default_rng(37)
+        base = rng.normal(size=(300, 64)).astype(np.float32)
+        probes = rng.normal(size=(20, 64)).astype(np.float32)
+        for codec in (True, False):
+            for bits in (1, 4):
+                index = codec_native.Index(base, bits, 0, codec, False)
+                expected = np.empty((len(probes), 10), dtype=np.uint32)
+                index.search(probes, expected, 4)
+                with tempfile.TemporaryDirectory() as directory:
+                    path = Path(directory)/"index.bin"
+                    self.assertEqual(index.save(str(path)), path.stat().st_size)
+                    loaded = codec_native.Index.load(str(path), codec)
+                actual = np.empty_like(expected)
+                loaded.search(probes, actual, 4)
+                np.testing.assert_array_equal(actual, expected)
+                self.assertGreater(loaded.resident_bytes(), len(base)*64*bits/8)
+
 if __name__ == "__main__":
     unittest.main()

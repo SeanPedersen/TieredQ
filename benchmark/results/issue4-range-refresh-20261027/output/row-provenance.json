@@ -1,0 +1,3170 @@
+[
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "1",
+      "0",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "1",
+      "0",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "1",
+      "0",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "1",
+      "0",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "1",
+      "1",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "1",
+      "1",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "1",
+      "1",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "1",
+      "1",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "1",
+      "2",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "1",
+      "2",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "1",
+      "2",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "1",
+      "2",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "2",
+      "0",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "2",
+      "0",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "2",
+      "0",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "2",
+      "0",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "2",
+      "1",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "2",
+      "1",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "2",
+      "1",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "2",
+      "1",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "2",
+      "2",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "2",
+      "2",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "2",
+      "2",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "2",
+      "2",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "4",
+      "0",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "4",
+      "0",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "4",
+      "0",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "4",
+      "0",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "4",
+      "1",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "4",
+      "1",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "4",
+      "1",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "4",
+      "1",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "4",
+      "2",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "4",
+      "2",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "4",
+      "2",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "tieredq",
+      "4",
+      "2",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "1",
+      "0",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "1",
+      "0",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "1",
+      "0",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "1",
+      "0",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "1",
+      "1",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "1",
+      "1",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "1",
+      "1",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "1",
+      "1",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "1",
+      "2",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "1",
+      "2",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "1",
+      "2",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "1",
+      "2",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "2",
+      "0",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "2",
+      "0",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "2",
+      "0",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "2",
+      "0",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "2",
+      "1",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "2",
+      "1",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "2",
+      "1",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "2",
+      "1",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "2",
+      "2",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "2",
+      "2",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "2",
+      "2",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "2",
+      "2",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "4",
+      "0",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "4",
+      "0",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "4",
+      "0",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "4",
+      "0",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "4",
+      "1",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "4",
+      "1",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "4",
+      "1",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "4",
+      "1",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "4",
+      "2",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "4",
+      "2",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "4",
+      "2",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "tieredq",
+      "4",
+      "2",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "1",
+      "0",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "1",
+      "0",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "1",
+      "0",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "1",
+      "0",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "1",
+      "1",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "1",
+      "1",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "1",
+      "1",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "1",
+      "1",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "1",
+      "2",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "1",
+      "2",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "1",
+      "2",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "1",
+      "2",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "2",
+      "0",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "2",
+      "0",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "2",
+      "0",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "2",
+      "0",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "2",
+      "1",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "2",
+      "1",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "2",
+      "1",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "2",
+      "1",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "2",
+      "2",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "2",
+      "2",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "2",
+      "2",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "2",
+      "2",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "4",
+      "0",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "4",
+      "0",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "4",
+      "0",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "4",
+      "0",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "4",
+      "1",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "4",
+      "1",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "4",
+      "1",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "4",
+      "1",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "4",
+      "2",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "4",
+      "2",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "4",
+      "2",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "tieredq",
+      "4",
+      "2",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "1",
+      "0",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "1",
+      "0",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "1",
+      "0",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "1",
+      "0",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "1",
+      "1",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "1",
+      "1",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "1",
+      "1",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "1",
+      "1",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "1",
+      "2",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "1",
+      "2",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "1",
+      "2",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "1",
+      "2",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "2",
+      "0",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "2",
+      "0",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "2",
+      "0",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "2",
+      "0",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "2",
+      "1",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "2",
+      "1",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "2",
+      "1",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "2",
+      "1",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "2",
+      "2",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "2",
+      "2",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "2",
+      "2",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "2",
+      "2",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "4",
+      "0",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "4",
+      "0",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "4",
+      "0",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "4",
+      "0",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "4",
+      "1",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "4",
+      "1",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "4",
+      "1",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "4",
+      "1",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "4",
+      "2",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "4",
+      "2",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "4",
+      "2",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "tieredq",
+      "4",
+      "2",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "1",
+      "1",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "1",
+      "1",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "1",
+      "1",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "1",
+      "1",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "1",
+      "2",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "1",
+      "2",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "1",
+      "2",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "1",
+      "2",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "2",
+      "1",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "2",
+      "1",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "2",
+      "1",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "2",
+      "1",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "2",
+      "2",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "2",
+      "2",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "2",
+      "2",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "2",
+      "2",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "4",
+      "1",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "4",
+      "1",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "4",
+      "1",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "4",
+      "1",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "4",
+      "2",
+      "1",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "4",
+      "2",
+      "1",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "4",
+      "2",
+      "8",
+      "1"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "4",
+      "2",
+      "8",
+      "32"
+    ],
+    "source": "fresh-results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "1",
+      "0",
+      "1",
+      "1"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "1",
+      "0",
+      "1",
+      "32"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "1",
+      "0",
+      "8",
+      "1"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "1",
+      "0",
+      "8",
+      "32"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "2",
+      "0",
+      "1",
+      "1"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "2",
+      "0",
+      "1",
+      "32"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "2",
+      "0",
+      "8",
+      "1"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "2",
+      "0",
+      "8",
+      "32"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "4",
+      "0",
+      "1",
+      "1"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "4",
+      "0",
+      "1",
+      "32"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "4",
+      "0",
+      "8",
+      "1"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "4",
+      "0",
+      "8",
+      "32"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "1",
+      "0",
+      "1",
+      "1"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "1",
+      "0",
+      "1",
+      "32"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "1",
+      "0",
+      "8",
+      "1"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "1",
+      "0",
+      "8",
+      "32"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "2",
+      "0",
+      "1",
+      "1"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "2",
+      "0",
+      "1",
+      "32"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "2",
+      "0",
+      "8",
+      "1"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "2",
+      "0",
+      "8",
+      "32"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "4",
+      "0",
+      "1",
+      "1"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "4",
+      "0",
+      "1",
+      "32"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "4",
+      "0",
+      "8",
+      "1"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "4",
+      "0",
+      "8",
+      "32"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "1",
+      "0",
+      "1",
+      "1"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "1",
+      "0",
+      "1",
+      "32"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "1",
+      "0",
+      "8",
+      "1"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "1",
+      "0",
+      "8",
+      "32"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "2",
+      "0",
+      "1",
+      "1"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "2",
+      "0",
+      "1",
+      "32"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "2",
+      "0",
+      "8",
+      "1"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "2",
+      "0",
+      "8",
+      "32"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "4",
+      "0",
+      "1",
+      "1"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "4",
+      "0",
+      "1",
+      "32"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "4",
+      "0",
+      "8",
+      "1"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "4",
+      "0",
+      "8",
+      "32"
+    ],
+    "source": "issue4-current-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "1",
+      "1",
+      "1",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "1",
+      "1",
+      "1",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "1",
+      "1",
+      "8",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "1",
+      "1",
+      "8",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "1",
+      "2",
+      "1",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "1",
+      "2",
+      "1",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "1",
+      "2",
+      "8",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "1",
+      "2",
+      "8",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "2",
+      "1",
+      "1",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "2",
+      "1",
+      "1",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "2",
+      "1",
+      "8",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "2",
+      "1",
+      "8",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "2",
+      "2",
+      "1",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "2",
+      "2",
+      "1",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "2",
+      "2",
+      "8",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "2",
+      "2",
+      "8",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "4",
+      "1",
+      "1",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "4",
+      "1",
+      "1",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "4",
+      "1",
+      "8",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "4",
+      "1",
+      "8",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "4",
+      "2",
+      "1",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "4",
+      "2",
+      "1",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "4",
+      "2",
+      "8",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "sift",
+      "rabitq",
+      "4",
+      "2",
+      "8",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "1",
+      "1",
+      "1",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "1",
+      "1",
+      "1",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "1",
+      "1",
+      "8",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "1",
+      "1",
+      "8",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "1",
+      "2",
+      "1",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "1",
+      "2",
+      "1",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "1",
+      "2",
+      "8",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "1",
+      "2",
+      "8",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "2",
+      "1",
+      "1",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "2",
+      "1",
+      "1",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "2",
+      "1",
+      "8",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "2",
+      "1",
+      "8",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "2",
+      "2",
+      "1",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "2",
+      "2",
+      "1",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "2",
+      "2",
+      "8",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "2",
+      "2",
+      "8",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "4",
+      "1",
+      "1",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "4",
+      "1",
+      "1",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "4",
+      "1",
+      "8",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "4",
+      "1",
+      "8",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "4",
+      "2",
+      "1",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "4",
+      "2",
+      "1",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "4",
+      "2",
+      "8",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "glove",
+      "rabitq",
+      "4",
+      "2",
+      "8",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "1",
+      "1",
+      "1",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "1",
+      "1",
+      "1",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "1",
+      "1",
+      "8",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "1",
+      "1",
+      "8",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "1",
+      "2",
+      "1",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "1",
+      "2",
+      "1",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "1",
+      "2",
+      "8",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "1",
+      "2",
+      "8",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "2",
+      "1",
+      "1",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "2",
+      "1",
+      "1",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "2",
+      "1",
+      "8",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "2",
+      "1",
+      "8",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "2",
+      "2",
+      "1",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "2",
+      "2",
+      "1",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "2",
+      "2",
+      "8",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "2",
+      "2",
+      "8",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "4",
+      "1",
+      "1",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "4",
+      "1",
+      "1",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "4",
+      "1",
+      "8",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "4",
+      "1",
+      "8",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "4",
+      "2",
+      "1",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "4",
+      "2",
+      "1",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "4",
+      "2",
+      "8",
+      "1"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "openai",
+      "rabitq",
+      "4",
+      "2",
+      "8",
+      "32"
+    ],
+    "source": "issue12-recall/pack-opt/curve/results.csv (recall only)"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "1",
+      "0",
+      "1",
+      "1"
+    ],
+    "source": "gemini-rabitq-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "1",
+      "0",
+      "1",
+      "32"
+    ],
+    "source": "gemini-rabitq-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "1",
+      "0",
+      "8",
+      "1"
+    ],
+    "source": "gemini-rabitq-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "1",
+      "0",
+      "8",
+      "32"
+    ],
+    "source": "gemini-rabitq-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "2",
+      "0",
+      "1",
+      "1"
+    ],
+    "source": "gemini-rabitq-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "2",
+      "0",
+      "1",
+      "32"
+    ],
+    "source": "gemini-rabitq-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "2",
+      "0",
+      "8",
+      "1"
+    ],
+    "source": "gemini-rabitq-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "2",
+      "0",
+      "8",
+      "32"
+    ],
+    "source": "gemini-rabitq-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "4",
+      "0",
+      "1",
+      "1"
+    ],
+    "source": "gemini-rabitq-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "4",
+      "0",
+      "1",
+      "32"
+    ],
+    "source": "gemini-rabitq-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "4",
+      "0",
+      "8",
+      "1"
+    ],
+    "source": "gemini-rabitq-single-seed-20261026/results.csv"
+  },
+  {
+    "key": [
+      "gemini",
+      "rabitq",
+      "4",
+      "0",
+      "8",
+      "32"
+    ],
+    "source": "gemini-rabitq-single-seed-20261026/results.csv"
+  }
+]

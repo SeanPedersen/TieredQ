@@ -132,6 +132,32 @@ and serialized RaBitQ measure are not process RSS; allocator bookkeeping is excl
 Per-row native representations are fixed-stride for each built configuration, so
 mean and p95 code bits per vector coincide; shared overhead is amortized over N.
 
+### Separate disk and RAM
+
+`measure_memory.py` splits storage into disk and RAM for every dataset × codec ×
+1/2/4-bit cell (seed 0). Each cell builds in one fresh process and serves from a
+second process that reloads the saved index:
+
+- **Disk**: saved index file size, plus the saved SIFT TieredQ L2 lift.
+- **RAM accounted**: component allocations of the reloaded index (the serving side
+  of the `effective_bytes_per_vector` metric above).
+- **RAM loaded RSS**: process RSS growth from just before reload to just after it.
+- **RAM load peak / query peak**: VmHWM growth during reload, and separately during
+  the full timed query workload (warmups and three repeats at threads 1/8 × batches
+  1/32) after a second reset. Query peak includes query scratch, OpenMP threads and
+  allocator overhead.
+- **RAM peak RSS**: the larger of the two, i.e. maximum serving usage.
+- **Build peak RSS**: VmHWM growth from the loaded FP32 corpus through training,
+  encoding and packing (eight threads). For SIFT TieredQ this includes the lifted
+  FP32 copy used by the L2 adapter.
+
+RSS deltas start from a high-water mark reset (`/proc/self/clear_refs`), so the
+Python runtime, the loaded queries and ground truth are excluded. Fixed costs such
+as thread stacks are divided by N like every other shared overhead. Each serve
+worker records Recall@10 per schedule as a reload check against the timed rows.
+`report_memory.py <output>` writes the per-cell table. Results, including the streamed
+loader before/after comparison: `results/issue4-memory-20261028/README.md`.
+
 Each timing point uses three warmup queries and three complete repeats of all
 queries. All timings use seed 0; seeds 1 and 2 record recall with `NaN` timing fields.
 Recall-only seeds search once at 8 threads/batch 32 and share that deterministic

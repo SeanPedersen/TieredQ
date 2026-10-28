@@ -1,0 +1,13 @@
+{
+  "status": "passed",
+  "rows": 288,
+  "timed_rows": 96,
+  "recall_seeds": [
+    0,
+    1,
+    2
+  ],
+  "input_hashes_match": true,
+  "reused_adapter_and_measurement_hashes_match": true,
+  "ablation_identical_ids": 48
+}

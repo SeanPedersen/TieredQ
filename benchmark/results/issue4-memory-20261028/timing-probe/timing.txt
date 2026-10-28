@@ -1,0 +1,44 @@
+build.json
+glove.bin
+openai.bin
+probe.py
+sift-transform.npz
+sift.bin
+timing.py
+    print(" ".join(f"{measure(index, queries, truth, 1, b)[chr(113)+chr(112)+chr(115)]:.1f}" for b in (1, 32)))
+sift source-before 362.8 364.8
+sift source 378.7 381.8
+sift source-before 372.1 373.8
+sift source 364.9 375.0
+sift source-before 366.8 379.2
+sift source 367.6 378.7
+sift source-before 361.9 375.0
+sift source 363.7 379.0
+sift source-before 371.8 372.8
+sift source 364.2 371.2
+sift source-before 361.6 368.6
+sift source 379.3 380.4
+glove source-before 3368.5 3636.7
+glove source 3218.9 3319.9
+glove source-before 3160.4 3483.1
+glove source 3352.9 3483.0
+glove source-before 3216.5 3478.2
+glove source 3162.2 3344.0
+glove source-before 3276.6 3541.8
+glove source 3315.6 3398.4
+glove source-before 3356.8 3520.8
+glove source 3261.1 3553.9
+glove source-before 3199.4 3484.7
+glove source 3279.4 3440.1
+openai source-before 486.3 584.6
+openai source 494.0 564.8
+openai source-before 475.0 547.7
+openai source 471.8 533.5
+openai source-before 473.2 547.6
+openai source 495.5 605.9
+openai source-before 490.8 564.0
+openai source 467.0 540.0
+openai source-before 471.9 535.6
+openai source 483.0 568.2
+openai source-before 519.8 595.1
+openai source 486.8 567.7

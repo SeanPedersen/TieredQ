@@ -42,6 +42,15 @@ class RaBitQFlat {
   double encode_s_ = 0;
   float (*extra_ip_)(const float*,const uint8_t*,size_t);
 
+  using Header = std::array<uint64_t,header_fields>;
+  // Allocates storage for a saved header; load() fills rotation, center and codes.
+  explicit RaBitQFlat(const Header& fields)
+      : count_(fields[0]), dimensions_(fields[1]), padded_(fields[2]), extra_bits_(fields[3]),
+        metric_(static_cast<rabitqlib::MetricType>(fields[4])),
+        rotator_(rabitqlib::choose_rotator<float>(dimensions_,rabitqlib::RotatorType::FhtKacRotator,padded_)),
+        center_(padded_), binary_(((count_+batch_size-1)/batch_size)*binary_stride()),
+        extra_(count_*extra_stride()), extra_ip_(rabitqlib::select_excode_ipfunc(extra_bits_)) {}
+
   size_t binary_stride() const { return rabitqlib::BatchDataMap<float>::data_bytes(padded_); }
   size_t extra_stride() const { return rabitqlib::ExDataMap<float>::data_bytes(padded_,extra_bits_); }
 
@@ -73,6 +82,8 @@ class RaBitQFlat {
     encode_s_=std::chrono::duration<double>(Clock::now()-start).count();
   }
   double encode_seconds() const { return encode_s_; }
+  size_t size() const { return count_; }
+  size_t dimensions() const { return dimensions_; }
   void search(const float* vector,size_t k,uint32_t* ids) const {
     std::vector<float> rotated(padded_);
     rotator_->rotate(vector,rotated.data());
@@ -117,6 +128,21 @@ class RaBitQFlat {
     out.write(binary_.data(),binary_.bytes());
     if (extra_.bytes()) out.write(extra_.data(),extra_.bytes());
     if (!out) throw std::runtime_error("Cannot save flat RaBitQ storage");
+  }
+  static std::unique_ptr<RaBitQFlat> load(const std::string& path) {
+    std::ifstream in(path,std::ios::binary);
+    std::array<char,magic.size()> found{};
+    Header fields{};
+    in.read(found.data(),found.size());
+    in.read(reinterpret_cast<char*>(fields.data()),sizeof(fields));
+    if (!in || found!=magic) throw std::runtime_error("Not a flat RaBitQ file");
+    std::unique_ptr<RaBitQFlat> index(new RaBitQFlat(fields));
+    index->rotator_->load(in);
+    in.read(reinterpret_cast<char*>(index->center_.data()),index->center_.size()*sizeof(float));
+    in.read(index->binary_.data(),index->binary_.bytes());
+    if (index->extra_.bytes()) in.read(index->extra_.data(),index->extra_.bytes());
+    if (!in || in.peek()!=std::ifstream::traits_type::eof()) throw std::runtime_error("Corrupt flat RaBitQ file");
+    return index;
   }
 };
 } // namespace benchmark

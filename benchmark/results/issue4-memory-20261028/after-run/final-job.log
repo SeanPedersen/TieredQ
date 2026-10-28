@@ -1,0 +1,61 @@
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue4-streamed-load-20261028/source/benchmark/build-native
+[ 20%] Built target dv_tieredq
+[ 25%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 85%] Built target nanobind-static
+[ 90%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 95%] Linking CXX executable codec_reference
+[ 95%] Built target codec_reference
+[100%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[100%] Built target codec_native
+sift tieredq b=1: disk 218.4, peak RAM 266.8 bits/vector
+sift tieredq b=2: disk 330.5, peak RAM 417.2 bits/vector
+sift tieredq b=4: disk 586.7, peak RAM 675.2 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+sift rabitq b=1: disk 224.0, peak RAM 244.0 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+sift rabitq b=2: disk 416.0, peak RAM 436.0 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+sift rabitq b=4: disk 672.0, peak RAM 692.0 bits/vector
+glove tieredq b=1: disk 309.7, peak RAM 565.2 bits/vector
+glove tieredq b=2: disk 510.0, peak RAM 775.6 bits/vector
+glove tieredq b=4: disk 902.3, peak RAM 1177.7 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+glove rabitq b=1: disk 352.1, peak RAM 533.8 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+glove rabitq b=2: disk 672.1, peak RAM 853.9 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+glove rabitq b=4: disk 1184.1, peak RAM 1366.4 bits/vector
+openai tieredq b=1: disk 2298.0, peak RAM 2831.5 bits/vector
+openai tieredq b=2: disk 3948.2, peak RAM 4789.0 bits/vector
+openai tieredq b=4: disk 7097.0, peak RAM 7978.4 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+openai rabitq b=1: disk 1632.6, peak RAM 1860.6 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+openai rabitq b=2: disk 3232.6, peak RAM 3460.6 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+openai rabitq b=4: disk 6304.6, peak RAM 6532.6 bits/vector
+gemini tieredq b=1: disk 1109.7, peak RAM 1495.7 bits/vector
+gemini tieredq b=2: disk 1826.2, peak RAM 2626.4 bits/vector
+gemini tieredq b=4: disk 3399.1, peak RAM 4218.1 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+gemini rabitq b=1: disk 864.4, peak RAM 1075.4 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+gemini rabitq b=2: disk 1696.4, peak RAM 1907.2 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+gemini rabitq b=4: disk 3232.4, peak RAM 3443.6 bits/vector
