@@ -121,8 +121,10 @@ extra-bit payload, the required global mean and rotation state. No explicit row
 IDs or IVF metadata are stored. A regression test checks that adding vectors adds
 exactly the native code/factor bytes, excluding a per-vector ID surcharge.
 TieredQ uses the larger of saved index size and the serving footprint of the
-reloaded index: vector storage and fast-cache allocations (including lookup
-projection panels, groups and codebooks), plus `codec.memory_bytes()`. A reloaded model
+reloaded index: vector storage and fast-cache allocations (including the lookup
+projection's per-dimension mean shift, groups and codebooks), plus `codec.memory_bytes()`.
+Lookup layouts derive centroid scores per query from the model's centroids, so no
+per-centroid projection panels are held in RAM. A reloaded model
 holds basis, mean, sigma, centroids, codebooks and half norms; encoder buffers
 (fused panels, FP64 centroid projections) are built on the first append and are
 reported separately in diagnostics (`model_memory_bytes` minus
@@ -157,6 +159,16 @@ as thread stacks are divided by N like every other shared overhead. Each serve
 worker records Recall@10 per schedule as a reload check against the timed rows.
 `report_memory.py <output>` writes the per-cell table. Results, including the streamed
 loader before/after comparison: `results/issue4-memory-20261028/README.md`.
+
+### Equal-memory head-to-head
+
+`match_memory.py` (default: OpenAI and Gemini, RaBitQ 1/2/3/4 bits, seeds 0/1/2)
+measures each RaBitQ point with `measure_memory.py` cells. It then searches, separately
+for disk, steady RAM and peak RAM, for the largest TieredQ code-bit budget whose seed-0
+measurement is at or below the minimum over RaBitQ's seeds. Selection reads storage only.
+Every probe is logged in `calibration.csv`, and `cells.csv` makes the run resumable. The
+chosen budget is confirmed on all seeds; if any seed exceeds the target, the search
+steps down. `matches.md` reports recall mean ± std and disk/RAM/peak per matched pair.
 
 Each timing point uses three warmup queries and three complete repeats of all
 queries. All timings use seed 0; seeds 1 and 2 record recall with `NaN` timing fields.
