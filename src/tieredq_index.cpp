@@ -32,7 +32,7 @@ std::shared_ptr<tieredq_detail::FastScanCache> TieredQIndex::make_fast_storage(
     const uint8_t* rows,size_t count,bool lookup,int level_max) const {
   if (lookup) {
     auto projection=tieredq_detail::build_fast_query_projection(codec_.config().dimensions,
-        codec_.basis_,codec_.sigma_,codec_.mean_,codec_.centroids_,codec_.centroid_half_norms_);
+        codec_.basis_,codec_.sigma_,codec_.mean_,codec_.centroid_half_norms_);
     return tieredq_detail::build_fast_lookup_cache(codec_.levels_,codec_.tiers_,std::move(projection),
         count,codec_.bytes_per_vector(),codec_.code_bytes(),codec_.config().num_centroids,rows);
   }

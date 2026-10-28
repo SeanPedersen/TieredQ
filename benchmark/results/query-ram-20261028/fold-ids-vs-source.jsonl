@@ -1,0 +1,5 @@
+{"index": "gemini-1", "recall_reference": 0.8337, "recall_candidate": 0.8337, "identical_rows": 999, "rows": 1000, "set_overlap": 1.0}
+{"index": "glove-1", "recall_reference": 0.4121, "recall_candidate": 0.4121, "identical_rows": 1000, "rows": 1000, "set_overlap": 1.0}
+{"index": "glove-2", "recall_reference": 0.6719, "recall_candidate": 0.6719, "identical_rows": 1000, "rows": 1000, "set_overlap": 1.0}
+{"index": "glove-4", "recall_reference": 0.9011, "recall_candidate": 0.9011, "identical_rows": 1000, "rows": 1000, "set_overlap": 1.0}
+{"index": "openai-1", "recall_reference": 0.8939, "recall_candidate": 0.8939, "identical_rows": 1000, "rows": 1000, "set_overlap": 1.0}

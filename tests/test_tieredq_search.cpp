@@ -34,9 +34,9 @@ void fast_cache_accounting_test() {
   cache.lookup=std::make_shared<FastScanLookupCache>();
   const size_t empty_lookup=fast_storage_bytes(cache);
   auto& lookup=*cache.lookup;
-  lookup.projection.panels.reserve(101);lookup.groups.reserve(13);
+  lookup.projection.correction.reserve(101);lookup.groups.reserve(13);
   lookup.levels.resize(2);lookup.levels[1].reserve(17);
-  require(fast_storage_bytes(cache)-empty_lookup==lookup.projection.panels.capacity()*sizeof(float)+
+  require(fast_storage_bytes(cache)-empty_lookup==lookup.projection.correction.capacity()*sizeof(float)+
       lookup.groups.capacity()*sizeof(FastLookupGroup)+lookup.levels.capacity()*sizeof(std::vector<float>)+
       lookup.levels[1].capacity()*sizeof(float),"fast lookup shared state is unaccounted");
 }
