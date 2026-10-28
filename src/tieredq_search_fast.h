@@ -5,23 +5,25 @@
 #include "tieredq_search.h"
 
 namespace dv::tieredq_detail {
+// Each concurrent worker holds a query_tile x document_tile score scratch. One worker keeps the wide tile;
+// parallel searches use a narrow one, which bounds the multi-worker peak and measured faster there.
 constexpr size_t fast_search_document_tile = 4096;
+constexpr size_t fast_search_parallel_document_tile = 1024;
 static_assert(fast_search_document_tile % selection_block == 0);
+static_assert(fast_search_parallel_document_tile % selection_block == 0);
 
 // Document segments per query tile: enough to give each worker a task, in whole document tiles.
-inline size_t fast_search_segments(size_t query_tiles,size_t documents,size_t workers) {
-  const size_t document_tiles=(documents+fast_search_document_tile-1)/fast_search_document_tile;
+inline size_t fast_search_segments(size_t query_tiles,size_t documents,size_t workers,size_t document_tile) {
+  const size_t document_tiles=(documents+document_tile-1)/document_tile;
   return std::max<size_t>(1,std::min(document_tiles,(workers+query_tiles-1)/query_tiles));
 }
 
-template<class Prepared,class Scan,class Finish>
-void search_fast_tiles(const std::vector<Prepared>& queries,size_t documents,size_t k,
-    size_t query_tile,Scan scan,Finish finish) {
+template<size_t document_tile,class Prepared,class Scan,class Finish>
+void search_fast_document_tiles(const std::vector<Prepared>& queries,size_t documents,size_t k,
+    size_t query_tile,size_t available,Scan scan,Finish finish) {
   const size_t tiles=(queries.size()+query_tile-1)/query_tile;
-  if (!tiles) return;
-  const size_t available=std::max<size_t>(1,size_t(omp_get_max_threads()));
-  const size_t segments=omp_in_parallel() ? 1 : fast_search_segments(tiles,documents,available);
-  const size_t document_tiles=(documents+fast_search_document_tile-1)/fast_search_document_tile;
+  const size_t segments=fast_search_segments(tiles,documents,available,document_tile);
+  const size_t document_tiles=(documents+document_tile-1)/document_tile;
   const size_t segment_tiles=(document_tiles+segments-1)/segments;
   const size_t tasks=tiles*segments,workers=std::min(tasks,available);
   std::vector<std::vector<TieredQHit>> partial(segments*queries.size());
@@ -32,9 +34,9 @@ void search_fast_tiles(const std::vector<Prepared>& queries,size_t documents,siz
     try {
       const size_t tile=task/segments,segment=task%segments;
       const size_t first=tile*query_tile,rows=std::min(query_tile,queries.size()-first);
-      const size_t begin_document=std::min(documents,segment*segment_tiles*fast_search_document_tile);
-      const size_t end_document=std::min(documents,begin_document+segment_tiles*fast_search_document_tile);
-      const size_t stride=std::min(documents,fast_search_document_tile);
+      const size_t begin_document=std::min(documents,segment*segment_tiles*document_tile);
+      const size_t end_document=std::min(documents,begin_document+segment_tiles*document_tile);
+      const size_t stride=std::min(documents,document_tile);
       std::vector<float> scratch(rows*stride);
       std::vector<TopK> top;
       top.reserve(rows);
@@ -64,5 +66,15 @@ void search_fast_tiles(const std::vector<Prepared>& queries,size_t documents,siz
     hits.resize(std::min(k,hits.size()));
     finish(row,std::move(hits));
   }
+}
+
+template<class Prepared,class Scan,class Finish>
+void search_fast_tiles(const std::vector<Prepared>& queries,size_t documents,size_t k,
+    size_t query_tile,Scan scan,Finish finish) {
+  if (queries.empty()) return;
+  const size_t available=omp_in_parallel() ? 1 : std::max<size_t>(1,size_t(omp_get_max_threads()));
+  if (available>1)
+    search_fast_document_tiles<fast_search_parallel_document_tile>(queries,documents,k,query_tile,available,scan,finish);
+  else search_fast_document_tiles<fast_search_document_tile>(queries,documents,k,query_tile,available,scan,finish);
 }
 } // namespace dv::tieredq_detail

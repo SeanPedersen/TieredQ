@@ -28,9 +28,15 @@ The 2- and 4-bit OpenAI/Gemini layouts keep less than 5 bits/vector above disk. 
 
 ## 4a: query-tile scratch
 
-At 8 threads × batch 32, each document-segment worker holds a 32 × 4,096 FP32 score tile. The peak query transient is 7.5 MiB on OpenAI 2-bit and 6.3 MiB on Gemini 2-bit, and other schedules stay at 1.3 MiB or below (`query_peak.py`/`query_peak.sh`). glibc arena and mmap-threshold settings barely change it. A 2048 tile saves 2.0 MiB and a 1024 tile saves 3.0 MiB of the transient.
+At 8 threads × batch 32, each document-segment worker holds a 32 × 4,096 FP32 score tile. The peak query transient is 7.5 MiB on OpenAI 2-bit and 6.3 MiB on Gemini 2-bit, and other schedules stay at 1.3 MiB or below (`query_peak.py`/`query_peak.sh`). glibc arena and mmap-threshold settings barely change it.
 
-Uniformly smaller tiles fail the speed bar at 1 thread. At Gemini 2-bit t1-b32, QPS was 0.958× (2048) and 0.937× (1024), with every paired round below 0.961 against a 1.008 source spread. The same tiles give +11–18% QPS at 8 threads. A worker-dependent tile is evaluated separately.
+- **Uniformly smaller tiles fail** ([ab-fold-table.md](ab-fold-table.md), trees `fold-tile-*`). On Gemini 2-bit at t1-b32, QPS was 0.958× (2048) and 0.937× (1024), with every paired round below 0.961 against a 1.008 source spread. The same tiles give +11–18% QPS at 8 threads.
+- **Worker-dependent tile (committed).** A single worker keeps the 4,096 tile, and parallel searches use 1,024. Both are template constants, so the one-thread instantiation compiles exactly as before.
+  - A first version with a runtime tile measured small, consistent one-thread drops: Gemini 4-bit t1 at 0.985× over 8 rounds ([ab-adaptive-table.md](ab-adaptive-table.md), [ab-t1-table.md](ab-t1-table.md), tree `adaptive`). It was replaced.
+  - **1 thread** ([ab-t1-table.md](ab-t1-table.md), tree `adaptive-tmpl`, 8 rounds): QPS 0.998–1.013× on Gemini 2/4-bit and OpenAI 4-bit, within each reference spread. The exception is OpenAI 4-bit t1-b32 at +5.6%, which is likely code layout, since the algorithm is unchanged.
+  - **8 threads** ([ab-t8-table.md](ab-t8-table.md), 4 rounds): QPS +15–20% and p50 −14–17% on 2/4-bit; OpenAI 1-bit +12% at t8-b1 and +4% at t8-b32.
+  - **Peak:** t8-b32 transient 7.51 → 4.43 MiB on OpenAI 2-bit and 6.33 → 3.25 MiB on Gemini 2-bit, i.e. −3.1 MiB, about −250 bits/vector at 100K. That is 5.3% / 9.7% of the previous OpenAI / Gemini 2-bit peak RAM.
+  - **IDs:** byte-identical to the previous library on every index tested.
 
 ## Limitations
 

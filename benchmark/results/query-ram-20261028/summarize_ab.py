@@ -1,4 +1,4 @@
-"""Summarize an interleaved A/B JSONL (timing_probe.py rows) against the 'source' tree.
+"""Summarize an interleaved A/B JSONL (timing_probe.py rows) against a reference tree (default 'source').
 
 Per index × schedule × tree: median QPS / p50 / p95 over rounds, ratio of medians to source, the range of
 same-round paired QPS ratios, and source's own max/min QPS spread as the run-to-run noise reference.
@@ -9,7 +9,6 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-REFERENCE = "source"
 
 
 def load(path):
@@ -20,13 +19,13 @@ def load(path):
     return runs
 
 
-def table(runs):
+def table(runs, reference_label):
     indexes = sorted({index for index, _ in runs})
-    labels = sorted({label for _, label in runs}, key=lambda label: (label != REFERENCE, label))
+    labels = sorted({label for _, label in runs}, key=lambda label: (label != reference_label, label))
     lines = ["| Index | Schedule | Tree | Rounds | QPS (median) | QPS ratio | Paired ratio range | p50 ratio | p95 ratio "
-             "| Source spread | IDs vs source |", "|---|---|---|---:|---:|---:|---|---:|---:|---:|---|"]
+             "| Reference spread | IDs vs reference |", "|---|---|---|---:|---:|---:|---|---:|---:|---:|---|"]
     for index in indexes:
-        reference = runs[(index, REFERENCE)]
+        reference = runs[(index, reference_label)]
         reference_ids = {row["ids_sha256"] for row in reference}
         schedules = [key for key in reference[0] if key.startswith("t")]
         for schedule in schedules:
@@ -47,4 +46,4 @@ def table(runs):
 
 
 if __name__ == "__main__":
-    print(table(load(sys.argv[1])), end="")
+    print(table(load(sys.argv[1]), sys.argv[2] if len(sys.argv) > 2 else "source"), end="")
