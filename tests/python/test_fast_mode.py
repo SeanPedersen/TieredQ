@@ -31,9 +31,11 @@ def assert_same(actual, expected):
         np.testing.assert_array_equal(left, right)
 
 
-# Fast and full training must yield the same model here: budgets whose allocation has no 3-bit tiers.
+# Fast and full training yield the same model only at 8 bits/dim: fast targets allocate on variance^1.5 and fill
+# nibble padding (#9), so the 1-bit budget compares the fast index with its own fast scan instead.
 @pytest.mark.parametrize("code_bits", [DIMENSIONS, DIMENSIONS * 8])
 def test_fast_only_search_storage_append_and_roundtrip(code_bits, tmp_path):
+    same_model = code_bits == DIMENSIONS * 8
     rows = np.random.default_rng(13).normal(size=(INITIAL_ROWS * 2, DIMENSIONS)).astype(np.float32)
     fast = TieredQIndex(dimensions=DIMENSIONS, code_bits=code_bits, mode="fast")
     exact = TieredQIndex(dimensions=DIMENSIONS, code_bits=code_bits, mode="full")
@@ -48,15 +50,16 @@ def test_fast_only_search_storage_append_and_roundtrip(code_bits, tmp_path):
     if not exact.has_fast_scan:
         pytest.skip("reference cache unavailable on this CPU")
     assert fast.has_fast_scan
-    assert fast.storage_bytes == exact.storage_bytes - planes_bytes
+    assert not same_model or fast.storage_bytes == exact.storage_bytes - planes_bytes
     before = fast.storage_bytes
     fast.build_fast_scan()
     assert fast.storage_bytes == before
     queries = rows[:17]
     for k in (0, 1, 10, len(fast) + 1):
-        assert_same(fast.search(queries, k=k), exact.search_fast(queries, k=k))
         assert_same(fast.search(queries, k=k), fast.search_fast(queries, k=k))
-        assert_same(fast.search(queries[0], k=k), exact.search_fast(queries[0], k=k))
+        if same_model:
+            assert_same(fast.search(queries, k=k), exact.search_fast(queries, k=k))
+            assert_same(fast.search(queries[0], k=k), exact.search_fast(queries[0], k=k))
     for name, index in (("exact", exact), ("fast", fast)):
         path = str(tmp_path / f"{name}.tq")
         index.save(path)
@@ -69,7 +72,8 @@ def test_fast_only_search_storage_append_and_roundtrip(code_bits, tmp_path):
         index.add(rows[INITIAL_ROWS:])
     exact.build_fast_scan()
     assert loaded.has_fast_scan and fast.has_fast_scan
-    assert_same(fast.search(queries), exact.search_fast(queries))
+    if same_model:
+        assert_same(fast.search(queries), exact.search_fast(queries))
     assert_same(loaded.search(queries), fast.search(queries))
     loaded.save(path)
     assert_same(TieredQIndex.load(path).search(queries), fast.search(queries))

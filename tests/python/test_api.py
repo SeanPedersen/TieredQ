@@ -24,10 +24,10 @@ def built(rows):
 def test_add_trains_on_first_batch_and_search_scores_before_ids():
     rows = vectors()
     index = TieredQIndex(dimensions=DIMENSIONS, code_bits=CODE_BITS)
+    assert index.dimensions == DIMENSIONS and index.code_bits == CODE_BITS
     index.add(rows[:17])
     index.add(rows[17:])
     assert len(index) == len(rows)
-    assert index.dimensions == DIMENSIONS and index.code_bits == CODE_BITS
     assert index.bytes_per_vector > 0
 
     scores, ids = index.search(rows[:2], k=len(rows) + 1)
@@ -56,7 +56,7 @@ def test_persistence_and_owned_outputs(tmp_path):
 
     loaded = TieredQIndex.load(path)
     assert len(loaded) == len(rows)
-    assert loaded.dimensions == DIMENSIONS and loaded.code_bits == CODE_BITS
+    assert loaded.dimensions == DIMENSIONS and loaded.code_bits == index.code_bits
     actual_scores, actual_ids = loaded.search(rows[:1], k=len(rows))
     np.testing.assert_array_equal(actual_ids, ids)
     np.testing.assert_array_equal(actual_scores, scores)

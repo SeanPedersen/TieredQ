@@ -6,7 +6,6 @@
 #include "tieredq_train_allocation.h"
 #include "tieredq_train_codebook.h"
 #include "tieredq_train_codebook_data.h"
-#include "tieredq_train_distortion.h"
 #include <algorithm>
 #include <bit>
 #include <climits>
@@ -102,9 +101,9 @@ void split_derivation_test() {
   Allocation bits(200,2); bits[0]=3;
   require(lookup_stored_bits(bits,true)==408 && lookup_stored_bits(Allocation(200,2),true)==400,"padded storage");
 }
-// The 3-bit allocation spends the whole budget, never stores more than code_bits or the 2/4-bit allocation, and
-// must predict less distortion. The exact allocation fits the same storage and never predicts more than a nibble
-// choice (a 2/4 fallback that reaches 5 bits leaves the nibble layout). On a flat spectrum at 2 bits/dim, one padded 3-bit coordinate falls back.
+// Exact allocation stays within the padded storage of the 2/4-bit rule and never predicts more distortion than its
+// 2/4-bit fallback or than a dense greedy allocation whose padded size also fits; mildly decaying spectra keep
+// additive 3-bit tiers. On a flat spectrum at 2 bits/dim uniform 2-bit tiers win.
 void padded_allocation_test() {
   constexpr int ranks=200;
   DistortionTable error{1};
@@ -116,27 +115,21 @@ void padded_allocation_test() {
   for (uint32_t code_bits=ranks;code_bits<=4*ranks;code_bits+=ranks/8) for (uint32_t odd:{0u,1u,3u}) {
     const uint32_t budget=code_bits-odd;
     const auto dense=greedy_allocation(model,budget,false);
-    const auto fallback=has_three_bit_tier(dense) ? greedy_allocation(model,budget,true) : dense;
     if (widest_tier(dense)>lookup_code_bits) continue;
-    const auto chosen=fast_lookup_allocation(model,budget,dense);
+    const auto fallback=lookup_fallback(model,budget,dense);
     const uint32_t limit=lookup_storage_limit(fallback,budget);
     const auto exact=exact_lookup_allocation(model.variance,error,limit);
+    require(exact.additive_three==has_three_bit_tier(exact.bits),"invalid padded allocation");
     require(lookup_stored_bits(exact.bits,exact.additive_three)<=limit,"exact allocation exceeds its storage");
-    require(widest_tier(chosen.bits)>lookup_code_bits ||
-            predicted_distortion(model,exact.bits)<=predicted_distortion(model,chosen.bits)*(1+1e-12),"exact allocation loses to greedy");
-    require(chosen.additive_three==has_three_bit_tier(chosen.bits),"invalid padded allocation");
-    if (!chosen.additive_three) { require(chosen.bits==fallback,"2/4-bit fallback changed"); continue; }
-    const bool nibble_fallback=widest_tier(fallback)<=lookup_code_bits;
-    require(widest_tier(chosen.bits)<=lookup_code_bits,"3-bit allocation left the nibble layout");
-    require(chosen.bits==greedy_allocation(model,budget,false),"3-bit allocation trimmed its budget");
-    require(lookup_stored_bits(chosen.bits,true)<=std::max(budget,nibble_fallback ? lookup_stored_bits(fallback,false) : 0),"padded allocation exceeds the budget");
-    require(predicted_distortion(model,chosen.bits)<predicted_distortion(model,fallback),"3-bit tiers kept without gain");
-    ++additive;
+    const double predicted=predicted_distortion(model,exact.bits)*(1-1e-12);
+    require(widest_tier(fallback)>lookup_code_bits || predicted<=predicted_distortion(model,fallback),"exact allocation loses to the 2/4-bit fallback");
+    require(lookup_stored_bits(dense,true)>limit || predicted<=predicted_distortion(model,dense),"exact allocation loses to greedy");
+    additive+=exact.additive_three;
   }
   require(additive>=ranks/16,"padded allocation rarely keeps 3-bit tiers");
   std::fill(model.variance.begin(),model.variance.end(),1.0);
-  const auto flat=fast_lookup_allocation(model,2*ranks,greedy_allocation(model,2*ranks,false));
-  require(!flat.additive_three && flat.bits==Allocation(ranks,2),"2 bits/dim does not fall back to 2-bit tiers");
+  const auto flat=exact_lookup_allocation(model.variance,error,2*ranks);
+  require(!flat.additive_three && flat.bits==Allocation(ranks,2),"2 bits/dim does not keep 2-bit tiers");
 }
 // Reference for exact_lookup_allocation: enumerates the 4-, 3- and 2-bit counts over ranks sorted by variance and
 // fills the remaining padded 1-bit slots (the #9 experiment allocator, O(d^2 * groups)).
@@ -185,46 +178,25 @@ void exact_allocation_test() {
   }
   require(cases>1000,"too few exact allocation cases");
 }
-// Measured distortion matches the Gaussian table on Gaussian rows. Rows with random norms (a scale mixture) raise
-// raw distortion, while shape-gain measurement divides out each row's RMS as the encoder does.
-// The RMS of a finite row is noisy, which trims tails by about 1% at 256 ranks.
-void measured_distortion_test() {
-  constexpr size_t ranks=256,rows=8192;
-  constexpr double low_norm=0.5,high_norm=1.5;
-  const auto& book=gaussian_codebooks()[lookup_code_bits];
-  const double gaussian=distortion(book);
-  std::mt19937_64 rng(9); std::normal_distribution<float> normal;
-  std::vector<float> plain(rows*ranks),mixed(plain.size());
-  for (size_t i=0;i<rows;++i) for (size_t r=0;r<ranks;++r) {
-    plain[i*ranks+r]=normal(rng);
-    mixed[i*ranks+r]=plain[i*ranks+r]*float(i%2 ? high_norm : low_norm);
-  }
-  auto mean_error=[&](const std::vector<float>& z,bool shape_gain) {
-    DistortionSums sums(ranks,{book}); sums.add(z.data(),rows,shape_gain);
-    double total=0; for (size_t r=0;r<ranks;++r) total+=sums.mean(r,1)/sums.mean(r,0);
-    return total/ranks;
-  };
-  require(std::fabs(mean_error(plain,false)/gaussian-1)<0.02,"raw distortion differs on Gaussian rows");
-  require(std::fabs(mean_error(plain,true)/gaussian-1)<0.03,"shape-gain distortion differs on Gaussian rows");
-  require(mean_error(mixed,false)>1.2*gaussian,"raw distortion misses the scale mixture");
-  require(std::fabs(mean_error(mixed,true)/gaussian-1)<0.03,"shape-gain distortion keeps the row scale");
-}
-// Fast targets with every tier <= 4 bits use additive 3-bit tiers; training predicts their padded storage.
+// Fast targets with every tier <= 4 bits use additive 3-bit tiers; training predicts their padded storage. The budget
+// bounds padded storage under the 2/4-bit rule, whose padding adds at most an unpaired 2-bit and three 1-bit slots,
+// and the realised code bits fit that storage.
 void fast_target_allocation_test() {
   size_t with_three=0;
   for (uint32_t code_bits:{72u,80u,88u,96u,112u}) {
     const auto fast=train(code_bits,TieredQIndexMode::fast),full=train(code_bits,TieredQIndexMode::full);
     require(widest(fast)<=lookup_code_bits,"fast allocation left the nibble layout");
-    require(fast.config().code_bits<=code_bits,"fast allocation exceeds the budget");
     TieredQIndex index(fast);
+    constexpr uint32_t rule_padding=2+3;
+    require(!nibble_layout || stored_code_bits(index)<=ceil_div(code_bits+rule_padding,CHAR_BIT)*CHAR_BIT,"fast allocation exceeds the budget");
     Allocation bits;
     for (const auto& tier:fast.tiers()) bits.insert(bits.end(),tier.dimensions,tier.bits);
     require(!nibble_layout || stored_code_bits(index)==lookup_stored_bits(bits,true),"training mispredicts padded fast storage");
+    require(!nibble_layout || fast.config().code_bits<=stored_code_bits(index),"realised code bits exceed padded storage");
     require(persisted_three_levels(full)==gaussian_codebooks()[split_code_bits],"full target changed the 3-bit codebook");
     if (!has_three(fast)) continue;
     ++with_three;
     require(persisted_three_levels(fast)==additive_three_codebook(),"fast 3-bit tiers do not use the additive codebook");
-    require(fast.config().code_bits==code_bits,"3-bit allocation trimmed its budget");
   }
   require(with_three>=3,"fast target allocates too few 3-bit tiers");
 }
@@ -273,7 +245,6 @@ void tieredq_additive_tests() {
   split_derivation_test();
   padded_allocation_test();
   exact_allocation_test();
-  measured_distortion_test();
   fast_target_allocation_test();
   additive_index_test();
   lloyd_max_fast_test();

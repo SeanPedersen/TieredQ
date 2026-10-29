@@ -1,5 +1,6 @@
 #!/bin/bash
 # Issue #9 greedy-vs-exact allocation gap on every dataset (4 CPUs; cheap, runs beside the A/B lanes).
+# Pinned: build-gap must come from 8762da6 (-DISSUE9_GAP=ON); main no longer has fast_lookup_allocation.
 set -u
 W=/home/sean/experiments/TieredQ-issue9-empirical-20261029
 cd $W

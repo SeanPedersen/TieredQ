@@ -3,6 +3,8 @@
 # allocator on variance^power, and the parallel (ScaNN-style) weight. Waits for round 2's timing so it does not
 # disturb it; eight 4-CPU lanes (LANES="arm:cpus ..." reruns selected arms). heldout.py picks a setting on even
 # queries and reports odd ones.
+# Pinned: source-new must be 8762da6. Main removed these switches when exact allocation on variance^1.5 became
+# the fast default.
 set -u
 W=/home/sean/experiments/TieredQ-issue9-empirical-20261029
 X=$W/source-new/benchmark/experiments/issue20_additive

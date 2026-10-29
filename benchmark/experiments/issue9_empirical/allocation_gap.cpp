@@ -4,6 +4,7 @@
 //  - fast: the shipped fast choice vs exact_lookup_allocation under padded nibble storage, both at the stored bits
 //    the shipped choice uses (equal memory) and at the nominal budget.
 // Distortion is reported as a fraction of total variance. Usage: allocation_gap DATA_DIR D BUDGET...
+// Pinned: build against 8762da6 (-DISSUE9_GAP=ON); main no longer has fast_lookup_allocation.
 #include "tieredq/tieredq.h"
 #include "tieredq_train_allocation.h"
 #include "tieredq_train_codebook.h"

@@ -46,7 +46,12 @@ class PythonIndex {
     return index_ ? index_->size() : 0;
   }
   uint32_t dimensions() const { return config_.dimensions; }
-  uint32_t code_bits() const { return config_.code_bits; }
+  // The requested budget until add() trains; then the model's realised bits, which fast nibble targets may round
+  // to their padded storage (#9).
+  uint32_t code_bits() const {
+    std::shared_lock lock(mutex_);
+    return index_ ? index_->codec().config().code_bits : config_.code_bits;
+  }
   const char* mode() const { return mode_==dv::TieredQIndexMode::fast ? "fast" : "full"; }
   size_t storage_bytes() const {
     std::shared_lock lock(mutex_);
@@ -149,7 +154,9 @@ void bind_index(nb::module_& module) {
       .def(nb::init<uint32_t, uint32_t, const std::string&>(), "dimensions"_a, "code_bits"_a, nb::kw_only(), "mode"_a = "fast")
       .def("__len__", &PythonIndex::size, nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro("dimensions", &PythonIndex::dimensions)
-      .def_prop_ro("code_bits", &PythonIndex::code_bits)
+      .def_prop_ro("code_bits", &PythonIndex::code_bits,
+                   "Requested code bits per vector before training; the trained model's realised bits after.",
+                   nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro("mode", &PythonIndex::mode)
       .def_prop_ro("storage_bytes", &PythonIndex::storage_bytes,
                    "Allocated vector-data bytes, excluding shared models and query scratch.",

@@ -1,12 +1,14 @@
 # Builds the issue #9 tools against one TieredQ source tree: cmake -S . -B out -DTIEREDQ_SOURCE=<tree>
-# allocation_gap needs the #9 allocator headers; pass -DISSUE9_GAP=OFF for older trees (build_time uses the public API).
+# build_time uses the public API. allocation_gap needs the experiment allocators of 8762da6 (-DISSUE9_GAP=ON);
+# allocation_time needs the O(d) exact allocator (-DISSUE9_TIME=OFF for older trees).
 cmake_minimum_required(VERSION 3.18)
 project(issue9_allocation CXX)
 set(TIEREDQ_TESTS OFF CACHE BOOL "" FORCE)
 set(TIEREDQ_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory(${TIEREDQ_SOURCE} tieredq)
 find_package(OpenMP REQUIRED)
-option(ISSUE9_GAP "Build the allocation-gap analysis" ON)
+option(ISSUE9_GAP "Build the allocation-gap analysis (8762da6 only)" OFF)
+option(ISSUE9_TIME "Build the exact allocator timing" ON)
 add_executable(issue9_build_time build_time.cpp)
 target_compile_features(issue9_build_time PRIVATE cxx_std_20)
 target_link_libraries(issue9_build_time PRIVATE TieredQ::TieredQ OpenMP::OpenMP_CXX)
@@ -15,6 +17,8 @@ if(ISSUE9_GAP)
   target_compile_features(allocation_gap PRIVATE cxx_std_20)
   target_include_directories(allocation_gap PRIVATE ${TIEREDQ_SOURCE}/src)
   target_link_libraries(allocation_gap PRIVATE TieredQ::TieredQ OpenMP::OpenMP_CXX)
+endif()
+if(ISSUE9_TIME)
   add_executable(allocation_time allocation_time.cpp)
   target_compile_features(allocation_time PRIVATE cxx_std_20)
   target_include_directories(allocation_time PRIVATE ${TIEREDQ_SOURCE}/src)

@@ -1,6 +1,8 @@
 #!/bin/bash
 # Issue #9 recall oracle: the exact padded allocator on variance^power, power 0.5-1.5 (1 is MSE-optimal), against
 # the base (c85b0f8) rows of job_ab.sh. Recall only; five 7-CPU lanes in parallel.
+# Pinned: source-new must be 8762da6. Main removed these switches when exact allocation on variance^1.5 became
+# the fast default.
 set -u
 W=/home/sean/experiments/TieredQ-issue9-empirical-20261029
 E=$W/source-new/benchmark/experiments/issue20_additive

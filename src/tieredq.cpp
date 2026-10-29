@@ -13,7 +13,6 @@
 #include "tieredq_train_codebook.h"
 #include "tieredq_train_codebook_data.h"
 #include "tieredq_train_allocation.h"
-#include "tieredq_train_distortion.h"
 #include "training_rng.h"
 #include <algorithm>
 #include <array>
@@ -293,105 +292,6 @@ __attribute__((target("avx512f"))) size_t scan16(const uint8_t* payload,size_t c
   return begin;
 }
 #endif
-// Experiment knobs for #9: the exact padded allocator, and allocation on variance^power (1 is MSE-optimal).
-bool exact_allocator() {
-  const char* name=std::getenv("DV_TIEREDQ_ALLOCATOR");
-  if (!name || !std::strcmp(name,"greedy")) return false;
-  if (!std::strcmp(name,"exact")) return true;
-  bad("DV_TIEREDQ_ALLOCATOR must be greedy or exact");
-  return false;
-}
-double allocation_power() {
-  const char* value=std::getenv("DV_TIEREDQ_ALLOCATION_POWER");
-  const double power=value ? std::strtod(value,nullptr) : 1.0;
-  if (!(power>0)) bad("DV_TIEREDQ_ALLOCATION_POWER must be positive");
-  return power;
-}
-enum class AllocationWeight { none, query, parallel };
-AllocationWeight allocation_weight() {
-  const char* name=std::getenv("DV_TIEREDQ_ALLOCATION_WEIGHT");
-  if (!name || !std::strcmp(name,"none")) return AllocationWeight::none;
-  if (!std::strcmp(name,"query")) return AllocationWeight::query;
-  if (!std::strcmp(name,"parallel")) return AllocationWeight::parallel;
-  bad("DV_TIEREDQ_ALLOCATION_WEIGHT must be none, query or parallel");
-  return AllocationWeight::none;
-}
-// Strength of the parallel (anisotropic, ScaNN-style) term: a rank's weight is 1 + strength * variance / mean variance,
-// so 0 is MSE and large strengths approach allocating on variance^2.
-double parallel_strength() {
-  const char* value=std::getenv("DV_TIEREDQ_PARALLEL_WEIGHT");
-  const double strength=value ? std::strtod(value,nullptr) : 1.0;
-  if (!(strength>=0)) bad("DV_TIEREDQ_PARALLEL_WEIGHT must be non-negative");
-  return strength;
-}
-// Expected squared projection of a query distributed like the data on each descending PCA rank (#9): residual
-// variance, plus the residual mean and the cluster-weighted centroids along the eigenvector. Inner-product score
-// error weights a rank's reconstruction error by this energy. Within-cluster residual means are taken as zero.
-std::vector<double> query_energy(const std::vector<double>& eigenvalues,const std::vector<double>& eigenvectors,
-                                 const std::vector<float>& centroids,const uint32_t* ids,size_t rows,int d,
-                                 const std::vector<double>& residual_mean) {
-  const size_t k=centroids.size()/size_t(d);
-  std::vector<double> share(k,0);
-  for (size_t i=0;i<rows;++i) share[ids[i]]+=1.0/double(rows);
-  std::vector<double> energy(d);
-#pragma omp parallel for schedule(static)
-  for (int rank=0;rank<d;++rank) {
-    const double* vector=eigenvectors.data()+size_t(d-1-rank)*d;
-    double offset=0,between=0;
-    for (int j=0;j<d;++j) offset+=residual_mean[j]*vector[j];
-    for (size_t c=0;c<k;++c) {
-      if (share[c]==0) continue;
-      double dot=0; for (int j=0;j<d;++j) dot+=double(centroids[c*d+j])*vector[j];
-      between+=share[c]*dot*dot;
-    }
-    energy[rank]=std::max(0.0,eigenvalues[d-1-rank])+offset*offset+between;
-  }
-  return energy;
-}
-tieredq_detail::DistortionModel distortion_model() {
-  const char* name=std::getenv("DV_TIEREDQ_DISTORTION");
-  if (!name || !std::strcmp(name,"gaussian")) return tieredq_detail::DistortionModel::gaussian;
-  if (!std::strcmp(name,"raw")) return tieredq_detail::DistortionModel::raw;
-  if (!std::strcmp(name,"shape")) return tieredq_detail::DistortionModel::shape_gain;
-  bad("DV_TIEREDQ_DISTORTION must be gaussian, raw or shape");
-  return tieredq_detail::DistortionModel::gaussian;
-}
-// Replaces the Gaussian tables of ranks with positive variance by distortion measured on the training residuals
-// (sample minus assigned centroid minus mean), standardized along the PCA eigenvectors. additive receives the
-// same tables with the additive 3-bit codebook at width 3.
-void measure_distortion(tieredq_detail::DistortionModel model,const float* sample,size_t rows,int d,const uint32_t* ids,
-                        const std::vector<float>& centroids,const std::vector<double>& mean,const std::vector<double>& eigenvectors,
-                        const std::vector<double>& eigenvalues,std::vector<tieredq_detail::DistortionTable>& lloyd_max,
-                        std::vector<tieredq_detail::DistortionTable>& additive) {
-  constexpr size_t chunk_rows=4096;
-  const auto& books=tieredq_detail::gaussian_codebooks();
-  std::vector<std::vector<float>> measured(books.begin()+1,books.end());
-  measured.push_back(tieredq_detail::additive_three_codebook());
-  const size_t additive_column=measured.size();
-  std::vector<float> standardize(product(d,d),0);
-  for (int rank=0;rank<d;++rank) {
-    const double variance=eigenvalues[d-1-rank];
-    if (variance<=0) continue;
-    for (int j=0;j<d;++j) standardize[size_t(j)*d+rank]=float(eigenvectors[size_t(d-1-rank)*d+j]/std::sqrt(variance));
-  }
-  tieredq_detail::DistortionSums sums(d,std::move(measured));
-  std::vector<float> residual(product(chunk_rows,d)),z(residual.size());
-  for (size_t begin=0;begin<rows;begin+=chunk_rows) {
-    const size_t count=std::min(chunk_rows,rows-begin);
-    for (size_t i=0;i<count;++i) {
-      const float* row=sample+(begin+i)*d; const float* center=centroids.data()+size_t(ids[begin+i])*d;
-      for (int j=0;j<d;++j) residual[i*d+j]=float(double(row[j])-center[j]-mean[j]);
-    }
-    multiply(residual.data(),int(count),d,standardize.data(),d,z.data());
-    sums.add(z.data(),count,model==tieredq_detail::DistortionModel::shape_gain);
-  }
-  for (int rank=0;rank<d;++rank) {
-    const double energy=sums.mean(rank,0);
-    if (eigenvalues[d-1-rank]<=0 || energy<=0) continue;
-    for (unsigned b=1;b<=tieredq_detail::max_code_bits;++b) lloyd_max[rank][b]=additive[rank][b]=sums.mean(rank,b)/energy;
-    additive[rank][tieredq_detail::split_code_bits]=sums.mean(rank,additive_column)/energy;
-  }
-}
 bool same_scan_geometry(const TieredQQuery& a,const TieredQQuery& b) {
   return a.scan_groups.size()==b.scan_groups.size() &&
          std::equal(a.scan_groups.begin(),a.scan_groups.end(),b.scan_groups.begin(),tieredq_detail::same_group);
@@ -477,43 +377,27 @@ TieredQ TieredQ::train(TieredQConfig config,const float* sample,size_t rows,uint
   for (unsigned b=1;b<=8;++b) { c.levels_[b]=tieredq_detail::gaussian_codebooks()[b]; gaussian[b]=tieredq_detail::distortion(c.levels_[b]); }
   auto additive_gaussian=gaussian; additive_gaussian[tieredq_detail::split_code_bits]=tieredq_detail::distortion(additive);
   tieredq_detail::AllocationModel allocation{std::vector<double>(d),std::vector<uint32_t>(d),std::vector(d,gaussian)};
-  std::vector additive_error(d,additive_gaussian);
-  if (const auto model=distortion_model();model!=tieredq_detail::DistortionModel::gaussian)
-    measure_distortion(model,sample,rows,d,ids.data(),c.centroids_,mean,cov,eigenvalues,allocation.error,additive_error);
   for (int j=0;j<d;++j) {
     allocation.variance[j]=eigenvalues[d-1-j];
     allocation.cap[j]=uint32_t(j)<config.wide_dims ? config.max_bits : std::min<uint32_t>(config.max_bits,6);
   }
-  // Recall experiments (#9) allocate on reweighted variances: variance^power, times a query-energy or parallel weight.
+  auto bits=tieredq_detail::greedy_allocation(allocation,config.code_bits,false);
+  // Fast targets allocate on variance^1.5 instead of the MSE-optimal variance: it is recall-optimal at equal storage
+  // (#9, chosen and confirmed on disjoint query halves). SAQ's inner-product error model puts the optimum at power 2
+  // and ScaNN's parallel-error argument between 1 and 2.
   auto weighted=allocation;
-  const double power=allocation_power();
-  const auto weight=allocation_weight();
-  const auto energy=weight==AllocationWeight::query ? query_energy(eigenvalues,cov,c.centroids_,ids.data(),rows,d,mean) : std::vector<double>();
-  const double mean_variance=std::accumulate(allocation.variance.begin(),allocation.variance.end(),0.0,
-                                             [](double sum,double v) { return sum+std::max(0.0,v); })/d;
-  for (int j=0;j<d;++j) {
-    const double variance=std::max(0.0,allocation.variance[j]);
-    if (power!=1) weighted.variance[j]=std::pow(variance,power);
-    if (weight==AllocationWeight::query) weighted.variance[j]*=energy[j];
-    if (weight==AllocationWeight::parallel && mean_variance>0)
-      weighted.variance[j]*=1+parallel_strength()*variance/mean_variance;
-  }
-  // The exact allocator keeps the shipped layout and storage: the unweighted model decides the nibble path and its
-  // padded limit, and the weights only choose which ranks get which widths.
-  const bool exact=exact_allocator() && config.max_bits>=tieredq_detail::lookup_code_bits &&
-                   distortion_model()==tieredq_detail::DistortionModel::gaussian;
-  auto bits=tieredq_detail::greedy_allocation(exact ? allocation : weighted,config.code_bits,false);
+  for (auto& v:weighted.variance) v=std::pow(std::max(0.0,v),tieredq_detail::fast_allocation_power);
   // Fast caches of models with every tier <= 4 bits use the x86 nibble lookup, which stores 3-bit codes exactly
-  // only for the additive codebook (tieredq_lookup_layout.h). Fast targets therefore use that codebook when its
-  // padded allocation beats 2/4-bit tiers; full mode and wider fast models pack the Lloyd-Max codes densely.
+  // only for the additive codebook (tieredq_lookup_layout.h). The MSE allocation decides that layout and its padded
+  // storage limit, so stored bytes do not depend on the weights; the exact allocator then fills that storage.
+  // Full mode and wider fast models pack the Lloyd-Max codes densely.
   if (config.target_mode==TieredQIndexMode::fast && tieredq_detail::widest_tier(bits)<=tieredq_detail::lookup_code_bits) {
-    allocation.error=additive_error; weighted.error=std::move(additive_error);
-    auto fast=exact ? tieredq_detail::exact_lookup_allocation(weighted.variance,weighted.error.front(),
-                        tieredq_detail::lookup_storage_limit(tieredq_detail::lookup_fallback(allocation,config.code_bits,bits),config.code_bits))
-                    : tieredq_detail::fast_lookup_allocation(weighted,config.code_bits,bits);
+    allocation.error.assign(d,additive_gaussian);
+    const uint32_t limit=tieredq_detail::lookup_storage_limit(tieredq_detail::lookup_fallback(allocation,config.code_bits,bits),config.code_bits);
+    auto fast=tieredq_detail::exact_lookup_allocation(weighted.variance,additive_gaussian,limit,config.max_bits);
     if (fast.additive_three) c.levels_[3]=additive;
     bits=std::move(fast.bits);
-  } else if (exact) {
+  } else if (config.target_mode==TieredQIndexMode::fast) {
     bits=tieredq_detail::greedy_allocation(weighted,config.code_bits,false);
   }
   profile.mark("bit_allocation");
@@ -526,7 +410,8 @@ TieredQ TieredQ::train(TieredQConfig config,const float* sample,size_t rows,uint
       c.tiers_.push_back({uint32_t(start),count,uint32_t(b),0,offset}); offset+=count*b;
     }
   }
-  // Storage-aware allocation may realise fewer bits than requested; the model stores what its codes use.
+  // Fast nibble allocation bounds padded storage, so it may realise fewer or (filling padding) more bits than
+  // requested; the model stores what its codes use.
   c.config_.code_bits=offset;
   const int m=int(ranks.size());
   std::vector<float> pca_basis(product(d,m));

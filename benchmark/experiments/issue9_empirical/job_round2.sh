@@ -2,6 +2,8 @@
 # Issue #9 round 2. Recall: layout-preserving exact allocator (nibble path and padded limit from the unweighted
 # model) on variance^power and on query-energy weights, five 7-CPU lanes. Then build and search cost on quiet
 # CPUs 0-7: one process per (round, dataset, arm), arm order rotating per round, against c85b0f8 (base).
+# Pinned: source-new must be 8762da6. Main removed these switches when exact allocation on variance^1.5 became
+# the fast default.
 set -u
 W=/home/sean/experiments/TieredQ-issue9-empirical-20261029
 X=$W/source-new/benchmark/experiments

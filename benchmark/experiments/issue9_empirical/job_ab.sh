@@ -2,6 +2,8 @@
 # Issue #9 empirical-distortion A/B: c85b0f8 (base) vs the new tree under DV_TIEREDQ_DISTORTION=gaussian|raw|shape.
 # Recall is deterministic, so arms run untimed in parallel, one 8-CPU lane each; reuses the issue #20 ab_eval
 # and exported data. The gaussian arm must reproduce base model_ids and runs on GloVe/SIFT only.
+# Pinned: source-new must be 8762da6. Main removed these switches when exact allocation on variance^1.5 became
+# the fast default.
 set -u
 W=/home/sean/experiments/TieredQ-issue9-empirical-20261029
 E=$W/source-new/benchmark/experiments/issue20_additive

@@ -1,5 +1,5 @@
-// Greedy rate-distortion bit allocation over PCA ranks, and the fast-target choice between additive 3-bit and
-// 2/4-bit allocations under the padded storage of the x86 nibble-lookup layout.
+// Greedy rate-distortion bit allocation over PCA ranks, and the exact fast-target allocation (additive 3-bit tiers
+// included) under the padded storage of the x86 nibble-lookup layout.
 #pragma once
 #include "tieredq_io.h"
 #include "tieredq_lookup_layout.h"
@@ -61,12 +61,9 @@ inline uint32_t lookup_stored_bits(const Allocation& bits,bool split) {
   for (unsigned b:bits) ++dimensions[b];
   return uint32_t(lookup_group_bytes(lookup_group_count(dimensions,split))*CHAR_BIT);
 }
-struct FastLookupAllocation { Allocation bits; bool additive_three; };
-// Fast target whose dense allocation fits the nibble layout. The additive 3-bit allocation is kept only if its
-// padded storage is no more than code_bits (or than a nibble 2/4-bit allocation, whose own padding may already
-// exceed it) and it predicts less distortion than the 2/4-bit allocation. Trimming its budget to absorb padding
-// loses recall on non-Gaussian data (SIFT, #20), so an overflow falls back instead. The 2/4 steps can reach
-// 5 bits, which moves that fallback to packed codes. error[rank][3] must be the additive codebook's distortion.
+// The 2/4-bit fast allocation of a dense allocation that fits the nibble layout (its 2 -> 4 steps can reach 5 bits).
+// Fast targets no longer ship it; it only sets the padded storage limit below, which keeps the stored bytes of the
+// pre-#9 rule. error[rank][3] must be the additive codebook's distortion.
 inline Allocation lookup_fallback(const AllocationModel& model,uint32_t code_bits,const Allocation& dense) {
   return has_three_bit_tier(dense) ? greedy_allocation(model,code_bits,true) : dense;
 }
@@ -74,17 +71,10 @@ inline Allocation lookup_fallback(const AllocationModel& model,uint32_t code_bit
 inline uint32_t lookup_storage_limit(const Allocation& fallback,uint32_t code_bits) {
   return widest_tier(fallback)<=lookup_code_bits ? std::max(code_bits,lookup_stored_bits(fallback,false)) : code_bits;
 }
-inline FastLookupAllocation fast_lookup_allocation(const AllocationModel& model,uint32_t code_bits,const Allocation& dense) {
-  const auto fallback=lookup_fallback(model,code_bits,dense);
-  auto bits=greedy_allocation(model,code_bits,false);
-  if (widest_tier(bits)>lookup_code_bits || !has_three_bit_tier(bits)) return {fallback,false};
-  if (lookup_stored_bits(bits,true)>lookup_storage_limit(fallback,code_bits) ||
-      predicted_distortion(model,bits)>=predicted_distortion(model,fallback))
-    return {fallback,false};
-  return {std::move(bits),true};
-}
-// Exact nibble-layout allocation under padded storage <= limit_bits (#9), for one distortion table shared by all
-// ranks that is convex in the code width (error[3] is the additive codebook's). With G = 2 * limit_bits / 8 groups,
+struct FastLookupAllocation { Allocation bits; bool additive_three; };
+constexpr double fast_allocation_power=1.5; // fast targets allocate on variance^power (#9, see TieredQ::train)
+// Exact nibble-layout allocation of at most max_width bits per rank under padded storage <= limit_bits (#9), for
+// one distortion table shared by all ranks that is convex in the code width (error[3] is the additive codebook's). With G = 2 * limit_bits / 8 groups,
 // 4-bit codes take a group each, 2-bit codes and 3-bit low parts pair up and 1-bit codes and 3-bit high parts fill
 // groups of four, so an allocation fits iff its total bits plus 2 when the count of 2- and 3-bit codes is odd is at
 // most 4G. Unit steps 2 and 4 flip that parity. Greedy at 4G maximizes the gain without the parity term. Swapping an
@@ -92,10 +82,12 @@ inline FastLookupAllocation fast_lookup_allocation(const AllocationModel& model,
 // parity-preserving swaps shows some optimum differs from greedy by at most exchange_window removed and as many
 // added unit steps. A DP over ranks inside that window is therefore exact, and takes O(d) after the greedy.
 constexpr uint32_t exchange_window=4;
-inline FastLookupAllocation exact_lookup_allocation(const std::vector<double>& variance,const DistortionTable& error,uint32_t limit_bits) {
+inline FastLookupAllocation exact_lookup_allocation(const std::vector<double>& variance,const DistortionTable& error,
+                                                    uint32_t limit_bits,uint32_t max_width=lookup_code_bits) {
   const uint32_t d=uint32_t(variance.size()),capacity=uint32_t(limit_bits/CHAR_BIT*lookup_pair_groups*lookup_code_bits);
-  const AllocationModel model{variance,std::vector<uint32_t>(d,lookup_code_bits),std::vector(d,error)};
-  const auto greedy=greedy_allocation(model,std::min(capacity,d*lookup_code_bits),false);
+  max_width=std::min(max_width,lookup_code_bits);
+  const AllocationModel model{variance,std::vector<uint32_t>(d,max_width),std::vector(d,error)};
+  const auto greedy=greedy_allocation(model,std::min(capacity,d*max_width),false);
   auto paired=[](unsigned b) { return b==split_low_bits || b==split_code_bits; };
   uint32_t greedy_bits=0; bool odd=false;
   for (unsigned b:greedy) { greedy_bits+=b; odd^=paired(b); }
@@ -112,7 +104,7 @@ inline FastLookupAllocation exact_lookup_allocation(const std::vector<double>& v
     for (uint32_t removed=0;removed<side;++removed) for (uint32_t added=0;added<side;++added) for (bool parity:{false,true}) {
       const double base=cost[state(removed,added,parity)];
       if (base==INFINITY) continue;
-      for (unsigned b=0;b<=lookup_code_bits;++b) {
+      for (unsigned b=0;b<=max_width;++b) {
         const uint32_t r=removed+(b<g ? g-b : 0),a=added+(b>g ? b-g : 0);
         if (r>exchange_window || a>exchange_window) continue;
         const uint32_t to=state(r,a,parity^(paired(b)!=paired(g)));
