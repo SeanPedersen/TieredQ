@@ -12,6 +12,7 @@
 #include "tieredq_train_residuals.h"
 #include "tieredq_train_codebook.h"
 #include "tieredq_train_codebook_data.h"
+#include "tieredq_train_allocation.h"
 #include "training_rng.h"
 #include <algorithm>
 #include <array>
@@ -28,7 +29,6 @@
 #include <numeric>
 #include <mutex>
 #include <omp.h>
-#include <queue>
 #include <stdexcept>
 #if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
 #include <immintrin.h>
@@ -371,43 +371,25 @@ TieredQ TieredQ::train(TieredQConfig config,const float* sample,size_t rows,uint
   profile.mark("eigen");
   tieredq_detail::dump_training_stage("eigenvectors.f64",cov);
   tieredq_detail::dump_training_stage("eigenvalues.f64",eigenvalues);
-  c.levels_.resize(9); std::array<double,9> error{}; error[0]=1;
-  for (unsigned b=1;b<=8;++b) { c.levels_[b]=tieredq_detail::gaussian_codebooks()[b]; error[b]=tieredq_detail::distortion(c.levels_[b]); }
-  struct Gain { double value; int rank; bool operator<(const Gain& b) const { return value<b.value || (value==b.value && rank>b.rank); } };
-  auto cap=[&](int rank) {
-    return uint32_t(rank)<config.wide_dims ? config.max_bits : std::min<uint32_t>(config.max_bits,6);
-  };
-  // Greedy rate-distortion allocation by gain per stored bit. With skip_three a coordinate moves 2 -> 4 bits in
-  // one 2-bit step, so no tier has 3 bits (see below); a final bit no step can take is left unused.
-  auto allocate=[&](bool skip_three) {
-    std::vector<unsigned> bits(d,0);
-    auto step=[&](int rank) { return skip_three && bits[rank]==2 ? 2u : 1u; };
-    auto gain=[&](int rank) {
-      const unsigned b=bits[rank],s=step(rank);
-      return std::max(0.0,eigenvalues[d-1-rank])*(error[b]-error[b+s])/s;
-    };
-    std::priority_queue<Gain> gains;
-    for (int j=0;j<d;++j) gains.push({gain(j),j});
-    for (uint32_t used=0;used<config.code_bits;) {
-      if (gains.empty()) {
-        if (skip_three) break;
-        bad("code_bits exceeds the allocation cap");
-      }
-      const int j=gains.top().rank; gains.pop();
-      const unsigned s=step(j);
-      if (used+s>config.code_bits || bits[j]+s>cap(j)) continue;
-      bits[j]+=s; used+=s;
-      if (bits[j]<cap(j)) gains.push({gain(j),j});
-    }
-    return bits;
-  };
-  auto bits=allocate(false);
-  // When every tier fits the x86 nibble-lookup fast layout (<= 4 bits), each 3-bit code is stored in 4 bits, so
-  // 3-bit tiers spend storage the budget does not count; allocate without them to keep storage = code_bits.
-  // Full mode packs codes densely, where 3-bit tiers cost exactly 3 bits.
-  const unsigned widest=*std::max_element(bits.begin(),bits.end());
-  const bool nibble_layout=config.target_mode==TieredQIndexMode::fast && widest<=tieredq_detail::lookup_code_bits;
-  if (nibble_layout && std::count(bits.begin(),bits.end(),3u)) bits=allocate(true);
+  c.levels_.resize(9);
+  tieredq_detail::AllocationModel allocation{std::vector<double>(d),std::vector<uint32_t>(d),{}};
+  allocation.error[0]=1;
+  for (unsigned b=1;b<=8;++b) { c.levels_[b]=tieredq_detail::gaussian_codebooks()[b]; allocation.error[b]=tieredq_detail::distortion(c.levels_[b]); }
+  for (int j=0;j<d;++j) {
+    allocation.variance[j]=eigenvalues[d-1-j];
+    allocation.cap[j]=uint32_t(j)<config.wide_dims ? config.max_bits : std::min<uint32_t>(config.max_bits,6);
+  }
+  auto bits=tieredq_detail::greedy_allocation(allocation,config.code_bits,false);
+  // Fast caches of models with every tier <= 4 bits use the x86 nibble lookup, which stores 3-bit codes exactly
+  // only for the additive codebook (tieredq_lookup_layout.h). Fast targets therefore use that codebook when its
+  // padded allocation beats 2/4-bit tiers; full mode and wider fast models pack the Lloyd-Max codes densely.
+  if (config.target_mode==TieredQIndexMode::fast && tieredq_detail::widest_tier(bits)<=tieredq_detail::lookup_code_bits) {
+    const auto& additive=tieredq_detail::additive_three_codebook();
+    allocation.error[3]=tieredq_detail::distortion(additive);
+    auto fast=tieredq_detail::fast_lookup_allocation(allocation,config.code_bits,bits);
+    if (fast.additive_three) c.levels_[3]=additive;
+    bits=std::move(fast.bits);
+  }
   profile.mark("bit_allocation");
   // Group equal precisions; retain source PCA ranks explicitly in the unrotated basis.
   std::vector<int> ranks; uint32_t offset=0;

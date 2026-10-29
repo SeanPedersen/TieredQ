@@ -7,6 +7,8 @@
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
 #include "tieredq_scan_int8_avx512.h"
 #include "tieredq_scan_int8_avx2.h"
+#include "tieredq_scan_fast_scalar.h"
+#include "tieredq_train_codebook_data.h"
 namespace {
 using namespace dv;
 using namespace dv::tieredq_detail;
@@ -63,14 +65,20 @@ void wide_kernel_range_test(bool avx512) {
     }
   }
 }
-void lookup_kernel_test(size_t count,bool avx512) {
-  constexpr size_t dimensions=4, weights=40, centroids=2, code_bytes=19, stride=24;
-  const std::vector<TieredQTier> tiers{{0,35,4,0,0},{35,5,1,0,140}};
+// Tier layouts of 40 coded weights; the second scores additive 3-bit codes as split 2- and 1-bit groups.
+struct LookupLayout { std::vector<TieredQTier> tiers; size_t code_bytes; };
+const LookupLayout narrow_layout{{{0,35,4,0,0},{35,5,1,0,140}},19};
+const LookupLayout split_layout{{{0,7,4,0,0},{7,13,3,0,28},{20,11,2,0,67},{31,9,1,0,89}},13};
+void lookup_kernel_test(size_t count,bool avx512,const LookupLayout& layout_spec) {
+  constexpr size_t dimensions=4, weights=40, centroids=2;
+  const auto& tiers=layout_spec.tiers;
+  const size_t code_bytes=layout_spec.code_bytes, stride=code_bytes+TieredQ::metadata_bytes;
   std::vector<std::vector<float>> levels(9);
-  for (unsigned bits:{1u,4u}) {
+  for (unsigned bits:{1u,2u,4u}) {
     const size_t n=size_t(1)<<bits; levels[bits].resize(n);
     for (size_t i=0;i<n;++i) { const float x=2*float(i)/float(n-1)-1; levels[bits][i]=x*x*x; }
   }
+  levels[3]=additive_three_codebook();
   std::vector<float> basis(dimensions*weights),sigma(weights),mean(weights),centers(dimensions*centroids),norms(centroids,1);
   for (size_t i=0;i<basis.size();++i) basis[i]=std::sin(float(i));
   for (size_t i=0;i<weights;++i) { sigma[i]=float(i+1)/weights; mean[i]=std::cos(float(i)); }
@@ -89,6 +97,9 @@ void lookup_kernel_test(size_t count,bool avx512) {
     layout.store_half(row,layout.correction_offset(),.25);
   }
   const auto cache=build_fast_lookup_cache(levels,tiers,map,count,stride,code_bytes,centroids,rows.data());
+  size_t group_count=0;
+  for (const auto& tier:tiers) group_count+=lookup_tier_groups(tier.bits,tier.dimensions,true);
+  require(cache->lookup->groups.size()==group_count && cache->lookup->split,"split lookup groups missing");
   const std::vector<float> input{.3f,-.7f,.1f,.2f};
   auto query=prepare_fast_lookup_query(*cache->lookup,input.data(),source);
   const auto output=project_fast_query(map,input.data(),source);
@@ -121,15 +132,24 @@ void lookup_kernel_test(size_t count,bool avx512) {
       int sum=0;
       for (size_t g=start;g<std::min(start+lookup_scale_groups,groups.size());++g) {
         const auto& group=groups[g];
-        const unsigned code=read_code(rows.data()+d*stride,group.bit,group.bits*group.count);
-        sum+=query.tables[g*lookup_table_entries+code];
+        sum+=query.tables[g*lookup_table_entries+lookup_group_code(*cache->lookup,group,rows.data()+d*stride)];
       }
       dot+=float(sum)*query.scales[start/lookup_scale_groups];
     }
     const size_t cid=d%centroids;
     const float expected=query.centroid_scores[cid]+query.correction_weights[cid]*.25f+dot;
     require(std::fabs(scores[d]-expected)<1e-5f,"byte-table kernel differs from scalar sum");
+    // Independent float score from whole codes: table rounding bounds the error per group.
+    float exact=query.centroid_scores[cid]+query.correction_weights[cid]*.25f,bound=1e-4f;
+    for (const auto& tier:tiers) for (uint32_t j=0;j<tier.dimensions;++j)
+      exact+=output[tier.start+j]*levels[tier.bits][read_code(rows.data()+d*stride,tier.bit_offset+j*tier.bits,tier.bits)];
+    for (size_t g=0;g<group_count;++g) bound+=query.scales[g/lookup_scale_groups]/2;
+    require(std::fabs(scores[d]-exact)<=bound,"byte-table score differs from whole-code levels");
   }
+  FastScanScalarQuery scalar_query; scalar_query.lookup=query;
+  std::vector<float> scalar(count);
+  scan_fast_scalar_tile(*cache,&scalar_query,1,0,count,scalar.data(),count);
+  for (size_t d=0;d<count;++d) require(std::fabs(scalar[d]-scores[d])<1e-5f,"scalar fallback differs from byte-table kernel");
   require(std::all_of(scores.begin()+count,scores.end(),[](float x){return x==sentinel;}),"byte-table tail store overflow");
   for (size_t first=0;first<count;first+=lookup_block_docs) {
     const size_t rows=std::min(lookup_block_docs,count-first);
@@ -169,8 +189,9 @@ void tieredq_lookup_tests() {
         : bool(__builtin_cpu_supports("avx2"));
     if (!available) continue;
     wide_kernel_range_test(avx512);
-    for (size_t count:{1u,7u,8u,9u,15u,16u,17u,31u,32u,33u,63u,64u,65u,255u,256u,257u,511u,512u,4097u})
-      lookup_kernel_test(count,avx512);
+    for (const auto* layout:{&narrow_layout,&split_layout})
+      for (size_t count:{1u,7u,8u,9u,15u,16u,17u,31u,32u,33u,63u,64u,65u,255u,256u,257u,511u,512u,4097u})
+        lookup_kernel_test(count,avx512,*layout);
   }
 #endif
 }

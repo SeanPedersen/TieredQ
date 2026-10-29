@@ -22,9 +22,10 @@ struct TieredQConfig {
   uint32_t max_bits = 8;
   // Training-only: only the top-N PCA ranks may exceed 6 bits (UINT32_MAX disables the restriction).
   uint32_t wide_dims = UINT32_MAX;
-  // Training-only: the index mode whose storage layout bit allocation optimises for. Fast caches on x86 store
-  // 3-bit codes in 4-bit nibbles, so fast models with all tiers <= 4 bits skip 3-bit tiers; full mode packs
-  // codes densely and keeps them.
+  // Training-only: the index mode whose storage layout bit allocation optimises for. Fast models with all tiers
+  // <= 4 bits use the x86 nibble lookup, so their 3-bit tiers take an additive codebook whose codes split into
+  // 2- and 1-bit nibble parts; they are kept only if padded storage fits code_bits and they beat 2/4-bit tiers.
+  // Full mode packs codes densely and keeps the Lloyd-Max 3-bit codebook. Either model serves in either mode.
   TieredQIndexMode target_mode = TieredQIndexMode::fast;
   static TieredQConfig target_bytes(uint32_t dimensions, uint32_t bytes);
   static TieredQConfig target_code_bits(uint32_t dimensions, uint32_t bits);

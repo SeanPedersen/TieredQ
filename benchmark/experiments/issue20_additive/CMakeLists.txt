@@ -1,0 +1,10 @@
+# Builds the issue #20 A/B eval against one TieredQ source tree: cmake -S . -B out -DTIEREDQ_SOURCE=<tree>
+cmake_minimum_required(VERSION 3.18)
+project(issue20_ab CXX)
+set(TIEREDQ_TESTS OFF CACHE BOOL "" FORCE)
+set(TIEREDQ_EXAMPLES OFF CACHE BOOL "" FORCE)
+add_subdirectory(${TIEREDQ_SOURCE} tieredq)
+find_package(OpenMP REQUIRED)
+add_executable(ab_eval ab_eval.cpp)
+target_compile_features(ab_eval PRIVATE cxx_std_20)
+target_link_libraries(ab_eval PRIVATE TieredQ::TieredQ OpenMP::OpenMP_CXX)

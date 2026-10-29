@@ -1,4 +1,4 @@
-// Canonical Gaussian codebooks: exact float outputs of the original Lloyd-Max recipe.
+// Canonical Gaussian codebooks: exact float outputs of the original Lloyd-Max recipe, plus the additive 3-bit book.
 #pragma once
 #include <array>
 #include <vector>
@@ -146,5 +146,15 @@ inline const std::array<std::vector<float>,9>& gaussian_codebooks() {
     },
   }};
   return books;
+}
+// Gaussian-optimal additive 3-bit codebook {b} U {b+delta} (distortion 0.03527 vs 0.03455 for Lloyd-Max), with
+// b = {-2.18743848, -0.69113032, -0.21093376, 1.28537439} and delta = 0.90206410 snapped to a 2^-20 grid so
+// every b+delta is exact in float. Fast-target nibble layouts split its codes into 2- and 1-bit parts.
+inline const std::vector<float>& additive_three_codebook() {
+  static const std::vector<float> book{
+    -0x1.17fdf8p+1f, -0x1.490e4p+0f, -0x1.61dbep-1f, -0x1.affep-3f,
+    0x1.affep-3f, 0x1.61dbep-1f, 0x1.490e5p+0f, 0x1.17fep+1f,
+  };
+  return book;
 }
 } // namespace dv::tieredq_detail

@@ -3,6 +3,7 @@
 // precision by keeping each document's packed code row as 32-bit words interleaved across 16-document blocks.
 #pragma once
 #include "tieredq_layout.h"
+#include "tieredq_lookup_layout.h"
 #include "tieredq/tieredq.h"
 #include <algorithm>
 #include <bit>
@@ -25,7 +26,6 @@ constexpr size_t fast_code_word_bits = 32, fast_code_word_bytes = sizeof(uint32_
 constexpr size_t fast_scan_quant_max = 127;
 constexpr int x86_fast_level_max=63,arm_fast_level_max=127;
 constexpr int fast_code_lookup_levels=0; // tagged code IDs, not a numerical quantization range
-constexpr uint32_t lookup_code_bits=4; // widest tier of the narrow x86 lookup cache
 // Any wider tier scans exact packed codes on every backend.
 inline bool fast_code_lookup_supported(const std::vector<TieredQTier>& tiers) {
   return std::any_of(tiers.begin(),tiers.end(),[](const auto& tier){return tier.bits>lookup_code_bits;});

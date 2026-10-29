@@ -61,7 +61,7 @@ inline void append_fast_rows(FastScanCache& cache,const std::vector<std::vector<
       auto& lookup=*cache.lookup;
       for (size_t g=0;g<lookup.groups.size();++g) {
         const auto& group=lookup.groups[g];
-        const uint8_t code=uint8_t(read_code(row,group.bit,group.count*group.bits));
+        const uint8_t code=uint8_t(lookup_group_code(lookup,group,row));
         const size_t position=fast_lookup_position(lookup,doc,g);
         const size_t shift=g%lookup_pair_groups*lookup_code_bits;
         lookup.codes[position]=uint8_t((lookup.codes[position]&~((lookup_table_entries-1)<<shift))|(code<<shift));
