@@ -146,8 +146,9 @@ void exercise(unsigned d,unsigned bits,bool rotate,const std::string& prefix) {
   rejects([&]{TieredQ::load(prefix+".index");}); rejects([&]{TieredQIndex::load(prefix+".codec");});
   std::cout<<"PASS D="<<d<<" bits="<<bits<<" rotate="<<rotate<<'\n';
 }
-// A diagonal covariance forces uniform 5/6-bit tiers and exercises every table
-// half in the exact register-permutation path, independently of greedy fitting.
+// A diagonal covariance forces uniform tiers and exercises every table half in the exact
+// register-permutation path, independently of greedy fitting. A uniform 3-bit budget fits
+// the nibble lookup layout, so training spends it on 2- and 4-bit tiers instead.
 void wide_register_parity(unsigned bits) {
   constexpr unsigned d=64; constexpr size_t n=97;
   std::vector<float> sample(2*d*d,0),docs(n*d),query(d);
@@ -155,7 +156,10 @@ void wide_register_parity(unsigned bits) {
   std::mt19937 rng(bits); std::normal_distribution<float> normal;
   for(auto& v:docs) v=normal(rng); for(auto& v:query) v=normal(rng);
   auto codec=TieredQ::train(TieredQConfig{d,d*bits,1,false},sample.data(),2*d);
-  check(codec.tiers().size()==1 && codec.tiers()[0].bits==bits,"uniform wide allocation failed");
+  if (bits==3) {
+    uint32_t stored=0; for (const auto& tier:codec.tiers()) { check(tier.bits!=3,"3-bit tier in nibble layout"); stored+=tier.dimensions*tier.bits; }
+    check(stored<=d*bits,"storage-aware allocation exceeds the budget");
+  } else check(codec.tiers().size()==1 && codec.tiers()[0].bits==bits,"uniform wide allocation failed");
   auto encoded=codec.encode(docs.data(),n);
   if (TieredQ::kernel_available(TieredQKernel::neon)) {
     const auto q=codec.query(query.data());

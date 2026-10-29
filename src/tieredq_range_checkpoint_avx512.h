@@ -13,7 +13,7 @@ struct FastRangeCheckpoint {
   bool check(const FastScanCache& cache,const __m512* dots,const float* centers,
       const float* corrections,size_t doc,size_t valid,uint16_t* keep,__m512* terms) const {
     code_base_terms_avx512(cache,centers,corrections,doc,terms);
-    const auto factor=_mm512_loadu_ps(cache.factor.data()+doc);
+    const auto factor=_mm512_cvtph_ps(_mm256_loadu_si256(reinterpret_cast<const __m256i*>(cache.factor.data()+doc)));
     const auto sign_mask=_mm512_set1_epi32(INT32_MAX);
     const auto abs_factor=_mm512_castsi512_ps(_mm512_and_si512(_mm512_castps_si512(factor),sign_mask));
     const auto abs_base=_mm512_castsi512_ps(_mm512_and_si512(_mm512_castps_si512(terms[0]),sign_mask));

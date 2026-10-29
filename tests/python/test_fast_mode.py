@@ -15,7 +15,7 @@ CODE_BLOCK_WORD_BYTES = CODE_WORD_BYTES * CODE_BLOCK_ROWS
 # High-bit tiers plus trailing bits in each row's last packed code word.
 PACKED_CODE_BITS = DIMENSIONS * 7 + 4
 PACKED_CODE_KIND = 4
-FAST_METADATA_BYTES = 2 * np.dtype(np.float32).itemsize + np.dtype(np.uint8).itemsize
+FAST_METADATA_BYTES = 2 * np.dtype(np.float16).itemsize + np.dtype(np.uint8).itemsize
 
 
 def fast_codes_offset(payload, padded_rows):
@@ -155,9 +155,9 @@ def test_rejects_malformed_fast_only_files(tmp_path, corruption):
     elif corruption == "length":
         struct.pack_into("<Q", data, payload + 12, padded + 1)
     elif corruption == "nonfinite":
-        struct.pack_into("<f", data, payload + 20, np.nan)
+        struct.pack_into("<H", data, payload + 20, 0x7E00)  # binary16 NaN
     elif corruption == "centroid":
-        data[payload + 36 + padded * 8] = 255
+        data[payload + 36 + padded * 2 * np.dtype(np.float16).itemsize] = 255
     elif corruption == "code_padding":
         last_word = PACKED_CODE_BITS // CODE_WORD_BITS
         data[fast_codes_offset(payload, padded) + last_word * CODE_BLOCK_WORD_BYTES + CODE_WORD_BYTES - 1] = 255

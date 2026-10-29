@@ -104,7 +104,7 @@ void automatic_search_test() {
   index.save(path.string());
   const auto file=dv::tieredq_detail::load_file(path.string(),dv::tieredq_detail::fast_index_file_kind);
   dv::tieredq_detail::Reader reader{file.payload};
-  require(reader.u32()==1,"range checkpoint changed the fast payload version");
+  require(reader.u32()==dv::tieredq_detail::fast_payload_version,"range checkpoint changed the fast payload version");
   const auto blocks=(documents+dv::tieredq_detail::fast_scan_block_docs-1)/dv::tieredq_detail::fast_scan_block_docs;
   constexpr size_t header_bytes=3*sizeof(uint32_t),vector_headers=4*sizeof(uint64_t);
   require(file.payload.size()==header_bytes+vector_headers+blocks*dv::tieredq_detail::fast_scan_block_docs*index.bytes_per_vector(),

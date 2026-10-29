@@ -46,8 +46,8 @@ inline void scan_fast_avx512_tile_impl(const FastScanCache& cache, const FastSca
     }
     const __m512i cid = _mm512_cvtepu8_epi32(
         _mm_loadu_si128(reinterpret_cast<const __m128i*>(cache.centroid.data()+block*fast_scan_block_docs)));
-    const __m512 correction = _mm512_loadu_ps(cache.correction.data()+block*fast_scan_block_docs);
-    const __m512 factor = _mm512_loadu_ps(cache.factor.data()+block*fast_scan_block_docs);
+    const __m512 correction = _mm512_cvtph_ps(_mm256_loadu_si256(reinterpret_cast<const __m256i*>(cache.correction.data()+block*fast_scan_block_docs)));
+    const __m512 factor = _mm512_cvtph_ps(_mm256_loadu_si256(reinterpret_cast<const __m256i*>(cache.factor.data()+block*fast_scan_block_docs)));
     const size_t n = std::min(fast_scan_block_docs,first+count-block*fast_scan_block_docs);
     const __mmask16 mask = fast_mask(n);
     for (size_t t=0; t<query_count; ++t) {

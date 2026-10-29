@@ -39,7 +39,10 @@ struct FastScanCache {
   std::vector<int8_t> levels;          // signed numerical levels or interleaved packed code words
   size_t code_bits = 0;                // code lookup: packed code bits per document
   std::vector<uint32_t> code_offset;   // code lookup: bit offset of each coded rank in its document's codes
-  std::vector<float> factor, correction;
+  // Per-document scale and correction as binary16 bits: the payload's exact values at half the FP32 size.
+  std::vector<uint16_t> factor, correction;
+  float factor_at(size_t doc) const { return half_decode(factor[doc]); }
+  float correction_at(size_t doc) const { return half_decode(correction[doc]); }
   std::vector<uint8_t> centroid;
   std::vector<float> level_scale;      // per tier
   std::vector<uint8_t> tier_of;        // per coded rank; 0xFF for group padding
@@ -122,7 +125,7 @@ inline void build_fast_scan_metadata(FastScanCache& cache, size_t padded,
     if (row[code_bytes]>=num_centroids)
       throw std::runtime_error("TieredQ: invalid centroid id while building fast scan");
     cache.centroid[doc]=row[code_bytes];
-    cache.factor[doc]=layout.factor(row); cache.correction[doc]=layout.correction(row);
+    cache.factor[doc]=layout.half(row,layout.factor_offset()); cache.correction[doc]=layout.half(row,layout.correction_offset());
   }
 }
 

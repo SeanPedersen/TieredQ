@@ -7,7 +7,7 @@ inline bool native_fast_scan_available() {
 #if defined(__aarch64__) || defined(_M_ARM64)
   return true;
 #elif (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
-  return __builtin_cpu_supports("avx2") ||
+  return (__builtin_cpu_supports("avx2") && __builtin_cpu_supports("f16c")) ||
       (__builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512bw"));
 #else
   return false;
@@ -20,7 +20,7 @@ inline FastScanBackend fast_scan_backend(const FastScanCache& cache) {
   if (cache.lookup || cache.level_max<=x86_fast_level_max) {
     if (__builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512bw"))
       return FastScanBackend::avx512;
-    if (__builtin_cpu_supports("avx2")) return FastScanBackend::avx2;
+    if (__builtin_cpu_supports("avx2") && __builtin_cpu_supports("f16c")) return FastScanBackend::avx2;
   }
 #endif
   return FastScanBackend::scalar;

@@ -8,14 +8,14 @@ namespace dv::tieredq_detail {
 constexpr size_t fast_scan_avx2_lanes=8,fast_lookup_avx2_docs=32;
 constexpr size_t fast_scan_avx2_group_bytes=fast_scan_block_docs*sizeof(int32_t);
 
-__attribute__((target("avx2")))
+__attribute__((target("avx2,f16c")))
 inline void fast_epilogue_avx2(const FastScanCache& cache,const std::vector<float>& centers,
     const std::vector<float>& corrections,size_t doc,__m256 dot,float* out,size_t count) {
   const auto cid=_mm256_cvtepu8_epi32(_mm_loadl_epi64(reinterpret_cast<const __m128i*>(cache.centroid.data()+doc)));
   auto score=_mm256_i32gather_ps(centers.data(),cid,sizeof(float));
   score=_mm256_add_ps(score,_mm256_mul_ps(_mm256_i32gather_ps(corrections.data(),cid,sizeof(float)),
-      _mm256_loadu_ps(cache.correction.data()+doc)));
-  score=_mm256_add_ps(score,_mm256_mul_ps(_mm256_loadu_ps(cache.factor.data()+doc),dot));
+      _mm256_cvtph_ps(_mm_loadu_si128(reinterpret_cast<const __m128i*>(cache.correction.data()+doc)))));
+  score=_mm256_add_ps(score,_mm256_mul_ps(_mm256_cvtph_ps(_mm_loadu_si128(reinterpret_cast<const __m128i*>(cache.factor.data()+doc))),dot));
   if (count>=fast_scan_avx2_lanes) { _mm256_storeu_ps(out,score); return; }
   alignas(32) float tail[fast_scan_avx2_lanes];
   _mm256_store_ps(tail,score);
@@ -23,7 +23,7 @@ inline void fast_epilogue_avx2(const FastScanCache& cache,const std::vector<floa
 }
 
 // Range starts are aligned to lookup_block_docs; only the final block may be partial.
-__attribute__((target("avx2")))
+__attribute__((target("avx2,f16c")))
 inline void scan_fast_lookup_avx2_range(const FastScanCache& cache,const FastScanLookupQuery& q,
     size_t first,size_t count,float* scores) {
   const auto& lookup=*cache.lookup;
@@ -62,7 +62,7 @@ inline void scan_fast_lookup_avx2_range(const FastScanCache& cache,const FastSca
 
 constexpr size_t fast_scan_query_tile_avx2=8;
 template<size_t query_tile>
-__attribute__((target("avx2")))
+__attribute__((target("avx2,f16c")))
 inline void scan_fast_avx2_tile_impl(const FastScanCache& cache,const FastScanQueryX86* queries,
     size_t rows,size_t first,size_t count,float* scores,size_t stride) {
   if (cache.code_lookup()) {

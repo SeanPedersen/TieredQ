@@ -200,10 +200,13 @@ __attribute__((target("avx512f,avx512bw"),always_inline))
 inline void code_base_terms_avx512(const FastScanCache& cache,const float* centers,
     const float* corrections,size_t doc,__m512* terms) {
   __m256 by_document[fast_scan_block_docs];
+  // One conversion widens the block's 16 binary16 corrections; per-lane scalar decoding is far slower.
+  alignas(64) float correction[fast_scan_block_docs];
+  _mm512_store_ps(correction,_mm512_cvtph_ps(_mm256_loadu_si256(reinterpret_cast<const __m256i*>(cache.correction.data()+doc))));
   for (size_t lane=0;lane<fast_scan_block_docs;++lane) {
     const size_t at=size_t(cache.centroid[doc+lane])*fast_code_query_tile_avx512;
     by_document[lane]=_mm256_add_ps(_mm256_loadu_ps(centers+at),
-        _mm256_mul_ps(_mm256_loadu_ps(corrections+at),_mm256_set1_ps(cache.correction[doc+lane])));
+        _mm256_mul_ps(_mm256_loadu_ps(corrections+at),_mm256_set1_ps(correction[lane])));
   }
   transpose_tile_terms_avx512(by_document,terms);
 }
@@ -215,7 +218,7 @@ inline void store_code_scores_avx512(const FastScanCache& cache,const __m512* do
   __m512 generated[fast_code_query_tile_avx512];
   if constexpr (!Filter) code_base_terms_avx512(cache,centers,corrections,doc,generated);
   const __m512* terms=Filter ? cached_terms : generated;
-  const __m512 factor=_mm512_loadu_ps(cache.factor.data()+doc);
+  const __m512 factor=_mm512_cvtph_ps(_mm256_loadu_si256(reinterpret_cast<const __m256i*>(cache.factor.data()+doc)));
   const auto mask=__mmask16((1u<<valid)-1);
   for (size_t row=0;row<Rows;++row) {
     auto score=_mm512_add_ps(terms[row],_mm512_mul_ps(factor,dots[row]));
@@ -248,7 +251,7 @@ inline void scan_single_code_avx512(const FastScanCache& cache,const std::vector
 }
 
 template<size_t Rows,class QueryAt>
-__attribute__((target("avx2")))
+__attribute__((target("avx2,f16c")))
 inline void accumulate_codes_avx2(const FastScanCache& cache,const float* decoded,const float* weights,
     size_t doc,size_t valid,float* scores,size_t stride,QueryAt query) {
   constexpr size_t lanes=8,halves=fast_scan_block_docs/lanes;
@@ -262,7 +265,7 @@ inline void accumulate_codes_avx2(const FastScanCache& cache,const float* decode
   for (size_t half=0;half<halves && half*lanes<valid;++half) {
     const size_t at=doc+half*lanes;
     const auto cid=_mm256_cvtepu8_epi32(_mm_loadl_epi64(reinterpret_cast<const __m128i*>(cache.centroid.data()+at)));
-    const __m256 correction=_mm256_loadu_ps(cache.correction.data()+at),factor=_mm256_loadu_ps(cache.factor.data()+at);
+    const __m256 correction=_mm256_cvtph_ps(_mm_loadu_si128(reinterpret_cast<const __m128i*>(cache.correction.data()+at))),factor=_mm256_cvtph_ps(_mm_loadu_si128(reinterpret_cast<const __m128i*>(cache.factor.data()+at)));
     for (size_t row=0;row<Rows;++row) {
       const auto& q=query(row);
       auto score=_mm256_i32gather_ps(q.centroid_scores.data(),cid,sizeof(float));

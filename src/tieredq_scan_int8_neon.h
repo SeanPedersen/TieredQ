@@ -75,8 +75,8 @@ inline void scan_fast_neon_tile(const FastScanCache& cache,const FastScanQuery* 
         const auto& q=queries[t];
         if (cid>=q.centroid_scores.size() || q.centroid_scores.size()!=q.correction_weights.size())
           throw std::runtime_error("TieredQ: invalid centroid shape or id");
-        scores[t*stride+doc-first]=q.centroid_scores[cid]+q.correction_weights[cid]*cache.correction[doc]+
-            cache.factor[doc]*(float(values[t][v][c])*q.scale);
+        scores[t*stride+doc-first]=q.centroid_scores[cid]+q.correction_weights[cid]*cache.correction_at(doc)+
+            cache.factor_at(doc)*(float(values[t][v][c])*q.scale);
       }
     }
   }

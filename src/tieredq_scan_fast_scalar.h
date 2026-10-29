@@ -59,8 +59,8 @@ inline void scan_fast_scalar_tile(const FastScanCache& cache,const FastScanScala
     const auto& centers=cache.lookup ? q.lookup.centroid_scores : q.centroid_scores;
     const auto& corrections=cache.lookup ? q.lookup.correction_weights : q.correction_weights;
     float score=centers[cid];
-    score+=corrections[cid]*cache.correction[doc];
-    score+=cache.factor[doc]*dot;
+    score+=corrections[cid]*cache.correction_at(doc);
+    score+=cache.factor_at(doc)*dot;
     scores[row*stride+doc-first]=score;
   }
 }

@@ -5,6 +5,7 @@
 #include "tieredq_encode.h"
 #include "tieredq_encode_float.h"
 #include "tieredq_profile.h"
+#include "tieredq_scan_int8.h"
 #include "tieredq_train_linalg.h"
 #include "tieredq_train_kmeans.h"
 #include "tieredq_train_stats.h"
@@ -109,16 +110,26 @@ void nearest_centroids(const float* x, size_t rows, size_t d, const std::vector<
     for (size_t r = 0; r < n; ++r) ids[r0 + r] = argmin_centroid(dots.data() + r * width, half.data(), k);
   }
 }
-// Lower-triangle covariance in column-major LAPACK layout from a d x rows (transposed) matrix.
-std::vector<double> covariance(const std::vector<double>& transposed, int d, size_t rows) {
-  std::vector<double> cov(product(d, d), 0); const double alpha = 1.0 / double(rows - 1);
+// Rows per covariance chunk: a d x chunk f64 block (3 MiB at d = 1536) replaces a d x rows copy of the sample.
+constexpr size_t COVARIANCE_CHUNK_ROWS = 256;
+// Symmetric covariance in column-major LAPACK layout, accumulated over row chunks.
+// fill(r0, n, out) writes centered rows [r0, r0+n) transposed: out[j*n + i] for dimension j.
+template<class Fill>
+std::vector<double> chunked_covariance(int d, size_t rows, Fill fill) {
+  std::vector<double> cov(product(d, d), 0), chunk(product(d, std::min(rows, COVARIANCE_CHUNK_ROWS)));
+  for (size_t r0 = 0; r0 < rows; r0 += COVARIANCE_CHUNK_ROWS) {
+    const size_t n = std::min(COVARIANCE_CHUNK_ROWS, rows - r0);
+    fill(r0, n, chunk.data());
 #pragma omp parallel for schedule(dynamic)
-  for (int i = 0; i < d; ++i) for (int j = 0; j <= i; ++j) {
-    const double* a = transposed.data() + size_t(i) * rows; const double* b = transposed.data() + size_t(j) * rows; double s = 0;
+    for (int i = 0; i < d; ++i) for (int j = 0; j <= i; ++j) {
+      const double* a = chunk.data() + size_t(i) * n; const double* b = chunk.data() + size_t(j) * n; double s = 0;
 #pragma omp simd reduction(+:s)
-    for (size_t r = 0; r < rows; ++r) s += a[r] * b[r];
-    cov[size_t(j) * d + i] = cov[size_t(i) * d + j] = s * alpha;
+      for (size_t r = 0; r < n; ++r) s += a[r] * b[r];
+      cov[size_t(j) * d + i] += s;
+    }
   }
+  const double alpha = 1.0 / double(rows - 1);
+  for (int i = 0; i < d; ++i) for (int j = 0; j <= i; ++j) cov[size_t(i) * d + j] = cov[size_t(j) * d + i] *= alpha;
   return cov;
 }
 std::vector<float> rotation(int n, uint64_t seed, const tieredq_detail::TrainingLinalg& linalg, tieredq_detail::StageProfile* sink=nullptr) {
@@ -327,7 +338,7 @@ TieredQ TieredQ::train(TieredQConfig config,const float* sample,size_t rows,uint
     profile.mark("residual");
     cov=linalg.covariance_centered(centered.values,d,n);
   } else {
-    // Spectral stats only need the centered transpose; recomputing differences avoids a second rows x d copy.
+    // Spectral stats only need centered rows; recomputing differences per chunk avoids any rows x d copy.
     const bool keep_residual=!spectral_stats;
     auto difference=[&](size_t i,int j) { return double(sample[i*d+j])-c.centroids_[size_t(ids[i])*d+j]; };
     if (keep_residual) residual.resize(product(rows,d));
@@ -340,10 +351,10 @@ TieredQ TieredQ::train(TieredQConfig config,const float* sample,size_t rows,uint
     for (int j=0;j<d;++j) mean[j]/=rows;
     if (linalg.syrk) cov=linalg.covariance(residual,mean,d,n,profile);
     else {
-      std::vector<double> transposed(product(rows,d));
-      for (size_t i=0;i<rows;++i) for (int j=0;j<d;++j) transposed[size_t(j)*rows+i]=difference(i,j)-mean[j];
       profile.mark("residual");
-      cov=covariance(transposed,d,rows);
+      cov=chunked_covariance(d,rows,[&](size_t r0,size_t n,double* out) {
+        for (size_t i=0;i<n;++i) for (int j=0;j<d;++j) out[size_t(j)*n+i]=difference(r0+i,j)-mean[j];
+      });
     }
   }
   profile.mark("covariance");
@@ -361,19 +372,40 @@ TieredQ TieredQ::train(TieredQConfig config,const float* sample,size_t rows,uint
   tieredq_detail::dump_training_stage("eigenvalues.f64",eigenvalues);
   c.levels_.resize(9); std::array<double,9> error{}; error[0]=1;
   for (unsigned b=1;b<=8;++b) { c.levels_[b]=tieredq_detail::gaussian_codebooks()[b]; error[b]=tieredq_detail::distortion(c.levels_[b]); }
-  std::vector<unsigned> bits(d,0);
   struct Gain { double value; int rank; bool operator<(const Gain& b) const { return value<b.value || (value==b.value && rank>b.rank); } };
-  std::priority_queue<Gain> gains;
-  auto gain=[&](int rank) { unsigned b=bits[rank]; return std::max(0.0,eigenvalues[d-1-rank])*(error[b]-error[b+1]); };
-  for (int j=0;j<d;++j) gains.push({gain(j),j});
   auto cap=[&](int rank) {
     return uint32_t(rank)<config.wide_dims ? config.max_bits : std::min<uint32_t>(config.max_bits,6);
   };
-  for (uint32_t used=0;used<config.code_bits;++used) {
-    if (gains.empty()) bad("code_bits exceeds the allocation cap");
-    int j=gains.top().rank; gains.pop(); ++bits[j];
-    if (bits[j]<cap(j)) gains.push({gain(j),j});
-  }
+  // Greedy rate-distortion allocation by gain per stored bit. With skip_three a coordinate moves 2 -> 4 bits in
+  // one 2-bit step, so no tier has 3 bits (see below); budget a step cannot fill exactly is left unused.
+  auto allocate=[&](bool skip_three) {
+    std::vector<unsigned> bits(d,0);
+    auto step=[&](int rank) { return skip_three && bits[rank]==2 ? 2u : 1u; };
+    auto gain=[&](int rank) {
+      const unsigned b=bits[rank],s=step(rank);
+      return std::max(0.0,eigenvalues[d-1-rank])*(error[b]-error[b+s])/s;
+    };
+    std::priority_queue<Gain> gains;
+    for (int j=0;j<d;++j) gains.push({gain(j),j});
+    for (uint32_t used=0;used<config.code_bits;) {
+      if (gains.empty()) {
+        if (skip_three) break;
+        bad("code_bits exceeds the allocation cap");
+      }
+      const int j=gains.top().rank; gains.pop();
+      const unsigned s=step(j);
+      if (used+s>config.code_bits || bits[j]+s>cap(j)) continue;
+      bits[j]+=s; used+=s;
+      if (bits[j]<cap(j)) gains.push({gain(j),j});
+    }
+    return bits;
+  };
+  auto bits=allocate(false);
+  // When every tier fits the x86 nibble-lookup fast layout (<= 4 bits), each 3-bit code is stored in 4 bits, so
+  // 3-bit tiers spend storage the budget does not count; allocate without them to keep storage = code_bits.
+  // Training precedes the index mode, so full-mode indexes (dense codes) get the same allocation.
+  const unsigned widest=*std::max_element(bits.begin(),bits.end());
+  if (widest<=tieredq_detail::lookup_code_bits && std::count(bits.begin(),bits.end(),3u)) bits=allocate(true);
   profile.mark("bit_allocation");
   // Group equal precisions; retain source PCA ranks explicitly in the unrotated basis.
   std::vector<int> ranks; uint32_t offset=0;

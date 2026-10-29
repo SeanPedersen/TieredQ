@@ -8,8 +8,8 @@ __attribute__((target("avx512f,avx512bw")))
 inline void lookup_epilogue(const FastScanCache& c, const FastScanLookupQuery& q, size_t first, __m512 dot, float* out, size_t output_first, size_t output_end) {
   const auto cid = _mm512_cvtepu8_epi32(_mm_loadu_si128(reinterpret_cast<const __m128i*>(c.centroid.data() + first)));
   auto score = _mm512_i32gather_ps(cid, q.centroid_scores.data(), sizeof(float));
-  score = _mm512_add_ps(score, _mm512_mul_ps(_mm512_i32gather_ps(cid, q.correction_weights.data(), sizeof(float)), _mm512_loadu_ps(c.correction.data() + first)));
-  score = _mm512_add_ps(score, _mm512_mul_ps(_mm512_loadu_ps(c.factor.data() + first), dot));
+  score = _mm512_add_ps(score, _mm512_mul_ps(_mm512_i32gather_ps(cid, q.correction_weights.data(), sizeof(float)), _mm512_cvtph_ps(_mm256_loadu_si256(reinterpret_cast<const __m256i*>(c.correction.data() + first)))));
+  score = _mm512_add_ps(score, _mm512_mul_ps(_mm512_cvtph_ps(_mm256_loadu_si256(reinterpret_cast<const __m256i*>(c.factor.data() + first))), dot));
   const size_t n = std::min(lookup_vector_docs, output_end - first);
   _mm512_mask_storeu_ps(out + first - output_first, n == lookup_vector_docs ? 0xffff : (1u << n) - 1, score);
 }

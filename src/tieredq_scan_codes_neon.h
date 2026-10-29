@@ -13,7 +13,9 @@ inline void store_code_scores_neon(const FastScanCache& cache,const float32x4_t 
   constexpr size_t lanes=code_neon_lanes;
   for (size_t quarter=0;quarter<code_neon_quarters && quarter*lanes<valid;++quarter) {
     const size_t at=doc+quarter*lanes;
-    const auto correction=vld1q_f32(cache.correction.data()+at),factor=vld1q_f32(cache.factor.data()+at);
+    float corrections_at[lanes],factors_at[lanes];
+    for (size_t lane=0;lane<lanes;++lane) { corrections_at[lane]=cache.correction_at(at+lane); factors_at[lane]=cache.factor_at(at+lane); }
+    const auto correction=vld1q_f32(corrections_at),factor=vld1q_f32(factors_at);
     for (size_t row=0;row<Rows;++row) {
       const auto& q=query(row);
       float centers[lanes],corrections[lanes];

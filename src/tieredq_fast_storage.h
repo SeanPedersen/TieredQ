@@ -6,10 +6,10 @@
 #include <climits>
 
 namespace dv::tieredq_detail {
-constexpr uint32_t fast_payload_version=1,fast_lookup_kind=1,fast_levels_kind=2,fast_byte_code_kind=3,fast_packed_code_kind=4;
-constexpr size_t fast_metadata_bytes=sizeof(float)*2+sizeof(uint8_t);
+constexpr uint32_t fast_payload_version=2,fast_lookup_kind=1,fast_levels_kind=2,fast_byte_code_kind=3,fast_packed_code_kind=4;
+constexpr size_t fast_metadata_bytes=sizeof(uint16_t)*2+sizeof(uint8_t);
 inline size_t fast_storage_bytes(const FastScanCache& cache) {
-  size_t bytes=sizeof(cache)+cache.levels.capacity()+cache.factor.capacity()*sizeof(float)+cache.correction.capacity()*sizeof(float)+
+  size_t bytes=sizeof(cache)+cache.levels.capacity()+cache.factor.capacity()*sizeof(uint16_t)+cache.correction.capacity()*sizeof(uint16_t)+
       cache.centroid.capacity()+(cache.lookup ? cache.lookup->allocated_bytes() : 0);
   bytes+=cache.code_offset.capacity()*sizeof(uint32_t)+cache.level_scale.capacity()*sizeof(float)+cache.tier_of.capacity();
   bytes+=cache.codebooks.capacity()*sizeof(std::vector<float>);
@@ -56,7 +56,7 @@ inline void append_fast_rows(FastScanCache& cache,const std::vector<std::vector<
   else cache.levels.resize(product(blocks,cache.level_block_bytes()),0);
   for (size_t i=0;i<count;++i) {
     const uint8_t* row=rows+i*stride;const size_t doc=cache.count+i;
-    cache.factor[doc]=layout.factor(row);cache.correction[doc]=layout.correction(row);cache.centroid[doc]=row[code_bytes];
+    cache.factor[doc]=layout.half(row,layout.factor_offset());cache.correction[doc]=layout.half(row,layout.correction_offset());cache.centroid[doc]=row[code_bytes];
     if (cache.lookup) {
       auto& lookup=*cache.lookup;
       for (size_t g=0;g<lookup.groups.size();++g) {
@@ -90,7 +90,7 @@ inline std::vector<uint8_t> serialize_fast_storage(const FastScanCache& cache) {
   Writer writer;writer.u32(fast_payload_version);
   writer.u32(cache.lookup ? fast_lookup_kind : cache.code_lookup() ? fast_packed_code_kind : fast_levels_kind);
   writer.u32(cache.lookup ? 0 : uint32_t(cache.level_max));
-  writer.floats(cache.factor);writer.floats(cache.correction);write_fast_bytes(writer,cache.centroid);
+  writer.halves(cache.factor);writer.halves(cache.correction);write_fast_bytes(writer,cache.centroid);
   if (cache.lookup) write_fast_bytes(writer,cache.lookup->codes); else write_fast_bytes(writer,cache.levels);
   return std::move(writer.data);
 }
@@ -121,11 +121,15 @@ template<class R> void read_fast_storage(R& reader,FastScanCache& cache,size_t c
   const size_t block_docs=cache.lookup ? lookup_block_docs : fast_scan_block_docs;
   cache.count=count;cache.blocks=(count+block_docs-1)/block_docs;
   const size_t padded=product(cache.blocks,block_docs);
-  auto floats=[&](std::vector<float>& values) {
-    if (reader.u64()!=padded || padded>reader.remaining()/sizeof(float)) bad("invalid fast metadata length");
-    values.resize(padded);read_f32_array(reader,values.data(),padded);
+  auto halves=[&](std::vector<uint16_t>& values) {
+    if (reader.u64()!=padded || padded>reader.remaining()/sizeof(uint16_t)) bad("invalid fast metadata length");
+    std::vector<uint8_t> bytes(product(padded,sizeof(uint16_t)));reader.bytes(bytes.data(),bytes.size());
+    values.resize(padded);
+    for (size_t i=0;i<padded;++i) values[i]=uint16_t(bytes[2*i]|uint16_t(bytes[2*i+1])<<8);
+    constexpr uint16_t exponent_mask=0x7c00;
+    if (std::any_of(values.begin(),values.end(),[](uint16_t v){return (v&exponent_mask)==exponent_mask;})) bad("nonfinite fast metadata");
   };
-  floats(cache.factor);floats(cache.correction);read_fast_bytes(reader,cache.centroid,padded);
+  halves(cache.factor);halves(cache.correction);read_fast_bytes(reader,cache.centroid,padded);
   if (std::any_of(cache.centroid.begin(),cache.centroid.end(),[&](uint8_t id){return id>=centroids;})) bad("invalid fast centroid id");
   if (cache.lookup) read_fast_bytes(reader,cache.lookup->codes,product(product(cache.blocks,cache.lookup->pairs()),block_docs));
   else if (byte_codes) {

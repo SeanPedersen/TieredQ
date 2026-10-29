@@ -46,7 +46,7 @@ index = TieredQIndex.load("index.tq")
 - Queries accept one vector or a matrix. Scores estimate inner products.
 - Fast storage size depends on the model and CPU. Inspect `bytes_per_vector`
   for the representation stride and `storage_bytes` for allocated vector data.
-  Fast scans use AVX-512 or AVX2 on x86, and NEON on ARM.
+  Fast scans use AVX-512 or AVX2+F16C on x86, and NEON on ARM.
   On AVX-512, single-vector queries with compatible packed-code models use a
   range checkpoint after four tiers to skip uncompetitive suffixes while preserving
   fast-scan IDs and score bits. Bounds are prepared per query and add no stored bits

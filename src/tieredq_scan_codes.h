@@ -15,8 +15,8 @@ inline float fast_code_score(const FastScanCache& cache,const TieredQQuery& quer
   }
   const size_t cid=cache.centroid[doc];
   float score=query.centroid_scores[cid];
-  score+=query.correction_weights[cid]*cache.correction[doc];
-  score+=cache.factor[doc]*dot;
+  score+=query.correction_weights[cid]*cache.correction_at(doc);
+  score+=cache.factor_at(doc)*dot;
   return score;
 }
 
