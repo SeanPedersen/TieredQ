@@ -168,7 +168,10 @@ for disk, steady RAM and peak RAM, for the largest TieredQ code-bit budget whose
 measurement is at or below the minimum over RaBitQ's seeds. Selection reads storage only.
 Every probe is logged in `calibration.csv`, and `cells.csv` makes the run resumable. The
 chosen budget is confirmed on all seeds; if any seed exceeds the target, the search
-steps down. `matches.md` reports recall mean ± std and disk/RAM/peak per matched pair.
+steps down. `matches.md` reports recall mean ± std and disk/RAM/peak per matched pair. `--quick` (also on
+`measure_memory.py`) replaces the timed workload with one untimed pass per schedule; use it for
+both codecs or neither, since the timing harness adds about 160 bits/vector of peak RSS.
+Results before and after the RAM work (issue #18): `results/issue4-equal-memory-20261028/README.md`.
 
 Each timing point uses three warmup queries and three complete repeats of all
 queries. All timings use seed 0; seeds 1 and 2 record recall with `NaN` timing fields.
