@@ -6,8 +6,10 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import numpy as np
 
-DATASET_NAMES = {'sift': 'SIFT1M', 'glove': 'GloVe-200', 'openai': 'OpenAI3-1536'}
-CODEC_STYLES = {'tieredq': ('TieredQ', '#1769aa'), 'rabitq': ('RaBitQ', '#d95f02')}
+DATASET_NAMES = {'sift': 'SIFT1M', 'glove': 'GloVe-200', 'openai': 'OpenAI3-1536', 'gemini': 'DBpedia Gemini-768'}
+CODEC_STYLES = {'tieredq': ('TieredQ', '#1769aa'), 'rabitq': ('RaBitQ', '#d95f02'), 'qdrant': ('Qdrant TQ+', '#1b9e77')}
+# Vertical label offsets (points) keep budget labels of overlapping codecs apart.
+LABEL_OFFSETS = {'tieredq': 12, 'rabitq': -17, 'qdrant': 24}
 BUDGET_MARKERS = {1: 'o', 2: 's', 3: 'v', 4: '^', 5: 'P', 6: 'X', 7: 'h', 8: 'D'}
 FIGURES = (
     ('recall-storage', 'effective_bytes_per_vector', 'recall10', 'Measured bytes / vector', 'Recall@10'),
@@ -40,8 +42,7 @@ def draw_series(ax, points, codec, xkey, ykey, latency):
         ax.plot([p[xkey] for p in points], [p['p95_ms'] for p in points], color=color, linestyle='--', alpha=.7)
     for point in points:
         ax.scatter(point[xkey], point[ykey], marker=BUDGET_MARKERS[point['bits']], color=color, s=44, zorder=3)
-        offset = 12 if codec == 'tieredq' else -17
-        ax.annotate(f"{point['bits']}b", (point[xkey], point[ykey]), xytext=(0, offset),
+        ax.annotate(f"{point['bits']}b", (point[xkey], point[ykey]), xytext=(0, LABEL_OFFSETS[codec]),
                     textcoords='offset points', ha='center', color=color, fontsize=9,
                     bbox=dict(facecolor='white', edgecolor='none', alpha=.75, pad=.3))
 
@@ -70,7 +71,8 @@ def plot_results(root, rows):
                 ax.set(title=DATASET_NAMES[dataset] + suffix, xlabel=xlabel, ylabel=ylabel)
                 ax.margins(x=.10, y=.20)
                 ax.grid(alpha=.2)
-                handles = [Line2D([], [], color=color, label=label) for label, color in CODEC_STYLES.values()]
+                present = [c for c in CODEC_STYLES if any(r['codec'] == c for r in rows)]
+                handles = [Line2D([], [], color=CODEC_STYLES[c][1], label=CODEC_STYLES[c][0]) for c in present]
                 if name == 'latency-recall':
                     handles += [Line2D([], [], color='#555', label='p50'), Line2D([], [], color='#555', linestyle='--', label='p95')]
                 ax.legend(handles=handles, fontsize=9)
@@ -78,3 +80,32 @@ def plot_results(root, rows):
         fig.tight_layout(rect=(0, 0, 1, .95 if len(thread_counts) == 1 else .97))
         fig.savefig(root / f'{name}.png', dpi=160)
         plt.close(fig)
+
+
+MEMORY_METRICS = (('disk_bits_per_vector', 'Disk bits / vector'),
+                  ('ram_loaded_bits_per_vector', 'Steady RAM bits / vector'),
+                  ('ram_peak_bits_per_vector', 'Peak RAM bits / vector'))
+
+
+def plot_memory(root, rows):
+    """Recall@10 against disk, steady-RAM and peak-RAM bits/vector; one point per codec and budget.
+
+    Each row is one (dataset, codec, target_bits) summary: memory is the maximum over seeds, recall the mean.
+    """
+    datasets = [name for name in DATASET_NAMES if any(r['dataset'] == name for r in rows)]
+    present = [c for c in CODEC_STYLES if any(r['codec'] == c for r in rows)]
+    fig, axes = plt.subplots(len(MEMORY_METRICS), len(datasets), figsize=(5.2 * len(datasets), 3.9 * len(MEMORY_METRICS)), squeeze=False)
+    for metric_axes, (key, xlabel) in zip(axes, MEMORY_METRICS, strict=True):
+        for dataset, ax in zip(datasets, metric_axes, strict=True):
+            for codec in present:
+                points = sorted((dict(bits=int(r['target_bits']), x=float(r[key]), y=float(r['recall10']))
+                                 for r in rows if r['dataset'] == dataset and r['codec'] == codec), key=lambda p: p['bits'])
+                draw_series(ax, points, codec, 'x', 'y', False)
+            ax.set(title=DATASET_NAMES[dataset], xlabel=xlabel, ylabel='Recall@10')
+            ax.margins(x=.10, y=.20)
+            ax.grid(alpha=.2)
+            ax.legend(handles=[Line2D([], [], color=CODEC_STYLES[c][1], label=CODEC_STYLES[c][0]) for c in present], fontsize=9)
+    fig.suptitle('Measured memory per vector vs Recall@10 · lines connect 1 → 2 → 4 bits per original dimension', fontsize=12)
+    fig.tight_layout(rect=(0, 0, 1, .97))
+    fig.savefig(root / 'recall-memory.png', dpi=160)
+    plt.close(fig)

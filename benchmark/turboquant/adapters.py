@@ -18,7 +18,7 @@ def sha(path):
 class Qdrant:
     codec = 'qdrant-turboquant-plus'
     lib = ct.CDLL(str(HERE/'native/target/release/libqdrant_bench.so'))
-    lib.tq_build.argtypes = [ct.c_void_p, ct.c_size_t, ct.c_size_t, ct.c_uint32, ct.c_char_p]
+    lib.tq_build.argtypes = [ct.c_void_p, ct.c_size_t, ct.c_size_t, ct.c_uint32, ct.c_bool, ct.c_char_p]
     lib.tq_build.restype = ct.c_void_p
     lib.tq_load.argtypes = [ct.c_char_p]
     lib.tq_load.restype = ct.c_void_p
@@ -31,7 +31,7 @@ class Qdrant:
     def __init__(self, base, bits, path):
         self.path = Path(path)
         tick = time.perf_counter()
-        pointer = self.lib.tq_build(base.ctypes.data, len(base), base.shape[1], bits, str(path).encode())
+        pointer = self.lib.tq_build(base.ctypes.data, len(base), base.shape[1], bits, False, str(path).encode())
         self.build_s = time.perf_counter()-tick
         self.pointer = pointer
         self.encode_seconds = self._stats()[3]

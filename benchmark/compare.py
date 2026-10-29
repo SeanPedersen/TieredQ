@@ -1,6 +1,8 @@
 """Measured operating points and budget-constrained cross-codec comparisons."""
 import numpy as np
 
+CODECS = ("tieredq", "rabitq", "qdrant")
+
 
 def operating_points(rows):
     datasets = sorted({r["dataset"] for r in rows})
@@ -8,7 +10,7 @@ def operating_points(rows):
     # Recall means across seeds; timing comes only from seed zero, by thread count.
     for dataset in datasets:
         for threads in sorted({int(row["threads"]) for row in rows}):
-            for codec in ("tieredq", "rabitq"):
+            for codec in [c for c in CODECS if any(r["codec"] == c for r in rows)]:
                 operating = []
                 for bits in sorted({int(r["target_bits"]) for r in rows}):
                     group = [r for r in rows if r["dataset"]==dataset and r["codec"]==codec
@@ -37,13 +39,13 @@ def operating_points(rows):
 def compare(points):
     comparisons = []
     for anchor in points:
-        if anchor["codec"] != "rabitq":
+        if anchor["codec"] == "tieredq":
             continue
         tieredq = next(p for p in points if p["dataset"] == anchor["dataset"] and p["threads"] == anchor["threads"] and p["codec"] == "tieredq")
         for point in anchor["points"]:
             affordable = [p for p in tieredq["points"] if p["bytes_per_vector"] <= point["bytes_per_vector"]]
             comparable = [p for p in tieredq["points"] if p["recall_mean"] >= point["recall_mean"]]
-            comparisons.append({"dataset": anchor["dataset"], "threads": anchor["threads"], "rabitq_anchor": point,
+            comparisons.append({"dataset": anchor["dataset"], "threads": anchor["threads"], "anchor_codec": anchor["codec"], "anchor": point,
                                 "tieredq_best_recall_within_budget": max(affordable, key=lambda p:p["recall_mean"]) if affordable else None,
                                 "tieredq_fastest_at_least_anchor_recall": max(comparable, key=lambda p:p["qps_seed0"]) if comparable else None})
     return comparisons

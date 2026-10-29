@@ -2,13 +2,14 @@
 use std::{ffi::{CStr,c_char}, path::Path, sync::atomic::AtomicBool};
 use quantization::{ encoded_storage::TestEncodedStorageBuilder, encoded_vectors_tq::{EncodedVectorsTQ,Metadata,new_turbo_quantizer_from_metadata,get_quantized_vector_size}, VectorParameters,DistanceType,turboquant::{TQBits,TQMode,TQRotation,quantization::TurboQuantizer}};
 use rayon::prelude::*;
-struct Index { quantizer:TurboQuantizer, codes:Vec<u8>, stride:usize, dim:usize, encode_s:f64 }
+struct Index { quantizer:TurboQuantizer, codes:Vec<u8>, stride:usize, dim:usize, encode_s:f64, l2:bool }
 fn text<'a>(p:*const c_char)-> &'a str {unsafe {CStr::from_ptr(p)}.to_str().unwrap()}
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn tq_build(data:*const f32,n:usize,d:usize,bits:u32,path:*const c_char)->*mut std::ffi::c_void {
+pub unsafe extern "C" fn tq_build(data:*const f32,n:usize,d:usize,bits:u32,l2:bool,path:*const c_char)->*mut std::ffi::c_void {
  let bits=match bits {1=>TQBits::Bits1,2=>TQBits::Bits2,4=>TQBits::Bits4,_=>panic!("bits")};
  let path=Path::new(text(path));std::fs::create_dir_all(path).unwrap();
- let vp=VectorParameters{dim:d,distance_type:DistanceType::Cosine,invert:false,deprecated_count:None};
+ // Qdrant's Euclid collections use L2 with invert=true; the scorer below ranks raw L2 distances ascending instead.
+ let vp=VectorParameters{dim:d,distance_type:if l2 {DistanceType::L2} else {DistanceType::Cosine},invert:false,deprecated_count:None};
  let stride=get_quantized_vector_size(&vp,bits,TQMode::Plus);
  let values=unsafe{std::slice::from_raw_parts(data,n*d)};
  let encoded=EncodedVectorsTQ::encode(values.chunks_exact(d),std::iter::repeat_n(true,n),TestEncodedStorageBuilder::new(None,stride),&vp,bits,TQMode::Plus,TQRotation::Padded,false,8,Some(&path.join("metadata.json")),&AtomicBool::new(false)).unwrap();
@@ -16,7 +17,7 @@ pub unsafe extern "C" fn tq_build(data:*const f32,n:usize,d:usize,bits:u32,path:
  let codes=codes.into_boxed_slice().into_vec();
  std::fs::write(path.join("codes.bin"),&codes).unwrap();
  let quantizer=new_turbo_quantizer_from_metadata(encoded.get_metadata()).unwrap();
- Box::into_raw(Box::new(Index{quantizer,codes,stride,dim:d,encode_s:encoded.benchmark_encode_seconds})).cast()
+ Box::into_raw(Box::new(Index{quantizer,codes,stride,dim:d,encode_s:encoded.benchmark_encode_seconds,l2})).cast()
 }
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tq_load(path:*const c_char)->*mut std::ffi::c_void {
@@ -24,19 +25,32 @@ pub unsafe extern "C" fn tq_load(path:*const c_char)->*mut std::ffi::c_void {
  let stride=get_quantized_vector_size(&meta.vector_parameters,meta.bits,meta.mode);
  let codes=std::fs::read(path.join("codes.bin")).unwrap();assert_eq!(codes.len()%stride,0);
  let quantizer=new_turbo_quantizer_from_metadata(&meta).unwrap();
- Box::into_raw(Box::new(Index{quantizer,codes,stride,dim:meta.vector_parameters.dim,encode_s:0.0})).cast()
+ let l2=matches!(meta.vector_parameters.distance_type,DistanceType::L2);
+ Box::into_raw(Box::new(Index{quantizer,codes,stride,dim:meta.vector_parameters.dim,encode_s:0.0,l2})).cast()
 }
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tq_stats(p:*const std::ffi::c_void,out:*mut f64) {
  let x=unsafe{&*p.cast::<Index>()};let out=unsafe{std::slice::from_raw_parts_mut(out,5)};
  out.copy_from_slice(&[x.codes.capacity() as f64,x.quantizer.heap_size_bytes() as f64,size_of::<Index>() as f64,x.encode_s,x.stride as f64]);
 }
+// Score in fixed chunks into a bounded top-10, as Qdrant's raw scorer does, so query RAM stays O(threads).
+const SCORE_CHUNK:usize=1024;
+const TOP_K:usize=10;
 fn search_one(x:&Index,q:&[f32],out:&mut [u32]) {
- let query=x.quantizer.precompute_query(q);let n=x.codes.len()/x.stride;let mut scores=vec![0.0;n];
- x.quantizer.score_precomputed_batch(&query,&x.codes,x.stride,&mut scores);
- let mut ids:Vec<usize>=(0..n).collect();let cmp=|a:&usize,b:&usize|scores[*b].total_cmp(&scores[*a]).then(a.cmp(b));
- assert!(scores.iter().all(|s|s.is_finite()));ids.select_nth_unstable_by(10,cmp);ids[..10].sort_unstable_by(cmp);
- for (a,b) in out.iter_mut().zip(ids) {*a=b as u32;}
+ let query=x.quantizer.precompute_query(q);let n=x.codes.len()/x.stride;let mut scores=[0.0f32;SCORE_CHUNK];
+ // Ordered by score descending, then id ascending; identical to a full sort with the same comparator.
+ let mut best:Vec<(f32,u32)>=Vec::with_capacity(TOP_K+1);
+ for first in (0..n).step_by(SCORE_CHUNK) {
+  let count=SCORE_CHUNK.min(n-first);
+  x.quantizer.score_precomputed_batch(&query,&x.codes[first*x.stride..(first+count)*x.stride],x.stride,&mut scores[..count]);
+  for (offset,&raw) in scores[..count].iter().enumerate() {
+   assert!(raw.is_finite());let score=if x.l2 {-raw} else {raw};
+   if best.len()==TOP_K && score.total_cmp(&best[TOP_K-1].0)!=std::cmp::Ordering::Greater {continue;}
+   let position=best.iter().position(|b|b.0.total_cmp(&score)==std::cmp::Ordering::Less).unwrap_or(best.len());
+   best.insert(position,(score,(first+offset) as u32));best.truncate(TOP_K);
+  }
+ }
+ for (a,b) in out.iter_mut().zip(best) {*a=b.1;}
 }
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tq_search(p:*const std::ffi::c_void,q:*const f32,n:usize,out:*mut u32,threads:usize) {

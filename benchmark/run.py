@@ -27,6 +27,24 @@ def git_metadata(*args):
     return result.stdout.strip() if result.returncode == 0 else None
 
 
+def codec_config(args, transform):
+    if args.codec == "qdrant":
+        from qdrant_codec import CONFIG
+        return CONFIG
+    if args.codec == "tieredq":
+        return "fast-native-query-metric-lift" if transform else "fast-native"
+    return "flat-fht-full-score-hacc" if args.full_score else "flat-fht-native-bounds-hacc"
+
+
+def build_index(args, vectors):
+    import codec_native
+    if args.codec == "qdrant":
+        from qdrant_codec import QdrantIndex
+        return QdrantIndex.build(vectors, args.bits[0], args.datasets[0] == "sift")
+    return codec_native.Index(vectors, args.bits[0], args.seeds[0], args.codec == "tieredq", args.datasets[0] == "sift",
+                              True, args.code_bits or 0)
+
+
 def worker(args):
     import numpy as np
     from threadpoolctl import threadpool_limits
@@ -42,7 +60,7 @@ def worker(args):
         start = time.perf_counter()
         transform = L2Transform.fit(base) if lift and not args.legacy_l2_lift else None
         vectors, probes = (transform.base_vectors(base), transform.queries(queries)) if transform else codec_vectors(base, queries, lift)
-        index = codec_native.Index(vectors, args.bits[0], args.seeds[0], args.codec == "tieredq", args.datasets[0] == "sift")
+        index = build_index(args, vectors)
         build_s = time.perf_counter() - start
         with tempfile.TemporaryDirectory(dir=args.output) as temporary:
             total_bytes = index.storage(str(Path(temporary) / "index.bin"))
@@ -50,7 +68,7 @@ def worker(args):
             total_bytes += transform.storage_bytes
         common = dict(dataset=args.datasets[0], d=d, base_n=len(base), queries=len(queries),
                       metric="l2" if args.datasets[0] == "sift" else "cosine", codec=args.codec,
-                      config=("fast-native-query-metric-lift" if transform else "fast-native") if args.codec == "tieredq" else ("flat-fht-full-score-hacc" if args.full_score else "flat-fht-native-bounds-hacc"),
+                      config=codec_config(args, transform),
                       target_bits=args.bits[0], effective_bits_per_dim=total_bytes*8/len(base)/d,
                       effective_bytes_per_vector=total_bytes/len(base), build_s=build_s,
                       encode_vps=len(base)/index.encode_seconds, rerank=False, seed=args.seeds[0])
@@ -78,7 +96,7 @@ def worker(args):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--datasets", nargs="+", choices=["sift", "glove", "openai"], default=["sift", "glove", "openai"])
+    parser.add_argument("--datasets", nargs="+", choices=["sift", "glove", "openai", "gemini"], default=["sift", "glove", "openai"])
     parser.add_argument("--bits", nargs="+", type=int, choices=BIT_BUDGETS, default=[1,2,4,8], metavar="{1..8}")
     parser.add_argument("--threads", nargs="+", type=int, choices=[1,8], default=[1,8])
     parser.add_argument("--batches", nargs="+", type=int, choices=[1,32], default=[1,32])
@@ -89,11 +107,14 @@ def main():
     parser.add_argument("--output", type=Path, default=HERE/"output")
     parser.add_argument("--full-score", action="store_true", help="Disable native RaBitQ extra-bit bound pruning")
     parser.add_argument("--legacy-l2-lift", action="store_true", help="Use the original unconditioned TieredQ L2 lift")
-    parser.add_argument("--codec", choices=["tieredq", "rabitq"])
+    parser.add_argument("--codec", choices=["tieredq", "rabitq", "qdrant"])
     parser.add_argument("--cell", type=Path)
+    parser.add_argument("--code-bits", type=int, help="Exact TieredQ code budget per vector (e.g. a match_memory result)")
     args = parser.parse_args()
     if args.max_base is not None and args.max_base < 10:
         parser.error("--max-base must be at least 10")
+    if args.code_bits is not None and (args.codec != "tieredq" or args.code_bits < 1):
+        parser.error("--code-bits needs --codec tieredq and a positive budget")
     if any(seed < 0 for seed in args.seeds):
         parser.error("seeds must be nonnegative")
     if not args.codec and 0 not in args.seeds:

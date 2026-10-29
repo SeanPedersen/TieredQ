@@ -2,7 +2,7 @@
 
 Question: at RaBitQ's exact measured disk, steady-RAM or peak-RAM budget, does TieredQ reach higher recall@10? This bundle runs the comparison twice. **Before** uses the library from before the RAM work (`f73d394` + streamed loader `9b7ded4`). **After** adds the folded lookup projection, the parallel query tile, the lean training residual and the FP16 basis (model format 3). See issue #18.
 
-Hartmut (Intel i9-7980XE, AVX-512), GCC 16.2.1, `-O3 -march=native -ffp-contract=off`. OpenAI: 100K × 1536, Gemini: 99K × 3072 (the issue #4 splits and ground truth), 1,000 queries, seeds 0/1/2. The before run used CPUs 8–15 and the after run used CPUs 0–7; both record memory and recall only, so the host's other work affects neither.
+Hartmut (Intel i9-7980XE, AVX-512), GCC 16.2.1, `-O3 -march=native -ffp-contract=off`. OpenAI: 100K × 1536, Gemini: 99K × 768 (the issue #4 splits and ground truth), 1,000 queries, seeds 0/1/2. The before run used CPUs 8–15 and the after run used CPUs 0–7; both record memory and recall only, so the host's other work affects neither.
 
 ## Method
 

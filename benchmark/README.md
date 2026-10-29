@@ -162,13 +162,19 @@ loader before/after comparison: `results/issue4-memory-20261028/README.md`.
 
 ### Equal-memory head-to-head
 
-`match_memory.py` (default: OpenAI and Gemini, RaBitQ 1/2/3/4 bits, seeds 0/1/2)
-measures each RaBitQ point with `measure_memory.py` cells. It then searches, separately
+Compare TieredQ at equal measured memory, not equal nominal bits/dim: at nominal bits its fixed
+model cost can make it larger or smaller than the other codec.
+
+`match_memory.py` (default: OpenAI and Gemini, reference RaBitQ at 1/2/3/4 bits, seeds 0/1/2;
+`--reference qdrant` uses Qdrant TQ+ at 1/2/4 bits) measures each reference point with
+`measure_memory.py` cells. It then searches, separately
 for disk, steady RAM and peak RAM, for the largest TieredQ code-bit budget whose seed-0
-measurement is at or below the minimum over RaBitQ's seeds. Selection reads storage only.
-Every probe is logged in `calibration.csv`, and `cells.csv` makes the run resumable. The
+measurement is at or below the minimum over the reference's seeds. Selection reads storage only.
+Every probe is logged in `calibration.csv`, and `cells.csv` makes the run resumable; runs against
+different references can share one output directory and its TieredQ probes. The
 chosen budget is confirmed on all seeds; if any seed exceeds the target, the search
-steps down. `matches.md` reports recall mean ± std and disk/RAM/peak per matched pair. `--quick` (also on
+steps down. `matches-<reference>.md` reports recall mean ± std and disk/RAM/peak per matched pair.
+`run.py --codec tieredq --code-bits N` times TieredQ at a matched budget. `--quick` (also on
 `measure_memory.py`) replaces the timed workload with one untimed pass per schedule; use it for
 both codecs or neither, since the timing harness adds about 160 bits/vector of peak RSS.
 Results before and after the RAM work (issue #18): `results/issue4-equal-memory-20261028/README.md`.

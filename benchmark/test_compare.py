@@ -30,6 +30,12 @@ class ComparisonTests(unittest.TestCase):
         self.assertIsNone(result["tieredq_best_recall_within_budget"])
         self.assertIsNone(result["tieredq_fastest_at_least_anchor_recall"])
 
+    def test_every_reference_codec_is_an_anchor(self):
+        points = [dict(dataset="gemini", threads=8, codec="qdrant", points=[dict(bytes_per_vector=40, recall_mean=.7)]),
+                  dict(dataset="gemini", threads=8, codec="rabitq", points=[dict(bytes_per_vector=42, recall_mean=.72)]),
+                  dict(dataset="gemini", threads=8, codec="tieredq", points=[dict(bytes_per_vector=39, recall_mean=.74, qps_seed0=900)])]
+        self.assertEqual([r["anchor_codec"] for r in compare(points)], ["qdrant", "rabitq"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -17,6 +17,7 @@ import json
 import os
 from pathlib import Path
 import platform
+import shutil
 import subprocess
 import sys
 import time
@@ -25,6 +26,8 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
 DATASETS = ["sift", "glove", "openai", "gemini"]
 CODECS = ["tieredq", "rabitq"]
+# Qdrant TQ+ needs the Rust shim (turboquant/native), so it is opt-in via --codecs.
+OPTIONAL_CODECS = ["qdrant"]
 BIT_BUDGETS = [1, 2, 4]
 SUPPORTED_BITS = range(1, 9)
 # Same scheduling grid as the timed matrix; the workload sets the serving high-water mark.
@@ -67,26 +70,60 @@ def uses_lift(spec):
     return spec["dataset"] == "sift" and spec["codec"] == "tieredq"
 
 
+def index_path(spec, cell):
+    """TQ+ saves a directory (metadata + codes); the native codecs save one file."""
+    return cell / ("index" if spec["codec"] == "qdrant" else "index.bin")
+
+
+def build_index(spec, vectors):
+    import codec_native
+    if spec["codec"] == "qdrant":
+        from qdrant_codec import QdrantIndex
+        return QdrantIndex.build(vectors, spec["bits"], spec["dataset"] == "sift")
+    return codec_native.Index(vectors, spec["bits"], spec["seed"], spec["codec"] == "tieredq",
+                              spec["dataset"] == "sift", True, spec.get("code_bits", 0))
+
+
+def load_index(spec, cell):
+    import codec_native
+    if spec["codec"] == "qdrant":
+        from qdrant_codec import QdrantIndex
+        return QdrantIndex.load(index_path(spec, cell))
+    return codec_native.Index.load(str(index_path(spec, cell)), spec["codec"] == "tieredq")
+
+
+def preload_codec(spec):
+    """Load codec libraries before the RSS baseline so their code pages are not counted as index memory."""
+    import codec_native
+    if spec["codec"] == "qdrant":
+        from qdrant_codec import QdrantIndex
+        QdrantIndex._lib()
+    return codec_native
+
+
+def index_sha256(path):
+    from qdrant_codec import directory_sha256
+    return directory_sha256(path) if path.is_dir() else hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 def build_worker(spec, cell):
     import numpy as np
     from threadpoolctl import threadpool_limits
-    import codec_native
     from data import prepare
     from l2_transform import L2Transform
     with threadpool_limits(limits=1):
         base, _, _ = prepare(Path(spec["data"]), spec["dataset"])
-        codec_native.set_threads(BUILD_THREADS)
+        preload_codec(spec).set_threads(BUILD_THREADS)
         baseline = reset_peak()
         start = time.perf_counter()
         transform = L2Transform.fit(base) if uses_lift(spec) else None
         vectors = transform.base_vectors(base) if transform else base
-        index = codec_native.Index(vectors, spec["bits"], spec["seed"], spec["codec"] == "tieredq",
-                                   spec["dataset"] == "sift", True, spec.get("code_bits", 0))
+        index = build_index(spec, vectors)
         build_s = time.perf_counter() - start
         build_peak = memory_status()[1] - baseline
         code_bits = (sum(tier["dimensions"] * tier["bits"] for tier in index.diagnostics()["tiers"])
                      if spec["codec"] == "tieredq" else None)
-        index_bytes = index.save(str(cell / "index.bin"))
+        index_bytes = index.save(str(index_path(spec, cell)))
         transform_bytes = 0
         if transform:
             np.savez(cell / "transform.npz", scale=transform.scale, base_map=transform.base_map,
@@ -95,7 +132,7 @@ def build_worker(spec, cell):
         return dict(d=base.shape[1], base_n=len(base), code_bits=code_bits, build_s=build_s,
                     build_peak_rss_bytes=build_peak,
                     disk_bytes=index_bytes + transform_bytes,
-                    index_sha256=hashlib.sha256((cell / "index.bin").read_bytes()).hexdigest())
+                    index_sha256=index_sha256(index_path(spec, cell)))
 
 
 def single_pass(index, queries, truth, threads, batch, recall):
@@ -109,15 +146,15 @@ def single_pass(index, queries, truth, threads, batch, recall):
 def serve_worker(spec, cell):
     import numpy as np
     from threadpoolctl import threadpool_limits
-    import codec_native
     from data import prepare
     from l2_transform import L2Transform
     from measure import L2Search, measure, recall
     with threadpool_limits(limits=1):
         base, queries, truth = prepare(Path(spec["data"]), spec["dataset"])
         del base
+        preload_codec(spec)
         baseline = reset_peak()
-        index = codec_native.Index.load(str(cell / "index.bin"), spec["codec"] == "tieredq")
+        index = load_index(spec, cell)
         accounted = index.resident_bytes()
         if uses_lift(spec):
             with np.load(cell / "transform.npz") as saved:
@@ -168,6 +205,7 @@ def run_cell(spec, output, env):
         results[phase] = json.loads((cell / f"{phase}.json").read_text())
     for artifact in ("index.bin", "transform.npz"):
         (cell / artifact).unlink(missing_ok=True)
+    shutil.rmtree(cell / "index", ignore_errors=True)
     row = to_row(spec, results["build"], results["serve"])
     print(f"{cell_name(spec)}: disk {row['disk_bits_per_vector']:.1f}, "
           f"peak RAM {row['ram_peak_bits_per_vector']:.1f} bits/vector", flush=True)
@@ -199,7 +237,7 @@ def prepare_native():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--datasets", nargs="+", choices=DATASETS, default=DATASETS)
-    parser.add_argument("--codecs", nargs="+", choices=CODECS, default=CODECS)
+    parser.add_argument("--codecs", nargs="+", choices=CODECS + OPTIONAL_CODECS, default=CODECS)
     parser.add_argument("--bits", nargs="+", type=int, choices=SUPPORTED_BITS, default=BIT_BUDGETS)
     parser.add_argument("--seeds", nargs="+", type=int, default=[0])
     parser.add_argument("--data", type=Path, default=HERE / "data")

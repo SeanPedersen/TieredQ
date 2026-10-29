@@ -1,10 +1,10 @@
-"""Equal-memory TieredQ vs RaBitQ: calibrate TieredQ's code-bit budget to each measured RaBitQ storage point.
+"""Equal-memory TieredQ vs a reference codec: calibrate TieredQ's code-bit budget to each measured reference point.
 
-RaBitQ is measured at every requested bits/dim and seed. Each (RaBitQ bits, storage metric) pair is one target:
-the minimum of that metric over RaBitQ's seeds. For each target, the search finds the largest TieredQ `code_bits`
+The reference (RaBitQ by default, or Qdrant TQ+ with --reference qdrant) is measured at every requested bits/dim
+and seed. Each (reference bits, storage metric) pair is one target: the minimum of that metric over its seeds. For each target, the search finds the largest TieredQ `code_bits`
 whose seed-0 measurement is at or below the target. It brackets the target, then bisects with secant steps down
 to RESOLUTION code bits. Selection reads storage only, never recall. Every measured cell is shared across
-targets and logged in calibration.csv. Each chosen budget is then measured at the remaining seeds. If any seed
+targets (and across references sharing an output directory) and logged in calibration.csv. Each chosen budget is then measured at the remaining seeds. If any seed
 exceeds the target, the search steps down to the next smaller calibrated budget that fits. Cells are measured
 by measure_memory.run_cell, so methodology and columns match memory.csv, and cells.csv makes the run resumable.
 """
@@ -21,7 +21,7 @@ METRICS = {"disk": "disk_bits_per_vector", "ram": "ram_loaded_bits_per_vector", 
 RESOLUTION = 8
 MAX_PROBES = 24
 CALIBRATION_SEED = 0
-CALIBRATION_FIELDS = ["dataset", "rabitq_bits", "metric", "target_bits_per_vector", "probe", "code_bits",
+CALIBRATION_FIELDS = ["dataset", "reference_codec", "reference_bits", "metric", "target_bits_per_vector", "probe", "code_bits",
                       "realised_code_bits", "measured_bits_per_vector", "fits", "seed"]
 
 
@@ -89,7 +89,7 @@ def next_probe(fitting, failing, target, dimensions):
     return round(min(hi - margin, max(lo + margin, guess)))
 
 
-def calibrate(cells, dataset, rabitq_bits, metric, target, dimensions, log):
+def calibrate(cells, dataset, reference, metric, target, dimensions, log):
     """Largest seed-0 TieredQ budget with metric ≤ target, or None if even the smallest budget overshoots."""
     column = METRICS[metric]
     fitting, failing = {}, {}
@@ -102,21 +102,21 @@ def calibrate(cells, dataset, rabitq_bits, metric, target, dimensions, log):
         if code_bits is None:
             break
         row = cells.measure(dataset, "tieredq", -(-code_bits // dimensions), CALIBRATION_SEED, code_bits)
-        log(dict(dataset=dataset, rabitq_bits=rabitq_bits, metric=metric, target_bits_per_vector=target,
+        log(reference | dict(dataset=dataset, metric=metric, target_bits_per_vector=target,
                  probe=probe, code_bits=code_bits, realised_code_bits=row["code_bits"],
                  measured_bits_per_vector=row[column], fits=float(row[column]) <= target, seed=CALIBRATION_SEED))
     else:
-        raise RuntimeError(f"{dataset} b={rabitq_bits} {metric}: no bracket within {MAX_PROBES} probes")
+        raise RuntimeError(f"{dataset} {reference} {metric}: no bracket within {MAX_PROBES} probes")
     return max(fitting, default=None), sorted(fitting, reverse=True)
 
 
-def confirm(cells, dataset, metric, target, candidates, dimensions, seeds, log, rabitq_bits):
+def confirm(cells, dataset, metric, target, candidates, dimensions, seeds, log, reference):
     """First candidate (largest first) whose every seed fits the target; returns its budget and rows."""
     column = METRICS[metric]
     for code_bits in candidates:
         rows = [cells.measure(dataset, "tieredq", -(-code_bits // dimensions), seed, code_bits) for seed in seeds]
         for row in rows:
-            log(dict(dataset=dataset, rabitq_bits=rabitq_bits, metric=metric, target_bits_per_vector=target,
+            log(reference | dict(dataset=dataset, metric=metric, target_bits_per_vector=target,
                      probe="confirm", code_bits=code_bits, realised_code_bits=row["code_bits"],
                      measured_bits_per_vector=row[column], fits=float(row[column]) <= target, seed=row["seed"]))
         if all(float(row[column]) <= target for row in rows):
@@ -130,43 +130,48 @@ def summary(rows, column):
                 max=max(values), min=min(values))
 
 
-def match(cells, dataset, rabitq_bits, metric, seeds, log):
-    rabitq = [cells.measure(dataset, "rabitq", rabitq_bits, seed) for seed in seeds]
-    dimensions = int(rabitq[0]["d"])
-    target = min(float(row[METRICS[metric]]) for row in rabitq)
-    best, candidates = calibrate(cells, dataset, rabitq_bits, metric, target, dimensions, log)
-    chosen, tieredq = confirm(cells, dataset, metric, target, candidates, dimensions, seeds, log, rabitq_bits)
-    result = dict(dataset=dataset, rabitq_bits=rabitq_bits, metric=metric, target_bits_per_vector=target,
-                  calibrated_code_bits=best, code_bits=chosen,
-                  rabitq={name: summary(rabitq, column) for name, column in METRICS.items()}
-                  | {"recall10": summary(rabitq, "recall10")})
+def match(cells, dataset, codec, bits, metric, seeds, log):
+    measured = [cells.measure(dataset, codec, bits, seed) for seed in seeds]
+    dimensions = int(measured[0]["d"])
+    target = min(float(row[METRICS[metric]]) for row in measured)
+    reference = dict(reference_codec=codec, reference_bits=bits)
+    best, candidates = calibrate(cells, dataset, reference, metric, target, dimensions, log)
+    chosen, tieredq = confirm(cells, dataset, metric, target, candidates, dimensions, seeds, log, reference)
+    result = reference | dict(dataset=dataset, metric=metric, target_bits_per_vector=target,
+                              calibrated_code_bits=best, code_bits=chosen,
+                              reference={name: summary(measured, column) for name, column in METRICS.items()}
+                              | {"recall10": summary(measured, "recall10")})
     if chosen is None:
         return result | dict(tieredq=None, win=False)
     stats = {name: summary(tieredq, column) for name, column in METRICS.items()} | {
         "recall10": summary(tieredq, "recall10"), "realised_code_bits": int(tieredq[0]["code_bits"])}
-    win = stats[metric]["max"] <= target and stats["recall10"]["mean"] > result["rabitq"]["recall10"]["mean"]
+    win = stats[metric]["max"] <= target and stats["recall10"]["mean"] > result["reference"]["recall10"]["mean"]
     return result | dict(tieredq=stats, win=win)
 
 
+REFERENCE_NAMES = {"rabitq": "RaBitQ", "qdrant": "Qdrant TQ+"}
+
+
 def markdown(results):
-    lines = ["Bits/vector; recall@10 is mean ± std over seeds. Target = min of RaBitQ's metric over seeds; "
+    name = REFERENCE_NAMES[results[0]["reference_codec"]]
+    lines = [f"Bits/vector; recall@10 is mean ± std over seeds. Target = min of {name}'s metric over seeds; "
              "TieredQ memory is the max over seeds.", "",
-             "| Dataset | Matched on | RaBitQ bits/dim | Target | TieredQ code bits | TieredQ disk | TieredQ RAM "
-             "| TieredQ peak | TieredQ R@10 | RaBitQ disk | RaBitQ RAM | RaBitQ peak | RaBitQ R@10 | Δ R@10 | Win |",
+             f"| Dataset | Matched on | {name} bits/dim | Target | TieredQ code bits | TieredQ disk | TieredQ RAM "
+             f"| TieredQ peak | TieredQ R@10 | {name} disk | {name} RAM | {name} peak | {name} R@10 | Δ R@10 | Win |",
              "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|"]
     recall = lambda stats: f"{stats['mean']:.4f} ± {stats['std']:.4f}"
     for result in results:
-        rabitq, tieredq = result["rabitq"], result["tieredq"]
-        head = (f"| {result['dataset']} | {result['metric']} | {result['rabitq_bits']} | "
+        reference, tieredq = result["reference"], result["tieredq"]
+        head = (f"| {result['dataset']} | {result['metric']} | {result['reference_bits']} | "
                 f"{result['target_bits_per_vector']:,.1f} | ")
-        rabitq_cells = (f"{rabitq['disk']['max']:,.1f} | {rabitq['ram']['max']:,.1f} | {rabitq['peak']['max']:,.1f} "
-                        f"| {recall(rabitq['recall10'])}")
+        reference_cells = (f"{reference['disk']['max']:,.1f} | {reference['ram']['max']:,.1f} | "
+                           f"{reference['peak']['max']:,.1f} | {recall(reference['recall10'])}")
         if tieredq is None:
-            lines.append(head + "none fits | – | – | – | – | " + rabitq_cells + " | – | no |")
+            lines.append(head + "none fits | – | – | – | – | " + reference_cells + " | – | no |")
             continue
-        delta = tieredq["recall10"]["mean"] - rabitq["recall10"]["mean"]
+        delta = tieredq["recall10"]["mean"] - reference["recall10"]["mean"]
         lines.append(head + f"{result['code_bits']:,} | {tieredq['disk']['max']:,.1f} | {tieredq['ram']['max']:,.1f} | "
-                     f"{tieredq['peak']['max']:,.1f} | {recall(tieredq['recall10'])} | {rabitq_cells} | "
+                     f"{tieredq['peak']['max']:,.1f} | {recall(tieredq['recall10'])} | {reference_cells} | "
                      f"{delta:+.4f} | {'yes' if result['win'] else 'no'} |")
     return "\n".join(lines) + "\n"
 
@@ -174,13 +179,15 @@ def markdown(results):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--datasets", nargs="+", default=["openai", "gemini"])
-    parser.add_argument("--rabitq-bits", nargs="+", type=int, default=[1, 2, 3, 4])
+    parser.add_argument("--reference", choices=REFERENCE_NAMES, default="rabitq")
+    parser.add_argument("--reference-bits", "--rabitq-bits", nargs="+", type=int, help="default: 1-4 (RaBitQ), 1/2/4 (TQ+)")
     parser.add_argument("--metrics", nargs="+", choices=METRICS, default=list(METRICS))
     parser.add_argument("--seeds", nargs="+", type=int, default=[0, 1, 2])
     parser.add_argument("--data", type=Path, default=HERE / "data")
     parser.add_argument("--output", type=Path, default=HERE / "output-match")
     parser.add_argument("--quick", action="store_true", help="memory-only query workload per cell, no timing")
     args = parser.parse_args()
+    args.reference_bits = args.reference_bits or ([1, 2, 4] if args.reference == "qdrant" else [1, 2, 3, 4])
     if args.seeds[0] != CALIBRATION_SEED:
         raise SystemExit(f"--seeds must start with the calibration seed {CALIBRATION_SEED}")
     args.output.mkdir(parents=True, exist_ok=True)
@@ -196,13 +203,14 @@ def main():
         calibration.flush()
 
     start = time.perf_counter()
-    results = [match(cells, dataset, bits, metric, args.seeds, log)
-               for dataset in args.datasets for bits in args.rabitq_bits for metric in args.metrics]
+    results = [match(cells, dataset, args.reference, bits, metric, args.seeds, log)
+               for dataset in args.datasets for bits in args.reference_bits for metric in args.metrics]
     calibration.close()
     meta["wall_s"] = time.perf_counter() - start
-    (args.output / "meta.json").write_text(json.dumps(meta, indent=2))
-    (args.output / "matches.json").write_text(json.dumps(results, indent=2))
-    (args.output / "matches.md").write_text(markdown(results))
+    # One output directory may hold matches against several references; TieredQ probes in cells.csv are shared.
+    (args.output / f"meta-{args.reference}.json").write_text(json.dumps(meta, indent=2))
+    (args.output / f"matches-{args.reference}.json").write_text(json.dumps(results, indent=2))
+    (args.output / f"matches-{args.reference}.md").write_text(markdown(results))
 
 
 if __name__ == "__main__":
