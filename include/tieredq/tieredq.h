@@ -13,6 +13,10 @@ namespace dv {
 namespace tieredq_detail { class StageProfile; struct FastScanCache; struct FastQueryBasis; struct EncoderData; class LazyEncoder; }
 enum class TieredQIndexMode { fast, full };
 enum class TieredQKernel { automatic, scalar, avx2, avx512, neon };
+// Similarity an index serves; scores are always larger-is-better. Cosine normalizes rows and queries. L2 lifts rows
+// and queries into one more dimension (whitened for the query distribution, as calibrated on the training sample),
+// where inner products rank by distance; index scores are estimates of -|q - x|^2.
+enum class TieredQMetric { inner_product, cosine, l2 };
 struct TieredQConfig {
   uint32_t dimensions = 512;
   uint32_t code_bits = 512;
@@ -28,6 +32,11 @@ struct TieredQConfig {
   // (or the padded size of 2/4-bit tiers at code_bits, if larger), so the realised config().code_bits may differ.
   // Full mode packs codes densely and keeps the Lloyd-Max 3-bit codebook. Either model serves in either mode.
   TieredQIndexMode target_mode = TieredQIndexMode::fast;
+  TieredQMetric metric = TieredQMetric::inner_product;
+  // Training-only: allocate bits on PCA variance^allocation_power. 0 picks the default: fast targets use 1.5 for
+  // inner product and cosine, whose queries follow the data, and 1 (MSE) for L2, whose lift whitens queries (#9);
+  // full targets use 1. An explicit power applies to both modes.
+  double allocation_power = 0;
   static TieredQConfig target_bytes(uint32_t dimensions, uint32_t bytes);
   static TieredQConfig target_code_bits(uint32_t dimensions, uint32_t bits);
   static TieredQConfig target_bytes_per_vector(uint32_t dimensions, uint32_t bytes) {
@@ -94,7 +103,9 @@ class TieredQ {
                           size_t query_count, float* scores, size_t score_stride,
                           TieredQKernel kernel = TieredQKernel::automatic,
                           bool validate_query = true) const;
-  // Rows are contiguous finite float32 vectors; scores estimate inner products.
+  // Rows are contiguous finite float32 vectors of config().dimensions. Codec-level scores estimate inner products
+  // in model space: the metric's normalized or lifted vectors (model_dimensions() wide); TieredQIndex maps L2 scores
+  // to negative squared distances.
   std::vector<uint8_t> encode(const float* rows, size_t count) const;
   // Writes count * bytes_per_vector() bytes; parallel over row blocks outside OpenMP regions.
   // Optional output receives the stored, rounded centroid correction for each row.
@@ -108,7 +119,16 @@ class TieredQ {
   std::vector<TieredQQuery> query_weights(const float* vectors, size_t rows) const;
   void score(const uint8_t* payload, size_t count, const TieredQQuery& query,
              float* scores, TieredQKernel kernel = TieredQKernel::automatic) const;
+  // Model space: the metric's transform of input vectors. Engines that prepare many queries can lift them once
+  // and call the model_* variants, which take model_dimensions() floats per vector.
+  size_t model_dimensions() const;
+  void lift_queries(const float* queries, size_t count, float* out) const;
+  TieredQQuery model_query(const float* vector) const;
+  TieredQQuery model_query_weights(const float* vector) const;
+  std::vector<TieredQQuery> model_query_weights(const float* vectors, size_t rows) const;
   // Format 3 stores the PCA basis as IEEE binary16; format-2 files (FP32 basis) still load and serve unchanged.
+  // Format 4 adds the metric and its lift; inner-product models keep writing format 3.
+  static constexpr uint32_t metric_model_format = 4;
   static constexpr uint32_t model_format = 3;
   static constexpr uint32_t fp32_basis_model_format = 2;
   static constexpr size_t metadata_bytes = 5;
@@ -129,6 +149,13 @@ class TieredQ {
   std::vector<uint16_t> basis_half_;
   float basis_value(size_t index) const;
   std::vector<std::vector<float>> levels_;
+  // L2 lift: input scale and the lower Cholesky factor of the lifted query second moment (row-major; the base map).
+  float lift_scale_ = 1;
+  std::vector<float> lift_base_map_;
+  // Derived (not serialized): inverse transpose of the base map, which whitens lifted queries, and both maps as
+  // GEMM panels.
+  std::vector<float> lift_query_map_;
+  TieredQPanels lift_base_panels_, lift_query_panels_;
   // Derived serving state (not serialized): float half norms supply query correction weights.
   std::vector<float> centroid_half_norms_;
   // Derived scan geometry (not serialized): window and shift per grouped FP32 lookup, built from tiers_.
@@ -142,6 +169,11 @@ class TieredQ {
   // Up to eight validated rows; shares basis traffic and vectorizes centroid dots across rows.
   void project_query_tile(const float* vectors, size_t rows, TieredQQuery* out) const;
   void validate_model() const;
+  // Writes count model-space vectors of model_dimensions() floats.
+  void lift(const float* vectors, size_t count, bool queries, float* out) const;
+  void prepare_lift();
+  // Maps a model-space score of a query to the metric's score (identity except for L2).
+  std::pair<double,double> score_map(const float* query) const;
 };
 class TieredQIndex {
  public:
@@ -194,6 +226,12 @@ class TieredQIndex {
   void save(const std::string& path) const;
   static TieredQIndex load(const std::string& path);
  private:
+  // Model-space searches; the public searches lift queries once and map the scores they return.
+  std::vector<TieredQHit> search_model(const float* query, size_t k, TieredQKernel kernel) const;
+  std::vector<TieredQHit> search_fast_model(const float* query, size_t k) const;
+  void search_batch_model(const float* queries, size_t rows, size_t k, float* scores, uint32_t* ids) const;
+  void search_batch_fast_model(const float* queries, size_t rows, size_t k, float* scores, uint32_t* ids) const;
+  void finish_scores(const float* query, float* scores, size_t count) const;
   std::shared_ptr<tieredq_detail::FastScanCache> make_fast_storage(
       const uint8_t* rows, size_t count, bool lookup, int level_max) const;
   std::shared_ptr<tieredq_detail::FastScanCache> make_fast_storage(const uint8_t* rows, size_t count) const;

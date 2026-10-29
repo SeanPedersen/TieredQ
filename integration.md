@@ -28,8 +28,12 @@ ceil(count/16) * 16 * bytes_per_vector() bytes, including padded lanes.
 score_planes writes count scores; retain default query validation unless the
 caller has already validated the query against the same model.
 
-Scores estimate inner products; larger is better. Cosine callers normalize
-inputs and queries. Scores are not squared L2 distances. Grouped/scalar
+Scores are larger-is-better estimates under TieredQConfig::metric: inner
+products (default), cosine similarity (rows and queries are normalized), or for
+L2 the negative squared distance -|q - x|^2. Codec-level score()/score_planes()
+score model space (model_dimensions() wide: normalized or lifted vectors); for
+L2 only TieredQIndex maps those scores to distances. Engines can lift queries
+once with lift_queries() and use the model_query* functions. Grouped/scalar
 accumulations have established floating-point differences; compare tolerances
 and validate top-k using the same scoring kernel. TieredQIndex::search scans
 exhaustively, sorts descending score then ascending insertion ID for ties,

@@ -32,7 +32,7 @@ def codec_config(args, transform):
         from qdrant_codec import CONFIG
         return CONFIG
     if args.codec == "tieredq":
-        return "fast-native-query-metric-lift" if transform else "fast-native"
+        return "fast-native" if args.legacy_l2_lift or args.datasets[0] != "sift" else "fast-native-metric-l2"
     return "flat-fht-full-score-hacc" if args.full_score else "flat-fht-native-bounds-hacc"
 
 
@@ -42,7 +42,7 @@ def build_index(args, vectors):
         from qdrant_codec import QdrantIndex
         return QdrantIndex.build(vectors, args.bits[0], args.datasets[0] == "sift")
     return codec_native.Index(vectors, args.bits[0], args.seeds[0], args.codec == "tieredq", args.datasets[0] == "sift",
-                              True, args.code_bits or 0)
+                              True, args.code_bits or 0, not args.legacy_l2_lift)
 
 
 def worker(args):
@@ -55,10 +55,11 @@ def worker(args):
     with threadpool_limits(limits=1):
         base, queries, truth = prepare(args.data, args.datasets[0], args.max_base, args.queries)
         d = base.shape[1]
-        lift = args.datasets[0] == "sift" and args.codec == "tieredq"
+        # TieredQ serves SIFT with its native L2 metric; --legacy-l2-lift keeps the old adapter path.
+        lift = args.datasets[0] == "sift" and args.codec == "tieredq" and args.legacy_l2_lift
         codec_native.set_threads(8)
         start = time.perf_counter()
-        transform = L2Transform.fit(base) if lift and not args.legacy_l2_lift else None
+        transform = None
         vectors, probes = (transform.base_vectors(base), transform.queries(queries)) if transform else codec_vectors(base, queries, lift)
         index = build_index(args, vectors)
         build_s = time.perf_counter() - start
@@ -72,7 +73,7 @@ def worker(args):
                       target_bits=args.bits[0], effective_bits_per_dim=total_bytes*8/len(base)/d,
                       effective_bytes_per_vector=total_bytes/len(base), build_s=build_s,
                       encode_vps=len(base)/index.encode_seconds, rerank=False, seed=args.seeds[0])
-        if args.datasets[0] == "sift" and args.codec == "tieredq":
+        if lift:
             from measure import L2Search
             scale = transform.scale if transform else float(np.max(np.linalg.norm(base, axis=1)))
             index = L2Search(index, scale, transform)

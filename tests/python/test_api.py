@@ -15,6 +15,11 @@ def vectors(rows=128, seed=42):
     return np.random.default_rng(seed).normal(size=(rows, DIMENSIONS)).astype(np.float32)
 
 
+def assert_same_results(actual, expected):
+    for left, right in zip(actual, expected):
+        np.testing.assert_array_equal(left, right)
+
+
 def built(rows):
     index = TieredQIndex(dimensions=DIMENSIONS, code_bits=CODE_BITS)
     index.add(rows)
@@ -172,3 +177,37 @@ def test_batch_search_propagates_worker_exceptions():
     with pytest.raises(RuntimeError, match="nonfinite"):
         index.search(queries)
     assert index.search(rows[0])[1][0] == 0
+
+
+@pytest.mark.parametrize("mode", ["fast", "full"])
+def test_l2_metric_scores_negative_squared_distances(mode, tmp_path):
+    rows = vectors(seed=5) * np.linspace(0.5, 2.0, DIMENSIONS, dtype=np.float32) + 1.0
+    index = TieredQIndex(dimensions=DIMENSIONS, code_bits=DIMENSIONS * 4, mode=mode, metric="l2")
+    index.add(rows)
+    assert index.metric == "l2"
+    scores, ids = index.search(rows[:5], k=3)
+    distances = -np.sum((rows[:5, None, :] - rows[ids]) ** 2, axis=-1)
+    np.testing.assert_allclose(scores, distances, rtol=0.1, atol=0.05 * np.abs(distances).mean())
+    assert (ids[:, 0] == np.arange(5)).all()
+    path = str(tmp_path / "l2.tq")
+    index.save(path)
+    loaded = TieredQIndex.load(path)
+    assert loaded.metric == "l2"
+    assert_same_results(loaded.search(rows[:5], k=3), (scores, ids))
+
+
+def test_cosine_metric_ignores_norms():
+    rows = vectors(seed=6)
+    index = TieredQIndex(dimensions=DIMENSIONS, code_bits=DIMENSIONS * 4, metric="cosine")
+    scaled = TieredQIndex(dimensions=DIMENSIONS, code_bits=DIMENSIONS * 4, metric="cosine")
+    index.add(rows)
+    scaled.add(rows * 4)
+    assert_same_results(index.search(rows[:4], k=5), scaled.search(rows[:4] * 2, k=5))
+
+
+def test_metric_and_power_validation():
+    with pytest.raises(ValueError):
+        TieredQIndex(dimensions=DIMENSIONS, code_bits=CODE_BITS, metric="hamming")
+    with pytest.raises(ValueError):
+        TieredQIndex(dimensions=DIMENSIONS, code_bits=CODE_BITS, allocation_power=0)
+    assert TieredQIndex(dimensions=DIMENSIONS, code_bits=CODE_BITS, allocation_power=1.25).metric == "ip"

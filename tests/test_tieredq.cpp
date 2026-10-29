@@ -311,6 +311,7 @@ void tieredq_lookup_tests();
 void tieredq_search_tests();
 void tieredq_fast_mode_tests();
 void tieredq_additive_tests();
+void tieredq_metric_tests();
 int main() {
   auto dir=std::filesystem::temp_directory_path()/("tieredq_test_"+std::to_string(getpid())); std::filesystem::create_directory(dir);
   try {
@@ -325,6 +326,7 @@ int main() {
     tieredq_search_tests();
     tieredq_fast_mode_tests();
     tieredq_additive_tests();
+    tieredq_metric_tests();
     fast_scan_test();
     fast_scan_test(128,4);
     tieredq_projection_tests();

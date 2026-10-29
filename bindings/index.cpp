@@ -4,6 +4,7 @@
 // is released for every native call.
 #include "arrays.h"
 #include "search.h"
+#include <nanobind/stl/optional.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/unique_ptr.h>
 #include <algorithm>
@@ -27,6 +28,15 @@ dv::TieredQIndexMode parse_index_mode(const std::string& mode) {
   if (mode=="full") return dv::TieredQIndexMode::full;
   throw std::invalid_argument("mode must be 'fast' or 'full'");
 }
+dv::TieredQMetric parse_metric(const std::string& metric) {
+  if (metric=="ip") return dv::TieredQMetric::inner_product;
+  if (metric=="cosine") return dv::TieredQMetric::cosine;
+  if (metric=="l2") return dv::TieredQMetric::l2;
+  throw std::invalid_argument("metric must be 'ip', 'cosine' or 'l2'");
+}
+const char* metric_name(dv::TieredQMetric metric) {
+  return metric==dv::TieredQMetric::l2 ? "l2" : metric==dv::TieredQMetric::cosine ? "cosine" : "ip";
+}
 struct SearchResult {
   std::vector<float> scores;
   std::vector<uint32_t> ids;
@@ -36,9 +46,16 @@ struct SearchResult {
 
 class PythonIndex {
  public:
-  PythonIndex(uint32_t dimensions, uint32_t code_bits, const std::string& mode)
+  PythonIndex(uint32_t dimensions, uint32_t code_bits, const std::string& mode, const std::string& metric,
+              std::optional<double> allocation_power)
       : config_(dv::TieredQConfig::target_code_bits(dimensions, code_bits)), mode_(parse_index_mode(mode)) {
     config_.target_mode = mode_;
+    config_.metric = parse_metric(metric);
+    if (allocation_power) {
+      if (!(*allocation_power > 0)) throw std::invalid_argument("allocation_power must be positive");
+      config_.allocation_power = *allocation_power;
+    }
+    config_.validate();
   }
 
   size_t size() const {
@@ -53,6 +70,7 @@ class PythonIndex {
     return index_ ? index_->codec().config().code_bits : config_.code_bits;
   }
   const char* mode() const { return mode_==dv::TieredQIndexMode::fast ? "fast" : "full"; }
+  const char* metric() const { return metric_name(config_.metric); }
   size_t storage_bytes() const {
     std::shared_lock lock(mutex_);
     return index_ ? index_->storage_bytes() : 0;
@@ -151,13 +169,18 @@ nb::tuple search_result(const PythonIndex& index, FloatArray queries, size_t k, 
 
 void bind_index(nb::module_& module) {
   nb::class_<PythonIndex>(module, "TieredQIndex", "Trained exhaustive in-memory vector index.")
-      .def(nb::init<uint32_t, uint32_t, const std::string&>(), "dimensions"_a, "code_bits"_a, nb::kw_only(), "mode"_a = "fast")
+      .def(nb::init<uint32_t, uint32_t, const std::string&, const std::string&, std::optional<double>>(),
+           "dimensions"_a, "code_bits"_a, nb::kw_only(), "mode"_a = "fast", "metric"_a = "ip",
+           "allocation_power"_a = nb::none(),
+           "metric is 'ip', 'cosine' or 'l2' (scores are -squared distances); allocation_power overrides the\n"
+           "variance power bit allocation uses (default: 1.5 for fast ip/cosine, 1 for l2 and full mode).")
       .def("__len__", &PythonIndex::size, nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro("dimensions", &PythonIndex::dimensions)
       .def_prop_ro("code_bits", &PythonIndex::code_bits,
                    "Requested code bits per vector before training; the trained model's realised bits after.",
                    nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro("mode", &PythonIndex::mode)
+      .def_prop_ro("metric", &PythonIndex::metric)
       .def_prop_ro("storage_bytes", &PythonIndex::storage_bytes,
                    "Allocated vector-data bytes, excluding shared models and query scratch.",
                    nb::call_guard<nb::gil_scoped_release>())

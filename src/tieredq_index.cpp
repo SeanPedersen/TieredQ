@@ -31,7 +31,7 @@ using tieredq_detail::load_file;
 std::shared_ptr<tieredq_detail::FastScanCache> TieredQIndex::make_fast_storage(
     const uint8_t* rows,size_t count,bool lookup,int level_max) const {
   if (lookup) {
-    auto projection=tieredq_detail::build_fast_query_projection(codec_.config().dimensions,
+    auto projection=tieredq_detail::build_fast_query_projection(codec_.model_dimensions(),
         tieredq_detail::FastQueryBasis::from(codec_),codec_.mean_);
     return tieredq_detail::build_fast_lookup_cache(codec_.levels_,codec_.tiers_,std::move(projection),
         count,codec_.bytes_per_vector(),codec_.code_bytes(),codec_.config().num_centroids,rows);
@@ -91,13 +91,34 @@ void TieredQIndex::add(const float* rows,size_t count) {
   count_=total;
   if (count) fast_.reset();
 }
+namespace {
+// Model-space queries: the input itself for inner-product models, otherwise the metric's lift.
+struct ModelQueries {
+  std::vector<float> lifted;
+  const float* data;
+  ModelQueries(const TieredQ& codec,const float* queries,size_t rows) : data(queries) {
+    if (codec.config().metric==TieredQMetric::inner_product) return;
+    lifted.resize(product(rows,codec.model_dimensions()));
+    codec.lift_queries(queries,rows,lifted.data());
+    data=lifted.data();
+  }
+};
+} // namespace
+void TieredQIndex::finish_scores(const float* query,float* scores,size_t count) const {
+  const auto [scale,offset]=codec_.score_map(query);
+  if (scale==1 && offset==0) return;
+  for (size_t i=0;i<count;++i) scores[i]=float(scale*scores[i]+offset);
+}
 std::vector<TieredQHit> TieredQIndex::search(const float* vector,size_t k,TieredQKernel kernel) const {
   if (!k || !size()) return {};
-  if (fast_mode_) {
-    if (kernel!=TieredQKernel::automatic) bad("fast-only search does not support exact kernel overrides");
-    return search_fast(vector,k);
-  }
-  auto q=codec_.query(vector); k=std::min(k,size());
+  if (fast_mode_ && kernel!=TieredQKernel::automatic) bad("fast-only search does not support exact kernel overrides");
+  const ModelQueries query(codec_,vector,1);
+  auto hits=fast_mode_ ? search_fast_model(query.data,k) : search_model(query.data,k,kernel);
+  for (auto& hit:hits) finish_scores(vector,&hit.score,1);
+  return hits;
+}
+std::vector<TieredQHit> TieredQIndex::search_model(const float* vector,size_t k,TieredQKernel kernel) const {
+  auto q=codec_.model_query(vector); k=std::min(k,size());
   TopK top(k);
   std::array<float,selection_block> scores;
   const size_t stride=codec_.bytes_per_vector();
@@ -130,8 +151,8 @@ namespace {
 template<class Prepare>
 auto fast_search_queries(const tieredq_detail::FastScanCache& cache,const TieredQ& codec,
     const float* queries,size_t rows,Prepare prepare) {
-  if (!cache.code_lookup()) return prepare_search_queries(queries,rows,codec.config().dimensions,prepare);
-  auto weights=codec.query_weights(queries,rows);
+  if (!cache.code_lookup()) return prepare_search_queries(queries,rows,codec.model_dimensions(),prepare);
+  auto weights=codec.model_query_weights(queries,rows);
   std::vector<decltype(prepare(queries))> prepared(rows);
   for (size_t row=0;row<rows;++row) prepared[row].codes=std::move(weights[row]);
   return prepared;
@@ -141,7 +162,7 @@ auto fast_search_queries(const tieredq_detail::FastScanCache& cache,const Tiered
 template<class Finish>
 void fast_range_search(const tieredq_detail::FastScanCache& cache,const TieredQ& codec,
     const float* query,size_t k,Finish finish) {
-  const auto prepared=codec.query_weights(query,1);
+  const auto prepared=codec.model_query_weights(query,1);
   const auto bounds=tieredq_detail::prepare_fast_range_bounds(cache,codec.tiers(),prepared[0]);
   const size_t prefix_rank=codec.tiers()[tieredq_detail::fast_range_prefix_tiers].start;
   auto scan=[&](const TieredQQuery* queries,size_t,size_t first,size_t documents,
@@ -157,7 +178,7 @@ void fast_search(const tieredq_detail::FastScanCache& cache,const TieredQ& codec
   [[maybe_unused]] const auto backend=tieredq_detail::fast_scan_backend(cache);
 #ifdef DV_TIEREDQ_NEON
   if (backend==tieredq_detail::FastScanBackend::neon) {
-    auto prepare=[&](const float* vector) { return tieredq_detail::fast_scan_query(cache,codec.query_weights(vector)); };
+    auto prepare=[&](const float* vector) { return tieredq_detail::fast_scan_query(cache,codec.model_query_weights(vector)); };
     auto scan=[&](const auto* prepared,size_t count,size_t first,size_t documents,float* scores,size_t stride) {
       tieredq_detail::scan_fast_neon_tile(cache,prepared,count,first,documents,scores,stride);
     };
@@ -196,7 +217,13 @@ void fast_search(const tieredq_detail::FastScanCache& cache,const TieredQ& codec
 } // namespace
 std::vector<TieredQHit> TieredQIndex::search_fast(const float* vector,size_t k) const {
   if (!k || !size()) return {};
-  if (!fast_) return search(vector,k);
+  const ModelQueries query(codec_,vector,1);
+  auto hits=search_fast_model(query.data,k);
+  for (auto& hit:hits) finish_scores(vector,&hit.score,1);
+  return hits;
+}
+std::vector<TieredQHit> TieredQIndex::search_fast_model(const float* vector,size_t k) const {
+  if (!fast_) return fast_mode_ ? std::vector<TieredQHit>{} : search_model(vector,k,TieredQKernel::automatic);
   std::vector<TieredQHit> result;
   fast_search(*fast_,codec_,vector,1,std::min(k,size()),
       [&](size_t,std::vector<TieredQHit> hits) { result=std::move(hits); });
@@ -206,7 +233,14 @@ void TieredQIndex::search_batch_fast(const float* queries,size_t rows,size_t k,
     float* scores,uint32_t* ids) const {
   if (!rows || !k || !size()) return;
   if (!queries || !scores || !ids) bad("null search buffer");
-  if (!fast_) { search_batch(queries,rows,k,scores,ids); return; }
+  const ModelQueries model(codec_,queries,rows);
+  search_batch_fast_model(model.data,rows,k,scores,ids);
+  const size_t found=std::min(k,size()),d=codec_.config().dimensions;
+  for (size_t row=0;row<rows;++row) finish_scores(queries+row*d,scores+row*found,found);
+}
+void TieredQIndex::search_batch_fast_model(const float* queries,size_t rows,size_t k,
+    float* scores,uint32_t* ids) const {
+  if (!fast_) { search_batch_model(queries,rows,k,scores,ids); return; }
   const size_t found=std::min(k,size());
   fast_search(*fast_,codec_,queries,rows,found,[&](size_t row,const std::vector<TieredQHit>& hits) {
     for (size_t hit=0;hit<hits.size();++hit) {
@@ -219,8 +253,15 @@ void TieredQIndex::search_batch(const float* queries,size_t rows,size_t k,
     float* scores,uint32_t* ids) const {
   if (!rows || !k || !size()) return;
   if (!queries || !scores || !ids) bad("null search buffer");
-  if (fast_mode_) { search_batch_fast(queries,rows,k,scores,ids); return; }
-  const size_t dimensions=codec_.config().dimensions,stride=codec_.bytes_per_vector();
+  const ModelQueries model(codec_,queries,rows);
+  if (fast_mode_) search_batch_fast_model(model.data,rows,k,scores,ids);
+  else search_batch_model(model.data,rows,k,scores,ids);
+  const size_t found=std::min(k,size()),d=codec_.config().dimensions;
+  for (size_t row=0;row<rows;++row) finish_scores(queries+row*d,scores+row*found,found);
+}
+void TieredQIndex::search_batch_model(const float* queries,size_t rows,size_t k,
+    float* scores,uint32_t* ids) const {
+  const size_t dimensions=codec_.model_dimensions(),stride=codec_.bytes_per_vector();
   const size_t found=std::min(k,size());
   const size_t available=std::max<size_t>(1,size_t(omp_get_max_threads()));
   const size_t chunk=std::min<size_t>(4,rows),query_chunks=(rows+chunk-1)/chunk;
@@ -232,7 +273,7 @@ void TieredQIndex::search_batch(const float* queries,size_t rows,size_t k,
   segments=(total_blocks+segment_blocks-1)/segment_blocks;
   const size_t tasks=query_chunks*segments,workers=std::min(tasks,available);
   auto prepared=prepare_search_queries(queries,rows,dimensions,
-      [&](const float* vector) { return codec_.query(vector); });
+      [&](const float* vector) { return codec_.model_query(vector); });
   std::vector<float> partial_scores(tasks*chunk*found);
   std::vector<uint32_t> partial_ids(tasks*chunk*found),partial_counts(tasks*chunk);
   std::exception_ptr failure; std::mutex failure_mutex;

@@ -84,9 +84,23 @@ class NativeTests(unittest.TestCase):
             for code_bits in (40, 100):
                 index = codec_native.Index(base, 2, 0, True, False, True, code_bits)
                 tiers = index.diagnostics()["tiers"]
-                self.assertEqual(sum(tier["dimensions"]*tier["bits"] for tier in tiers), code_bits)
+                # Fast nibble models bound padded storage (#9): up to an unpaired 2-bit and three 1-bit slots more.
+                realised = sum(tier["dimensions"]*tier["bits"] for tier in tiers)
+                self.assertLessEqual(realised, -(-(code_bits + 5) // 8) * 8)
                 sizes.append(index.save(str(Path(directory)/f"{code_bits}.bin")))
         self.assertLess(sizes[0], sizes[1])
+
+    def test_native_l2_metric_ranks_like_exact_l2(self):
+        rng = np.random.default_rng(43)
+        base = (rng.normal(size=(800, 32)) * rng.uniform(0.2, 3.0, size=(800, 1)) + 1.5).astype(np.float32)
+        probes = base[:20] + 0.01*rng.normal(size=(20, 32)).astype(np.float32)
+        index = codec_native.Index(base, 4, 0, True, True, True, 0, True)
+        ids = np.empty((20, 10), dtype=np.uint32)
+        index.search(probes, ids, 1)
+        self.assertEqual(sum(tier["dimensions"]*tier["bits"] for tier in index.diagnostics()["tiers"]) > 0, True)
+        exact = np.argsort(((probes[:, None, :]-base[None])**2).sum(-1), axis=1)[:, :10]
+        overlap = np.mean([len(set(a) & set(b)) for a, b in zip(ids, exact)])
+        self.assertGreaterEqual(overlap, 8)
 
 if __name__ == "__main__":
     unittest.main()

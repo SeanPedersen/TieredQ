@@ -67,7 +67,8 @@ def reset_peak():
 
 
 def uses_lift(spec):
-    return spec["dataset"] == "sift" and spec["codec"] == "tieredq"
+    """TieredQ serves SIFT with its native L2 metric (the lift is part of the model); no adapter lift remains."""
+    return False
 
 
 def index_path(spec, cell):
@@ -81,7 +82,7 @@ def build_index(spec, vectors):
         from qdrant_codec import QdrantIndex
         return QdrantIndex.build(vectors, spec["bits"], spec["dataset"] == "sift")
     return codec_native.Index(vectors, spec["bits"], spec["seed"], spec["codec"] == "tieredq",
-                              spec["dataset"] == "sift", True, spec.get("code_bits", 0))
+                              spec["dataset"] == "sift", True, spec.get("code_bits", 0), True)
 
 
 def load_index(spec, cell):

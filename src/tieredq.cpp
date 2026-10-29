@@ -13,6 +13,7 @@
 #include "tieredq_train_codebook.h"
 #include "tieredq_train_codebook_data.h"
 #include "tieredq_train_allocation.h"
+#include "tieredq_metric.h"
 #include "training_rng.h"
 #include <algorithm>
 #include <array>
@@ -309,9 +310,48 @@ void TieredQConfig::validate() const {
   if (!num_centroids || num_centroids>256) bad("centroid count must be in [1, 256]");
   if (!max_bits || max_bits>8) bad("max bits per coordinate must be in [1, 8]");
   if (target_mode!=TieredQIndexMode::fast && target_mode!=TieredQIndexMode::full) bad("invalid target index mode");
+  if (metric!=TieredQMetric::inner_product && metric!=TieredQMetric::cosine && metric!=TieredQMetric::l2) bad("invalid metric");
+  if (!std::isfinite(allocation_power) || allocation_power<0) bad("allocation power must be finite and non-negative");
 }
 TieredQ TieredQ::train(TieredQConfig config,const float* sample,size_t rows,uint64_t seed) {
   config.validate(); if (rows<std::max<size_t>(2,size_t(config.num_centroids)*2) || rows>INT32_MAX) bad("training needs at least 2*K rows and at most INT32_MAX rows");
+  if (config.metric!=TieredQMetric::inner_product) {
+    // Train an inner-product model on the metric's model space, then attach the transform.
+    finite_rows(sample,product(rows,config.dimensions));
+    TieredQ lifted; lifted.config_=config;
+    const size_t d=config.dimensions;
+    if (config.metric==TieredQMetric::l2) {
+      double peak=0;
+      for (size_t i=0;i<rows;++i) {
+        double square=0; for (size_t j=0;j<d;++j) square+=double(sample[i*d+j])*sample[i*d+j];
+        peak=std::max(peak,square);
+      }
+      lifted.lift_scale_=peak>0 ? float(std::sqrt(peak)) : 1.0f;
+      const size_t calibration=std::min(rows,tieredq_detail::lift_calibration_rows);
+      std::vector<float> y(d+1);
+      auto moment=chunked_covariance(int(d+1),calibration,[&](size_t r0,size_t n,double* out) {
+        for (size_t i=0;i<n;++i) {
+          tieredq_detail::l2_lift_input(sample+(r0+i)*d,d,lifted.lift_scale_,true,y.data());
+          for (size_t j=0;j<=d;++j) out[j*n+i]=y[j];
+        }
+      });
+      // chunked_covariance normalizes by rows - 1; the lift uses the second moment E[y y^T].
+      for (auto& value:moment) value*=double(calibration-1)/double(calibration);
+      lifted.lift_base_map_=tieredq_detail::l2_base_map(moment,d+1,tieredq_detail::TrainingLinalg::get().eigen);
+      lifted.prepare_lift();
+    }
+    std::vector<float> model_rows(product(rows,lifted.model_dimensions()));
+    lifted.lift(sample,rows,false,model_rows.data());
+    auto model_config=config;
+    model_config.dimensions=uint32_t(lifted.model_dimensions()); model_config.metric=TieredQMetric::inner_product;
+    if (!config.allocation_power)
+      model_config.allocation_power=config.target_mode==TieredQIndexMode::fast && config.metric==TieredQMetric::l2 ? 1.0 : 0.0;
+    auto c=train(model_config,model_rows.data(),rows,seed);
+    c.config_.dimensions=config.dimensions; c.config_.metric=config.metric; c.config_.allocation_power=config.allocation_power;
+    c.lift_scale_=lifted.lift_scale_; c.lift_base_map_=std::move(lifted.lift_base_map_);
+    c.prepare_lift(); c.validate_model();
+    return c;
+  }
   const int d=int(config.dimensions), n=int(rows); const unsigned k=config.num_centroids;
   tieredq_detail::StageProfile profile;
   const auto& linalg=tieredq_detail::TrainingLinalg::get();
@@ -382,22 +422,25 @@ TieredQ TieredQ::train(TieredQConfig config,const float* sample,size_t rows,uint
     allocation.cap[j]=uint32_t(j)<config.wide_dims ? config.max_bits : std::min<uint32_t>(config.max_bits,6);
   }
   auto bits=tieredq_detail::greedy_allocation(allocation,config.code_bits,false);
-  // Fast targets allocate on variance^1.5 instead of the MSE-optimal variance: it is recall-optimal at equal storage
-  // (#9, chosen and confirmed on disjoint query halves). SAQ's inner-product error model puts the optimum at power 2
-  // and ScaNN's parallel-error argument between 1 and 2.
+  // Fast targets allocate on variance^1.5 instead of the MSE-optimal variance by default: for queries distributed
+  // like the data it is recall-optimal at equal storage (#9, chosen and confirmed on disjoint query halves). SAQ's
+  // inner-product error model puts the optimum at power 2 and ScaNN's parallel-error argument between 1 and 2.
+  // Whitened queries (the L2 lift) weight every rank alike, so MSE is optimal there and L2 training passes 1.
+  const bool fast_target=config.target_mode==TieredQIndexMode::fast;
+  const double power=config.allocation_power>0 ? config.allocation_power : fast_target ? tieredq_detail::fast_allocation_power : 1.0;
   auto weighted=allocation;
-  for (auto& v:weighted.variance) v=std::pow(std::max(0.0,v),tieredq_detail::fast_allocation_power);
+  for (auto& v:weighted.variance) v=std::pow(std::max(0.0,v),power);
   // Fast caches of models with every tier <= 4 bits use the x86 nibble lookup, which stores 3-bit codes exactly
   // only for the additive codebook (tieredq_lookup_layout.h). The MSE allocation decides that layout and its padded
   // storage limit, so stored bytes do not depend on the weights; the exact allocator then fills that storage.
   // Full mode and wider fast models pack the Lloyd-Max codes densely.
-  if (config.target_mode==TieredQIndexMode::fast && tieredq_detail::widest_tier(bits)<=tieredq_detail::lookup_code_bits) {
+  if (fast_target && tieredq_detail::widest_tier(bits)<=tieredq_detail::lookup_code_bits) {
     allocation.error.assign(d,additive_gaussian);
     const uint32_t limit=tieredq_detail::lookup_storage_limit(tieredq_detail::lookup_fallback(allocation,config.code_bits,bits),config.code_bits);
     auto fast=tieredq_detail::exact_lookup_allocation(weighted.variance,additive_gaussian,limit,config.max_bits);
     if (fast.additive_three) c.levels_[3]=additive;
     bits=std::move(fast.bits);
-  } else if (config.target_mode==TieredQIndexMode::fast) {
+  } else if (power!=1.0) {
     bits=tieredq_detail::greedy_allocation(weighted,config.code_bits,false);
   }
   profile.mark("bit_allocation");
@@ -453,13 +496,48 @@ TieredQ TieredQ::train(TieredQConfig config,const float* sample,size_t rows,uint
   c.validate_model(); return c;
 }
 
+size_t TieredQ::model_dimensions() const { return config_.dimensions+(config_.metric==TieredQMetric::l2 ? 1 : 0); }
+void TieredQ::prepare_lift() {
+  if (config_.metric!=TieredQMetric::l2) return;
+  const size_t lifted=model_dimensions();
+  lift_query_map_=tieredq_detail::l2_query_map(lift_base_map_,lifted);
+  auto panels=[&](const std::vector<float>& map) { return pack_panels(lifted,lifted,[&](size_t k,size_t c) { return map[k*lifted+c]; }); };
+  lift_base_panels_=panels(lift_base_map_); lift_query_panels_=panels(lift_query_map_);
+}
+void TieredQ::lift(const float* vectors,size_t count,bool queries,float* out) const {
+  const size_t d=config_.dimensions,lifted=model_dimensions();
+  if (config_.metric==TieredQMetric::inner_product) { std::copy_n(vectors,product(count,d),out); return; }
+  if (config_.metric==TieredQMetric::cosine) {
+    for (size_t i=0;i<count;++i) tieredq_detail::normalize_row(vectors+i*d,d,out+i*d);
+    return;
+  }
+  const auto& panels=queries ? lift_query_panels_ : lift_base_panels_;
+  const size_t width=panels.padded_columns();
+  std::vector<float> inputs(product(std::min(count,BLOCK_ROWS),lifted)),wide(product(std::min(count,BLOCK_ROWS),width));
+  for (size_t r0=0;r0<count;r0+=BLOCK_ROWS) {
+    const size_t n=std::min(BLOCK_ROWS,count-r0);
+    for (size_t i=0;i<n;++i) tieredq_detail::l2_lift_input(vectors+(r0+i)*d,d,lift_scale_,queries,inputs.data()+i*lifted);
+    float_matrix(inputs.data(),n,lifted,panels,wide.data(),width);
+    for (size_t i=0;i<n;++i) std::copy_n(wide.data()+i*width,lifted,out+(r0+i)*lifted);
+  }
+}
+void TieredQ::lift_queries(const float* queries,size_t count,float* out) const {
+  finite_rows(queries,product(count,config_.dimensions));
+  lift(queries,count,true,out);
+}
+std::pair<double,double> TieredQ::score_map(const float* query) const {
+  if (config_.metric!=TieredQMetric::l2) return {1.0,0.0};
+  double square=0; for (size_t j=0;j<config_.dimensions;++j) square+=double(query[j])*query[j];
+  return {2.0*double(lift_scale_)*lift_scale_,-square};
+}
 void TieredQ::prepare_serving() {
-  centroid_half_norms_=half_norms(centroids_,config_.num_centroids,config_.dimensions);
+  prepare_lift();
+  centroid_half_norms_=half_norms(centroids_,config_.num_centroids,model_dimensions());
   tieredq_detail::build_scan_plan(tiers_,scan_plan_);
   encoder_=std::make_shared<tieredq_detail::LazyEncoder>();
 }
 tieredq_detail::EncoderData TieredQ::build_encoder() const {
-  const size_t d=config_.dimensions,m=coded_dimensions(),k=config_.num_centroids;
+  const size_t d=model_dimensions(),m=coded_dimensions(),k=config_.num_centroids;
   tieredq_detail::EncoderData encoder;
   encoder.fused_panels=pack_panels(d,m+k,[&](size_t j,size_t r) {
     return r<m ? basis_value(j*m+r) : centroids_[(r-m)*d+j];
@@ -475,7 +553,11 @@ tieredq_detail::EncoderData TieredQ::build_encoder() const {
 // the residual projection is x*basis - c*basis.
 void TieredQ::encode_block(const float* rows,size_t count,uint8_t* out,float* corrections,tieredq_detail::StageProfile* profile) const {
   const Layout layout{code_bytes()};
-  const tieredq_detail::EncodingModel model{config_.dimensions,centroids_,mean_,sigma_,levels_,tiers_};
+  const tieredq_detail::EncodingModel model{model_dimensions(),centroids_,mean_,sigma_,levels_,tiers_};
+  std::vector<float> lifted;
+  if (config_.metric!=TieredQMetric::inner_product) {
+    lifted.resize(product(count,model_dimensions())); lift(rows,count,false,lifted.data()); rows=lifted.data();
+  }
   const auto encoder=encoder_->get([&] { return build_encoder(); }).view();
   const TieredQKernel kernel=kernel_available(TieredQKernel::neon) ? TieredQKernel::neon : TieredQKernel::automatic;
   tieredq_detail::encode_block(model,encoder,layout,rows,count,out,corrections,kernel,profile);
@@ -506,7 +588,13 @@ std::vector<uint8_t> TieredQ::encode(const float* rows,size_t count) const {
   return out;
 }
 TieredQQuery TieredQ::query(const float* vector) const {
-  auto q=query_weights(vector);
+  finite_rows(vector,config_.dimensions);
+  std::vector<float> lifted(model_dimensions());
+  lift(vector,1,true,lifted.data());
+  return model_query(lifted.data());
+}
+TieredQQuery TieredQ::model_query(const float* vector) const {
+  auto q=model_query_weights(vector);
   q.offsets.resize(coded_dimensions());
   for (const auto& t:tiers_) for (uint32_t j=0;j<t.dimensions;++j) {
     const size_t rank=t.start+j;q.offsets[rank]=q.lut.size();
@@ -572,7 +660,7 @@ void accumulate_half_row_avx2(const uint16_t* basis,size_t m,const float* vector
 #endif
 } // namespace
 void TieredQ::project_query_tile(const float* vectors,size_t rows,TieredQQuery* out) const {
-  const size_t m=coded_dimensions(),d=config_.dimensions,centroids=config_.num_centroids;
+  const size_t m=coded_dimensions(),d=model_dimensions(),centroids=config_.num_centroids;
   std::vector<float> transformed(rows*m,0),decoded;
   for (size_t i=0;i<d;++i) {
     const float* basis=basis_half_.empty() ? basis_.data()+i*m : nullptr;
@@ -625,12 +713,25 @@ void TieredQ::project_query_tile(const float* vectors,size_t rows,TieredQQuery* 
 }
 TieredQQuery TieredQ::query_weights(const float* vector) const {
   finite_rows(vector,config_.dimensions);
+  std::vector<float> lifted(model_dimensions());
+  lift(vector,1,true,lifted.data());
+  return model_query_weights(lifted.data());
+}
+std::vector<TieredQQuery> TieredQ::query_weights(const float* vectors,size_t rows) const {
+  finite_rows(vectors,product(rows,config_.dimensions));
+  if (config_.metric==TieredQMetric::inner_product) return model_query_weights(vectors,rows);
+  std::vector<float> lifted(product(rows,model_dimensions()));
+  lift(vectors,rows,true,lifted.data());
+  return model_query_weights(lifted.data(),rows);
+}
+TieredQQuery TieredQ::model_query_weights(const float* vector) const {
+  finite_rows(vector,model_dimensions());
   TieredQQuery q;
   project_query_tile(vector,1,&q);
   return q;
 }
-std::vector<TieredQQuery> TieredQ::query_weights(const float* vectors,size_t rows) const {
-  finite_rows(vectors,product(rows,config_.dimensions));
+std::vector<TieredQQuery> TieredQ::model_query_weights(const float* vectors,size_t rows) const {
+  finite_rows(vectors,product(rows,model_dimensions()));
   std::vector<TieredQQuery> queries(rows);
   const size_t tiles=(rows+query_weight_tile-1)/query_weight_tile;
   const size_t workers=std::max<size_t>(1,std::min(tiles,size_t(omp_get_max_threads())));
@@ -639,7 +740,7 @@ std::vector<TieredQQuery> TieredQ::query_weights(const float* vectors,size_t row
   for (size_t tile=0;tile<tiles;++tile) {
     try {
       const size_t first=tile*query_weight_tile;
-      project_query_tile(vectors+first*config_.dimensions,std::min(query_weight_tile,rows-first),queries.data()+first);
+      project_query_tile(vectors+first*model_dimensions(),std::min(query_weight_tile,rows-first),queries.data()+first);
     } catch (...) {
       std::lock_guard<std::mutex> lock(failure_mutex);
       if (!failure) failure=std::current_exception();
@@ -699,7 +800,15 @@ void TieredQ::score(const uint8_t* payload,size_t count,const TieredQQuery& q,fl
 size_t TieredQ::metadata_bytes_per_vector() const { return Layout{code_bytes()}.metadata_bytes(); }
 size_t TieredQ::model_bytes() const { return serialize().size(); }
 void TieredQ::validate_model() const {
-  config_.validate(); const size_t d=config_.dimensions,m=sigma_.size();
+  config_.validate(); const size_t d=model_dimensions(),m=sigma_.size();
+  if (config_.metric==TieredQMetric::l2) {
+    if (!(lift_scale_>0) || !std::isfinite(lift_scale_) || lift_base_map_.size()!=product(d,d)) bad("invalid L2 lift");
+    finite_rows(lift_base_map_.data(),lift_base_map_.size());
+    for (size_t i=0;i<d;++i) {
+      if (!(lift_base_map_[i*d+i]>0)) bad("invalid L2 lift");
+      for (size_t j=i+1;j<d;++j) if (lift_base_map_[i*d+j]!=0) bad("L2 lift is not lower triangular");
+    }
+  } else if (!lift_base_map_.empty() || lift_scale_!=1) bad("lift on a non-L2 model");
   if (!m || m>d || tiers_.empty() || tiers_.size()>8 || levels_.size()!=9)
     bad("invalid model layout");
   const size_t basis_size=basis_half_.empty() ? basis_.size() : basis_half_.size();
@@ -723,7 +832,9 @@ std::vector<uint8_t> TieredQ::serialize() const {
   validate_model(); Writer w;
   w.u32(config_.dimensions); w.u32(config_.code_bits); w.u32(config_.num_centroids);
   const bool half_basis=!basis_half_.empty();
-  w.u32(config_.rotate_tiers); w.u32(half_basis ? model_format : fp32_basis_model_format);
+  const bool metric=config_.metric!=TieredQMetric::inner_product;
+  if (metric && !half_basis) bad("metric models need a binary16 basis");
+  w.u32(config_.rotate_tiers); w.u32(metric ? metric_model_format : half_basis ? model_format : fp32_basis_model_format);
   w.u32(uint32_t(code_bytes())); w.u32(uint32_t(bytes_per_vector()));
   w.u32(uint32_t(tiers_.size()));
   for (const auto& t:tiers_) { w.u32(t.start); w.u32(t.dimensions); w.u32(t.bits); w.u32(t.scale_group); w.u32(t.bit_offset); }
@@ -731,6 +842,15 @@ std::vector<uint8_t> TieredQ::serialize() const {
   if (half_basis) w.halves(basis_half_); else w.floats(basis_);
   w.floats(mean_); w.floats(sigma_);
   w.u32(uint32_t(levels_.size())); for (const auto& l:levels_) w.floats(l);
+  if (metric) {
+    w.u32(uint32_t(config_.metric));
+    if (config_.metric==TieredQMetric::l2) {
+      // Only the lower triangle of the base map is stored.
+      const size_t lifted=model_dimensions(); std::vector<float> lower;
+      for (size_t i=0;i<lifted;++i) for (size_t j=0;j<=i;++j) lower.push_back(lift_base_map_[i*lifted+j]);
+      w.floats({lift_scale_}); w.floats(lower);
+    }
+  }
   return w.data;
 }
 TieredQ TieredQ::deserialize(const std::vector<uint8_t>& data) {
@@ -738,14 +858,27 @@ TieredQ TieredQ::deserialize(const std::vector<uint8_t>& data) {
   c.config_.dimensions=r.u32(); c.config_.code_bits=r.u32(); c.config_.num_centroids=r.u32();
   const auto rotate=r.u32(); if (rotate>1) bad("invalid rotation flag"); c.config_.rotate_tiers=rotate;
   const auto format=r.u32();
-  if (format!=model_format && format!=fp32_basis_model_format) bad("unsupported codec format");
+  if (format!=metric_model_format && format!=model_format && format!=fp32_basis_model_format) bad("unsupported codec format");
   c.config_.validate();
   auto cb=r.u32(),pb=r.u32(),nt=r.u32(); if (cb!=c.code_bytes() || nt==0 || nt>8) bad("invalid layout header");
   for (uint32_t i=0;i<nt;++i) c.tiers_.push_back({r.u32(),r.u32(),r.u32(),r.u32(),r.u32()});
   c.centroids_=r.floats();
-  if (format==model_format) c.basis_half_=r.halves(); else c.basis_=r.floats();
+  if (format==fp32_basis_model_format) c.basis_=r.floats(); else c.basis_half_=r.halves();
   c.mean_=r.floats(); c.sigma_=r.floats();
   if (r.u32()!=9) bad("table count mismatch"); for (int i=0;i<9;++i) c.levels_.push_back(r.floats());
+  if (format==metric_model_format) {
+    const uint32_t metric=r.u32();
+    if (metric!=uint32_t(TieredQMetric::cosine) && metric!=uint32_t(TieredQMetric::l2)) bad("invalid metric");
+    c.config_.metric=TieredQMetric(metric);
+    if (c.config_.metric==TieredQMetric::l2) {
+      const auto scale=r.floats(); const auto lower=r.floats();
+      const size_t lifted=c.model_dimensions();
+      if (scale.size()!=1 || lower.size()!=lifted*(lifted+1)/2) bad("invalid L2 lift");
+      c.lift_scale_=scale[0]; c.lift_base_map_.assign(lifted*lifted,0);
+      size_t at=0;
+      for (size_t i=0;i<lifted;++i) for (size_t j=0;j<=i;++j) c.lift_base_map_[i*lifted+j]=lower[at++];
+    }
+  }
   if (r.pos!=data.size() || pb!=c.bytes_per_vector()) bad("metadata length mismatch");
   c.validate_model(); c.prepare_serving(); return c;
 }
@@ -851,8 +984,10 @@ void TieredQ::unpack(const uint8_t* planes,size_t count,uint8_t* rows) const {
 void TieredQ::decode(const uint8_t* payload,size_t count,float* rows) const {
   const Layout layout{code_bytes()};
   if (count && (!payload || !rows)) bad("null decoding buffer");
-  const size_t d=config_.dimensions,m=coded_dimensions(),stride=bytes_per_vector();
+  const size_t d=model_dimensions(),m=coded_dimensions(),stride=bytes_per_vector();
+  const bool lifted=config_.metric==TieredQMetric::l2;
   std::vector<double> precise(m);
+  std::vector<float> model_row(lifted ? d : 0);
   for (size_t i=0;i<count;++i) {
     const uint8_t* code=payload+i*stride; const unsigned cid=code[code_bytes()];
     if (cid>=config_.num_centroids) bad("invalid centroid id");
@@ -861,9 +996,17 @@ void TieredQ::decode(const uint8_t* payload,size_t count,float* rows) const {
       const size_t r=t.start+j; const float level=levels_[t.bits][read_code(code,t.bit_offset+j*t.bits,t.bits)];
       precise[r]=mean_[r]+factor*(double(sigma_[r])*level);
     }
+    float* row=lifted ? model_row.data() : rows+i*d;
     for (size_t j=0;j<d;++j) {
       double residual=0; for (size_t r=0;r<m;++r) residual+=basis_value(j*m+r)*precise[r];
-      rows[i*d+j]=float(centroids_[size_t(cid)*d+j]+residual);
+      row[j]=float(centroids_[size_t(cid)*d+j]+residual);
+    }
+    if (!lifted) continue;
+    // Invert the lift: [x/s, .] = row * base_map^-1, and base_map^-1 is the transposed query map.
+    const size_t inputs=config_.dimensions;
+    for (size_t j=0;j<inputs;++j) {
+      double sum=0; for (size_t k=0;k<d;++k) sum+=double(row[k])*lift_query_map_[j*d+k];
+      rows[i*inputs+j]=float(sum*lift_scale_);
     }
   }
 }
@@ -877,6 +1020,7 @@ size_t TieredQ::memory_bytes() const {
   n+=levels_.capacity()*sizeof(std::vector<float>);
   for (const auto& v:levels_) n+=v.capacity()*sizeof(float);
   n+=centroid_half_norms_.capacity()*sizeof(float)+scan_plan_.capacity()*sizeof(tieredq_detail::ScanGroupPlan);
+  for (const auto* v:{&lift_base_map_,&lift_query_map_,&lift_base_panels_.data,&lift_query_panels_.data}) n+=v->capacity()*sizeof(float);
   return n+encoder_->bytes();
 }
 uint32_t TieredQ::model_id() const {
