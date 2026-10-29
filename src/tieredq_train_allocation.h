@@ -84,40 +84,53 @@ inline FastLookupAllocation fast_lookup_allocation(const AllocationModel& model,
   return {std::move(bits),true};
 }
 // Exact nibble-layout allocation under padded storage <= limit_bits (#9), for one distortion table shared by all
-// ranks (error[3] is the additive codebook's). For fixed per-width counts the best allocation gives wider codes to
-// larger variances, and 1-bit codes always help, so enumerating the 4-, 3- and 2-bit counts over ranks sorted by
-// variance and filling the remaining padded 1-bit slots is exact. Without 3-bit tiers the layout is plain 1/2/4.
+// ranks that is convex in the code width (error[3] is the additive codebook's). With G = 2 * limit_bits / 8 groups,
+// 4-bit codes take a group each, 2-bit codes and 3-bit low parts pair up and 1-bit codes and 3-bit high parts fill
+// groups of four, so an allocation fits iff its total bits plus 2 when the count of 2- and 3-bit codes is odd is at
+// most 4G. Unit steps 2 and 4 flip that parity. Greedy at 4G maximizes the gain without the parity term. Swapping an
+// extra step of an optimum (beyond greedy) for a missing one (below greedy) never loses gain, so case analysis on the
+// parity-preserving swaps shows some optimum differs from greedy by at most exchange_window removed and as many
+// added unit steps. A DP over ranks inside that window is therefore exact, and takes O(d) after the greedy.
+constexpr uint32_t exchange_window=4;
 inline FastLookupAllocation exact_lookup_allocation(const std::vector<double>& variance,const DistortionTable& error,uint32_t limit_bits) {
-  const uint32_t d=uint32_t(variance.size()),groups=uint32_t(limit_bits/CHAR_BIT*lookup_pair_groups);
-  const uint32_t low_slots=lookup_coordinates_per_group(split_low_bits),high_slots=lookup_coordinates_per_group(split_high_bits);
-  std::vector<uint32_t> order(d);
-  for (uint32_t r=0;r<d;++r) order[r]=r;
-  std::stable_sort(order.begin(),order.end(),[&](uint32_t a,uint32_t b) { return variance[a]>variance[b]; });
-  std::vector<double> prefix(d+1,0);
-  for (uint32_t r=0;r<d;++r) prefix[r+1]=prefix[r]+std::max(0.0,variance[order[r]]);
-  auto span=[&](uint32_t begin,uint32_t count) { return prefix[begin+count]-prefix[begin]; };
-  struct Best { double distortion=INFINITY; LookupWidthCounts counts{}; } best;
-#pragma omp parallel
-  {
-    Best local;
-#pragma omp for schedule(dynamic)
-    for (uint32_t four=0;four<=std::min(d,groups);++four)
-      for (uint32_t three=0;three<=d-four;++three)
-        for (uint32_t two=0;two+three+four<=d;++two) {
-          const uint32_t fixed=four+ceil_div(two+three,low_slots);
-          if (fixed>groups) break;
-          if ((groups-fixed)*high_slots<three) continue;
-          const uint32_t coded=four+three+two,one=std::min(d-coded,(groups-fixed)*high_slots-three);
-          const double value=error[4]*span(0,four)+error[3]*span(four,three)+error[2]*span(four+three,two)+
-                             error[1]*span(coded,one)+error[0]*span(coded+one,d-coded-one);
-          if (value<local.distortion) local={value,{d-coded-one,one,two,three,four}};
-        }
-#pragma omp critical
-    if (local.distortion<best.distortion) best=local;
+  const uint32_t d=uint32_t(variance.size()),capacity=uint32_t(limit_bits/CHAR_BIT*lookup_pair_groups*lookup_code_bits);
+  const AllocationModel model{variance,std::vector<uint32_t>(d,lookup_code_bits),std::vector(d,error)};
+  const auto greedy=greedy_allocation(model,std::min(capacity,d*lookup_code_bits),false);
+  auto paired=[](unsigned b) { return b==split_low_bits || b==split_code_bits; };
+  uint32_t greedy_bits=0; bool odd=false;
+  for (unsigned b:greedy) { greedy_bits+=b; odd^=paired(b); }
+  // State: removed steps, added steps and pair parity; each rank keeps the choice that reached a state for backtracking.
+  constexpr uint32_t side=exchange_window+1,states=side*side*2;
+  auto state=[](uint32_t removed,uint32_t added,bool parity) { return (removed*side+added)*2+parity; };
+  std::vector<double> cost(states,INFINITY),next(states);
+  struct Step { uint8_t width,from; };
+  std::vector<std::array<Step,states>> choice(d);
+  cost[state(0,0,odd)]=0;
+  for (uint32_t rank=0;rank<d;++rank) {
+    std::fill(next.begin(),next.end(),INFINITY);
+    const double v=std::max(0.0,variance[rank]); const unsigned g=greedy[rank];
+    for (uint32_t removed=0;removed<side;++removed) for (uint32_t added=0;added<side;++added) for (bool parity:{false,true}) {
+      const double base=cost[state(removed,added,parity)];
+      if (base==INFINITY) continue;
+      for (unsigned b=0;b<=lookup_code_bits;++b) {
+        const uint32_t r=removed+(b<g ? g-b : 0),a=added+(b>g ? b-g : 0);
+        if (r>exchange_window || a>exchange_window) continue;
+        const uint32_t to=state(r,a,parity^(paired(b)!=paired(g)));
+        const double value=base+v*error[b];
+        if (value<next[to]) { next[to]=value; choice[rank][to]={uint8_t(b),uint8_t(state(removed,added,parity))}; }
+      }
+    }
+    std::swap(cost,next);
+  }
+  const uint32_t unpaired_padding=split_low_bits; // the empty half of the last 2-bit group
+  uint32_t best=states;
+  for (uint32_t removed=0;removed<side;++removed) for (uint32_t added=0;added<side;++added) for (bool parity:{false,true}) {
+    const uint32_t s=state(removed,added,parity);
+    if (greedy_bits-removed+added+(parity ? unpaired_padding : 0)<=capacity && cost[s]<INFINITY && (best==states || cost[s]<cost[best])) best=s;
   }
   Allocation bits(d);
-  uint32_t position=0;
-  for (uint32_t b=lookup_code_bits+1;b-->0;) for (uint32_t i=0;i<best.counts[b];++i) bits[order[position++]]=b;
-  return {std::move(bits),best.counts[split_code_bits]>0};
+  for (uint32_t rank=d;rank-->0;) { bits[rank]=choice[rank][best].width; best=choice[rank][best].from; }
+  const bool additive_three=has_three_bit_tier(bits);
+  return {std::move(bits),additive_three};
 }
 } // namespace dv::tieredq_detail

@@ -138,6 +138,53 @@ void padded_allocation_test() {
   const auto flat=fast_lookup_allocation(model,2*ranks,greedy_allocation(model,2*ranks,false));
   require(!flat.additive_three && flat.bits==Allocation(ranks,2),"2 bits/dim does not fall back to 2-bit tiers");
 }
+// Reference for exact_lookup_allocation: enumerates the 4-, 3- and 2-bit counts over ranks sorted by variance and
+// fills the remaining padded 1-bit slots (the #9 experiment allocator, O(d^2 * groups)).
+double enumerated_distortion(const std::vector<double>& variance,const DistortionTable& error,uint32_t limit_bits) {
+  const uint32_t d=uint32_t(variance.size()),groups=uint32_t(limit_bits/CHAR_BIT*lookup_pair_groups);
+  auto sorted=variance;
+  for (auto& v:sorted) v=std::max(0.0,v);
+  std::sort(sorted.rbegin(),sorted.rend());
+  std::vector<double> prefix(d+1,0);
+  for (uint32_t r=0;r<d;++r) prefix[r+1]=prefix[r]+sorted[r];
+  auto span=[&](uint32_t begin,uint32_t count) { return prefix[begin+count]-prefix[begin]; };
+  double best=INFINITY;
+  for (uint32_t four=0;four<=std::min(d,groups);++four)
+    for (uint32_t three=0;three<=d-four;++three)
+      for (uint32_t two=0;two+three+four<=d;++two) {
+        const uint32_t fixed=four+ceil_div(two+three,2);
+        if (fixed>groups) break;
+        if ((groups-fixed)*4<three) continue;
+        const uint32_t coded=four+three+two,one=std::min(d-coded,(groups-fixed)*4-three);
+        best=std::min(best,error[4]*span(0,four)+error[3]*span(four,three)+error[2]*span(four+three,two)+
+                           error[1]*span(coded,one)+error[0]*span(coded+one,d-coded-one));
+      }
+  return best;
+}
+// The exact allocator matches the enumerator on random spectra (with ties and zero variances) at every padded limit.
+void exact_allocation_test() {
+  DistortionTable error{1};
+  for (unsigned b=1;b<=max_code_bits;++b) error[b]=distortion(gaussian_codebooks()[b]);
+  error[split_code_bits]=distortion(additive_three_codebook());
+  std::mt19937_64 rng(21);
+  size_t cases=0;
+  for (int trial=0;trial<300;++trial) {
+    const uint32_t d=1+uint32_t(rng()%40);
+    std::vector<double> variance(d);
+    std::exponential_distribution<double> exponential(1.0/(1+trial%4));
+    for (auto& v:variance) v=trial%5==0 ? double(rng()%3) : std::exp(-exponential(rng));
+    AllocationModel model{variance,std::vector<uint32_t>(d,max_code_bits),std::vector(d,error)};
+    for (uint32_t limit=CHAR_BIT;limit<=4*d+CHAR_BIT;limit+=1+uint32_t(rng()%3)) {
+      const auto exact=exact_lookup_allocation(variance,error,limit);
+      require(exact.bits.size()==d && widest_tier(exact.bits)<=lookup_code_bits,"exact allocation left the nibble layout");
+      require(lookup_stored_bits(exact.bits,exact.additive_three)<=std::max(limit/CHAR_BIT*CHAR_BIT,0u),"exact allocation exceeds its storage");
+      const double reference=enumerated_distortion(variance,error,limit);
+      require(std::fabs(predicted_distortion(model,exact.bits)-reference)<=1e-12*(1+reference),"exact allocation is not optimal");
+      ++cases;
+    }
+  }
+  require(cases>1000,"too few exact allocation cases");
+}
 // Measured distortion matches the Gaussian table on Gaussian rows. Rows with random norms (a scale mixture) raise
 // raw distortion, while shape-gain measurement divides out each row's RMS as the encoder does.
 // The RMS of a finite row is noisy, which trims tails by about 1% at 256 ranks.
@@ -225,6 +272,7 @@ void lloyd_max_fast_test() {
 void tieredq_additive_tests() {
   split_derivation_test();
   padded_allocation_test();
+  exact_allocation_test();
   measured_distortion_test();
   fast_target_allocation_test();
   additive_index_test();
