@@ -3,12 +3,15 @@
 // Recall is the mean over seeds 0-2 (inner-product truth on the raw base); QPS is seed 0, best of REPEATS,
 // at 1 thread batch 1, 1 thread batch 32 and THREADS threads batch 32. model_id identifies identical models.
 // The last two columns split recall into even and odd query ids, for choosing a setting on one half (#9).
+// AB_MODE=full trains for and serves full mode instead (#9 full-mode A/B).
 // Usage: issue20_ab_eval LABEL DATA_DIR D TIMED(0|1) BUDGET...
 #include "tieredq/tieredq.h"
 #include <algorithm>
 #include <array>
 #include <chrono>
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <fstream>
 #include <numeric>
 #include <omp.h>
@@ -41,7 +44,9 @@ Result evaluate(const std::vector<float>& base,const std::vector<float>& queries
   for (size_t i=0;i<train_count;++i) std::copy_n(base.data()+order[i]*d,d,sample.data()+i*d);
   auto config=dv::TieredQConfig::target_code_bits(d,code_bits);
   config.num_centroids=centroids;
-  dv::TieredQIndex index(dv::TieredQ::train(config,sample.data(),train_count,seed));
+  const char* mode=std::getenv("AB_MODE");
+  config.target_mode=mode && !std::strcmp(mode,"full") ? dv::TieredQIndexMode::full : dv::TieredQIndexMode::fast;
+  dv::TieredQIndex index(dv::TieredQ::train(config,sample.data(),train_count,seed),config.target_mode);
   index.add(base.data(),n);
   std::vector<float> scores(nq*top_k); std::vector<uint32_t> ids(nq*top_k);
   omp_set_num_threads(threads);
