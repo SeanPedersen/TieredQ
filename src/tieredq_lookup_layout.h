@@ -1,8 +1,8 @@
 // Geometry of the x86 nibble-lookup fast layout, shared by training (padded storage) and the lookup cache.
 // Same-width coordinates pack into 4-bit groups (1-bit x4, 2-bit x2, 4-bit x1) and two groups share a byte.
 // An additive 3-bit codebook {b} U {b+delta} splits each code into a 2-bit part (levels b) and a 1-bit part
-// (levels {0, delta}); both parts pack like ordinary 2- and 1-bit codes, so every group table stays an exact
-// sum of per-coordinate levels. Any other 3-bit codebook keeps one code per nibble, padded to 4 bits.
+// (levels {0, delta}). The parts share groups with the 2- and 1-bit tiers; each group table is the sum of its
+// coordinates' own level tables, so scoring stays exact. Any other 3-bit codebook keeps one code per nibble.
 #pragma once
 #include <array>
 #include <cstdint>
@@ -47,12 +47,18 @@ inline std::optional<AdditiveSplit> additive_three_split(const std::vector<float
 }
 inline uint32_t ceil_div(uint32_t value,uint32_t divisor) { return (value+divisor-1)/divisor; }
 inline uint32_t lookup_coordinates_per_group(uint32_t bits) { return lookup_code_bits/bits; }
-// Nibble groups of one tier; split 3-bit tiers emit a 2-bit and a 1-bit group run.
-inline uint32_t lookup_tier_groups(uint32_t bits,uint32_t dimensions,bool split) {
-  if (split && bits==split_code_bits)
-    return ceil_div(dimensions,lookup_coordinates_per_group(split_low_bits))+
-        ceil_div(dimensions,lookup_coordinates_per_group(split_high_bits));
-  return ceil_div(dimensions,lookup_coordinates_per_group(bits));
+using LookupWidthCounts=std::array<uint32_t,lookup_code_bits+1>; // coordinates per code width, one tier each
+// Nibble groups of a model; split 3-bit codes join the 2- and 1-bit streams.
+inline uint32_t lookup_group_count(const LookupWidthCounts& dimensions,bool split) {
+  auto stream=[&](uint32_t bits,uint32_t count) { return ceil_div(count,lookup_coordinates_per_group(bits)); };
+  if (!split) {
+    uint32_t groups=0;
+    for (uint32_t b=1;b<=lookup_code_bits;++b) groups+=stream(b,dimensions[b]);
+    return groups;
+  }
+  const uint32_t three=dimensions[split_code_bits];
+  return stream(lookup_code_bits,dimensions[lookup_code_bits])+stream(split_low_bits,dimensions[split_low_bits]+three)+
+      stream(split_high_bits,dimensions[split_high_bits]+three);
 }
 inline size_t lookup_group_bytes(size_t groups) { return (groups+lookup_pair_groups-1)/lookup_pair_groups; }
 } // namespace dv::tieredq_detail

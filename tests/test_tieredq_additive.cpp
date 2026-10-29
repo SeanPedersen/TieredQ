@@ -94,14 +94,15 @@ void split_derivation_test() {
   require(!additive_three_split(gaussian_codebooks()[2]),"4-level codebook splits");
   auto perturbed=book; perturbed[5]=std::nextafter(perturbed[5],INFINITY);
   require(!additive_three_split(perturbed),"inexact additive codebook splits");
-  require(lookup_tier_groups(3,5,true)==3+2 && lookup_tier_groups(3,5,false)==5,"3-bit group count");
-  require(lookup_tier_groups(1,5,false)==2 && lookup_tier_groups(2,5,true)==3 && lookup_tier_groups(4,5,true)==5,"group count");
-  // 199 two-bit + one 3-bit coordinate store 4 bits more than the all-2-bit 400 bits, rounded to a byte.
+  // Split parts share streams: 5x4 + ceil((3+5)/2) + ceil((2+5)/4) groups, against 5 + 5 + 2 + 1 unsplit.
+  const LookupWidthCounts widths{0,2,3,5,5};
+  require(lookup_group_count(widths,true)==5+4+2 && lookup_group_count(widths,false)==5+5+2+1,"group count");
+  // 199 two-bit + one 3-bit coordinate pad the 1-bit stream to a full nibble: 404 bits, stored as 408.
   Allocation bits(200,2); bits[0]=3;
   require(lookup_stored_bits(bits,true)==408 && lookup_stored_bits(Allocation(200,2),true)==400,"padded storage");
 }
-// The padded allocation never stores more than code_bits or the 2/4-bit allocation, and 3-bit tiers must
-// predict less distortion. On a flat spectrum at 2 bits/dim, one padded 3-bit coordinate loses to all 2-bit.
+// The 3-bit allocation spends the whole budget, never stores more than code_bits or the 2/4-bit allocation, and
+// must predict less distortion. On a flat spectrum at 2 bits/dim, one padded 3-bit coordinate falls back.
 void padded_allocation_test() {
   constexpr int ranks=200;
   AllocationModel model{std::vector<double>(ranks),std::vector<uint32_t>(ranks,max_code_bits),{}};
@@ -112,13 +113,15 @@ void padded_allocation_test() {
   size_t additive=0;
   for (uint32_t code_bits=ranks;code_bits<=4*ranks;code_bits+=ranks/8) for (uint32_t odd:{0u,1u,3u}) {
     const uint32_t budget=code_bits-odd;
-    const auto dense=greedy_allocation(model,budget,false),fallback=greedy_allocation(model,budget,true);
+    const auto dense=greedy_allocation(model,budget,false);
+    const auto fallback=has_three_bit_tier(dense) ? greedy_allocation(model,budget,true) : dense;
     if (widest_tier(dense)>lookup_code_bits) continue;
     const auto chosen=fast_lookup_allocation(model,budget,dense);
     require(chosen.additive_three==has_three_bit_tier(chosen.bits),"invalid padded allocation");
     if (!chosen.additive_three) { require(chosen.bits==fallback,"2/4-bit fallback changed"); continue; }
     const bool nibble_fallback=widest_tier(fallback)<=lookup_code_bits;
     require(widest_tier(chosen.bits)<=lookup_code_bits,"3-bit allocation left the nibble layout");
+    require(chosen.bits==greedy_allocation(model,budget,false),"3-bit allocation trimmed its budget");
     require(lookup_stored_bits(chosen.bits,true)<=std::max(budget,nibble_fallback ? lookup_stored_bits(fallback,false) : 0),"padded allocation exceeds the budget");
     require(predicted_distortion(model,chosen.bits)<predicted_distortion(model,fallback),"3-bit tiers kept without gain");
     ++additive;
@@ -143,6 +146,7 @@ void fast_target_allocation_test() {
     if (!has_three(fast)) continue;
     ++with_three;
     require(persisted_three_levels(fast)==additive_three_codebook(),"fast 3-bit tiers do not use the additive codebook");
+    require(fast.config().code_bits==code_bits,"3-bit allocation trimmed its budget");
   }
   require(with_three>=3,"fast target allocates too few 3-bit tiers");
 }
@@ -171,8 +175,9 @@ void additive_index_test() {
 void lloyd_max_fast_test() {
   const auto codec=TieredQ::deserialize(train(80,TieredQIndexMode::full).serialize());
   require(has_three(codec),"full-target model has no 3-bit tier");
-  size_t groups=0;
-  for (const auto& tier:codec.tiers()) groups+=lookup_tier_groups(tier.bits,tier.dimensions,false);
+  LookupWidthCounts widths{};
+  for (const auto& tier:codec.tiers()) widths[tier.bits]+=tier.dimensions;
+  const size_t groups=lookup_group_count(widths,false);
   const auto data=spectrum_rows(rows,13);
   TieredQIndex fast(codec),full(codec,TieredQIndexMode::full);
   fast.add(data.data(),rows); full.add(data.data(),rows);

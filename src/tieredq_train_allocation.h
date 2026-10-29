@@ -55,30 +55,24 @@ inline bool has_three_bit_tier(const Allocation& bits) { return std::count(bits.
 // Bits per vector the nibble lookup cache stores for an allocation whose tiers are all <= 4 bits,
 // including nibble and byte padding.
 inline uint32_t lookup_stored_bits(const Allocation& bits,bool split) {
-  std::array<uint32_t,lookup_code_bits+1> dimensions{};
+  LookupWidthCounts dimensions{};
   for (unsigned b:bits) ++dimensions[b];
-  size_t groups=0;
-  for (uint32_t b=1;b<=lookup_code_bits;++b) groups+=lookup_tier_groups(b,dimensions[b],split);
-  return uint32_t(lookup_group_bytes(groups)*CHAR_BIT);
+  return uint32_t(lookup_group_bytes(lookup_group_count(dimensions,split))*CHAR_BIT);
 }
 struct FastLookupAllocation { Allocation bits; bool additive_three; };
-// Fast target whose dense allocation fits the nibble layout. Additive 3-bit tiers cost 3 bits plus padding, so
-// the 3-bit allocation's budget shrinks by any overflow until it stores no more than code_bits (or than a nibble
-// 2/4-bit allocation, whose own padding may already exceed it); it is kept only if it predicts less distortion
-// than the 2/4-bit allocation. The 2/4 steps can reach 5 bits, which moves that fallback to packed codes.
-// model.error[3] must be the additive codebook's distortion.
+// Fast target whose dense allocation fits the nibble layout. The additive 3-bit allocation is kept only if its
+// padded storage is no more than code_bits (or than a nibble 2/4-bit allocation, whose own padding may already
+// exceed it) and it predicts less distortion than the 2/4-bit allocation. Trimming its budget to absorb padding
+// loses recall on non-Gaussian data (SIFT, #20), so an overflow falls back instead. The 2/4 steps can reach
+// 5 bits, which moves that fallback to packed codes. model.error[3] must be the additive codebook's distortion.
 inline FastLookupAllocation fast_lookup_allocation(const AllocationModel& model,uint32_t code_bits,const Allocation& dense) {
   const auto fallback=has_three_bit_tier(dense) ? greedy_allocation(model,code_bits,true) : dense;
+  auto bits=greedy_allocation(model,code_bits,false);
+  if (widest_tier(bits)>lookup_code_bits || !has_three_bit_tier(bits)) return {fallback,false};
   const bool nibble_fallback=widest_tier(fallback)<=lookup_code_bits;
   const uint32_t limit=nibble_fallback ? std::max(code_bits,lookup_stored_bits(fallback,false)) : code_bits;
-  for (uint32_t budget=code_bits;budget>0;) {
-    auto bits=greedy_allocation(model,budget,false);
-    if (widest_tier(bits)>lookup_code_bits || !has_three_bit_tier(bits)) break;
-    const uint32_t stored=lookup_stored_bits(bits,true);
-    if (stored>limit) { budget-=std::min(budget,stored-limit); continue; }
-    if (predicted_distortion(model,bits)<predicted_distortion(model,fallback)) return {std::move(bits),true};
-    break;
-  }
-  return {fallback,false};
+  if (lookup_stored_bits(bits,true)>limit || predicted_distortion(model,bits)>=predicted_distortion(model,fallback))
+    return {fallback,false};
+  return {std::move(bits),true};
 }
 } // namespace dv::tieredq_detail
