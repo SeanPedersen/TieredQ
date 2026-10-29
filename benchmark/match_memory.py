@@ -5,7 +5,8 @@ and seed. Each (reference bits, storage metric) pair is one target: the minimum 
 whose seed-0 measurement is at or below the target. It brackets the target, then bisects with secant steps down
 to RESOLUTION code bits. Selection reads storage only, never recall. Every measured cell is shared across
 targets (and across references sharing an output directory) and logged in calibration.csv. Each chosen budget is then measured at the remaining seeds. If any seed
-exceeds the target, the search steps down to the next smaller calibrated budget that fits. Cells are measured
+exceeds the target, the search steps down to the next smaller calibrated budget that fits, then below the smallest
+in RESOLUTION steps (seed-to-seed RSS noise can push every cached budget over a peak target). Cells are measured
 by measure_memory.run_cell, so methodology and columns match memory.csv, and cells.csv makes the run resumable.
 """
 import argparse
@@ -20,6 +21,7 @@ from measure_memory import FIELDS, HERE, prepare_native, run_cell
 METRICS = {"disk": "disk_bits_per_vector", "ram": "ram_loaded_bits_per_vector", "peak": "ram_peak_bits_per_vector"}
 RESOLUTION = 8
 MAX_PROBES = 24
+MAX_STEP_DOWNS = 8
 CALIBRATION_SEED = 0
 CALIBRATION_FIELDS = ["dataset", "reference_codec", "reference_bits", "metric", "target_bits_per_vector", "probe", "code_bits",
                       "realised_code_bits", "measured_bits_per_vector", "fits", "seed"]
@@ -111,9 +113,14 @@ def calibrate(cells, dataset, reference, metric, target, dimensions, log):
 
 
 def confirm(cells, dataset, metric, target, candidates, dimensions, seeds, log, reference):
-    """First candidate (largest first) whose every seed fits the target; returns its budget and rows."""
+    """First budget (largest first) whose every seed fits the target; returns its budget and rows.
+
+    Tries the calibrated candidates, then steps below the smallest of them in RESOLUTION code-bit steps.
+    """
     column = METRICS[metric]
-    for code_bits in candidates:
+    smallest = min(candidates, default=0)
+    step_downs = [smallest - RESOLUTION * step for step in range(1, MAX_STEP_DOWNS + 1) if smallest > RESOLUTION * step]
+    for code_bits in candidates + step_downs:
         rows = [cells.measure(dataset, "tieredq", -(-code_bits // dimensions), seed, code_bits) for seed in seeds]
         for row in rows:
             log(reference | dict(dataset=dataset, metric=metric, target_bits_per_vector=target,
