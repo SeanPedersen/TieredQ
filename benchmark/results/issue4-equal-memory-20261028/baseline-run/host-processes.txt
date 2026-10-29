@@ -1,0 +1,15 @@
+    PID %CPU   RSS COMMAND
+3378396  300 14856 /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python validate.py
+3363735  100 1068020 /app/.venv/bin/python /app/.venv/bin/uvicorn crawler_app:app --host 0.0.0.0 --port 23239 --no-access-log
+3361077 68.7 1513668 /app/.venv/bin/python /app/.venv/bin/uvicorn app:app --host 0.0.0.0 --port 23237 --no-access-log
+3378381 16.6 28492 /usr/bin/tailscaled be-child ssh --login-shell=/usr/bin/zsh --uid=1000 --gid=1000 --groups=1000,3,90,998,995,990,989,985,983,982,979,956,955,952 --local-user=sean --home-dir=/home/sean --remote-user=SeanPedersen@github --remote-ip=100.112.223.56 --has-tty=false --tty-name= --force-v1-behavior --cmd=bash -s
+   1620  4.5 171776 /usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock
+   1287  3.9 78720 /usr/bin/containerd
+  26622  2.7 68964 btop
+   2557  2.4 108660 /usr/bin/kwin_wayland --wayland-fd 7 --socket wayland-0 --xwayland-fd 8 --xwayland-fd 9 --xwayland-display :0 --xwayland-xauthority /run/user/1000/xauth_fVJnJa --xwayland
+2634106  2.1 400976 claude --dangerously-skip-permissions
+    507  1.9     0 [nv_queue]
+3455506  1.6 850008 /app/llama-server --model /models/Qwen_Qwen3.5-4B-Q4_K_M.gguf --alias SemIf-Q4 --n-gpu-layers 999 --ctx-size 6144 --parallel 1 --cache-ram 0 --host 0.0.0.0 --port 8080 --jinja
+   4088  1.3 259808 /usr/bin/plasmashell --no-respawn
+  26228  1.0 10616 mosh-server new -c 256 -s -l LANG=en_US.UTF-8
+  49498  0.9  2468 redis-server *:6379

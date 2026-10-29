@@ -1,0 +1,214 @@
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/source/benchmark/build-native
+[  5%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 25%] Built target dv_tieredq
+[ 85%] Built target nanobind-static
+[ 90%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 95%] Linking CXX executable codec_reference
+[ 95%] Built target codec_reference
+[100%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[100%] Built target codec_native
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-openai-rabitq-2-0: disk 3232.6, peak RAM 3296.5 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-openai-rabitq-2-1: disk 3232.6, peak RAM 3296.5 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-openai-rabitq-2-2: disk 3232.6, peak RAM 3296.5 bits/vector
+cell-openai-tieredq-c2654-0: disk 3164.7, peak RAM 3623.2 bits/vector
+cell-openai-tieredq-c2722-0: disk 3265.7, peak RAM 3728.3 bits/vector
+cell-openai-tieredq-c2700-0: disk 3232.4, peak RAM 3694.9 bits/vector
+cell-openai-tieredq-c2705-0: disk 3232.7, peak RAM 3701.1 bits/vector
+cell-openai-tieredq-c2700-1: disk 3232.4, peak RAM 3699.8 bits/vector
+cell-openai-tieredq-c2700-2: disk 3232.2, peak RAM 3699.5 bits/vector
+cell-openai-tieredq-c2680-0: disk 3198.7, peak RAM 3660.5 bits/vector
+cell-openai-tieredq-c2685-0: disk 3198.9, peak RAM 3660.5 bits/vector
+cell-openai-tieredq-c2688-0: disk 3199.2, peak RAM 3659.2 bits/vector
+cell-openai-tieredq-c2691-0: disk 3231.4, peak RAM 3696.6 bits/vector
+cell-openai-tieredq-c2688-1: disk 3199.7, peak RAM 3659.5 bits/vector
+cell-openai-tieredq-c2688-2: disk 3199.4, peak RAM 3664.8 bits/vector
+cell-openai-tieredq-c2394-0: disk 2888.5, peak RAM 3342.0 bits/vector
+cell-openai-tieredq-c2204-0: disk 2680.5, peak RAM 3118.5 bits/vector
+cell-openai-tieredq-c2347-0: disk 2852.6, peak RAM 3303.0 bits/vector
+cell-openai-tieredq-c2312-0: disk 2817.6, peak RAM 3262.4 bits/vector
+cell-openai-tieredq-c2339-0: disk 2852.1, peak RAM 3297.1 bits/vector
+cell-openai-tieredq-c2333-0: disk 2819.6, peak RAM 3264.7 bits/vector
+cell-openai-tieredq-c2333-1: disk 2819.8, peak RAM 3273.2 bits/vector
+cell-openai-tieredq-c2333-2: disk 2819.6, peak RAM 3272.5 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-openai-rabitq-3-0: disk 4768.6, peak RAM 4832.6 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-openai-rabitq-3-1: disk 4768.6, peak RAM 4832.6 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-openai-rabitq-3-2: disk 4768.6, peak RAM 4832.6 bits/vector
+cell-openai-tieredq-c4225-0: disk 4830.0, peak RAM 5329.7 bits/vector
+cell-openai-tieredq-c3850-0: disk 4443.8, peak RAM 4942.4 bits/vector
+cell-openai-tieredq-c4132-0: disk 4733.8, peak RAM 5233.4 bits/vector
+cell-openai-tieredq-c4166-0: disk 4765.8, peak RAM 5263.9 bits/vector
+cell-openai-tieredq-c4180-0: disk 4765.8, peak RAM 5271.7 bits/vector
+cell-openai-tieredq-c4191-0: disk 4766.0, peak RAM 5266.1 bits/vector
+cell-openai-tieredq-c4199-0: disk 4798.0, peak RAM 5297.9 bits/vector
+cell-openai-tieredq-c4191-1: disk 4766.0, peak RAM 5264.2 bits/vector
+cell-openai-tieredq-c4191-2: disk 4766.0, peak RAM 5264.2 bits/vector
+cell-openai-tieredq-c4140-0: disk 4733.8, peak RAM 5234.0 bits/vector
+cell-openai-tieredq-c4146-0: disk 4733.8, peak RAM 5232.7 bits/vector
+cell-openai-tieredq-c4151-0: disk 4733.8, peak RAM 5240.3 bits/vector
+cell-openai-tieredq-c4146-1: disk 4733.8, peak RAM 5233.4 bits/vector
+cell-openai-tieredq-c4146-2: disk 4733.8, peak RAM 5232.1 bits/vector
+cell-openai-tieredq-c4140-1: disk 4733.8, peak RAM 5232.4 bits/vector
+cell-openai-tieredq-c4140-2: disk 4733.8, peak RAM 5232.7 bits/vector
+cell-openai-tieredq-c3568-0: disk 4147.2, peak RAM 4637.3 bits/vector
+cell-openai-tieredq-c3749-0: disk 4345.6, peak RAM 4844.1 bits/vector
+cell-openai-tieredq-c3704-0: disk 4280.1, peak RAM 4779.9 bits/vector
+cell-openai-tieredq-c3738-0: disk 4313.3, peak RAM 4806.4 bits/vector
+cell-openai-tieredq-c3746-0: disk 4345.3, peak RAM 4843.4 bits/vector
+cell-openai-tieredq-c3738-1: disk 4313.3, peak RAM 4814.3 bits/vector
+cell-openai-tieredq-c3738-2: disk 4313.3, peak RAM 4808.0 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-openai-rabitq-4-0: disk 6304.6, peak RAM 6368.1 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-openai-rabitq-4-1: disk 6304.6, peak RAM 6368.5 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-openai-rabitq-4-2: disk 6304.6, peak RAM 6368.5 bits/vector
+cell-openai-tieredq-c5700-0: disk 6304.0, peak RAM 6803.9 bits/vector
+cell-openai-tieredq-c5708-0: disk 6304.0, peak RAM 6804.3 bits/vector
+cell-openai-tieredq-c5716-0: disk 6304.0, peak RAM 6805.3 bits/vector
+cell-openai-tieredq-c5724-0: disk 6304.0, peak RAM 6808.9 bits/vector
+cell-openai-tieredq-c5732-0: disk 6336.0, peak RAM 6836.1 bits/vector
+cell-openai-tieredq-c5724-1: disk 6304.0, peak RAM 6805.3 bits/vector
+cell-openai-tieredq-c5724-2: disk 6304.0, peak RAM 6805.3 bits/vector
+cell-openai-tieredq-c5332-0: disk 5920.0, peak RAM 6421.2 bits/vector
+cell-openai-tieredq-c5608-0: disk 6208.0, peak RAM 6709.6 bits/vector
+cell-openai-tieredq-c5666-0: disk 6272.0, peak RAM 6779.7 bits/vector
+cell-openai-tieredq-c5652-0: disk 6240.0, peak RAM 6739.7 bits/vector
+cell-openai-tieredq-c5663-0: disk 6240.0, peak RAM 6740.4 bits/vector
+cell-openai-tieredq-c5663-1: disk 6240.0, peak RAM 6745.3 bits/vector
+cell-openai-tieredq-c5663-2: disk 6240.0, peak RAM 6741.4 bits/vector
+cell-openai-tieredq-c5056-0: disk 5631.8, peak RAM 6131.5 bits/vector
+cell-openai-tieredq-c5263-0: disk 5856.0, peak RAM 6363.9 bits/vector
+cell-openai-tieredq-c5280-0: disk 5856.0, peak RAM 6356.3 bits/vector
+cell-openai-tieredq-c5293-0: disk 5888.0, peak RAM 6387.8 bits/vector
+cell-openai-tieredq-c5285-0: disk 5888.0, peak RAM 6389.4 bits/vector
+cell-openai-tieredq-c5280-1: disk 5856.0, peak RAM 6364.2 bits/vector
+cell-openai-tieredq-c5280-2: disk 5856.0, peak RAM 6356.0 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-gemini-rabitq-1-0: disk 864.4, peak RAM 902.9 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-gemini-rabitq-1-1: disk 864.4, peak RAM 902.9 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-gemini-rabitq-1-2: disk 864.4, peak RAM 902.9 bits/vector
+cell-gemini-tieredq-c864-0: disk 1183.0, peak RAM 1291.5 bits/vector
+cell-gemini-tieredq-c529-0: disk 736.6, peak RAM 828.1 bits/vector
+cell-gemini-tieredq-c625-0: disk 868.8, peak RAM 964.2 bits/vector
+cell-gemini-tieredq-c601-0: disk 835.9, peak RAM 931.7 bits/vector
+cell-gemini-tieredq-c619-0: disk 860.7, peak RAM 963.5 bits/vector
+cell-gemini-tieredq-c619-1: disk 860.7, peak RAM 960.9 bits/vector
+cell-gemini-tieredq-c619-2: disk 860.7, peak RAM 967.5 bits/vector
+cell-gemini-tieredq-c605-0: disk 836.1, peak RAM 936.0 bits/vector
+cell-gemini-tieredq-c601-1: disk 828.1, peak RAM 923.1 bits/vector
+cell-gemini-tieredq-c601-2: disk 835.9, peak RAM 932.4 bits/vector
+cell-gemini-tieredq-c581-0: disk 810.9, peak RAM 905.6 bits/vector
+cell-gemini-tieredq-c568-0: disk 786.2, peak RAM 886.1 bits/vector
+cell-gemini-tieredq-c578-0: disk 802.7, peak RAM 897.0 bits/vector
+cell-gemini-tieredq-c578-1: disk 802.9, peak RAM 897.3 bits/vector
+cell-gemini-tieredq-c578-2: disk 802.8, peak RAM 905.3 bits/vector
+cell-gemini-tieredq-c568-1: disk 786.4, peak RAM 881.1 bits/vector
+cell-gemini-tieredq-c568-2: disk 794.3, peak RAM 894.3 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-gemini-rabitq-2-0: disk 1696.4, peak RAM 1734.4 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-gemini-rabitq-2-1: disk 1696.4, peak RAM 1735.0 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-gemini-rabitq-2-2: disk 1696.4, peak RAM 1740.3 bits/vector
+cell-gemini-tieredq-c1377-0: disk 1777.3, peak RAM 1890.9 bits/vector
+cell-gemini-tieredq-c1249-0: disk 1637.1, peak RAM 1750.9 bits/vector
+cell-gemini-tieredq-c1303-0: disk 1694.9, peak RAM 1811.5 bits/vector
+cell-gemini-tieredq-c1321-0: disk 1719.4, peak RAM 1833.7 bits/vector
+cell-gemini-tieredq-c1307-0: disk 1702.9, peak RAM 1816.1 bits/vector
+cell-gemini-tieredq-c1303-1: disk 1695.0, peak RAM 1806.5 bits/vector
+cell-gemini-tieredq-c1303-2: disk 1694.7, peak RAM 1806.9 bits/vector
+cell-gemini-tieredq-c1276-0: disk 1662.0, peak RAM 1770.8 bits/vector
+cell-gemini-tieredq-c1282-0: disk 1670.2, peak RAM 1780.7 bits/vector
+cell-gemini-tieredq-c1276-1: disk 1662.0, peak RAM 1778.7 bits/vector
+cell-gemini-tieredq-c1276-2: disk 1661.9, peak RAM 1771.8 bits/vector
+cell-gemini-tieredq-c1153-0: disk 1529.9, peak RAM 1637.4 bits/vector
+cell-gemini-tieredq-c1225-0: disk 1604.2, peak RAM 1723.1 bits/vector
+cell-gemini-tieredq-c1235-0: disk 1620.6, peak RAM 1729.1 bits/vector
+cell-gemini-tieredq-c1238-0: disk 1620.7, peak RAM 1730.1 bits/vector
+cell-gemini-tieredq-c1240-0: disk 1628.7, peak RAM 1737.4 bits/vector
+cell-gemini-tieredq-c1238-1: disk 1620.6, peak RAM 1730.4 bits/vector
+cell-gemini-tieredq-c1238-2: disk 1620.6, peak RAM 1730.4 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-gemini-rabitq-3-0: disk 2464.4, peak RAM 2502.6 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-gemini-rabitq-3-1: disk 2464.4, peak RAM 2502.3 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-gemini-rabitq-3-2: disk 2464.4, peak RAM 2502.6 bits/vector
+cell-gemini-tieredq-c2064-0: disk 2306.4, peak RAM 2690.3 bits/vector
+cell-gemini-tieredq-c2222-0: disk 2469.3, peak RAM 2857.8 bits/vector
+cell-gemini-tieredq-c2183-0: disk 2436.8, peak RAM 2826.0 bits/vector
+cell-gemini-tieredq-c2213-0: disk 2469.1, peak RAM 2857.8 bits/vector
+cell-gemini-tieredq-c2206-0: disk 2437.0, peak RAM 2831.9 bits/vector
+cell-gemini-tieredq-c2206-1: disk 2437.0, peak RAM 2830.0 bits/vector
+cell-gemini-tieredq-c2206-2: disk 2437.0, peak RAM 2824.3 bits/vector
+cell-gemini-tieredq-c2154-0: disk 2404.1, peak RAM 2790.6 bits/vector
+cell-gemini-tieredq-c2176-0: disk 2404.6, peak RAM 2790.6 bits/vector
+cell-gemini-tieredq-c2176-1: disk 2404.6, peak RAM 2791.2 bits/vector
+cell-gemini-tieredq-c2176-2: disk 2404.5, peak RAM 2797.5 bits/vector
+cell-gemini-tieredq-c1893-0: disk 2142.9, peak RAM 2527.4 bits/vector
+cell-gemini-tieredq-c1764-0: disk 2011.7, peak RAM 2387.4 bits/vector
+cell-gemini-tieredq-c1861-0: disk 2110.1, peak RAM 2495.7 bits/vector
+cell-gemini-tieredq-c1869-0: disk 2110.4, peak RAM 2492.0 bits/vector
+cell-gemini-tieredq-c1876-0: disk 2110.5, peak RAM 2488.7 bits/vector
+cell-gemini-tieredq-c1882-0: disk 2110.6, peak RAM 2488.4 bits/vector
+cell-gemini-tieredq-c1886-0: disk 2110.7, peak RAM 2488.1 bits/vector
+cell-gemini-tieredq-c1886-1: disk 2110.9, peak RAM 2496.7 bits/vector
+cell-gemini-tieredq-c1886-2: disk 2110.7, peak RAM 2496.0 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-gemini-rabitq-4-0: disk 3232.4, peak RAM 3270.8 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-gemini-rabitq-4-1: disk 3232.4, peak RAM 3270.8 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-gemini-rabitq-4-2: disk 3232.4, peak RAM 3271.2 bits/vector
+cell-gemini-tieredq-c2985-0: disk 3239.8, peak RAM 3638.6 bits/vector
+cell-gemini-tieredq-c2795-0: disk 3047.8, peak RAM 3439.3 bits/vector
+cell-gemini-tieredq-c2938-0: disk 3175.8, peak RAM 3568.4 bits/vector
+cell-gemini-tieredq-c2974-0: disk 3207.8, peak RAM 3599.8 bits/vector
+cell-gemini-tieredq-c2982-0: disk 3239.8, peak RAM 3631.6 bits/vector
+cell-gemini-tieredq-c2974-1: disk 3207.8, peak RAM 3606.1 bits/vector
+cell-gemini-tieredq-c2974-2: disk 3207.8, peak RAM 3598.2 bits/vector
+cell-gemini-tieredq-c2963-0: disk 3207.8, peak RAM 3600.5 bits/vector
+cell-gemini-tieredq-c2955-0: disk 3207.8, peak RAM 3598.5 bits/vector
+cell-gemini-tieredq-c2949-0: disk 3207.8, peak RAM 3600.8 bits/vector
+cell-gemini-tieredq-c2946-0: disk 3207.8, peak RAM 3598.5 bits/vector
+cell-gemini-tieredq-c2938-1: disk 3175.8, peak RAM 3567.1 bits/vector
+cell-gemini-tieredq-c2938-2: disk 3175.8, peak RAM 3568.1 bits/vector
+cell-gemini-tieredq-c2629-0: disk 2887.8, peak RAM 3279.1 bits/vector
+cell-gemini-tieredq-c2528-0: disk 2759.8, peak RAM 3152.0 bits/vector
+cell-gemini-tieredq-c2604-0: disk 2855.8, peak RAM 3246.7 bits/vector
+cell-gemini-tieredq-c2623-0: disk 2855.8, peak RAM 3252.6 bits/vector
+cell-gemini-tieredq-c2623-1: disk 2855.8, peak RAM 3246.3 bits/vector
+cell-gemini-tieredq-c2623-2: disk 2855.8, peak RAM 3249.0 bits/vector

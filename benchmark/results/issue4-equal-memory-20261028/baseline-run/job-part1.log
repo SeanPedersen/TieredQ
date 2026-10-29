@@ -1,0 +1,136 @@
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue4-equal-memory-20261028/source/benchmark/build-native
+[  5%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 25%] Built target dv_tieredq
+[ 85%] Built target nanobind-static
+[ 90%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 95%] Linking CXX executable codec_reference
+[ 95%] Built target codec_reference
+[100%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[100%] Built target codec_native
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-openai-rabitq-1-0: disk 1632.6, peak RAM 1862.5 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-openai-rabitq-1-1: disk 1632.6, peak RAM 1861.2 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-openai-rabitq-1-2: disk 1632.6, peak RAM 1861.2 bits/vector
+cell-openai-tieredq-c1633-0: disk 2430.8, peak RAM 2968.1 bits/vector
+cell-openai-tieredq-c795-0: disk 1316.0, peak RAM 1831.7 bits/vector
+cell-openai-tieredq-c1033-0: disk 1632.3, peak RAM 2154.5 bits/vector
+cell-openai-tieredq-c1183-0: disk 1836.4, peak RAM 2358.3 bits/vector
+cell-openai-tieredq-c1070-0: disk 1681.2, peak RAM 2199.4 bits/vector
+cell-openai-tieredq-c1042-0: disk 1650.3, peak RAM 2173.2 bits/vector
+cell-openai-tieredq-c1035-0: disk 1640.8, peak RAM 2164.3 bits/vector
+cell-openai-tieredq-c1033-1: disk 1632.3, peak RAM 2149.6 bits/vector
+cell-openai-tieredq-c1033-2: disk 1632.3, peak RAM 2156.1 bits/vector
+cell-openai-tieredq-c854-0: disk 1395.8, peak RAM 1913.7 bits/vector
+cell-openai-tieredq-c840-0: disk 1376.4, peak RAM 1888.1 bits/vector
+cell-openai-tieredq-c843-0: disk 1377.4, peak RAM 1895.0 bits/vector
+cell-openai-tieredq-c845-0: disk 1385.4, peak RAM 1902.2 bits/vector
+cell-openai-tieredq-c843-1: disk 1384.9, peak RAM 1902.8 bits/vector
+cell-openai-tieredq-c843-2: disk 1384.9, peak RAM 1896.9 bits/vector
+cell-openai-tieredq-c840-1: disk 1375.9, peak RAM 1894.0 bits/vector
+cell-openai-tieredq-c840-2: disk 1375.9, peak RAM 1894.3 bits/vector
+cell-openai-tieredq-c819-0: disk 1346.4, peak RAM 1864.5 bits/vector
+cell-openai-tieredq-c813-0: disk 1336.5, peak RAM 1846.8 bits/vector
+cell-openai-tieredq-c813-1: disk 1336.5, peak RAM 1852.7 bits/vector
+cell-openai-tieredq-c813-2: disk 1337.0, peak RAM 1853.0 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-openai-rabitq-2-0: disk 3232.6, peak RAM 3461.0 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-openai-rabitq-2-1: disk 3232.6, peak RAM 3461.3 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-openai-rabitq-2-2: disk 3232.6, peak RAM 3460.6 bits/vector
+cell-openai-tieredq-c2435-0: disk 3249.2, peak RAM 4072.1 bits/vector
+cell-openai-tieredq-c2235-0: disk 2991.7, peak RAM 3797.2 bits/vector
+cell-openai-tieredq-c2385-0: disk 3176.8, peak RAM 3997.0 bits/vector
+cell-openai-tieredq-c2423-0: disk 3214.7, peak RAM 4059.0 bits/vector
+cell-openai-tieredq-c2429-0: disk 3215.7, peak RAM 4032.1 bits/vector
+cell-openai-tieredq-c2429-1: disk 3215.7, peak RAM 4037.3 bits/vector
+cell-openai-tieredq-c2429-2: disk 3215.7, peak RAM 4032.1 bits/vector
+cell-openai-tieredq-c1991-0: disk 2893.6, peak RAM 3435.7 bits/vector
+cell-openai-tieredq-c2052-0: disk 2977.0, peak RAM 3525.2 bits/vector
+cell-openai-tieredq-c2008-0: disk 2921.0, peak RAM 3468.5 bits/vector
+cell-openai-tieredq-c2004-0: disk 2912.0, peak RAM 3454.4 bits/vector
+cell-openai-tieredq-c2004-1: disk 2912.5, peak RAM 3455.4 bits/vector
+cell-openai-tieredq-c2004-2: disk 2912.5, peak RAM 3459.6 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-openai-rabitq-3-0: disk 4768.6, peak RAM 4996.8 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-openai-rabitq-3-1: disk 4768.6, peak RAM 5016.1 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-openai-rabitq-3-2: disk 4768.6, peak RAM 4997.1 bits/vector
+cell-openai-tieredq-c3954-0: disk 4914.6, peak RAM 5799.0 bits/vector
+cell-openai-tieredq-c3575-0: disk 4511.9, peak RAM 5388.7 bits/vector
+cell-openai-tieredq-c3817-0: disk 4783.6, peak RAM 5665.3 bits/vector
+cell-openai-tieredq-c3757-0: disk 4716.7, peak RAM 5583.0 bits/vector
+cell-openai-tieredq-c3802-0: disk 4750.7, peak RAM 5632.2 bits/vector
+cell-openai-tieredq-c3810-0: disk 4783.2, peak RAM 5663.9 bits/vector
+cell-openai-tieredq-c3802-1: disk 4750.7, peak RAM 5632.2 bits/vector
+cell-openai-tieredq-c3802-2: disk 4750.7, peak RAM 5626.6 bits/vector
+cell-openai-tieredq-c3236-0: disk 4158.4, peak RAM 5024.6 bits/vector
+cell-openai-tieredq-c3036-0: disk 3911.3, peak RAM 4803.8 bits/vector
+cell-openai-tieredq-c3186-0: disk 4088.5, peak RAM 4938.8 bits/vector
+cell-openai-tieredq-c3220-0: disk 4125.4, peak RAM 4973.9 bits/vector
+cell-openai-tieredq-c3227-0: disk 4126.4, peak RAM 4976.5 bits/vector
+cell-openai-tieredq-c3231-0: disk 4126.4, peak RAM 4970.6 bits/vector
+cell-openai-tieredq-c3231-1: disk 4126.4, peak RAM 4975.5 bits/vector
+cell-openai-tieredq-c3231-2: disk 4126.9, peak RAM 5007.0 bits/vector
+cell-openai-tieredq-c3227-1: disk 4126.4, peak RAM 4977.1 bits/vector
+cell-openai-tieredq-c3227-2: disk 4126.4, peak RAM 4991.5 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-openai-rabitq-4-0: disk 6304.6, peak RAM 6531.6 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-openai-rabitq-4-1: disk 6304.6, peak RAM 6531.0 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-openai-rabitq-4-2: disk 6304.6, peak RAM 6537.2 bits/vector
+cell-openai-tieredq-c5344-0: disk 6297.0, peak RAM 7181.4 bits/vector
+cell-openai-tieredq-c5352-0: disk 6329.0, peak RAM 7219.1 bits/vector
+cell-openai-tieredq-c5344-1: disk 6297.0, peak RAM 7169.3 bits/vector
+Traceback (most recent call last):
+  File "/home/sean/experiments/TieredQ-issue4-equal-memory-20261028/source/benchmark/measure_memory.py", line 215, in <module>
+    main()
+  File "/home/sean/experiments/TieredQ-issue4-equal-memory-20261028/source/benchmark/measure_memory.py", line 194, in main
+    result = worker(json.loads(args.spec), args.cell)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sean/experiments/TieredQ-issue4-equal-memory-20261028/source/benchmark/measure_memory.py", line 69, in build_worker
+    baseline = reset_peak()
+               ^^^^^^^^^^^^
+  File "/home/sean/experiments/TieredQ-issue4-equal-memory-20261028/source/benchmark/measure_memory.py", line 52, in reset_peak
+    raise RuntimeError("Kernel did not reset VmHWM")
+RuntimeError: Kernel did not reset VmHWM
+Traceback (most recent call last):
+  File "/home/sean/experiments/TieredQ-issue4-equal-memory-20261028/source/benchmark/match_memory.py", line 208, in <module>
+    main()
+  File "/home/sean/experiments/TieredQ-issue4-equal-memory-20261028/source/benchmark/match_memory.py", line 198, in main
+    results = [match(cells, dataset, bits, metric, args.seeds, log)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sean/experiments/TieredQ-issue4-equal-memory-20261028/source/benchmark/match_memory.py", line 138, in match
+    chosen, tieredq = confirm(cells, dataset, metric, target, candidates, dimensions, seeds, log, rabitq_bits)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sean/experiments/TieredQ-issue4-equal-memory-20261028/source/benchmark/match_memory.py", line 117, in confirm
+    rows = [cells.measure(dataset, "tieredq", -(-code_bits // dimensions), seed, code_bits) for seed in seeds]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sean/experiments/TieredQ-issue4-equal-memory-20261028/source/benchmark/match_memory.py", line 51, in measure
+    row = {name: str(value) for name, value in run_cell(spec, self.output, self.env).items()}
+                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sean/experiments/TieredQ-issue4-equal-memory-20261028/source/benchmark/measure_memory.py", line 146, in run_cell
+    subprocess.run([sys.executable, str(HERE / "measure_memory.py"), "--worker", phase,
+  File "/home/sean/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python', '/home/sean/experiments/TieredQ-issue4-equal-memory-20261028/source/benchmark/measure_memory.py', '--worker', 'build', '--spec', '{"dataset": "openai", "codec": "tieredq", "bits": 4, "seed": 2, "data": "/home/sean/experiments/TieredQ-issue4-equal-memory-20261028/data", "code_bits": 5344}', '--cell', '/home/sean/experiments/TieredQ-issue4-equal-memory-20261028/output/cell-openai-tieredq-c5344-2']' returned non-zero exit status 1.
