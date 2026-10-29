@@ -1,0 +1,62 @@
+{
+  "sift": {
+    "base_shape": [
+      1000000,
+      128
+    ],
+    "query_shape": [
+      1000,
+      128
+    ],
+    "sha256": {
+      "base": "ac8e11ed111b09e882bcf0ef1a77ebdd36c89f495bce8fd596603f69c35148e6",
+      "queries": "bd4faea0cbb6d80054ef3b7554cef8298001ee9c15ce798352b86bc1a206d598",
+      "truth": "b052425178b193b82bd1a7ab6e62446aaeca33202e98c0b57b4ae1db617d9a49"
+    }
+  },
+  "glove": {
+    "base_shape": [
+      100000,
+      200
+    ],
+    "query_shape": [
+      1000,
+      200
+    ],
+    "sha256": {
+      "base": "dbef767dd011fb713d9951e8b65d3ba1d3a008bc98f56a5815d6a810c2606c8a",
+      "queries": "39bbfe76c243fb3628e3fd002feaea49cd547416ac9474d476e1a3eb293a78d2",
+      "truth": "71058b7b59408346c816a7acd0c7e4475b472f98925fcfcf12dd9734f1e74439"
+    }
+  },
+  "openai": {
+    "base_shape": [
+      100000,
+      1536
+    ],
+    "query_shape": [
+      1000,
+      1536
+    ],
+    "sha256": {
+      "base": "09bf358f7e818a69aac33aaf8888a702e2843c4ff2904b9cfdf3bbfd5ab6a948",
+      "queries": "59f90bed24086c0a74d4d80a626a8945e6718ab373807063b089d4a4477ef1cd",
+      "truth": "3c170137a11342f3936a2dfda21feaf2061ade02b2c540278b43c634574a3c3a"
+    }
+  },
+  "gemini": {
+    "base_shape": [
+      99000,
+      768
+    ],
+    "query_shape": [
+      1000,
+      768
+    ],
+    "sha256": {
+      "base": "89744af8576116555f3e8ac384b1d318c5f3da192ebd193a76f03606b007fa1a",
+      "queries": "fa594bfbaebf5a68681f42b8570c6908df94db48f114e117e6e6185eda49d6b9",
+      "truth": "8eaa35bafe1ed4806fbd0182f75476ba5f12803e0d84959b01966b231dd70240"
+    }
+  }
+}

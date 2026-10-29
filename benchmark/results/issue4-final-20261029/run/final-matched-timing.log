@@ -1,0 +1,362 @@
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/build-native
+[ 20%] Built target dv_tieredq
+[ 25%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 85%] Built target nanobind-static
+[ 90%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 95%] Linking CXX executable codec_reference
+[ 95%] Built target codec_reference
+[100%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[100%] Built target codec_native
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets gemini --bits 1 --code-bits 634 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-gemini-c634.json
+gemini tieredq b=1 seed=0 t=1 batch=1: {'recall10': 0.7943000000000001, 'qps': 1679.7086783068958, 'p50_ms': 0.5838859360665083, 'p95_ms': 0.6478852825239301}
+gemini tieredq b=1 seed=0 t=1 batch=32: {'recall10': 0.7943000000000001, 'qps': 1688.9977828839012, 'p50_ms': 18.64700810983777, 'p95_ms': 20.510633941739798}
+gemini tieredq b=1 seed=0 t=8 batch=1: {'recall10': 0.7943000000000001, 'qps': 5093.975594194006, 'p50_ms': 0.1947064884006977, 'p95_ms': 0.218387390486896}
+gemini tieredq b=1 seed=0 t=8 batch=32: {'recall10': 0.7943000000000001, 'qps': 12123.117823641769, 'p50_ms': 2.6228418573737144, 'p95_ms': 2.7959756553173065}
+PROGRESS 1/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets gemini --bits 1 --code-bits 654 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-gemini-c654.json
+gemini tieredq b=1 seed=0 t=1 batch=1: {'recall10': 0.8030000000000002, 'qps': 1625.874645704769, 'p50_ms': 0.6040879525244236, 'p95_ms': 0.6724165519699454}
+gemini tieredq b=1 seed=0 t=1 batch=32: {'recall10': 0.8030000000000002, 'qps': 1674.1370650205506, 'p50_ms': 18.88341223821044, 'p95_ms': 20.920912735164165}
+gemini tieredq b=1 seed=0 t=8 batch=1: {'recall10': 0.8030000000000002, 'qps': 4553.950194618687, 'p50_ms': 0.20133145153522491, 'p95_ms': 0.21901815198361874}
+gemini tieredq b=1 seed=0 t=8 batch=32: {'recall10': 0.8030000000000002, 'qps': 11645.569862246817, 'p50_ms': 2.754833549261093, 'p95_ms': 2.877327613532543}
+PROGRESS 2/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets gemini --bits 1 --code-bits 678 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-gemini-c678.json
+gemini tieredq b=1 seed=0 t=1 batch=1: {'recall10': 0.8088000000000001, 'qps': 1636.0506565375765, 'p50_ms': 0.6039885338395834, 'p95_ms': 0.6728616543114185}
+gemini tieredq b=1 seed=0 t=1 batch=32: {'recall10': 0.8088000000000001, 'qps': 1641.2166280156805, 'p50_ms': 19.07547377049923, 'p95_ms': 21.207091864198446}
+gemini tieredq b=1 seed=0 t=8 batch=1: {'recall10': 0.8088000000000001, 'qps': 5219.112286668386, 'p50_ms': 0.19119540229439735, 'p95_ms': 0.21210841368883845}
+gemini tieredq b=1 seed=0 t=8 batch=32: {'recall10': 0.8088000000000001, 'qps': 11894.724895544688, 'p50_ms': 2.6743821799755096, 'p95_ms': 2.8277551755309105}
+PROGRESS 3/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets gemini --bits 1 --code-bits 684 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-gemini-c684.json
+gemini tieredq b=1 seed=0 t=1 batch=1: {'recall10': 0.8121000000000002, 'qps': 1596.0828500414643, 'p50_ms': 0.6120323669165373, 'p95_ms': 0.6790432147681713}
+gemini tieredq b=1 seed=0 t=1 batch=32: {'recall10': 0.8121000000000002, 'qps': 1609.8209817710879, 'p50_ms': 19.30375723168254, 'p95_ms': 21.65012201294303}
+gemini tieredq b=1 seed=0 t=8 batch=1: {'recall10': 0.8121000000000002, 'qps': 4905.982777060125, 'p50_ms': 0.20430353470146656, 'p95_ms': 0.21893507800996304}
+gemini tieredq b=1 seed=0 t=8 batch=32: {'recall10': 0.8121000000000002, 'qps': 11382.59420864568, 'p50_ms': 2.8186622075736523, 'p95_ms': 2.90866382420063}
+PROGRESS 4/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets gemini --bits 2 --code-bits 1372 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-gemini-c1372.json
+gemini tieredq b=2 seed=0 t=1 batch=1: {'recall10': 0.9144000000000001, 'qps': 892.1013144483281, 'p50_ms': 1.0923659428954124, 'p95_ms': 1.2949048308655615}
+gemini tieredq b=2 seed=0 t=1 batch=32: {'recall10': 0.9144000000000001, 'qps': 937.6887562736015, 'p50_ms': 33.53016311302781, 'p95_ms': 37.773678079247475}
+gemini tieredq b=2 seed=0 t=8 batch=1: {'recall10': 0.9144000000000001, 'qps': 3146.436825539373, 'p50_ms': 0.3181740175932646, 'p95_ms': 0.3439775202423334}
+gemini tieredq b=2 seed=0 t=8 batch=32: {'recall10': 0.9144000000000001, 'qps': 6760.89592315942, 'p50_ms': 4.719684831798077, 'p95_ms': 4.984293133020401}
+PROGRESS 5/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets gemini --bits 2 --code-bits 1393 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-gemini-c1393.json
+gemini tieredq b=2 seed=0 t=1 batch=1: {'recall10': 0.9157000000000001, 'qps': 830.7205085146937, 'p50_ms': 1.1837854981422424, 'p95_ms': 1.3231951044872403}
+gemini tieredq b=2 seed=0 t=1 batch=32: {'recall10': 0.9157000000000001, 'qps': 853.4713901750258, 'p50_ms': 36.79621173068881, 'p95_ms': 41.6618213057518}
+gemini tieredq b=2 seed=0 t=8 batch=1: {'recall10': 0.9157000000000001, 'qps': 2983.19845668321, 'p50_ms': 0.3176317550241947, 'p95_ms': 0.3423398593440652}
+gemini tieredq b=2 seed=0 t=8 batch=32: {'recall10': 0.9157000000000001, 'qps': 6240.046438968077, 'p50_ms': 5.1094042137265205, 'p95_ms': 5.3945849649608135}
+PROGRESS 6/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets gemini --bits 2 --code-bits 1423 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-gemini-c1423.json
+gemini tieredq b=2 seed=0 t=1 batch=1: {'recall10': 0.9178000000000002, 'qps': 821.0842845069465, 'p50_ms': 1.1813715100288391, 'p95_ms': 1.4024373376742}
+gemini tieredq b=2 seed=0 t=1 batch=32: {'recall10': 0.9178000000000002, 'qps': 866.8637067024234, 'p50_ms': 36.01136989891529, 'p95_ms': 40.445123333483934}
+gemini tieredq b=2 seed=0 t=8 batch=1: {'recall10': 0.9178000000000002, 'qps': 2972.6559732778096, 'p50_ms': 0.3281724639236927, 'p95_ms': 0.3565910505130887}
+gemini tieredq b=2 seed=0 t=8 batch=32: {'recall10': 0.9178000000000002, 'qps': 6381.378680434691, 'p50_ms': 4.996494855731726, 'p95_ms': 5.326798185706139}
+PROGRESS 7/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets gemini --bits 2 --code-bits 1460 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-gemini-c1460.json
+gemini tieredq b=2 seed=0 t=1 batch=1: {'recall10': 0.9189, 'qps': 746.646033352149, 'p50_ms': 1.3164228294044733, 'p95_ms': 1.4949712203815577}
+gemini tieredq b=2 seed=0 t=1 batch=32: {'recall10': 0.9189, 'qps': 780.0102090838122, 'p50_ms': 40.449108928442, 'p95_ms': 44.798645190894604}
+gemini tieredq b=2 seed=0 t=8 batch=1: {'recall10': 0.9189, 'qps': 3016.251528267398, 'p50_ms': 0.33236341550946236, 'p95_ms': 0.35477245692163706}
+gemini tieredq b=2 seed=0 t=8 batch=32: {'recall10': 0.9189, 'qps': 5443.627814440488, 'p50_ms': 5.881986115127802, 'p95_ms': 6.2977587804198265}
+PROGRESS 8/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets gemini --bits 2 --code-bits 1508 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-gemini-c1508.json
+gemini tieredq b=2 seed=0 t=1 batch=1: {'recall10': 0.9263000000000002, 'qps': 719.4226354984276, 'p50_ms': 1.347133656963706, 'p95_ms': 1.557356002740562}
+gemini tieredq b=2 seed=0 t=1 batch=32: {'recall10': 0.9263000000000002, 'qps': 765.6956042815394, 'p50_ms': 41.013398207724094, 'p95_ms': 45.90172506868839}
+gemini tieredq b=2 seed=0 t=8 batch=1: {'recall10': 0.9263000000000002, 'qps': 2910.2712287326312, 'p50_ms': 0.341770239174366, 'p95_ms': 0.37276726216077805}
+gemini tieredq b=2 seed=0 t=8 batch=32: {'recall10': 0.9263000000000002, 'qps': 5428.19950413001, 'p50_ms': 5.860739853233099, 'p95_ms': 6.215878762304783}
+PROGRESS 9/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets gemini --bits 4 --code-bits 2589 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-gemini-c2589.json
+gemini tieredq b=4 seed=0 t=1 batch=1: {'recall10': 0.9689000000000001, 'qps': 163.12844505738508, 'p50_ms': 5.967015400528908, 'p95_ms': 6.817034306004643}
+gemini tieredq b=4 seed=0 t=1 batch=32: {'recall10': 0.9689000000000001, 'qps': 453.6389475225439, 'p50_ms': 73.41785915195942, 'p95_ms': 80.80488489940763}
+gemini tieredq b=4 seed=0 t=8 batch=1: {'recall10': 0.9689000000000001, 'qps': 867.0415715498726, 'p50_ms': 1.1568740010261536, 'p95_ms': 1.2246840866282582}
+gemini tieredq b=4 seed=0 t=8 batch=32: {'recall10': 0.9689000000000001, 'qps': 2504.5956868099424, 'p50_ms': 12.007571756839752, 'p95_ms': 19.02993768453598}
+PROGRESS 10/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets gemini --bits 4 --code-bits 2655 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-gemini-c2655.json
+gemini tieredq b=4 seed=0 t=1 batch=1: {'recall10': 0.9688000000000001, 'qps': 160.75341139816044, 'p50_ms': 6.103307707235217, 'p95_ms': 6.924761924892664}
+gemini tieredq b=4 seed=0 t=1 batch=32: {'recall10': 0.9688000000000001, 'qps': 444.6424968868882, 'p50_ms': 72.88907980546355, 'p95_ms': 80.24381240829825}
+gemini tieredq b=4 seed=0 t=8 batch=1: {'recall10': 0.9688000000000001, 'qps': 872.404674067759, 'p50_ms': 1.1494511272758245, 'p95_ms': 1.2208316242322326}
+gemini tieredq b=4 seed=0 t=8 batch=32: {'recall10': 0.9688000000000001, 'qps': 2728.831598618714, 'p50_ms': 11.612897273153067, 'p95_ms': 12.25949078798294}
+PROGRESS 11/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets gemini --bits 4 --code-bits 2862 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-gemini-c2862.json
+gemini tieredq b=4 seed=0 t=1 batch=1: {'recall10': 0.9736, 'qps': 150.56369063871344, 'p50_ms': 6.51145470328629, 'p95_ms': 7.335940166376531}
+gemini tieredq b=4 seed=0 t=1 batch=32: {'recall10': 0.9736, 'qps': 449.3405405832965, 'p50_ms': 73.17524729296565, 'p95_ms': 80.09824901819229}
+gemini tieredq b=4 seed=0 t=8 batch=1: {'recall10': 0.9736, 'qps': 831.7986424789661, 'p50_ms': 1.2033111415803432, 'p95_ms': 1.270731003023684}
+gemini tieredq b=4 seed=0 t=8 batch=32: {'recall10': 0.9736, 'qps': 2484.1625264285285, 'p50_ms': 12.227874249219894, 'p95_ms': 17.938273027539253}
+PROGRESS 12/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets gemini --bits 4 --code-bits 2912 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-gemini-c2912.json
+gemini tieredq b=4 seed=0 t=1 batch=1: {'recall10': 0.9747, 'qps': 147.09234859909117, 'p50_ms': 6.683595944195986, 'p95_ms': 7.558103580959141}
+gemini tieredq b=4 seed=0 t=1 batch=32: {'recall10': 0.9747, 'qps': 439.89970730060537, 'p50_ms': 73.60455021262169, 'p95_ms': 82.11095398291945}
+gemini tieredq b=4 seed=0 t=8 batch=1: {'recall10': 0.9747, 'qps': 802.8760816708867, 'p50_ms': 1.2552940752357244, 'p95_ms': 1.3210350647568703}
+gemini tieredq b=4 seed=0 t=8 batch=32: {'recall10': 0.9747, 'qps': 2752.2609558026966, 'p50_ms': 11.562588158994913, 'p95_ms': 12.102316599339247}
+PROGRESS 13/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets gemini --bits 4 --code-bits 2975 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-gemini-c2975.json
+gemini tieredq b=4 seed=0 t=1 batch=1: {'recall10': 0.976, 'qps': 144.60772066708242, 'p50_ms': 6.762843811884522, 'p95_ms': 7.639528065919876}
+gemini tieredq b=4 seed=0 t=1 batch=32: {'recall10': 0.976, 'qps': 439.8521327028776, 'p50_ms': 73.19362694397569, 'p95_ms': 81.69157383963466}
+gemini tieredq b=4 seed=0 t=8 batch=1: {'recall10': 0.976, 'qps': 810.2986854558847, 'p50_ms': 1.2397544924169779, 'p95_ms': 1.3115917099639773}
+gemini tieredq b=4 seed=0 t=8 batch=32: {'recall10': 0.976, 'qps': 2594.9051927826017, 'p50_ms': 11.677742004394531, 'p95_ms': 15.920458361506462}
+PROGRESS 14/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets gemini --bits 4 --code-bits 3008 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-gemini-c3008.json
+gemini tieredq b=4 seed=0 t=1 batch=1: {'recall10': 0.9773000000000001, 'qps': 143.22427533799626, 'p50_ms': 6.840577814728022, 'p95_ms': 7.717071077786385}
+gemini tieredq b=4 seed=0 t=1 batch=32: {'recall10': 0.9773000000000001, 'qps': 437.21631180043687, 'p50_ms': 73.49915383383632, 'p95_ms': 82.98284839838743}
+gemini tieredq b=4 seed=0 t=8 batch=1: {'recall10': 0.9773000000000001, 'qps': 799.4161338253779, 'p50_ms': 1.255155773833394, 'p95_ms': 1.3454603729769588}
+gemini tieredq b=4 seed=0 t=8 batch=32: {'recall10': 0.9773000000000001, 'qps': 2579.945642251835, 'p50_ms': 12.159438338130713, 'p95_ms': 15.184930991381407}
+PROGRESS 15/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets glove --bits 1 --code-bits 190 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-glove-c190.json
+glove tieredq b=1 seed=0 t=1 batch=1: {'recall10': 0.39959999999999996, 'qps': 3434.5438228069092, 'p50_ms': 0.2781348302960396, 'p95_ms': 0.3264210186898708}
+glove tieredq b=1 seed=0 t=1 batch=32: {'recall10': 0.39959999999999996, 'qps': 3770.944883790558, 'p50_ms': 8.48844600841403, 'p95_ms': 8.641092106699944}
+glove tieredq b=1 seed=0 t=8 batch=1: {'recall10': 0.39959999999999996, 'qps': 14034.691123265957, 'p50_ms': 0.06721168756484985, 'p95_ms': 0.08431142196059227}
+glove tieredq b=1 seed=0 t=8 batch=32: {'recall10': 0.39959999999999996, 'qps': 26375.99968409971, 'p50_ms': 1.1927038431167603, 'p95_ms': 1.281773205846548}
+PROGRESS 16/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets glove --bits 1 --code-bits 198 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-glove-c198.json
+glove tieredq b=1 seed=0 t=1 batch=1: {'recall10': 0.3982, 'qps': 3500.3418356362995, 'p50_ms': 0.2821669913828373, 'p95_ms': 0.31622557435184717}
+glove tieredq b=1 seed=0 t=1 batch=32: {'recall10': 0.3982, 'qps': 3510.84926022178, 'p50_ms': 8.849307894706726, 'p95_ms': 9.966501034796238}
+glove tieredq b=1 seed=0 t=8 batch=1: {'recall10': 0.3982, 'qps': 13397.392671396348, 'p50_ms': 0.07291208021342754, 'p95_ms': 0.0965094892308116}
+glove tieredq b=1 seed=0 t=8 batch=32: {'recall10': 0.3982, 'qps': 24053.588779649606, 'p50_ms': 1.3317931443452835, 'p95_ms': 1.3608010485768318}
+PROGRESS 17/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets glove --bits 2 --code-bits 232 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-glove-c232.json
+glove tieredq b=2 seed=0 t=1 batch=1: {'recall10': 0.451, 'qps': 3345.96186809987, 'p50_ms': 0.2958646509796381, 'p95_ms': 0.32882660161703825}
+glove tieredq b=2 seed=0 t=1 batch=32: {'recall10': 0.451, 'qps': 3407.810985263098, 'p50_ms': 9.271975141018629, 'p95_ms': 10.439222678542137}
+glove tieredq b=2 seed=0 t=8 batch=1: {'recall10': 0.451, 'qps': 13178.652901451907, 'p50_ms': 0.07083197124302387, 'p95_ms': 0.10048162657767533}
+glove tieredq b=2 seed=0 t=8 batch=32: {'recall10': 0.451, 'qps': 24055.52453880457, 'p50_ms': 1.3215760700404644, 'p95_ms': 1.4218990691006184}
+PROGRESS 18/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets glove --bits 2 --code-bits 264 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-glove-c264.json
+glove tieredq b=2 seed=0 t=1 batch=1: {'recall10': 0.49789999999999995, 'qps': 2964.5294982161845, 'p50_ms': 0.3269778098911047, 'p95_ms': 0.3691951045766473}
+glove tieredq b=2 seed=0 t=1 batch=32: {'recall10': 0.49789999999999995, 'qps': 3160.6080454522535, 'p50_ms': 10.061666835099459, 'p95_ms': 10.546769015491009}
+glove tieredq b=2 seed=0 t=8 batch=1: {'recall10': 0.49789999999999995, 'qps': 11730.141952021331, 'p50_ms': 0.0832520890980959, 'p95_ms': 0.10666260495781896}
+glove tieredq b=2 seed=0 t=8 batch=32: {'recall10': 0.49789999999999995, 'qps': 21974.801748940805, 'p50_ms': 1.4640716835856438, 'p95_ms': 1.5194611623883247}
+PROGRESS 19/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets glove --bits 2 --code-bits 283 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-glove-c283.json
+glove tieredq b=2 seed=0 t=1 batch=1: {'recall10': 0.5186, 'qps': 3037.254331651376, 'p50_ms': 0.3265754785388708, 'p95_ms': 0.3512144554406404}
+glove tieredq b=2 seed=0 t=1 batch=32: {'recall10': 0.5186, 'qps': 3012.040824111005, 'p50_ms': 10.360328014940023, 'p95_ms': 11.626108083873987}
+glove tieredq b=2 seed=0 t=8 batch=1: {'recall10': 0.5186, 'qps': 2061.14100242624, 'p50_ms': 0.08497154340147972, 'p95_ms': 3.2084651524201035}
+glove tieredq b=2 seed=0 t=8 batch=32: {'recall10': 0.5186, 'qps': 21652.20535583149, 'p50_ms': 1.4698542654514313, 'p95_ms': 1.5572928823530674}
+PROGRESS 20/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets glove --bits 2 --code-bits 367 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-glove-c367.json
+glove tieredq b=2 seed=0 t=1 batch=1: {'recall10': 0.6317, 'qps': 2606.9050184083067, 'p50_ms': 0.37790811620652676, 'p95_ms': 0.4209009697660804}
+glove tieredq b=2 seed=0 t=1 batch=32: {'recall10': 0.6317, 'qps': 2687.3028234414974, 'p50_ms': 11.847592890262604, 'p95_ms': 12.562006711959839}
+glove tieredq b=2 seed=0 t=8 batch=1: {'recall10': 0.6317, 'qps': 6194.935052152538, 'p50_ms': 0.09242747910320759, 'p95_ms': 0.11622987221926451}
+glove tieredq b=2 seed=0 t=8 batch=32: {'recall10': 0.6317, 'qps': 18281.786251013615, 'p50_ms': 1.7447317950427532, 'p95_ms': 1.8082549795508385}
+PROGRESS 21/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets glove --bits 2 --code-bits 387 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-glove-c387.json
+glove tieredq b=2 seed=0 t=1 batch=1: {'recall10': 0.655, 'qps': 2526.9646772017954, 'p50_ms': 0.3876085393130779, 'p95_ms': 0.43307377491146326}
+glove tieredq b=2 seed=0 t=1 batch=32: {'recall10': 0.655, 'qps': 2604.1872341422913, 'p50_ms': 12.091987766325474, 'p95_ms': 13.473838102072477}
+glove tieredq b=2 seed=0 t=8 batch=1: {'recall10': 0.655, 'qps': 10844.44108925833, 'p50_ms': 0.08619693107903004, 'p95_ms': 0.11329292319715013}
+glove tieredq b=2 seed=0 t=8 batch=32: {'recall10': 0.655, 'qps': 17948.313894973322, 'p50_ms': 1.801912672817707, 'p95_ms': 1.861340831965208}
+PROGRESS 22/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets glove --bits 3 --code-bits 401 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-glove-c401.json
+glove tieredq b=3 seed=0 t=1 batch=1: {'recall10': 0.6655, 'qps': 2504.7055422533153, 'p50_ms': 0.3938833251595497, 'p95_ms': 0.4340101731941104}
+glove tieredq b=3 seed=0 t=1 batch=32: {'recall10': 0.6655, 'qps': 2482.4814196670914, 'p50_ms': 12.591536156833172, 'p95_ms': 13.862231746315956}
+glove tieredq b=3 seed=0 t=8 batch=1: {'recall10': 0.6655, 'qps': 10498.247309765551, 'p50_ms': 0.09394832886755466, 'p95_ms': 0.11403397656977175}
+glove tieredq b=3 seed=0 t=8 batch=32: {'recall10': 0.6655, 'qps': 17678.561073318797, 'p50_ms': 1.8228013068437576, 'p95_ms': 1.8930649384856224}
+PROGRESS 23/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets glove --bits 3 --code-bits 554 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-glove-c554.json
+glove tieredq b=3 seed=0 t=1 batch=1: {'recall10': 0.7475, 'qps': 2063.1810900259748, 'p50_ms': 0.47881901264190674, 'p95_ms': 0.5296764895319939}
+glove tieredq b=3 seed=0 t=1 batch=32: {'recall10': 0.7475, 'qps': 2054.191873567824, 'p50_ms': 15.24222269654274, 'p95_ms': 16.736396588385105}
+glove tieredq b=3 seed=0 t=8 batch=1: {'recall10': 0.7475, 'qps': 7221.8692065462055, 'p50_ms': 0.1127955038100481, 'p95_ms': 0.1420410582795739}
+glove tieredq b=3 seed=0 t=8 batch=32: {'recall10': 0.7475, 'qps': 14455.069988649908, 'p50_ms': 2.229928970336914, 'p95_ms': 2.3125396110117435}
+PROGRESS 24/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets glove --bits 4 --code-bits 608 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-glove-c608.json
+glove tieredq b=4 seed=0 t=1 batch=1: {'recall10': 0.7744000000000001, 'qps': 1966.8054269629583, 'p50_ms': 0.5024534184485674, 'p95_ms': 0.5506002344191074}
+glove tieredq b=4 seed=0 t=1 batch=32: {'recall10': 0.7744000000000001, 'qps': 1913.9355786321212, 'p50_ms': 16.75207493826747, 'p95_ms': 18.434378784149885}
+glove tieredq b=4 seed=0 t=8 batch=1: {'recall10': 0.7744000000000001, 'qps': 7307.838317411165, 'p50_ms': 0.12293714098632336, 'p95_ms': 0.13195404317229986}
+glove tieredq b=4 seed=0 t=8 batch=32: {'recall10': 0.7744000000000001, 'qps': 13762.124679569957, 'p50_ms': 2.3328540846705437, 'p95_ms': 2.4331677705049515}
+PROGRESS 25/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets glove --bits 4 --code-bits 766 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-glove-c766.json
+glove tieredq b=4 seed=0 t=1 batch=1: {'recall10': 0.8750000000000002, 'qps': 1530.910532336465, 'p50_ms': 0.6477008573710918, 'p95_ms': 0.6988088833168148}
+glove tieredq b=4 seed=0 t=1 batch=32: {'recall10': 0.8750000000000002, 'qps': 1614.7163944103138, 'p50_ms': 19.92372702807188, 'p95_ms': 21.126694977283478}
+glove tieredq b=4 seed=0 t=8 batch=1: {'recall10': 0.8750000000000002, 'qps': 6519.289724386689, 'p50_ms': 0.13922550715506077, 'p95_ms': 0.15028018970042464}
+glove tieredq b=4 seed=0 t=8 batch=32: {'recall10': 0.8750000000000002, 'qps': 11422.31992241763, 'p50_ms': 2.8005563654005527, 'p95_ms': 2.909937873482704}
+PROGRESS 26/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets glove --bits 4 --code-bits 788 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-glove-c788.json
+glove tieredq b=4 seed=0 t=1 batch=1: {'recall10': 0.8891000000000001, 'qps': 1632.2102452018084, 'p50_ms': 0.6071121897548437, 'p95_ms': 0.666838395409286}
+glove tieredq b=4 seed=0 t=1 batch=32: {'recall10': 0.8891000000000001, 'qps': 1635.5745447244196, 'p50_ms': 19.203450065106153, 'p95_ms': 20.96477709710598}
+glove tieredq b=4 seed=0 t=8 batch=1: {'recall10': 0.8891000000000001, 'qps': 7034.460142903386, 'p50_ms': 0.1410176046192646, 'p95_ms': 0.1585239078849554}
+glove tieredq b=4 seed=0 t=8 batch=32: {'recall10': 0.8891000000000001, 'qps': 11435.282361369975, 'p50_ms': 2.8122463263571262, 'p95_ms': 2.921005245298147}
+PROGRESS 27/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets glove --bits 4 --code-bits 794 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-glove-c794.json
+glove tieredq b=4 seed=0 t=1 batch=1: {'recall10': 0.8931000000000001, 'qps': 1623.4466025192742, 'p50_ms': 0.6098432932049036, 'p95_ms': 0.6738726748153567}
+glove tieredq b=4 seed=0 t=1 batch=32: {'recall10': 0.8931000000000001, 'qps': 1599.6877496975935, 'p50_ms': 19.46840900927782, 'p95_ms': 21.4693620800972}
+glove tieredq b=4 seed=0 t=8 batch=1: {'recall10': 0.8931000000000001, 'qps': 6690.841350216644, 'p50_ms': 0.14560064300894737, 'p95_ms': 0.1871145330369472}
+glove tieredq b=4 seed=0 t=8 batch=32: {'recall10': 0.8931000000000001, 'qps': 11215.973626277633, 'p50_ms': 2.8547830879688263, 'p95_ms': 2.963764127343893}
+PROGRESS 28/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets glove --bits 5 --code-bits 858 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-glove-c858.json
+glove tieredq b=5 seed=0 t=1 batch=1: {'recall10': 0.9157000000000002, 'qps': 500.58597828678603, 'p50_ms': 1.9272647332400084, 'p95_ms': 2.2281183628365397}
+glove tieredq b=5 seed=0 t=1 batch=32: {'recall10': 0.9157000000000002, 'qps': 1863.0112727406581, 'p50_ms': 16.877848654985428, 'p95_ms': 19.3805661983788}
+glove tieredq b=5 seed=0 t=8 batch=1: {'recall10': 0.9157000000000002, 'qps': 2862.2366781072, 'p50_ms': 0.3503509797155857, 'p95_ms': 0.3724845591932535}
+glove tieredq b=5 seed=0 t=8 batch=32: {'recall10': 0.9157000000000002, 'qps': 10968.159375602185, 'p50_ms': 2.835069317370653, 'p95_ms': 3.0719502829015255}
+PROGRESS 29/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets glove --bits 6 --code-bits 1085 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-glove-c1085.json
+glove tieredq b=6 seed=0 t=1 batch=1: {'recall10': 0.9601000000000002, 'qps': 458.71278749003415, 'p50_ms': 2.1484284661710262, 'p95_ms': 2.4392518680542707}
+glove tieredq b=6 seed=0 t=1 batch=32: {'recall10': 0.9601000000000002, 'qps': 1800.956927698496, 'p50_ms': 17.462382093071938, 'p95_ms': 19.69168893992901}
+glove tieredq b=6 seed=0 t=8 batch=1: {'recall10': 0.9601000000000002, 'qps': 2694.535514396978, 'p50_ms': 0.3685138653963804, 'p95_ms': 0.3938435344025492}
+glove tieredq b=6 seed=0 t=8 batch=32: {'recall10': 0.9601000000000002, 'qps': 10368.036897920314, 'p50_ms': 3.064271993935108, 'p95_ms': 3.18935327231884}
+PROGRESS 30/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets glove --bits 6 --code-bits 1115 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-glove-c1115.json
+glove tieredq b=6 seed=0 t=1 batch=1: {'recall10': 0.9618000000000001, 'qps': 478.5856917996914, 'p50_ms': 2.0483003463596106, 'p95_ms': 2.3457674076780677}
+glove tieredq b=6 seed=0 t=1 batch=32: {'recall10': 0.9618000000000001, 'qps': 1771.2910667891306, 'p50_ms': 17.67126889899373, 'p95_ms': 20.041988231241703}
+glove tieredq b=6 seed=0 t=8 batch=1: {'recall10': 0.9618000000000001, 'qps': 2708.183119647833, 'p50_ms': 0.36844704300165176, 'p95_ms': 0.3928498830646276}
+glove tieredq b=6 seed=0 t=8 batch=32: {'recall10': 0.9618000000000001, 'qps': 10412.912003173295, 'p50_ms': 3.0705947428941727, 'p95_ms': 3.238608129322529}
+PROGRESS 31/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets openai --bits 1 --code-bits 1195 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-openai-c1195.json
+openai tieredq b=1 seed=0 t=1 batch=1: {'recall10': 0.8723000000000002, 'qps': 799.649126608065, 'p50_ms': 1.2209585402160883, 'p95_ms': 1.4068142976611853}
+openai tieredq b=1 seed=0 t=1 batch=32: {'recall10': 0.8723000000000002, 'qps': 797.4070585129928, 'p50_ms': 39.4621011801064, 'p95_ms': 43.553945142775774}
+openai tieredq b=1 seed=0 t=8 batch=1: {'recall10': 0.8723000000000002, 'qps': 1921.2820685197548, 'p50_ms': 0.49863196909427643, 'p95_ms': 0.5313375033438206}
+openai tieredq b=1 seed=0 t=8 batch=32: {'recall10': 0.8723000000000002, 'qps': 6131.136159762152, 'p50_ms': 5.200614221394062, 'p95_ms': 5.479624029248953}
+PROGRESS 32/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets openai --bits 1 --code-bits 1228 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-openai-c1228.json
+openai tieredq b=1 seed=0 t=1 batch=1: {'recall10': 0.8707000000000001, 'qps': 787.261534268877, 'p50_ms': 1.2348378077149391, 'p95_ms': 1.4357185456901789}
+openai tieredq b=1 seed=0 t=1 batch=32: {'recall10': 0.8707000000000001, 'qps': 850.2108131282276, 'p50_ms': 36.78667591884732, 'p95_ms': 41.970723774284124}
+openai tieredq b=1 seed=0 t=8 batch=1: {'recall10': 0.8707000000000001, 'qps': 2112.5403303538305, 'p50_ms': 0.4680973943322897, 'p95_ms': 0.4921839106827974}
+openai tieredq b=1 seed=0 t=8 batch=32: {'recall10': 0.8707000000000001, 'qps': 6280.606791507317, 'p50_ms': 5.033882800489664, 'p95_ms': 5.517000798135996}
+PROGRESS 33/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets openai --bits 1 --code-bits 1238 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-openai-c1238.json
+openai tieredq b=1 seed=0 t=1 batch=1: {'recall10': 0.8727, 'qps': 776.2715443634887, 'p50_ms': 1.2460723519325256, 'p95_ms': 1.4706576243042946}
+openai tieredq b=1 seed=0 t=1 batch=32: {'recall10': 0.8727, 'qps': 847.5982992946728, 'p50_ms': 37.104621063917875, 'p95_ms': 41.292067151516676}
+openai tieredq b=1 seed=0 t=8 batch=1: {'recall10': 0.8727, 'qps': 2089.435610227741, 'p50_ms': 0.47461199574172497, 'p95_ms': 0.517160561867058}
+openai tieredq b=1 seed=0 t=8 batch=32: {'recall10': 0.8727, 'qps': 6066.738701933132, 'p50_ms': 5.229554139077663, 'p95_ms': 5.578058306127787}
+PROGRESS 34/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets openai --bits 1 --code-bits 1256 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-openai-c1256.json
+openai tieredq b=1 seed=0 t=1 batch=1: {'recall10': 0.8712000000000002, 'qps': 727.9806034460327, 'p50_ms': 1.3499886263161898, 'p95_ms': 1.5219614608213305}
+openai tieredq b=1 seed=0 t=1 batch=32: {'recall10': 0.8712000000000002, 'qps': 771.9665017491377, 'p50_ms': 40.77500430867076, 'p95_ms': 44.413282070308924}
+openai tieredq b=1 seed=0 t=8 batch=1: {'recall10': 0.8712000000000002, 'qps': 2057.1467712048634, 'p50_ms': 0.4885958041995764, 'p95_ms': 0.5238098558038473}
+openai tieredq b=1 seed=0 t=8 batch=32: {'recall10': 0.8712000000000002, 'qps': 5576.441322689534, 'p50_ms': 5.706382915377617, 'p95_ms': 6.111888214945793}
+PROGRESS 35/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets openai --bits 1 --code-bits 1277 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-openai-c1277.json
+openai tieredq b=1 seed=0 t=1 batch=1: {'recall10': 0.8744000000000001, 'qps': 792.2899916108806, 'p50_ms': 1.2404269073158503, 'p95_ms': 1.411769865080714}
+openai tieredq b=1 seed=0 t=1 batch=32: {'recall10': 0.8744000000000001, 'qps': 849.6926695386531, 'p50_ms': 36.97361098602414, 'p95_ms': 40.99697666242719}
+openai tieredq b=1 seed=0 t=8 batch=1: {'recall10': 0.8744000000000001, 'qps': 2112.5693696536773, 'p50_ms': 0.47722156159579754, 'p95_ms': 0.5072461441159248}
+openai tieredq b=1 seed=0 t=8 batch=32: {'recall10': 0.8744000000000001, 'qps': 6215.177161049978, 'p50_ms': 5.105374846607447, 'p95_ms': 5.472233984619379}
+PROGRESS 36/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets openai --bits 2 --code-bits 2304 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-openai-c2304.json
+openai tieredq b=2 seed=0 t=1 batch=1: {'recall10': 0.9292, 'qps': 130.000505528547, 'p50_ms': 7.528209127485752, 'p95_ms': 8.53670861106366}
+openai tieredq b=2 seed=0 t=1 batch=32: {'recall10': 0.9292, 'qps': 289.1482676180308, 'p50_ms': 112.46461607515812, 'p95_ms': 121.26069376245141}
+openai tieredq b=2 seed=0 t=8 batch=1: {'recall10': 0.9292, 'qps': 567.7500317236546, 'p50_ms': 1.7826480325311422, 'p95_ms': 1.8918382469564676}
+openai tieredq b=2 seed=0 t=8 batch=32: {'recall10': 0.9292, 'qps': 1816.9369797532206, 'p50_ms': 17.20104832202196, 'p95_ms': 18.90529226511717}
+PROGRESS 37/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets openai --bits 2 --code-bits 2365 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-openai-c2365.json
+openai tieredq b=2 seed=0 t=1 batch=1: {'recall10': 0.9299000000000001, 'qps': 122.22447102816878, 'p50_ms': 8.015739032998681, 'p95_ms': 9.019505279138684}
+openai tieredq b=2 seed=0 t=1 batch=32: {'recall10': 0.9299000000000001, 'qps': 286.0602925940765, 'p50_ms': 113.79779083654284, 'p95_ms': 125.18697511404753}
+openai tieredq b=2 seed=0 t=8 batch=1: {'recall10': 0.9299000000000001, 'qps': 561.4315711142845, 'p50_ms': 1.7857931088656187, 'p95_ms': 1.9143783021718264}
+openai tieredq b=2 seed=0 t=8 batch=32: {'recall10': 0.9299000000000001, 'qps': 1781.6105668394187, 'p50_ms': 17.492213752120733, 'p95_ms': 18.92925100401044}
+PROGRESS 38/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets openai --bits 2 --code-bits 2624 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-openai-c2624.json
+openai tieredq b=2 seed=0 t=1 batch=1: {'recall10': 0.9368000000000002, 'qps': 113.4950966732434, 'p50_ms': 8.664344437420368, 'p95_ms': 9.545959532260895}
+openai tieredq b=2 seed=0 t=1 batch=32: {'recall10': 0.9368000000000002, 'qps': 267.42744978093543, 'p50_ms': 122.07616399973631, 'p95_ms': 135.87169395759702}
+openai tieredq b=2 seed=0 t=8 batch=1: {'recall10': 0.9368000000000002, 'qps': 523.4396037399966, 'p50_ms': 1.924657030031085, 'p95_ms': 2.026835409924388}
+openai tieredq b=2 seed=0 t=8 batch=32: {'recall10': 0.9368000000000002, 'qps': 1592.9046369628547, 'p50_ms': 19.002173095941544, 'p95_ms': 30.66997928544879}
+PROGRESS 39/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets openai --bits 2 --code-bits 2654 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-openai-c2654.json
+openai tieredq b=2 seed=0 t=1 batch=1: {'recall10': 0.9402000000000001, 'qps': 112.16581157453581, 'p50_ms': 8.722641970962286, 'p95_ms': 9.620224311947823}
+openai tieredq b=2 seed=0 t=1 batch=32: {'recall10': 0.9402000000000001, 'qps': 269.11151798913124, 'p50_ms': 121.83735007420182, 'p95_ms': 132.87420524284244}
+openai tieredq b=2 seed=0 t=8 batch=1: {'recall10': 0.9402000000000001, 'qps': 512.3902392656942, 'p50_ms': 1.95473269559443, 'p95_ms': 2.0646904595196247}
+openai tieredq b=2 seed=0 t=8 batch=32: {'recall10': 0.9402000000000001, 'qps': 1649.9948295030251, 'p50_ms': 19.003876019269228, 'p95_ms': 21.015796810388565}
+PROGRESS 40/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets openai --bits 2 --code-bits 2688 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-openai-c2688.json
+openai tieredq b=2 seed=0 t=1 batch=1: {'recall10': 0.9374000000000001, 'qps': 110.7647015940867, 'p50_ms': 8.864756440743804, 'p95_ms': 9.829002269543707}
+openai tieredq b=2 seed=0 t=1 batch=32: {'recall10': 0.9374000000000001, 'qps': 262.7993832835324, 'p50_ms': 123.30309441313148, 'p95_ms': 132.8647998161614}
+openai tieredq b=2 seed=0 t=8 batch=1: {'recall10': 0.9374000000000001, 'qps': 495.68392921534075, 'p50_ms': 1.9600053783506155, 'p95_ms': 2.0865363301709294}
+openai tieredq b=2 seed=0 t=8 batch=32: {'recall10': 0.9374000000000001, 'qps': 1598.9793314931146, 'p50_ms': 19.263909198343754, 'p95_ms': 20.694517996162176}
+PROGRESS 41/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets openai --bits 2 --code-bits 2720 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-openai-c2720.json
+openai tieredq b=2 seed=0 t=1 batch=1: {'recall10': 0.9396000000000001, 'qps': 109.35801937850646, 'p50_ms': 9.005632484331727, 'p95_ms': 9.932653489522636}
+openai tieredq b=2 seed=0 t=1 batch=32: {'recall10': 0.9396000000000001, 'qps': 263.7721289689694, 'p50_ms': 123.8826927728951, 'p95_ms': 135.0725470110774}
+openai tieredq b=2 seed=0 t=8 batch=1: {'recall10': 0.9396000000000001, 'qps': 517.5329624977312, 'p50_ms': 1.9342843443155289, 'p95_ms': 2.050365274772048}
+openai tieredq b=2 seed=0 t=8 batch=32: {'recall10': 0.9396000000000001, 'qps': 1652.3868964328933, 'p50_ms': 19.07224813476205, 'p95_ms': 20.741689018905163}
+PROGRESS 42/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets openai --bits 4 --code-bits 5231 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-openai-c5231.json
+openai tieredq b=4 seed=0 t=1 batch=1: {'recall10': 0.9789000000000001, 'qps': 77.1152375147288, 'p50_ms': 12.724494095891714, 'p95_ms': 14.040202926844358}
+openai tieredq b=4 seed=0 t=1 batch=32: {'recall10': 0.9789000000000001, 'qps': 207.8477032978589, 'p50_ms': 154.57844408228993, 'p95_ms': 167.4081478267908}
+openai tieredq b=4 seed=0 t=8 batch=1: {'recall10': 0.9789000000000001, 'qps': 389.82391291234, 'p50_ms': 2.551428973674774, 'p95_ms': 2.734865644015372}
+openai tieredq b=4 seed=0 t=8 batch=32: {'recall10': 0.9789000000000001, 'qps': 1278.992985712614, 'p50_ms': 24.299486074596643, 'p95_ms': 30.823318753391504}
+PROGRESS 43/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets openai --bits 4 --code-bits 5250 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-openai-c5250.json
+openai tieredq b=4 seed=0 t=1 batch=1: {'recall10': 0.9783000000000001, 'qps': 76.53612065423246, 'p50_ms': 12.813510606065392, 'p95_ms': 14.211518596857786}
+openai tieredq b=4 seed=0 t=1 batch=32: {'recall10': 0.9783000000000001, 'qps': 221.07268928278862, 'p50_ms': 150.6848125718534, 'p95_ms': 164.09455612301826}
+openai tieredq b=4 seed=0 t=8 batch=1: {'recall10': 0.9783000000000001, 'qps': 374.7214683278133, 'p50_ms': 2.653427654877305, 'p95_ms': 2.917516953311859}
+openai tieredq b=4 seed=0 t=8 batch=32: {'recall10': 0.9783000000000001, 'qps': 1315.8215336755802, 'p50_ms': 23.495084140449762, 'p95_ms': 25.346584152430296}
+PROGRESS 44/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets openai --bits 4 --code-bits 5630 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-openai-c5630.json
+openai tieredq b=4 seed=0 t=1 batch=1: {'recall10': 0.982, 'qps': 73.18296879080634, 'p50_ms': 13.369245454668999, 'p95_ms': 14.863888453692198}
+openai tieredq b=4 seed=0 t=1 batch=32: {'recall10': 0.982, 'qps': 214.46427573372665, 'p50_ms': 151.70777402818203, 'p95_ms': 162.76631411165}
+openai tieredq b=4 seed=0 t=8 batch=1: {'recall10': 0.982, 'qps': 365.98605136113963, 'p50_ms': 2.7409628964960575, 'p95_ms': 2.866212837398052}
+openai tieredq b=4 seed=0 t=8 batch=32: {'recall10': 0.982, 'qps': 1315.0966068321386, 'p50_ms': 24.10993492230773, 'p95_ms': 26.71683905646205}
+PROGRESS 45/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets openai --bits 4 --code-bits 5664 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-openai-c5664.json
+openai tieredq b=4 seed=0 t=1 batch=1: {'recall10': 0.9806000000000001, 'qps': 71.17819067058943, 'p50_ms': 13.759799534454942, 'p95_ms': 15.35332074854523}
+openai tieredq b=4 seed=0 t=1 batch=32: {'recall10': 0.9806000000000001, 'qps': 226.02323090027417, 'p50_ms': 137.44288589805365, 'p95_ms': 162.10231697186828}
+openai tieredq b=4 seed=0 t=8 batch=1: {'recall10': 0.9806000000000001, 'qps': 362.40785027965217, 'p50_ms': 2.7674040757119656, 'p95_ms': 2.889069775119424}
+openai tieredq b=4 seed=0 t=8 batch=32: {'recall10': 0.9806000000000001, 'qps': 1272.9702503298945, 'p50_ms': 23.94702285528183, 'p95_ms': 35.84383428096771}
+PROGRESS 46/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets openai --bits 4 --code-bits 5693 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-openai-c5693.json
+openai tieredq b=4 seed=0 t=1 batch=1: {'recall10': 0.9802000000000001, 'qps': 72.11127577246025, 'p50_ms': 13.576134108006954, 'p95_ms': 15.139997913502157}
+openai tieredq b=4 seed=0 t=1 batch=32: {'recall10': 0.9802000000000001, 'qps': 219.77484022562152, 'p50_ms': 151.20717510581017, 'p95_ms': 164.39245361834764}
+openai tieredq b=4 seed=0 t=8 batch=1: {'recall10': 0.9802000000000001, 'qps': 363.64575466866336, 'p50_ms': 2.755927387624979, 'p95_ms': 2.880365774035454}
+openai tieredq b=4 seed=0 t=8 batch=32: {'recall10': 0.9802000000000001, 'qps': 1271.668767224506, 'p50_ms': 24.531265255063772, 'p95_ms': 28.0276439152658}
+PROGRESS 47/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets openai --bits 4 --code-bits 5759 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-openai-c5759.json
+openai tieredq b=4 seed=0 t=1 batch=1: {'recall10': 0.9826000000000001, 'qps': 70.64669052180574, 'p50_ms': 13.802707195281982, 'p95_ms': 15.462400671094656}
+openai tieredq b=4 seed=0 t=1 batch=32: {'recall10': 0.9826000000000001, 'qps': 220.4316769361048, 'p50_ms': 150.71546100080013, 'p95_ms': 160.56536231189966}
+openai tieredq b=4 seed=0 t=8 batch=1: {'recall10': 0.9826000000000001, 'qps': 359.0986742330331, 'p50_ms': 2.7974105905741453, 'p95_ms': 2.9133944073691964}
+openai tieredq b=4 seed=0 t=8 batch=32: {'recall10': 0.9826000000000001, 'qps': 1293.7565373420696, 'p50_ms': 24.03072500601411, 'p95_ms': 25.896616745740175}
+PROGRESS 48/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets sift --bits 2 --code-bits 134 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-sift-c134.json
+sift tieredq b=2 seed=0 t=1 batch=1: {'recall10': 0.5109, 'qps': 397.91157988502874, 'p50_ms': 2.4645919911563396, 'p95_ms': 2.7817054418846965}
+sift tieredq b=2 seed=0 t=1 batch=32: {'recall10': 0.5109, 'qps': 393.85605874075696, 'p50_ms': 80.75808500871062, 'p95_ms': 87.42704894393682}
+sift tieredq b=2 seed=0 t=8 batch=1: {'recall10': 0.5109, 'qps': 2550.4726279700863, 'p50_ms': 0.38120197132229805, 'p95_ms': 0.40909582749009127}
+sift tieredq b=2 seed=0 t=8 batch=32: {'recall10': 0.5109, 'qps': 2953.565920720939, 'p50_ms': 10.778869967907667, 'p95_ms': 11.512127704918385}
+PROGRESS 49/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets sift --bits 2 --code-bits 158 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-sift-c158.json
+sift tieredq b=2 seed=0 t=1 batch=1: {'recall10': 0.5894000000000001, 'qps': 127.97134165344534, 'p50_ms': 7.6235809829086065, 'p95_ms': 8.743806113488972}
+sift tieredq b=2 seed=0 t=1 batch=32: {'recall10': 0.5894000000000001, 'qps': 455.12605228448, 'p50_ms': 69.14691813290119, 'p95_ms': 74.85151709988713}
+sift tieredq b=2 seed=0 t=8 batch=1: {'recall10': 0.5894000000000001, 'qps': 763.0107633681946, 'p50_ms': 1.3209939934313297, 'p95_ms': 1.400523353368044}
+sift tieredq b=2 seed=0 t=8 batch=32: {'recall10': 0.5894000000000001, 'qps': 2786.2126504182575, 'p50_ms': 11.271297931671143, 'p95_ms': 12.345683295279741}
+PROGRESS 50/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets sift --bits 2 --code-bits 256 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-sift-c256.json
+sift tieredq b=2 seed=0 t=1 batch=1: {'recall10': 0.7624000000000001, 'qps': 112.86057873035573, 'p50_ms': 8.663583546876907, 'p95_ms': 9.859223873354495}
+sift tieredq b=2 seed=0 t=1 batch=32: {'recall10': 0.7624000000000001, 'qps': 347.22634504658873, 'p50_ms': 90.95614589750767, 'p95_ms': 100.30823387205601}
+sift tieredq b=2 seed=0 t=8 batch=1: {'recall10': 0.7624000000000001, 'qps': 645.7986692034904, 'p50_ms': 1.5588793903589249, 'p95_ms': 1.6659768298268318}
+sift tieredq b=2 seed=0 t=8 batch=32: {'recall10': 0.7624000000000001, 'qps': 2270.2687719371875, 'p50_ms': 13.631770852953196, 'p95_ms': 15.083703212440014}
+PROGRESS 51/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets sift --bits 3 --code-bits 284 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-sift-c284.json
+sift tieredq b=3 seed=0 t=1 batch=1: {'recall10': 0.7945000000000001, 'qps': 101.1268089845432, 'p50_ms': 9.690643986687064, 'p95_ms': 10.916364332661033}
+sift tieredq b=3 seed=0 t=1 batch=32: {'recall10': 0.7945000000000001, 'qps': 329.47662299749913, 'p50_ms': 95.43959563598037, 'p95_ms': 105.94172729179263}
+sift tieredq b=3 seed=0 t=8 batch=1: {'recall10': 0.7945000000000001, 'qps': 585.4522815754717, 'p50_ms': 1.7093026544898748, 'p95_ms': 1.8624240765348075}
+sift tieredq b=3 seed=0 t=8 batch=32: {'recall10': 0.7945000000000001, 'qps': 2224.976282668748, 'p50_ms': 13.913838192820549, 'p95_ms': 15.469961799681187}
+PROGRESS 52/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets sift --bits 3 --code-bits 319 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-sift-c319.json
+sift tieredq b=3 seed=0 t=1 batch=1: {'recall10': 0.8262, 'qps': 95.96999192644809, 'p50_ms': 10.206843726336956, 'p95_ms': 11.458376725204289}
+sift tieredq b=3 seed=0 t=1 batch=32: {'recall10': 0.8262, 'qps': 313.66371009249366, 'p50_ms': 100.25699762627482, 'p95_ms': 111.9535262696445}
+sift tieredq b=3 seed=0 t=8 batch=1: {'recall10': 0.8262, 'qps': 561.2100101776256, 'p50_ms': 1.7847043927758932, 'p95_ms': 1.8910834798589349}
+sift tieredq b=3 seed=0 t=8 batch=32: {'recall10': 0.8262, 'qps': 1915.4270996925025, 'p50_ms': 16.33038930594921, 'p95_ms': 21.307587157934904}
+PROGRESS 53/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets sift --bits 3 --code-bits 349 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-sift-c349.json
+sift tieredq b=3 seed=0 t=1 batch=1: {'recall10': 0.8501000000000002, 'qps': 84.8949799033925, 'p50_ms': 11.563337873667479, 'p95_ms': 12.96836354304105}
+sift tieredq b=3 seed=0 t=1 batch=32: {'recall10': 0.8501000000000002, 'qps': 295.64379195770584, 'p50_ms': 106.53986688703299, 'p95_ms': 115.51905795931816}
+sift tieredq b=3 seed=0 t=8 batch=1: {'recall10': 0.8501000000000002, 'qps': 491.9230693147968, 'p50_ms': 1.9740178249776363, 'p95_ms': 2.261845231987536}
+sift tieredq b=3 seed=0 t=8 batch=32: {'recall10': 0.8501000000000002, 'qps': 1951.6992263571976, 'p50_ms': 16.33639819920063, 'p95_ms': 17.285199835896492}
+PROGRESS 54/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets sift --bits 4 --code-bits 506 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-sift-c506.json
+sift tieredq b=4 seed=0 t=1 batch=1: {'recall10': 0.9331000000000002, 'qps': 63.623643678373064, 'p50_ms': 15.40745166130364, 'p95_ms': 18.58559409156441}
+sift tieredq b=4 seed=0 t=1 batch=32: {'recall10': 0.9331000000000002, 'qps': 258.23076360065284, 'p50_ms': 121.60924402996898, 'p95_ms': 131.12644385546446}
+sift tieredq b=4 seed=0 t=8 batch=1: {'recall10': 0.9331000000000002, 'qps': 324.56358546352186, 'p50_ms': 2.996261930093169, 'p95_ms': 3.5126975970342755}
+sift tieredq b=4 seed=0 t=8 batch=32: {'recall10': 0.9331000000000002, 'qps': 1640.5139406576022, 'p50_ms': 19.419881980866194, 'p95_ms': 20.148064009845257}
+PROGRESS 55/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets sift --bits 5 --code-bits 541 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-sift-c541.json
+sift tieredq b=5 seed=0 t=1 batch=1: {'recall10': 0.9427000000000002, 'qps': 58.955792831484345, 'p50_ms': 16.723746433854103, 'p95_ms': 18.838200252503157}
+sift tieredq b=5 seed=0 t=1 batch=32: {'recall10': 0.9427000000000002, 'qps': 255.25668688310108, 'p50_ms': 123.90624592080712, 'p95_ms': 134.48539888486266}
+sift tieredq b=5 seed=0 t=8 batch=1: {'recall10': 0.9427000000000002, 'qps': 328.57034580413455, 'p50_ms': 3.019294934347272, 'p95_ms': 3.396736341528594}
+sift tieredq b=5 seed=0 t=8 batch=32: {'recall10': 0.9427000000000002, 'qps': 1628.7310764198792, 'p50_ms': 18.778512254357338, 'p95_ms': 27.250534389168024}
+PROGRESS 56/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets sift --bits 5 --code-bits 573 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-sift-c573.json
+sift tieredq b=5 seed=0 t=1 batch=1: {'recall10': 0.9495, 'qps': 57.160881286579226, 'p50_ms': 17.22239446826279, 'p95_ms': 18.99559299927205}
+sift tieredq b=5 seed=0 t=1 batch=32: {'recall10': 0.9495, 'qps': 249.80663963874656, 'p50_ms': 126.46256573498249, 'p95_ms': 136.45024504512548}
+sift tieredq b=5 seed=0 t=8 batch=1: {'recall10': 0.9495, 'qps': 319.66649853690114, 'p50_ms': 3.104769391939044, 'p95_ms': 3.4044856904074545}
+sift tieredq b=5 seed=0 t=8 batch=32: {'recall10': 0.9495, 'qps': 1620.2673574822013, 'p50_ms': 19.544692244380713, 'p95_ms': 20.856637973338366}
+PROGRESS 57/58
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets sift --bits 5 --code-bits 606 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-sift-c606.json
+sift tieredq b=5 seed=0 t=1 batch=1: {'recall10': 0.9615, 'qps': 49.37906207666162, 'p50_ms': 19.908449379727244, 'p95_ms': 22.04790946561843}
+sift tieredq b=5 seed=0 t=1 batch=32: {'recall10': 0.9615, 'qps': 246.42619641972186, 'p50_ms': 128.19518381729722, 'p95_ms': 141.3986668922007}
+sift tieredq b=5 seed=0 t=8 batch=1: {'recall10': 0.9615, 'qps': 289.44497238900556, 'p50_ms': 3.446829505264759, 'p95_ms': 3.753009252250194}
+sift tieredq b=5 seed=0 t=8 batch=32: {'recall10': 0.9615, 'qps': 1498.773489353632, 'p50_ms': 19.899885170161724, 'p95_ms': 34.5870447345078}
+PROGRESS 58/58
+MATCHED TIMING COMPLETE

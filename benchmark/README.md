@@ -173,11 +173,13 @@ measurement is at or below the minimum over the reference's seeds. Selection rea
 Every probe is logged in `calibration.csv`, and `cells.csv` makes the run resumable; runs against
 different references can share one output directory and its TieredQ probes. The
 chosen budget is confirmed on all seeds; if any seed exceeds the target, the search
-steps down. `matches-<reference>.md` reports recall mean ± std and disk/RAM/peak per matched pair.
+steps down to smaller measured budgets, then below them in 8-bit steps. `matches-<reference>.md` reports recall mean ± std and disk/RAM/peak per matched pair.
 `run.py --codec tieredq --code-bits N` times TieredQ at a matched budget. `--quick` (also on
 `measure_memory.py`) replaces the timed workload with one untimed pass per schedule; use it for
 both codecs or neither, since the timing harness adds about 160 bits/vector of peak RSS.
 Results before and after the RAM work (issue #18): `results/issue4-equal-memory-20261028/README.md`.
+Final issue #4 results against Qdrant TQ+ and RaBitQ on all four datasets, with speed at every matched
+budget: `results/issue4-final-20261029/README.md`.
 
 Each timing point uses three warmup queries and three complete repeats of all
 queries. All timings use seed 0; seeds 1 and 2 record recall with `NaN` timing fields.

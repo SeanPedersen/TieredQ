@@ -1,0 +1,49 @@
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/build-native
+[  5%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 25%] Built target dv_tieredq
+[ 85%] Built target nanobind-static
+[ 90%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 95%] Linking CXX executable codec_reference
+[ 95%] Built target codec_reference
+[100%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[100%] Built target codec_native
+cell-sift-qdrant-1-0: disk 224.0, peak RAM 231.5 bits/vector
+cell-sift-qdrant-1-1: disk 224.0, peak RAM 231.5 bits/vector
+cell-sift-qdrant-1-2: disk 224.0, peak RAM 231.5 bits/vector
+cell-sift-qdrant-2-0: disk 352.0, peak RAM 359.6 bits/vector
+cell-sift-qdrant-2-1: disk 352.0, peak RAM 359.6 bits/vector
+cell-sift-qdrant-2-2: disk 352.0, peak RAM 359.5 bits/vector
+cell-sift-qdrant-4-0: disk 608.0, peak RAM 615.5 bits/vector
+cell-sift-qdrant-4-1: disk 608.0, peak RAM 615.6 bits/vector
+cell-sift-qdrant-4-2: disk 608.0, peak RAM 615.5 bits/vector
+cell-glove-qdrant-1-0: disk 264.4, peak RAM 335.5 bits/vector
+cell-glove-qdrant-1-1: disk 264.4, peak RAM 335.2 bits/vector
+cell-glove-qdrant-1-2: disk 264.4, peak RAM 335.2 bits/vector
+cell-glove-qdrant-2-0: disk 464.4, peak RAM 535.4 bits/vector
+cell-glove-qdrant-2-1: disk 464.4, peak RAM 535.1 bits/vector
+cell-glove-qdrant-2-2: disk 464.4, peak RAM 535.1 bits/vector
+cell-glove-qdrant-4-0: disk 864.4, peak RAM 935.5 bits/vector
+cell-glove-qdrant-4-1: disk 864.4, peak RAM 934.2 bits/vector
+cell-glove-qdrant-4-2: disk 864.4, peak RAM 935.2 bits/vector
+cell-openai-qdrant-1-0: disk 1602.6, peak RAM 1701.3 bits/vector
+cell-openai-qdrant-1-1: disk 1602.6, peak RAM 1701.0 bits/vector
+cell-openai-qdrant-1-2: disk 1602.6, peak RAM 1702.0 bits/vector
+cell-openai-qdrant-2-0: disk 3138.6, peak RAM 3237.2 bits/vector
+cell-openai-qdrant-2-1: disk 3138.6, peak RAM 3236.5 bits/vector
+cell-openai-qdrant-2-2: disk 3138.6, peak RAM 3236.5 bits/vector
+cell-openai-qdrant-4-0: disk 6210.6, peak RAM 6309.2 bits/vector
+cell-openai-qdrant-4-1: disk 6210.6, peak RAM 6308.8 bits/vector
+cell-openai-qdrant-4-2: disk 6210.6, peak RAM 6308.8 bits/vector
+cell-gemini-qdrant-1-0: disk 833.3, peak RAM 910.6 bits/vector
+cell-gemini-qdrant-1-1: disk 833.3, peak RAM 916.2 bits/vector
+cell-gemini-qdrant-1-2: disk 833.3, peak RAM 909.9 bits/vector
+cell-gemini-qdrant-2-0: disk 1601.3, peak RAM 1682.1 bits/vector
+cell-gemini-qdrant-2-1: disk 1601.3, peak RAM 1675.8 bits/vector
+cell-gemini-qdrant-2-2: disk 1601.3, peak RAM 1681.4 bits/vector
+cell-gemini-qdrant-4-0: disk 3137.3, peak RAM 3217.2 bits/vector
+cell-gemini-qdrant-4-1: disk 3137.3, peak RAM 3211.3 bits/vector
+cell-gemini-qdrant-4-2: disk 3137.3, peak RAM 3211.3 bits/vector

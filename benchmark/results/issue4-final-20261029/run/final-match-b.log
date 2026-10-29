@@ -1,0 +1,262 @@
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue4-final-20261029/source-perf/benchmark/build-native
+[ 20%] Built target dv_tieredq
+[ 25%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 85%] Built target nanobind-static
+[ 90%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 95%] Linking CXX executable codec_reference
+[ 95%] Built target codec_reference
+[100%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[100%] Built target codec_native
+cell-openai-tieredq-c1603-0: disk 1991.0, peak RAM 2114.2 bits/vector
+cell-openai-tieredq-c1195-0: disk 1538.5, peak RAM 1662.3 bits/vector
+cell-openai-tieredq-c1297-0: disk 1653.9, peak RAM 1774.4 bits/vector
+cell-openai-tieredq-c1252-0: disk 1600.7, peak RAM 1725.6 bits/vector
+cell-openai-tieredq-c1263-0: disk 1609.9, peak RAM 1737.4 bits/vector
+cell-openai-tieredq-c1254-0: disk 1600.9, peak RAM 1727.2 bits/vector
+cell-openai-tieredq-c1256-0: disk 1601.4, peak RAM 1726.9 bits/vector
+cell-openai-tieredq-c1256-1: disk 1600.7, peak RAM 1726.9 bits/vector
+cell-openai-tieredq-c1256-2: disk 1601.4, peak RAM 1727.9 bits/vector
+cell-openai-tieredq-c1238-0: disk 1583.2, peak RAM 1703.6 bits/vector
+cell-openai-tieredq-c1242-0: disk 1591.4, peak RAM 1709.8 bits/vector
+cell-openai-tieredq-c1238-1: disk 1582.7, peak RAM 1695.4 bits/vector
+cell-openai-tieredq-c1238-2: disk 1582.9, peak RAM 1713.1 bits/vector
+cell-openai-tieredq-c1195-1: disk 1538.2, peak RAM 1648.9 bits/vector
+cell-openai-tieredq-c1195-2: disk 1538.2, peak RAM 1655.4 bits/vector
+cell-openai-tieredq-c1228-0: disk 1573.9, peak RAM 1698.7 bits/vector
+cell-openai-tieredq-c1233-0: disk 1582.4, peak RAM 1716.7 bits/vector
+cell-openai-tieredq-c1228-1: disk 1573.7, peak RAM 1697.4 bits/vector
+cell-openai-tieredq-c1228-2: disk 1573.9, peak RAM 1698.7 bits/vector
+cell-openai-tieredq-c2751-0: disk 3235.6, peak RAM 3707.4 bits/vector
+cell-openai-tieredq-c2464-0: disk 2925.9, peak RAM 3391.5 bits/vector
+cell-openai-tieredq-c2661-0: disk 3165.5, peak RAM 3637.6 bits/vector
+cell-openai-tieredq-c2612-0: disk 3098.0, peak RAM 3575.6 bits/vector
+cell-openai-tieredq-c2642-0: disk 3131.7, peak RAM 3598.6 bits/vector
+cell-openai-tieredq-c2646-0: disk 3132.2, peak RAM 3598.6 bits/vector
+cell-openai-tieredq-c2649-0: disk 3132.2, peak RAM 3606.1 bits/vector
+cell-openai-tieredq-c2652-0: disk 3132.7, peak RAM 3608.1 bits/vector
+cell-openai-tieredq-c2654-0: disk 3132.7, peak RAM 3599.2 bits/vector
+cell-openai-tieredq-c2654-1: disk 3132.7, peak RAM 3598.9 bits/vector
+cell-openai-tieredq-c2654-2: disk 3132.7, peak RAM 3604.2 bits/vector
+cell-openai-tieredq-c2631-0: disk 3131.0, peak RAM 3599.9 bits/vector
+cell-openai-tieredq-c2624-0: disk 3098.8, peak RAM 3576.0 bits/vector
+cell-openai-tieredq-c2624-1: disk 3098.8, peak RAM 3571.7 bits/vector
+cell-openai-tieredq-c2624-2: disk 3098.5, peak RAM 3557.3 bits/vector
+cell-openai-tieredq-c2249-0: disk 2716.0, peak RAM 3171.9 bits/vector
+cell-openai-tieredq-c2312-0: disk 2785.6, peak RAM 3246.0 bits/vector
+cell-openai-tieredq-c2297-0: disk 2752.4, peak RAM 3220.1 bits/vector
+cell-openai-tieredq-c2306-0: disk 2785.1, peak RAM 3240.1 bits/vector
+cell-openai-tieredq-c2304-0: disk 2753.1, peak RAM 3210.0 bits/vector
+cell-openai-tieredq-c2304-1: disk 2753.4, peak RAM 3211.6 bits/vector
+cell-openai-tieredq-c2304-2: disk 2753.4, peak RAM 3212.9 bits/vector
+cell-openai-tieredq-c5726-0: disk 6272.0, peak RAM 6775.1 bits/vector
+cell-openai-tieredq-c4983-0: disk 5535.5, peak RAM 6049.0 bits/vector
+cell-openai-tieredq-c5541-0: disk 6112.0, peak RAM 6632.6 bits/vector
+cell-openai-tieredq-c5655-0: disk 6208.0, peak RAM 6723.0 bits/vector
+cell-openai-tieredq-c5672-0: disk 6240.0, peak RAM 6751.8 bits/vector
+cell-openai-tieredq-c5659-0: disk 6208.0, peak RAM 6724.3 bits/vector
+cell-openai-tieredq-c5662-0: disk 6208.0, peak RAM 6714.5 bits/vector
+cell-openai-tieredq-c5664-0: disk 6208.0, peak RAM 6721.7 bits/vector
+cell-openai-tieredq-c5664-1: disk 6208.0, peak RAM 6709.9 bits/vector
+cell-openai-tieredq-c5664-2: disk 6208.0, peak RAM 6714.5 bits/vector
+cell-openai-tieredq-c5627-0: disk 6176.0, peak RAM 6692.5 bits/vector
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/build-native
+[  5%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 65%] Built target nanobind-static
+[ 85%] Built target dv_tieredq
+[ 90%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 95%] Linking CXX executable codec_reference
+[ 95%] Built target codec_reference
+[100%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[100%] Built target codec_native
+cell-openai-tieredq-c5637-0: disk 6208.0, peak RAM 6720.4 bits/vector
+cell-openai-tieredq-c5630-0: disk 6176.0, peak RAM 6697.1 bits/vector
+cell-openai-tieredq-c5630-1: disk 6176.0, peak RAM 6700.1 bits/vector
+cell-openai-tieredq-c5630-2: disk 6176.0, peak RAM 6682.7 bits/vector
+cell-openai-tieredq-c5231-0: disk 5792.0, peak RAM 6299.0 bits/vector
+cell-openai-tieredq-c5308-0: disk 5856.0, peak RAM 6365.2 bits/vector
+cell-openai-tieredq-c5250-0: disk 5824.0, peak RAM 6331.4 bits/vector
+cell-openai-tieredq-c5237-0: disk 5792.0, peak RAM 6310.1 bits/vector
+cell-openai-tieredq-c5231-1: disk 5792.0, peak RAM 6306.2 bits/vector
+cell-openai-tieredq-c5231-2: disk 5792.0, peak RAM 6308.8 bits/vector
+cell-gemini-tieredq-c833-0: disk 997.7, peak RAM 1106.2 bits/vector
+cell-gemini-tieredq-c660-0: disk 815.5, peak RAM 929.8 bits/vector
+cell-gemini-tieredq-c703-0: disk 857.1, peak RAM 962.2 bits/vector
+cell-gemini-tieredq-c678-0: disk 832.2, peak RAM 939.3 bits/vector
+cell-gemini-tieredq-c684-0: disk 840.3, peak RAM 946.0 bits/vector
+cell-gemini-tieredq-c678-1: disk 832.1, peak RAM 940.7 bits/vector
+cell-gemini-tieredq-c678-2: disk 832.1, peak RAM 943.7 bits/vector
+cell-gemini-tieredq-c650-0: disk 806.9, peak RAM 909.9 bits/vector
+cell-gemini-tieredq-c654-0: disk 807.2, peak RAM 908.6 bits/vector
+cell-gemini-tieredq-c654-1: disk 807.0, peak RAM 938.7 bits/vector
+cell-gemini-tieredq-c654-2: disk 807.0, peak RAM 914.5 bits/vector
+cell-gemini-tieredq-c650-1: disk 806.9, peak RAM 915.5 bits/vector
+cell-gemini-tieredq-c650-2: disk 806.9, peak RAM 921.1 bits/vector
+cell-gemini-tieredq-c1437-0: disk 1617.7, peak RAM 1734.7 bits/vector
+cell-gemini-tieredq-c1286-0: disk 1460.8, peak RAM 1577.5 bits/vector
+cell-gemini-tieredq-c1400-0: disk 1584.4, peak RAM 1701.6 bits/vector
+cell-gemini-tieredq-c1419-0: disk 1601.0, peak RAM 1725.5 bits/vector
+cell-gemini-tieredq-c1423-0: disk 1601.2, peak RAM 1732.4 bits/vector
+cell-gemini-tieredq-c1426-0: disk 1609.3, peak RAM 1725.5 bits/vector
+cell-gemini-tieredq-c1423-1: disk 1601.3, peak RAM 1723.8 bits/vector
+cell-gemini-tieredq-c1423-2: disk 1601.2, peak RAM 1717.5 bits/vector
+cell-gemini-tieredq-c1372-0: disk 1551.4, peak RAM 1670.2 bits/vector
+cell-gemini-tieredq-c1393-0: disk 1576.2, peak RAM 1694.7 bits/vector
+cell-gemini-tieredq-c1393-1: disk 1576.3, peak RAM 1698.6 bits/vector
+cell-gemini-tieredq-c1393-2: disk 1576.2, peak RAM 1692.4 bits/vector
+cell-gemini-tieredq-c1377-0: disk 1559.6, peak RAM 1683.4 bits/vector
+cell-gemini-tieredq-c1372-1: disk 1551.5, peak RAM 1673.2 bits/vector
+cell-gemini-tieredq-c1372-2: disk 1551.5, peak RAM 1668.9 bits/vector
+cell-gemini-tieredq-c2957-0: disk 3175.8, peak RAM 3582.0 bits/vector
+cell-gemini-tieredq-c2577-0: disk 2791.8, peak RAM 3190.1 bits/vector
+cell-gemini-tieredq-c2862-0: disk 3079.8, peak RAM 3485.7 bits/vector
+cell-gemini-tieredq-c2919-0: disk 3143.8, peak RAM 3543.2 bits/vector
+cell-gemini-tieredq-c2905-0: disk 3111.8, peak RAM 3514.8 bits/vector
+cell-gemini-tieredq-c2916-0: disk 3143.8, peak RAM 3544.2 bits/vector
+cell-gemini-tieredq-c2914-0: disk 3143.8, peak RAM 3548.2 bits/vector
+cell-gemini-tieredq-c2912-0: disk 3111.8, peak RAM 3518.1 bits/vector
+cell-gemini-tieredq-c2912-1: disk 3111.8, peak RAM 3510.8 bits/vector
+cell-gemini-tieredq-c2912-2: disk 3111.8, peak RAM 3512.1 bits/vector
+cell-gemini-tieredq-c2895-0: disk 3111.8, peak RAM 3511.8 bits/vector
+cell-gemini-tieredq-c2902-0: disk 3111.8, peak RAM 3515.8 bits/vector
+cell-gemini-tieredq-c2902-1: disk 3111.8, peak RAM 3509.8 bits/vector
+cell-gemini-tieredq-c2902-2: disk 3111.8, peak RAM 3510.5 bits/vector
+cell-gemini-tieredq-c2895-1: disk 3111.8, peak RAM 3512.1 bits/vector
+cell-gemini-tieredq-c2895-2: disk 3111.8, peak RAM 3513.5 bits/vector
+cell-gemini-tieredq-c2862-1: disk 3079.8, peak RAM 3486.3 bits/vector
+cell-gemini-tieredq-c2862-2: disk 3079.8, peak RAM 3480.0 bits/vector
+cell-gemini-tieredq-c2648-0: disk 2855.8, peak RAM 3262.9 bits/vector
+cell-gemini-tieredq-c2598-0: disk 2823.8, peak RAM 3228.5 bits/vector
+cell-gemini-tieredq-c2589-0: disk 2791.8, peak RAM 3199.3 bits/vector
+cell-gemini-tieredq-c2593-0: disk 2823.8, peak RAM 3223.8 bits/vector
+cell-gemini-tieredq-c2589-1: disk 2791.8, peak RAM 3194.1 bits/vector
+cell-gemini-tieredq-c2589-2: disk 2791.8, peak RAM 3191.1 bits/vector
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/build-native
+[  5%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 25%] Built target dv_tieredq
+[ 85%] Built target nanobind-static
+[ 90%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 95%] Linking CXX executable codec_reference
+[ 95%] Built target codec_reference
+[100%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[100%] Built target codec_native
+cell-openai-tieredq-c1281-0: disk 1636.2, peak RAM 1761.3 bits/vector
+cell-openai-tieredq-c1277-0: disk 1627.9, peak RAM 1746.9 bits/vector
+cell-openai-tieredq-c1277-1: disk 1627.7, peak RAM 1755.1 bits/vector
+cell-openai-tieredq-c1277-2: disk 1627.7, peak RAM 1756.7 bits/vector
+cell-openai-tieredq-c1220-0: disk 1565.2, peak RAM 1685.6 bits/vector
+cell-openai-tieredq-c1220-1: disk 1564.9, peak RAM 1682.0 bits/vector
+cell-openai-tieredq-c1220-2: disk 1564.9, peak RAM 1697.7 bits/vector
+cell-openai-tieredq-c2729-0: disk 3234.2, peak RAM 3723.4 bits/vector
+cell-openai-tieredq-c2712-0: disk 3201.2, peak RAM 3680.5 bits/vector
+cell-openai-tieredq-c2725-0: disk 3233.7, peak RAM 3714.6 bits/vector
+cell-openai-tieredq-c2722-0: disk 3233.7, peak RAM 3704.1 bits/vector
+cell-openai-tieredq-c2720-0: disk 3201.4, peak RAM 3675.9 bits/vector
+cell-openai-tieredq-c2720-1: disk 3201.7, peak RAM 3672.3 bits/vector
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/build-native
+[ 20%] Built target dv_tieredq
+[ 25%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 85%] Built target nanobind-static
+[ 90%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 95%] Linking CXX executable codec_reference
+[ 95%] Built target codec_reference
+[100%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[100%] Built target codec_native
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/build-native
+[  5%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 25%] Built target dv_tieredq
+[ 85%] Built target nanobind-static
+[ 90%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 95%] Linking CXX executable codec_reference
+[ 95%] Built target codec_reference
+[100%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[100%] Built target codec_native
+cell-openai-tieredq-c2720-2: disk 3201.7, peak RAM 3689.3 bits/vector
+cell-openai-tieredq-c2688-0: disk 3167.2, peak RAM 3642.5 bits/vector
+cell-openai-tieredq-c2701-0: disk 3200.4, peak RAM 3686.7 bits/vector
+cell-openai-tieredq-c2694-0: disk 3199.7, peak RAM 3673.0 bits/vector
+cell-openai-tieredq-c2688-1: disk 3167.7, peak RAM 3634.6 bits/vector
+cell-openai-tieredq-c2688-2: disk 3167.4, peak RAM 3645.1 bits/vector
+cell-openai-tieredq-c2365-0: disk 2822.1, peak RAM 3284.3 bits/vector
+cell-openai-tieredq-c2389-0: disk 2856.3, peak RAM 3310.9 bits/vector
+cell-openai-tieredq-c2376-0: disk 2855.0, peak RAM 3307.6 bits/vector
+cell-openai-tieredq-c2371-0: disk 2854.8, peak RAM 3323.0 bits/vector
+cell-openai-tieredq-c2365-1: disk 2822.6, peak RAM 3283.7 bits/vector
+cell-openai-tieredq-c2365-2: disk 2822.1, peak RAM 3281.4 bits/vector
+cell-openai-tieredq-c5759-0: disk 6304.0, peak RAM 6819.0 bits/vector
+cell-openai-tieredq-c5767-0: disk 6336.0, peak RAM 6859.7 bits/vector
+cell-openai-tieredq-c5759-1: disk 6304.0, peak RAM 6822.3 bits/vector
+cell-openai-tieredq-c5759-2: disk 6304.0, peak RAM 6835.4 bits/vector
+cell-openai-tieredq-c5707-0: disk 6272.0, peak RAM 6785.9 bits/vector
+cell-openai-tieredq-c5687-0: disk 6240.0, peak RAM 6763.6 bits/vector
+cell-openai-tieredq-c5693-0: disk 6240.0, peak RAM 6756.8 bits/vector
+cell-openai-tieredq-c5699-0: disk 6272.0, peak RAM 6793.5 bits/vector
+cell-openai-tieredq-c5693-1: disk 6240.0, peak RAM 6754.5 bits/vector
+cell-openai-tieredq-c5693-2: disk 6240.0, peak RAM 6752.8 bits/vector
+cell-openai-tieredq-c5366-0: disk 5920.0, peak RAM 6434.3 bits/vector
+cell-openai-tieredq-c5322-0: disk 5888.0, peak RAM 6400.2 bits/vector
+cell-openai-tieredq-c5311-0: disk 5856.0, peak RAM 6369.1 bits/vector
+cell-openai-tieredq-c5308-1: disk 5856.0, peak RAM 6368.8 bits/vector
+cell-openai-tieredq-c5308-2: disk 5856.0, peak RAM 6370.4 bits/vector
+cell-openai-tieredq-c5250-1: disk 5824.0, peak RAM 6337.0 bits/vector
+cell-openai-tieredq-c5250-2: disk 5824.0, peak RAM 6338.3 bits/vector
+cell-gemini-tieredq-c735-0: disk 898.1, peak RAM 1008.2 bits/vector
+cell-gemini-tieredq-c711-0: disk 865.4, peak RAM 967.2 bits/vector
+cell-gemini-tieredq-c703-1: disk 857.2, peak RAM 968.8 bits/vector
+cell-gemini-tieredq-c703-2: disk 865.1, peak RAM 969.1 bits/vector
+cell-gemini-tieredq-c684-1: disk 840.3, peak RAM 949.9 bits/vector
+cell-gemini-tieredq-c684-2: disk 840.4, peak RAM 953.3 bits/vector
+cell-gemini-tieredq-c642-0: disk 798.5, peak RAM 907.9 bits/vector
+cell-gemini-tieredq-c634-0: disk 790.3, peak RAM 902.3 bits/vector
+cell-gemini-tieredq-c634-1: disk 790.4, peak RAM 900.0 bits/vector
+cell-gemini-tieredq-c634-2: disk 790.3, peak RAM 895.3 bits/vector
+cell-gemini-tieredq-c1722-0: disk 1914.7, peak RAM 2297.1 bits/vector
+cell-gemini-tieredq-c1512-0: disk 1700.0, peak RAM 1819.5 bits/vector
+cell-gemini-tieredq-c1494-0: disk 1675.6, peak RAM 1802.2 bits/vector
+cell-gemini-tieredq-c1508-0: disk 1691.9, peak RAM 1824.1 bits/vector
+cell-gemini-tieredq-c1508-1: disk 1692.0, peak RAM 1820.8 bits/vector
+cell-gemini-tieredq-c1508-2: disk 1692.0, peak RAM 1827.7 bits/vector
+cell-gemini-tieredq-c1467-0: disk 1650.8, peak RAM 1779.4 bits/vector
+cell-gemini-tieredq-c1460-0: disk 1642.4, peak RAM 1777.1 bits/vector
+cell-gemini-tieredq-c1460-1: disk 1642.4, peak RAM 1770.5 bits/vector
+cell-gemini-tieredq-c1460-2: disk 1642.4, peak RAM 1764.2 bits/vector
+cell-gemini-tieredq-c1435-0: disk 1617.6, peak RAM 1736.0 bits/vector
+cell-gemini-tieredq-c1433-0: disk 1617.4, peak RAM 1745.3 bits/vector
+cell-gemini-tieredq-c1426-1: disk 1609.3, peak RAM 1727.4 bits/vector
+cell-gemini-tieredq-c1426-2: disk 1609.4, peak RAM 1740.0 bits/vector
+cell-gemini-tieredq-c3014-0: disk 3239.8, peak RAM 3640.9 bits/vector
+cell-gemini-tieredq-c3000-0: disk 3207.8, peak RAM 3612.4 bits/vector
+cell-gemini-tieredq-c3011-0: disk 3239.8, peak RAM 3642.2 bits/vector
+cell-gemini-tieredq-c3008-0: disk 3207.8, peak RAM 3605.8 bits/vector
+cell-gemini-tieredq-c3008-1: disk 3207.8, peak RAM 3606.1 bits/vector
+cell-gemini-tieredq-c3008-2: disk 3207.8, peak RAM 3606.5 bits/vector
+cell-gemini-tieredq-c2967-0: disk 3175.8, peak RAM 3584.3 bits/vector
+cell-gemini-tieredq-c2975-0: disk 3175.8, peak RAM 3576.0 bits/vector
+cell-gemini-tieredq-c2981-0: disk 3207.8, peak RAM 3614.4 bits/vector
+cell-gemini-tieredq-c2975-1: disk 3175.8, peak RAM 3578.3 bits/vector
+cell-gemini-tieredq-c2975-2: disk 3175.8, peak RAM 3575.0 bits/vector
+cell-gemini-tieredq-c2701-0: disk 2919.8, peak RAM 3326.1 bits/vector
+cell-gemini-tieredq-c2661-0: disk 2887.8, peak RAM 3286.4 bits/vector
+cell-gemini-tieredq-c2652-0: disk 2855.8, peak RAM 3262.2 bits/vector
+cell-gemini-tieredq-c2655-0: disk 2855.8, peak RAM 3255.0 bits/vector
+cell-gemini-tieredq-c2655-1: disk 2855.8, peak RAM 3256.6 bits/vector
+cell-gemini-tieredq-c2655-2: disk 2855.8, peak RAM 3263.2 bits/vector

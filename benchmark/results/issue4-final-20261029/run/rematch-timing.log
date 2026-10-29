@@ -1,0 +1,78 @@
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/build-native
+[  5%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 25%] Built target dv_tieredq
+[ 85%] Built target nanobind-static
+[ 90%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 95%] Linking CXX executable codec_reference
+[ 95%] Built target codec_reference
+[100%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[100%] Built target codec_native
+PROGRESS 1/59
+PROGRESS 2/59
+PROGRESS 3/59
+PROGRESS 4/59
+PROGRESS 5/59
+PROGRESS 6/59
+PROGRESS 7/59
+PROGRESS 8/59
+PROGRESS 9/59
+PROGRESS 10/59
+PROGRESS 11/59
+PROGRESS 12/59
+PROGRESS 13/59
+PROGRESS 14/59
+PROGRESS 15/59
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/run.py --codec tieredq --datasets glove --bits 1 --code-bits 174 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-final-matched-timing/cell-glove-c174.json
+glove tieredq b=1 seed=0 t=1 batch=1: {'recall10': 0.3731999999999999, 'qps': 3552.0683505526754, 'p50_ms': 0.27458113618195057, 'p95_ms': 0.3099136985838413}
+glove tieredq b=1 seed=0 t=1 batch=32: {'recall10': 0.3731999999999999, 'qps': 3734.8844756825506, 'p50_ms': 8.466712664812803, 'p95_ms': 9.078801609575748}
+glove tieredq b=1 seed=0 t=8 batch=1: {'recall10': 0.3731999999999999, 'qps': 13905.839505679029, 'p50_ms': 0.06965547800064087, 'p95_ms': 0.09141541086137295}
+glove tieredq b=1 seed=0 t=8 batch=32: {'recall10': 0.3731999999999999, 'qps': 25248.66566105472, 'p50_ms': 1.2789200991392136, 'p95_ms': 1.3300757855176926}
+PROGRESS 16/59
+PROGRESS 17/59
+PROGRESS 18/59
+PROGRESS 19/59
+PROGRESS 20/59
+PROGRESS 21/59
+PROGRESS 22/59
+PROGRESS 23/59
+PROGRESS 24/59
+PROGRESS 25/59
+PROGRESS 26/59
+PROGRESS 27/59
+PROGRESS 28/59
+PROGRESS 29/59
+PROGRESS 30/59
+PROGRESS 31/59
+PROGRESS 32/59
+PROGRESS 33/59
+PROGRESS 34/59
+PROGRESS 35/59
+PROGRESS 36/59
+PROGRESS 37/59
+PROGRESS 38/59
+PROGRESS 39/59
+PROGRESS 40/59
+PROGRESS 41/59
+PROGRESS 42/59
+PROGRESS 43/59
+PROGRESS 44/59
+PROGRESS 45/59
+PROGRESS 46/59
+PROGRESS 47/59
+PROGRESS 48/59
+PROGRESS 49/59
+PROGRESS 50/59
+PROGRESS 51/59
+PROGRESS 52/59
+PROGRESS 53/59
+PROGRESS 54/59
+PROGRESS 55/59
+PROGRESS 56/59
+PROGRESS 57/59
+PROGRESS 58/59
+PROGRESS 59/59
+MATCHED TIMING COMPLETE

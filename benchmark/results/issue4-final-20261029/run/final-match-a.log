@@ -1,0 +1,219 @@
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/build-native
+[  5%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 25%] Built target dv_tieredq
+[ 85%] Built target nanobind-static
+[ 90%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 95%] Linking CXX executable codec_reference
+[ 95%] Built target codec_reference
+[100%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[100%] Built target codec_native
+cell-sift-tieredq-c224-0: disk 266.3, peak RAM 318.0 bits/vector
+cell-sift-tieredq-c180-0: disk 234.3, peak RAM 285.6 bits/vector
+cell-sift-tieredq-c169-0: disk 234.3, peak RAM 285.8 bits/vector
+cell-sift-tieredq-c158-0: disk 202.3, peak RAM 254.2 bits/vector
+cell-sift-tieredq-c165-0: disk 234.3, peak RAM 286.5 bits/vector
+cell-sift-tieredq-c158-1: disk 202.3, peak RAM 254.1 bits/vector
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/build-native
+[ 20%] Built target dv_tieredq
+[ 25%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 85%] Built target nanobind-static
+[ 90%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 95%] Linking CXX executable codec_reference
+[ 95%] Built target codec_reference
+[100%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[100%] Built target codec_native
+cell-sift-tieredq-c158-2: disk 202.3, peak RAM 253.9 bits/vector
+cell-sift-tieredq-c134-0: disk 178.3, peak RAM 214.9 bits/vector
+cell-sift-tieredq-c144-0: disk 202.3, peak RAM 253.6 bits/vector
+cell-sift-tieredq-c138-0: disk 202.3, peak RAM 253.8 bits/vector
+cell-sift-tieredq-c134-1: disk 178.3, peak RAM 214.3 bits/vector
+cell-sift-tieredq-c134-2: disk 178.3, peak RAM 215.0 bits/vector
+cell-sift-tieredq-c310-0: disk 362.4, peak RAM 414.1 bits/vector
+cell-sift-tieredq-c289-0: disk 362.4, peak RAM 413.7 bits/vector
+cell-sift-tieredq-c273-0: disk 330.3, peak RAM 381.8 bits/vector
+cell-sift-tieredq-c284-0: disk 330.4, peak RAM 381.8 bits/vector
+cell-sift-tieredq-c284-1: disk 330.4, peak RAM 381.9 bits/vector
+cell-sift-tieredq-c284-2: disk 330.4, peak RAM 382.3 bits/vector
+cell-sift-tieredq-c256-0: disk 298.3, peak RAM 350.3 bits/vector
+cell-sift-tieredq-c261-0: disk 330.3, peak RAM 382.3 bits/vector
+cell-sift-tieredq-c256-1: disk 298.3, peak RAM 349.2 bits/vector
+cell-sift-tieredq-c256-2: disk 298.3, peak RAM 350.2 bits/vector
+cell-sift-tieredq-c556-0: disk 618.4, peak RAM 670.9 bits/vector
+cell-sift-tieredq-c495-0: disk 554.4, peak RAM 609.0 bits/vector
+cell-sift-tieredq-c541-0: disk 586.4, peak RAM 641.2 bits/vector
+cell-sift-tieredq-c551-0: disk 618.4, peak RAM 671.1 bits/vector
+cell-sift-tieredq-c548-0: disk 618.4, peak RAM 672.1 bits/vector
+cell-sift-tieredq-c541-1: disk 586.4, peak RAM 638.6 bits/vector
+cell-sift-tieredq-c541-2: disk 586.4, peak RAM 640.1 bits/vector
+cell-sift-tieredq-c506-0: disk 554.4, peak RAM 607.7 bits/vector
+cell-sift-tieredq-c514-0: disk 586.4, peak RAM 638.9 bits/vector
+cell-sift-tieredq-c506-1: disk 554.4, peak RAM 607.0 bits/vector
+cell-sift-tieredq-c506-2: disk 554.4, peak RAM 606.4 bits/vector
+cell-glove-tieredq-c264-0: disk 327.4, peak RAM 417.1 bits/vector
+cell-glove-tieredq-c198-0: disk 263.2, peak RAM 352.3 bits/vector
+cell-glove-tieredq-c214-0: disk 279.3, peak RAM 364.1 bits/vector
+cell-glove-tieredq-c202-0: disk 271.3, peak RAM 361.8 bits/vector
+cell-glove-tieredq-c198-1: disk 263.2, peak RAM 352.9 bits/vector
+cell-glove-tieredq-c198-2: disk 263.2, peak RAM 348.0 bits/vector
+cell-glove-tieredq-c190-0: disk 255.0, peak RAM 330.0 bits/vector
+cell-glove-tieredq-c190-1: disk 255.0, peak RAM 346.4 bits/vector
+cell-glove-tieredq-c190-2: disk 255.0, peak RAM 339.1 bits/vector
+Traceback (most recent call last):
+  File "/home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/measure_memory.py", line 274, in <module>
+    main()
+  File "/home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/measure_memory.py", line 252, in main
+    result = worker(json.loads(args.spec), args.cell)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/measure_memory.py", line 121, in build_worker
+    index = build_index(spec, vectors)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/measure_memory.py", line 83, in build_index
+    return codec_native.Index(vectors, spec["bits"], spec["seed"], spec["codec"] == "tieredq",
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: TieredQ: tier budget mismatch
+Traceback (most recent call last):
+  File "/home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/match_memory.py", line 217, in <module>
+    main()
+  File "/home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/match_memory.py", line 206, in main
+    results = [match(cells, dataset, args.reference, bits, metric, args.seeds, log)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/match_memory.py", line 138, in match
+    best, candidates = calibrate(cells, dataset, reference, metric, target, dimensions, log)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/match_memory.py", line 104, in calibrate
+    row = cells.measure(dataset, "tieredq", -(-code_bits // dimensions), CALIBRATION_SEED, code_bits)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/match_memory.py", line 51, in measure
+    row = {name: str(value) for name, value in run_cell(spec, self.output, self.env).items()}
+                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/measure_memory.py", line 202, in run_cell
+    subprocess.run([sys.executable, str(HERE / "measure_memory.py"), "--worker", phase,
+  File "/home/sean/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python', '/home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/measure_memory.py', '--worker', 'build', '--spec', '{"dataset": "glove", "codec": "tieredq", "bits": 3, "seed": 0, "data": "/home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data", "quick": true, "code_bits": 401}', '--cell', '/home/sean/experiments/TieredQ-issue4-final-20261029/final-match-a/cell-glove-tieredq-c401-0']' returned non-zero exit status 1.
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/build-native
+[  5%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq.cpp.o
+[ 10%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 70%] Built target nanobind-static
+[ 75%] Linking CXX static library libdv_tieredq.a
+[ 85%] Built target dv_tieredq
+[ 90%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 95%] Linking CXX executable codec_reference
+[ 95%] Built target codec_reference
+[100%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[100%] Built target codec_native
+cell-glove-tieredq-c401-0: disk 463.5, peak RAM 547.9 bits/vector
+cell-glove-tieredq-c409-0: disk 479.1, peak RAM 780.2 bits/vector
+cell-glove-tieredq-c401-1: disk 463.5, peak RAM 559.0 bits/vector
+cell-glove-tieredq-c401-2: disk 463.5, peak RAM 555.7 bits/vector
+cell-glove-tieredq-c367-0: disk 439.5, peak RAM 533.5 bits/vector
+cell-glove-tieredq-c393-0: disk 463.5, peak RAM 557.1 bits/vector
+cell-glove-tieredq-c387-0: disk 455.5, peak RAM 541.7 bits/vector
+cell-glove-tieredq-c387-1: disk 455.5, peak RAM 549.8 bits/vector
+cell-glove-tieredq-c387-2: disk 455.5, peak RAM 549.5 bits/vector
+cell-glove-tieredq-c372-0: disk 439.5, peak RAM 550.8 bits/vector
+cell-glove-tieredq-c367-1: disk 439.5, peak RAM 531.2 bits/vector
+cell-glove-tieredq-c367-2: disk 439.5, peak RAM 527.6 bits/vector
+cell-glove-tieredq-c794-0: disk 863.9, peak RAM 963.4 bits/vector
+cell-glove-tieredq-c802-0: disk 895.1, peak RAM 1192.4 bits/vector
+cell-glove-tieredq-c794-1: disk 863.9, peak RAM 949.6 bits/vector
+cell-glove-tieredq-c794-2: disk 863.9, peak RAM 966.7 bits/vector
+cell-glove-tieredq-c698-0: disk 767.8, peak RAM 864.1 bits/vector
+cell-glove-tieredq-c770-0: disk 839.9, peak RAM 935.5 bits/vector
+cell-glove-tieredq-c788-0: disk 855.9, peak RAM 956.8 bits/vector
+cell-glove-tieredq-c788-1: disk 855.9, peak RAM 947.7 bits/vector
+cell-glove-tieredq-c788-2: disk 855.9, peak RAM 948.6 bits/vector
+cell-glove-tieredq-c752-0: disk 815.9, peak RAM 924.4 bits/vector
+cell-glove-tieredq-c766-0: disk 831.9, peak RAM 934.2 bits/vector
+cell-glove-tieredq-c766-1: disk 831.9, peak RAM 924.1 bits/vector
+cell-glove-tieredq-c766-2: disk 831.9, peak RAM 921.8 bits/vector
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue4-final-20261029/source-final/benchmark/build-native
+[  5%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 25%] Built target dv_tieredq
+[ 85%] Built target nanobind-static
+[ 90%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 95%] Linking CXX executable codec_reference
+[ 95%] Built target codec_reference
+[100%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[100%] Built target codec_native
+cell-sift-tieredq-c362-0: disk 426.4, peak RAM 478.4 bits/vector
+cell-sift-tieredq-c349-0: disk 394.4, peak RAM 446.0 bits/vector
+cell-sift-tieredq-c358-0: disk 426.4, peak RAM 479.3 bits/vector
+cell-sift-tieredq-c355-0: disk 426.4, peak RAM 478.2 bits/vector
+cell-sift-tieredq-c349-1: disk 394.4, peak RAM 446.7 bits/vector
+cell-sift-tieredq-c349-2: disk 394.4, peak RAM 446.9 bits/vector
+cell-sift-tieredq-c319-0: disk 362.4, peak RAM 415.6 bits/vector
+cell-sift-tieredq-c326-0: disk 394.4, peak RAM 447.0 bits/vector
+cell-sift-tieredq-c319-1: disk 362.4, peak RAM 414.8 bits/vector
+cell-sift-tieredq-c319-2: disk 362.4, peak RAM 414.0 bits/vector
+cell-sift-tieredq-c610-0: disk 682.4, peak RAM 734.4 bits/vector
+cell-sift-tieredq-c597-0: disk 650.4, peak RAM 702.4 bits/vector
+cell-sift-tieredq-c606-0: disk 650.4, peak RAM 704.1 bits/vector
+cell-sift-tieredq-c606-1: disk 650.4, peak RAM 702.5 bits/vector
+cell-sift-tieredq-c606-2: disk 650.4, peak RAM 703.1 bits/vector
+cell-sift-tieredq-c566-0: disk 618.4, peak RAM 670.5 bits/vector
+cell-sift-tieredq-c573-0: disk 618.4, peak RAM 672.1 bits/vector
+cell-sift-tieredq-c579-0: disk 650.4, peak RAM 703.2 bits/vector
+cell-sift-tieredq-c573-1: disk 618.4, peak RAM 670.9 bits/vector
+cell-sift-tieredq-c573-2: disk 618.4, peak RAM 672.3 bits/vector
+cell-glove-tieredq-c289-0: disk 359.4, peak RAM 447.3 bits/vector
+cell-glove-tieredq-c283-0: disk 351.4, peak RAM 437.5 bits/vector
+cell-glove-tieredq-c283-1: disk 351.4, peak RAM 462.4 bits/vector
+cell-glove-tieredq-c283-2: disk 351.4, peak RAM 438.4 bits/vector
+cell-glove-tieredq-c270-0: disk 335.4, peak RAM 423.4 bits/vector
+cell-glove-tieredq-c264-1: disk 327.4, peak RAM 418.1 bits/vector
+cell-glove-tieredq-c264-2: disk 327.4, peak RAM 419.4 bits/vector
+cell-glove-tieredq-c245-0: disk 311.4, peak RAM 407.0 bits/vector
+cell-glove-tieredq-c237-0: disk 303.4, peak RAM 399.8 bits/vector
+cell-glove-tieredq-c232-0: disk 295.4, peak RAM 387.3 bits/vector
+cell-glove-tieredq-c232-1: disk 295.4, peak RAM 383.1 bits/vector
+cell-glove-tieredq-c232-2: disk 295.4, peak RAM 392.9 bits/vector
+cell-glove-tieredq-c602-0: disk 671.7, peak RAM 767.1 bits/vector
+cell-glove-tieredq-c626-0: disk 695.7, peak RAM 789.4 bits/vector
+cell-glove-tieredq-c608-0: disk 671.7, peak RAM 759.6 bits/vector
+cell-glove-tieredq-c612-0: disk 679.7, peak RAM 779.2 bits/vector
+cell-glove-tieredq-c608-1: disk 671.7, peak RAM 759.2 bits/vector
+cell-glove-tieredq-c608-2: disk 671.7, peak RAM 776.3 bits/vector
+cell-glove-tieredq-c554-0: disk 623.7, peak RAM 724.8 bits/vector
+cell-glove-tieredq-c582-0: disk 647.7, peak RAM 741.2 bits/vector
+cell-glove-tieredq-c587-0: disk 671.1, peak RAM 966.7 bits/vector
+cell-glove-tieredq-c582-1: disk 647.7, peak RAM 755.6 bits/vector
+cell-glove-tieredq-c582-2: disk 647.7, peak RAM 734.0 bits/vector
+cell-glove-tieredq-c554-1: disk 623.7, peak RAM 710.4 bits/vector
+cell-glove-tieredq-c554-2: disk 623.7, peak RAM 742.2 bits/vector
+cell-glove-tieredq-c1091-0: disk 1183.1, peak RAM 1477.2 bits/vector
+cell-glove-tieredq-c1099-0: disk 1183.1, peak RAM 1486.4 bits/vector
+cell-glove-tieredq-c1107-0: disk 1183.1, peak RAM 1486.7 bits/vector
+cell-glove-tieredq-c1115-0: disk 1183.1, peak RAM 1486.4 bits/vector
+cell-glove-tieredq-c1123-0: disk 1215.1, peak RAM 1516.2 bits/vector
+cell-glove-tieredq-c1115-1: disk 1183.1, peak RAM 1469.0 bits/vector
+cell-glove-tieredq-c1115-2: disk 1183.1, peak RAM 1483.7 bits/vector
+cell-glove-tieredq-c1019-0: disk 1087.1, peak RAM 1373.0 bits/vector
+cell-glove-tieredq-c1073-0: disk 1151.1, peak RAM 1448.7 bits/vector
+cell-glove-tieredq-c1079-0: disk 1151.1, peak RAM 1456.2 bits/vector
+cell-glove-tieredq-c1082-0: disk 1151.1, peak RAM 1473.9 bits/vector
+cell-glove-tieredq-c1085-0: disk 1151.1, peak RAM 1436.9 bits/vector
+cell-glove-tieredq-c1085-1: disk 1151.1, peak RAM 1458.8 bits/vector
+cell-glove-tieredq-c1085-2: disk 1151.1, peak RAM 1471.0 bits/vector
+cell-glove-tieredq-c856-0: disk 927.1, peak RAM 1222.6 bits/vector
+cell-glove-tieredq-c896-0: disk 959.1, peak RAM 1257.0 bits/vector
+cell-glove-tieredq-c866-0: disk 959.1, peak RAM 1255.3 bits/vector
+cell-glove-tieredq-c858-0: disk 927.1, peak RAM 1224.2 bits/vector
+cell-glove-tieredq-c858-1: disk 927.1, peak RAM 1227.2 bits/vector
+cell-glove-tieredq-c858-2: disk 927.1, peak RAM 1227.8 bits/vector

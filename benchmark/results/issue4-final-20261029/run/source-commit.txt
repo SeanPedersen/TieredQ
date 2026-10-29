@@ -1,0 +1,1 @@
+83c2a99 (library) + d9c9c54 (harness); 3a89860 + chunked covariance, storage-aware allocation, binary16 fast metadata, TQ+ codec

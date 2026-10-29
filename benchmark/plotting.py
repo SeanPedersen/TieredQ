@@ -109,3 +109,32 @@ def plot_memory(root, rows):
     fig.tight_layout(rect=(0, 0, 1, .97))
     fig.savefig(root / 'recall-memory.png', dpi=160)
     plt.close(fig)
+
+
+MATCHED_METRICS = (('disk', 'Disk bits / vector'), ('ram', 'Steady RAM bits / vector'), ('peak', 'Peak RAM bits / vector'))
+
+
+def plot_matched(root, rows, reference):
+    """Recall@10 of TieredQ and one reference codec at each equal-measured-memory target (labels = reference bits/dim).
+
+    Rows come from finalize.matched_rows: the reference sits at its target, TieredQ at its max memory over seeds.
+    """
+    rows = [r for r in rows if r['reference_codec'] == reference]
+    datasets = [name for name in DATASET_NAMES if any(r['dataset'] == name for r in rows)]
+    fig, axes = plt.subplots(len(MATCHED_METRICS), len(datasets), figsize=(5.2 * len(datasets), 3.9 * len(MATCHED_METRICS)), squeeze=False)
+    for metric_axes, (metric, xlabel) in zip(axes, MATCHED_METRICS, strict=True):
+        for dataset, ax in zip(datasets, metric_axes, strict=True):
+            targets = sorted((r for r in rows if (r['dataset'], r['metric']) == (dataset, metric)), key=lambda r: r['reference_bits'])
+            draw_series(ax, [dict(bits=r['reference_bits'], x=r['target_bits_per_vector'], y=r['reference_recall10']) for r in targets],
+                        reference, 'x', 'y', False)
+            draw_series(ax, [dict(bits=r['reference_bits'], x=r['tieredq_memory_max'], y=r['tieredq_recall10'])
+                             for r in targets if 'tieredq_recall10' in r], 'tieredq', 'x', 'y', False)
+            ax.set(title=DATASET_NAMES[dataset], xlabel=xlabel, ylabel='Recall@10')
+            ax.margins(x=.10, y=.20)
+            ax.grid(alpha=.2)
+            ax.legend(handles=[Line2D([], [], color=CODEC_STYLES[c][1], label=CODEC_STYLES[c][0]) for c in ('tieredq', reference)], fontsize=9)
+    fig.suptitle(f'TieredQ at {CODEC_STYLES[reference][0]}\'s measured memory · labels = {CODEC_STYLES[reference][0]} bits per original dimension',
+                 fontsize=12)
+    fig.tight_layout(rect=(0, 0, 1, .97))
+    fig.savefig(root / f'recall-memory-{reference}.png', dpi=160)
+    plt.close(fig)

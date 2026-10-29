@@ -1,0 +1,289 @@
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/build-native
+[ 20%] Built target dv_tieredq
+[ 25%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 85%] Built target nanobind-static
+[ 90%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 95%] Linking CXX executable codec_reference
+[ 95%] Built target codec_reference
+[100%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[100%] Built target codec_native
+Verified input sift [1000000, 128]
+Verified input glove [100000, 200]
+Verified input openai [100000, 1536]
+Verified input gemini [99000, 768]
+RUN cmake -S /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq -B /home/sean/experiments/TieredQ-issue4-final-20261029/tests-build-source-tq -DTIEREDQ_EXAMPLES=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS=-march=native
+-- The CXX compiler identification is GNU 16.2.1
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP: TRUE (found version "5.2")
+-- Looking for sgemm_
+-- Looking for sgemm_ - not found
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE
+-- Looking for sgemm_
+-- Looking for sgemm_ - found
+-- Found BLAS: /usr/lib/libblas.so
+-- Looking for cheev_
+-- Looking for cheev_ - not found
+-- Looking for cheev_
+-- Looking for cheev_ - found
+-- Found LAPACK: /usr/lib/liblapack.so;/usr/lib/libblas.so
+-- Configuring done (1.8s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue4-final-20261029/tests-build-source-tq
+RUN cmake --build /home/sean/experiments/TieredQ-issue4-final-20261029/tests-build-source-tq -j 8
+[  6%] Building CXX object CMakeFiles/dv_tieredq.dir/src/tieredq.cpp.o
+[ 12%] Building CXX object CMakeFiles/dv_tieredq.dir/src/tieredq_index_io.cpp.o
+[ 18%] Building CXX object CMakeFiles/test_training_rng.dir/tests/test_training_rng.cpp.o
+[ 25%] Building CXX object CMakeFiles/dv_tieredq.dir/src/tieredq_index.cpp.o
+[ 31%] Linking CXX executable test_training_rng
+[ 31%] Built target test_training_rng
+[ 37%] Linking CXX static library libdv_tieredq.a
+[ 37%] Built target dv_tieredq
+[ 43%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq_projection.cpp.o
+[ 50%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq.cpp.o
+[ 56%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq_neon.cpp.o
+[ 62%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq_model.cpp.o
+[ 68%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq_encoder.cpp.o
+[ 75%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq_lookup.cpp.o
+[ 81%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq_search.cpp.o
+[ 87%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq_fast_mode.cpp.o
+[ 93%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq_range_checkpoint.cpp.o
+[100%] Linking CXX executable test_tieredq
+[100%] Built target test_tieredq
+RUN ctest --test-dir /home/sean/experiments/TieredQ-issue4-final-20261029/tests-build-source-tq --output-on-failure
+Test project /home/sean/experiments/TieredQ-issue4-final-20261029/tests-build-source-tq
+    Start 1: tieredq
+1/2 Test #1: tieredq ..........................   Passed   40.91 sec
+    Start 2: training_rng
+2/2 Test #2: training_rng .....................   Passed    0.00 sec
+
+100% tests passed out of 2
+
+Total Test time (real) =  40.92 sec
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets sift --bits 1 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-sift-qdrant-1-0.json
+sift qdrant b=1 seed=0 t=1 batch=1: {'recall10': 0.2685, 'qps': 34.75404991479897, 'p50_ms': 28.098765993490815, 'p95_ms': 31.912240688689053}
+sift qdrant b=1 seed=0 t=1 batch=32: {'recall10': 0.2685, 'qps': 34.757971670788486, 'p50_ms': 918.7041651457548, 'p95_ms': 950.1960440538824}
+sift qdrant b=1 seed=0 t=8 batch=1: {'recall10': 0.2685, 'qps': 34.709285063459795, 'p50_ms': 28.10742799192667, 'p95_ms': 31.994022242724895}
+sift qdrant b=1 seed=0 t=8 batch=32: {'recall10': 0.2685, 'qps': 260.1676747818824, 'p50_ms': 120.65463420003653, 'p95_ms': 141.8339409865439}
+PROGRESS 1/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets sift --bits 1 --seeds 1 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-sift-qdrant-1-1.json
+sift qdrant b=1 seed=1 t=1 batch=1: {'recall10': 0.2685, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift qdrant b=1 seed=1 t=1 batch=32: {'recall10': 0.2685, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift qdrant b=1 seed=1 t=8 batch=1: {'recall10': 0.2685, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift qdrant b=1 seed=1 t=8 batch=32: {'recall10': 0.2685, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 2/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets sift --bits 1 --seeds 2 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-sift-qdrant-1-2.json
+sift qdrant b=1 seed=2 t=1 batch=1: {'recall10': 0.2685, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift qdrant b=1 seed=2 t=1 batch=32: {'recall10': 0.2685, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift qdrant b=1 seed=2 t=8 batch=1: {'recall10': 0.2685, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift qdrant b=1 seed=2 t=8 batch=32: {'recall10': 0.2685, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 3/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets sift --bits 2 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-sift-qdrant-2-0.json
+sift qdrant b=2 seed=0 t=1 batch=1: {'recall10': 0.5605999999999999, 'qps': 55.00324600868758, 'p50_ms': 18.184985732659698, 'p95_ms': 18.97469195537269}
+sift qdrant b=2 seed=0 t=1 batch=32: {'recall10': 0.5605999999999999, 'qps': 54.718743643211766, 'p50_ms': 584.6108961850405, 'p95_ms': 601.6757688485086}
+sift qdrant b=2 seed=0 t=8 batch=1: {'recall10': 0.5605999999999999, 'qps': 55.69308927359991, 'p50_ms': 17.8528584074229, 'p95_ms': 18.790371948853135}
+sift qdrant b=2 seed=0 t=8 batch=32: {'recall10': 0.5605999999999999, 'qps': 430.1949759106374, 'p50_ms': 72.43982190266252, 'p95_ms': 90.54301539435983}
+PROGRESS 4/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets sift --bits 2 --seeds 1 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-sift-qdrant-2-1.json
+sift qdrant b=2 seed=1 t=1 batch=1: {'recall10': 0.5605999999999999, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift qdrant b=2 seed=1 t=1 batch=32: {'recall10': 0.5605999999999999, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift qdrant b=2 seed=1 t=8 batch=1: {'recall10': 0.5605999999999999, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift qdrant b=2 seed=1 t=8 batch=32: {'recall10': 0.5605999999999999, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 5/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets sift --bits 2 --seeds 2 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-sift-qdrant-2-2.json
+sift qdrant b=2 seed=2 t=1 batch=1: {'recall10': 0.5605999999999999, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift qdrant b=2 seed=2 t=1 batch=32: {'recall10': 0.5605999999999999, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift qdrant b=2 seed=2 t=8 batch=1: {'recall10': 0.5605999999999999, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift qdrant b=2 seed=2 t=8 batch=32: {'recall10': 0.5605999999999999, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 6/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets sift --bits 4 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-sift-qdrant-4-0.json
+sift qdrant b=4 seed=0 t=1 batch=1: {'recall10': 0.8525000000000001, 'qps': 53.22061475536167, 'p50_ms': 18.65817396901548, 'p95_ms': 19.714149623177946}
+sift qdrant b=4 seed=0 t=1 batch=32: {'recall10': 0.8525000000000001, 'qps': 53.16354369071305, 'p50_ms': 601.4828588813543, 'p95_ms': 613.8203791342676}
+sift qdrant b=4 seed=0 t=8 batch=1: {'recall10': 0.8525000000000001, 'qps': 53.48909069004768, 'p50_ms': 18.61245511099696, 'p95_ms': 19.66166018974036}
+sift qdrant b=4 seed=0 t=8 batch=32: {'recall10': 0.8525000000000001, 'qps': 415.70348048739646, 'p50_ms': 75.95585193485022, 'p95_ms': 83.28294800594449}
+PROGRESS 7/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets sift --bits 4 --seeds 1 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-sift-qdrant-4-1.json
+sift qdrant b=4 seed=1 t=1 batch=1: {'recall10': 0.8525000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift qdrant b=4 seed=1 t=1 batch=32: {'recall10': 0.8525000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift qdrant b=4 seed=1 t=8 batch=1: {'recall10': 0.8525000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift qdrant b=4 seed=1 t=8 batch=32: {'recall10': 0.8525000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 8/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets sift --bits 4 --seeds 2 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-sift-qdrant-4-2.json
+sift qdrant b=4 seed=2 t=1 batch=1: {'recall10': 0.8525000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift qdrant b=4 seed=2 t=1 batch=32: {'recall10': 0.8525000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift qdrant b=4 seed=2 t=8 batch=1: {'recall10': 0.8525000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+sift qdrant b=4 seed=2 t=8 batch=32: {'recall10': 0.8525000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 9/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets glove --bits 1 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-glove-qdrant-1-0.json
+glove qdrant b=1 seed=0 t=1 batch=1: {'recall10': 0.35529999999999995, 'qps': 333.9983897525994, 'p50_ms': 2.92577943764627, 'p95_ms': 3.278901451267302}
+glove qdrant b=1 seed=0 t=1 batch=32: {'recall10': 0.35529999999999995, 'qps': 336.8383308157301, 'p50_ms': 93.71802397072315, 'p95_ms': 99.86120695248246}
+glove qdrant b=1 seed=0 t=8 batch=1: {'recall10': 0.35529999999999995, 'qps': 334.04257563171814, 'p50_ms': 2.923437627032399, 'p95_ms': 3.280708030797541}
+glove qdrant b=1 seed=0 t=8 batch=32: {'recall10': 0.35529999999999995, 'qps': 2291.6253257392796, 'p50_ms': 13.124980963766575, 'p95_ms': 16.76692022010684}
+PROGRESS 10/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets glove --bits 1 --seeds 1 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-glove-qdrant-1-1.json
+glove qdrant b=1 seed=1 t=1 batch=1: {'recall10': 0.35529999999999995, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove qdrant b=1 seed=1 t=1 batch=32: {'recall10': 0.35529999999999995, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove qdrant b=1 seed=1 t=8 batch=1: {'recall10': 0.35529999999999995, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove qdrant b=1 seed=1 t=8 batch=32: {'recall10': 0.35529999999999995, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 11/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets glove --bits 1 --seeds 2 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-glove-qdrant-1-2.json
+glove qdrant b=1 seed=2 t=1 batch=1: {'recall10': 0.35529999999999995, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove qdrant b=1 seed=2 t=1 batch=32: {'recall10': 0.35529999999999995, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove qdrant b=1 seed=2 t=8 batch=1: {'recall10': 0.35529999999999995, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove qdrant b=1 seed=2 t=8 batch=32: {'recall10': 0.35529999999999995, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 12/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets glove --bits 2 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-glove-qdrant-2-0.json
+glove qdrant b=2 seed=0 t=1 batch=1: {'recall10': 0.6276, 'qps': 321.82822359107, 'p50_ms': 3.0634079594165087, 'p95_ms': 3.2520425971597433}
+glove qdrant b=2 seed=0 t=1 batch=32: {'recall10': 0.6276, 'qps': 327.65478734008525, 'p50_ms': 97.13731287047267, 'p95_ms': 100.5659457296133}
+glove qdrant b=2 seed=0 t=8 batch=1: {'recall10': 0.6276, 'qps': 323.0599507786594, 'p50_ms': 3.0538730788975954, 'p95_ms': 3.2452133717015386}
+glove qdrant b=2 seed=0 t=8 batch=32: {'recall10': 0.6276, 'qps': 2404.220555957911, 'p50_ms': 12.568962294608355, 'p95_ms': 15.86465584114194}
+PROGRESS 13/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets glove --bits 2 --seeds 1 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-glove-qdrant-2-1.json
+glove qdrant b=2 seed=1 t=1 batch=1: {'recall10': 0.6276, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove qdrant b=2 seed=1 t=1 batch=32: {'recall10': 0.6276, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove qdrant b=2 seed=1 t=8 batch=1: {'recall10': 0.6276, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove qdrant b=2 seed=1 t=8 batch=32: {'recall10': 0.6276, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 14/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets glove --bits 2 --seeds 2 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-glove-qdrant-2-2.json
+glove qdrant b=2 seed=2 t=1 batch=1: {'recall10': 0.6276, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove qdrant b=2 seed=2 t=1 batch=32: {'recall10': 0.6276, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove qdrant b=2 seed=2 t=8 batch=1: {'recall10': 0.6276, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove qdrant b=2 seed=2 t=8 batch=32: {'recall10': 0.6276, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 15/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets glove --bits 4 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-glove-qdrant-4-0.json
+glove qdrant b=4 seed=0 t=1 batch=1: {'recall10': 0.8826000000000002, 'qps': 325.31844970576304, 'p50_ms': 3.0448264442384243, 'p95_ms': 3.23630147613585}
+glove qdrant b=4 seed=0 t=1 batch=32: {'recall10': 0.8826000000000002, 'qps': 325.94426151167266, 'p50_ms': 97.43602713569999, 'p95_ms': 101.6504056751728}
+glove qdrant b=4 seed=0 t=8 batch=1: {'recall10': 0.8826000000000002, 'qps': 323.3052452483284, 'p50_ms': 3.0491165816783905, 'p95_ms': 3.2541434979066253}
+glove qdrant b=4 seed=0 t=8 batch=32: {'recall10': 0.8826000000000002, 'qps': 2226.6171748439, 'p50_ms': 13.487755320966244, 'p95_ms': 16.858770977705717}
+PROGRESS 16/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets glove --bits 4 --seeds 1 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-glove-qdrant-4-1.json
+glove qdrant b=4 seed=1 t=1 batch=1: {'recall10': 0.8826000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove qdrant b=4 seed=1 t=1 batch=32: {'recall10': 0.8826000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove qdrant b=4 seed=1 t=8 batch=1: {'recall10': 0.8826000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove qdrant b=4 seed=1 t=8 batch=32: {'recall10': 0.8826000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 17/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets glove --bits 4 --seeds 2 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-glove-qdrant-4-2.json
+glove qdrant b=4 seed=2 t=1 batch=1: {'recall10': 0.8826000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove qdrant b=4 seed=2 t=1 batch=32: {'recall10': 0.8826000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove qdrant b=4 seed=2 t=8 batch=1: {'recall10': 0.8826000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+glove qdrant b=4 seed=2 t=8 batch=32: {'recall10': 0.8826000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 18/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets openai --bits 1 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-openai-qdrant-1-0.json
+openai qdrant b=1 seed=0 t=1 batch=1: {'recall10': 0.8142, 'qps': 129.6343057860543, 'p50_ms': 7.6681142672896385, 'p95_ms': 8.252678462304175}
+openai qdrant b=1 seed=0 t=1 batch=32: {'recall10': 0.8142, 'qps': 123.95795698260191, 'p50_ms': 259.168260730803, 'p95_ms': 269.9937936849892}
+openai qdrant b=1 seed=0 t=8 batch=1: {'recall10': 0.8142, 'qps': 124.32631301596341, 'p50_ms': 8.004744071513414, 'p95_ms': 8.501453814096749}
+openai qdrant b=1 seed=0 t=8 batch=32: {'recall10': 0.8142, 'qps': 1002.7684099402043, 'p50_ms': 30.856451950967312, 'p95_ms': 38.263087160885334}
+PROGRESS 19/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets openai --bits 1 --seeds 1 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-openai-qdrant-1-1.json
+openai qdrant b=1 seed=1 t=1 batch=1: {'recall10': 0.8142, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai qdrant b=1 seed=1 t=1 batch=32: {'recall10': 0.8142, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai qdrant b=1 seed=1 t=8 batch=1: {'recall10': 0.8142, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai qdrant b=1 seed=1 t=8 batch=32: {'recall10': 0.8142, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 20/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets openai --bits 1 --seeds 2 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-openai-qdrant-1-2.json
+openai qdrant b=1 seed=2 t=1 batch=1: {'recall10': 0.8142, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai qdrant b=1 seed=2 t=1 batch=32: {'recall10': 0.8142, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai qdrant b=1 seed=2 t=8 batch=1: {'recall10': 0.8142, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai qdrant b=1 seed=2 t=8 batch=32: {'recall10': 0.8142, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 21/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets openai --bits 2 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-openai-qdrant-2-0.json
+openai qdrant b=2 seed=0 t=1 batch=1: {'recall10': 0.9046000000000002, 'qps': 115.28330199560625, 'p50_ms': 8.637742605060339, 'p95_ms': 9.112828015349805}
+openai qdrant b=2 seed=0 t=1 batch=32: {'recall10': 0.9046000000000002, 'qps': 113.54493311726752, 'p50_ms': 281.1726611107588, 'p95_ms': 286.49551002308726}
+openai qdrant b=2 seed=0 t=8 batch=1: {'recall10': 0.9046000000000002, 'qps': 113.40364538273684, 'p50_ms': 8.750998647883534, 'p95_ms': 9.22969866078347}
+openai qdrant b=2 seed=0 t=8 batch=32: {'recall10': 0.9046000000000002, 'qps': 928.3353153105808, 'p50_ms': 33.60927477478981, 'p95_ms': 39.7859956137836}
+PROGRESS 22/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets openai --bits 2 --seeds 1 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-openai-qdrant-2-1.json
+openai qdrant b=2 seed=1 t=1 batch=1: {'recall10': 0.9046000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai qdrant b=2 seed=1 t=1 batch=32: {'recall10': 0.9046000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai qdrant b=2 seed=1 t=8 batch=1: {'recall10': 0.9046000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai qdrant b=2 seed=1 t=8 batch=32: {'recall10': 0.9046000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 23/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets openai --bits 2 --seeds 2 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-openai-qdrant-2-2.json
+openai qdrant b=2 seed=2 t=1 batch=1: {'recall10': 0.9046000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai qdrant b=2 seed=2 t=1 batch=32: {'recall10': 0.9046000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai qdrant b=2 seed=2 t=8 batch=1: {'recall10': 0.9046000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai qdrant b=2 seed=2 t=8 batch=32: {'recall10': 0.9046000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 24/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets openai --bits 4 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-openai-qdrant-4-0.json
+openai qdrant b=4 seed=0 t=1 batch=1: {'recall10': 0.9715000000000001, 'qps': 101.35553464179712, 'p50_ms': 9.796249447390437, 'p95_ms': 10.299900686368346}
+openai qdrant b=4 seed=0 t=1 batch=32: {'recall10': 0.9715000000000001, 'qps': 100.61178105298441, 'p50_ms': 317.3396731726825, 'p95_ms': 327.1824843250215}
+openai qdrant b=4 seed=0 t=8 batch=1: {'recall10': 0.9715000000000001, 'qps': 102.26669059956467, 'p50_ms': 9.700055001303554, 'p95_ms': 10.271454299800098}
+openai qdrant b=4 seed=0 t=8 batch=32: {'recall10': 0.9715000000000001, 'qps': 801.345167084361, 'p50_ms': 39.50562793761492, 'p95_ms': 41.22431389987469}
+PROGRESS 25/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets openai --bits 4 --seeds 1 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-openai-qdrant-4-1.json
+openai qdrant b=4 seed=1 t=1 batch=1: {'recall10': 0.9715000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai qdrant b=4 seed=1 t=1 batch=32: {'recall10': 0.9715000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai qdrant b=4 seed=1 t=8 batch=1: {'recall10': 0.9715000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai qdrant b=4 seed=1 t=8 batch=32: {'recall10': 0.9715000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 26/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets openai --bits 4 --seeds 2 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-openai-qdrant-4-2.json
+openai qdrant b=4 seed=2 t=1 batch=1: {'recall10': 0.9715000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai qdrant b=4 seed=2 t=1 batch=32: {'recall10': 0.9715000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai qdrant b=4 seed=2 t=8 batch=1: {'recall10': 0.9715000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+openai qdrant b=4 seed=2 t=8 batch=32: {'recall10': 0.9715000000000001, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 27/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets gemini --bits 1 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-gemini-qdrant-1-0.json
+gemini qdrant b=1 seed=0 t=1 batch=1: {'recall10': 0.698, 'qps': 236.35505779720415, 'p50_ms': 4.166945349425077, 'p95_ms': 4.4807507423684}
+gemini qdrant b=1 seed=0 t=1 batch=32: {'recall10': 0.698, 'qps': 237.2922266301941, 'p50_ms': 133.6596398614347, 'p95_ms': 144.43117706105113}
+gemini qdrant b=1 seed=0 t=8 batch=1: {'recall10': 0.698, 'qps': 237.7366633703275, 'p50_ms': 4.155513597652316, 'p95_ms': 4.45997801143676}
+gemini qdrant b=1 seed=0 t=8 batch=32: {'recall10': 0.698, 'qps': 1718.2675861841883, 'p50_ms': 17.422343138605356, 'p95_ms': 22.102776914834976}
+PROGRESS 28/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets gemini --bits 1 --seeds 1 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-gemini-qdrant-1-1.json
+gemini qdrant b=1 seed=1 t=1 batch=1: {'recall10': 0.698, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini qdrant b=1 seed=1 t=1 batch=32: {'recall10': 0.698, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini qdrant b=1 seed=1 t=8 batch=1: {'recall10': 0.698, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini qdrant b=1 seed=1 t=8 batch=32: {'recall10': 0.698, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 29/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets gemini --bits 1 --seeds 2 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-gemini-qdrant-1-2.json
+gemini qdrant b=1 seed=2 t=1 batch=1: {'recall10': 0.698, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini qdrant b=1 seed=2 t=1 batch=32: {'recall10': 0.698, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini qdrant b=1 seed=2 t=8 batch=1: {'recall10': 0.698, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini qdrant b=1 seed=2 t=8 batch=32: {'recall10': 0.698, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 30/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets gemini --bits 2 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-gemini-qdrant-2-0.json
+gemini qdrant b=2 seed=0 t=1 batch=1: {'recall10': 0.8398000000000002, 'qps': 210.87987970434187, 'p50_ms': 4.687832668423653, 'p95_ms': 5.043513281270862}
+gemini qdrant b=2 seed=0 t=1 batch=32: {'recall10': 0.8398000000000002, 'qps': 209.03143303345328, 'p50_ms': 152.21658814698458, 'p95_ms': 160.17861990258098}
+gemini qdrant b=2 seed=0 t=8 batch=1: {'recall10': 0.8398000000000002, 'qps': 217.23445512985973, 'p50_ms': 4.569978686049581, 'p95_ms': 4.953389544971286}
+gemini qdrant b=2 seed=0 t=8 batch=32: {'recall10': 0.8398000000000002, 'qps': 1690.8818017551334, 'p50_ms': 18.168544862419367, 'p95_ms': 22.74426119402051}
+PROGRESS 31/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets gemini --bits 2 --seeds 1 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-gemini-qdrant-2-1.json
+gemini qdrant b=2 seed=1 t=1 batch=1: {'recall10': 0.8398000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini qdrant b=2 seed=1 t=1 batch=32: {'recall10': 0.8398000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini qdrant b=2 seed=1 t=8 batch=1: {'recall10': 0.8398000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini qdrant b=2 seed=1 t=8 batch=32: {'recall10': 0.8398000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 32/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets gemini --bits 2 --seeds 2 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-gemini-qdrant-2-2.json
+gemini qdrant b=2 seed=2 t=1 batch=1: {'recall10': 0.8398000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini qdrant b=2 seed=2 t=1 batch=32: {'recall10': 0.8398000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini qdrant b=2 seed=2 t=8 batch=1: {'recall10': 0.8398000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini qdrant b=2 seed=2 t=8 batch=32: {'recall10': 0.8398000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 33/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets gemini --bits 4 --seeds 0 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-gemini-qdrant-4-0.json
+gemini qdrant b=4 seed=0 t=1 batch=1: {'recall10': 0.9521000000000002, 'qps': 183.92224319466044, 'p50_ms': 5.4321682546287775, 'p95_ms': 5.585735477507114}
+gemini qdrant b=4 seed=0 t=1 batch=32: {'recall10': 0.9521000000000002, 'qps': 185.3175149722694, 'p50_ms': 173.76554803922772, 'p95_ms': 177.7481189928949}
+gemini qdrant b=4 seed=0 t=8 batch=1: {'recall10': 0.9521000000000002, 'qps': 189.6971855691701, 'p50_ms': 5.336453439667821, 'p95_ms': 5.56470004376024}
+gemini qdrant b=4 seed=0 t=8 batch=32: {'recall10': 0.9521000000000002, 'qps': 1430.467213966369, 'p50_ms': 22.110566962510347, 'p95_ms': 22.69099000841379}
+PROGRESS 34/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets gemini --bits 4 --seeds 1 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-gemini-qdrant-4-1.json
+gemini qdrant b=4 seed=1 t=1 batch=1: {'recall10': 0.9521000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini qdrant b=4 seed=1 t=1 batch=32: {'recall10': 0.9521000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini qdrant b=4 seed=1 t=8 batch=1: {'recall10': 0.9521000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini qdrant b=4 seed=1 t=8 batch=32: {'recall10': 0.9521000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 35/36
+RUN /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python /home/sean/experiments/TieredQ-issue4-final-20261029/source-tq/benchmark/run.py --codec qdrant --datasets gemini --bits 4 --seeds 2 --data /home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data --output /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant --cell /home/sean/experiments/TieredQ-issue4-final-20261029/output-qdrant/cell-gemini-qdrant-4-2.json
+gemini qdrant b=4 seed=2 t=1 batch=1: {'recall10': 0.9521000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini qdrant b=4 seed=2 t=1 batch=32: {'recall10': 0.9521000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini qdrant b=4 seed=2 t=8 batch=1: {'recall10': 0.9521000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+gemini qdrant b=4 seed=2 t=8 batch=32: {'recall10': 0.9521000000000002, 'qps': nan, 'p50_ms': nan, 'p95_ms': nan}
+PROGRESS 36/36
+MATRIX COMPLETE
