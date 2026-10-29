@@ -173,7 +173,7 @@ void bind_index(nb::module_& module) {
            "dimensions"_a, "code_bits"_a, nb::kw_only(), "mode"_a = "fast", "metric"_a = "ip",
            "allocation_power"_a = nb::none(),
            "metric is 'ip', 'cosine' or 'l2' (scores are -squared distances); allocation_power overrides the\n"
-           "variance power bit allocation uses (default: 1.5 for fast ip/cosine, 1 for l2 and full mode).")
+           "variance power bit allocation uses (default: 1.5 for ip/cosine, 1 for l2).")
       .def("__len__", &PythonIndex::size, nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro("dimensions", &PythonIndex::dimensions)
       .def_prop_ro("code_bits", &PythonIndex::code_bits,

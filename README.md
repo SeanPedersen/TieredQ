@@ -37,11 +37,11 @@ index = TieredQIndex.load("index.tq")
   queries, and `metric="l2"` serves Euclidean search with scores of `-|q - x|^2`.
   L2 lifts vectors into one extra dimension with a lift whitened for the query
   distribution, stored in the model, so saved indexes stay self-contained.
-- Bit allocation follows the metric: fast inner-product and cosine models allocate
+- Bit allocation follows the metric: inner-product and cosine models allocate
   on PCA variance^1.5 (recall-optimal when queries are distributed like the data,
   +0.5 to +0.8 R@10 points at equal disk on DBpedia OpenAI/Gemini, GloVe neutral to
-  +1.3, issue #9); L2 and
-  full-mode models use variance (MSE), which is optimal for whitened queries.
+  +1.3, issue #9) in both modes; L2 models use variance (MSE), which is optimal for
+  whitened queries.
   `allocation_power=` overrides it.
 - `mode="fast"` is the default and stores the native fast search representation.
   Use `mode="full"` for compact packed rows and FP32 scoring of quantized vectors,

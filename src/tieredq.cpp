@@ -345,7 +345,7 @@ TieredQ TieredQ::train(TieredQConfig config,const float* sample,size_t rows,uint
     auto model_config=config;
     model_config.dimensions=uint32_t(lifted.model_dimensions()); model_config.metric=TieredQMetric::inner_product;
     if (!config.allocation_power)
-      model_config.allocation_power=config.target_mode==TieredQIndexMode::fast && config.metric==TieredQMetric::l2 ? 1.0 : 0.0;
+      model_config.allocation_power=config.metric==TieredQMetric::l2 ? 1.0 : 0.0;
     auto c=train(model_config,model_rows.data(),rows,seed);
     c.config_.dimensions=config.dimensions; c.config_.metric=config.metric; c.config_.allocation_power=config.allocation_power;
     c.lift_scale_=lifted.lift_scale_; c.lift_base_map_=std::move(lifted.lift_base_map_);
@@ -422,12 +422,12 @@ TieredQ TieredQ::train(TieredQConfig config,const float* sample,size_t rows,uint
     allocation.cap[j]=uint32_t(j)<config.wide_dims ? config.max_bits : std::min<uint32_t>(config.max_bits,6);
   }
   auto bits=tieredq_detail::greedy_allocation(allocation,config.code_bits,false);
-  // Fast targets allocate on variance^1.5 instead of the MSE-optimal variance by default: for queries distributed
+  // Allocation uses variance^1.5 instead of the MSE-optimal variance by default: for queries distributed
   // like the data it is recall-optimal at equal storage (#9, chosen and confirmed on disjoint query halves). SAQ's
   // inner-product error model puts the optimum at power 2 and ScaNN's parallel-error argument between 1 and 2.
   // Whitened queries (the L2 lift) weight every rank alike, so MSE is optimal there and L2 training passes 1.
   const bool fast_target=config.target_mode==TieredQIndexMode::fast;
-  const double power=config.allocation_power>0 ? config.allocation_power : fast_target ? tieredq_detail::fast_allocation_power : 1.0;
+  const double power=config.allocation_power>0 ? config.allocation_power : tieredq_detail::default_allocation_power;
   auto weighted=allocation;
   for (auto& v:weighted.variance) v=std::pow(std::max(0.0,v),power);
   // Fast caches of models with every tier <= 4 bits use the x86 nibble lookup, which stores 3-bit codes exactly

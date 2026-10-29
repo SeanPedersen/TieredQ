@@ -26,16 +26,16 @@ struct TieredQConfig {
   uint32_t max_bits = 8;
   // Training-only: only the top-N PCA ranks may exceed 6 bits (UINT32_MAX disables the restriction).
   uint32_t wide_dims = UINT32_MAX;
-  // Training-only: the index mode whose storage layout bit allocation optimises for. Fast models allocate on
-  // variance^1.5 (recall-optimal, #9). Those with all tiers <= 4 bits use the x86 nibble lookup: 3-bit tiers take an
-  // additive codebook whose codes split into 2- and 1-bit nibble parts, and code_bits bounds padded nibble storage
-  // (or the padded size of 2/4-bit tiers at code_bits, if larger), so the realised config().code_bits may differ.
+  // Training-only: the index mode whose storage layout bit allocation optimises for. Fast models with all tiers
+  // <= 4 bits use the x86 nibble lookup: 3-bit tiers take an additive codebook whose codes split into 2- and 1-bit
+  // nibble parts, and code_bits bounds padded nibble storage (or the padded size of 2/4-bit tiers at code_bits, if
+  // larger), so the realised config().code_bits may differ.
   // Full mode packs codes densely and keeps the Lloyd-Max 3-bit codebook. Either model serves in either mode.
   TieredQIndexMode target_mode = TieredQIndexMode::fast;
   TieredQMetric metric = TieredQMetric::inner_product;
-  // Training-only: allocate bits on PCA variance^allocation_power. 0 picks the default: fast targets use 1.5 for
-  // inner product and cosine, whose queries follow the data, and 1 (MSE) for L2, whose lift whitens queries (#9);
-  // full targets use 1. An explicit power applies to both modes.
+  // Training-only: allocate bits on PCA variance^allocation_power. 0 picks the metric's default in either mode
+  // (#9): 1.5 for inner product and cosine, whose queries follow the data, and 1 (MSE) for L2, whose lift
+  // whitens queries.
   double allocation_power = 0;
   static TieredQConfig target_bytes(uint32_t dimensions, uint32_t bytes);
   static TieredQConfig target_code_bits(uint32_t dimensions, uint32_t bits);

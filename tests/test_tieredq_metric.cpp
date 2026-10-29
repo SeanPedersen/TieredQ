@@ -128,14 +128,16 @@ void cosine_test() {
   path_parity(index,probes);
   require(TieredQ::deserialize(codec.serialize()).model_id()==codec.model_id(),"cosine model does not round-trip");
 }
-// The default power is 1 for L2 fast targets and 1.5 for inner-product ones; inner-product models keep format 3.
+// The default power follows the metric in both modes (1 for L2, 1.5 otherwise); inner-product models keep format 3.
 void power_and_format_test() {
   require(train(TieredQMetric::l2,2,TieredQIndexMode::fast).model_id()==train(TieredQMetric::l2,2,TieredQIndexMode::fast,1.0).model_id(),
           "L2 fast default is not power 1");
   require(train(TieredQMetric::inner_product,2,TieredQIndexMode::fast).model_id()==
           train(TieredQMetric::inner_product,2,TieredQIndexMode::fast,1.5).model_id(),"inner-product fast default is not power 1.5");
   require(train(TieredQMetric::inner_product,2,TieredQIndexMode::full).model_id()==
-          train(TieredQMetric::inner_product,2,TieredQIndexMode::full,1.0).model_id(),"full default is not power 1");
+          train(TieredQMetric::inner_product,2,TieredQIndexMode::full,1.5).model_id(),"full inner-product default is not power 1.5");
+  require(train(TieredQMetric::l2,2,TieredQIndexMode::full).model_id()==
+          train(TieredQMetric::l2,2,TieredQIndexMode::full,1.0).model_id(),"full L2 default is not power 1");
   auto format=[](const TieredQ& codec) { const auto data=codec.serialize(); uint32_t v; std::memcpy(&v,data.data()+4*sizeof(uint32_t),sizeof v); return v; };
   require(format(train(TieredQMetric::inner_product,2,TieredQIndexMode::fast))==TieredQ::model_format,"inner-product model format changed");
   require(format(train(TieredQMetric::l2,2,TieredQIndexMode::fast))==TieredQ::metric_model_format,"L2 model format");
