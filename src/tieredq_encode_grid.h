@@ -126,15 +126,19 @@ __attribute__((target("avx512f"))) inline void scale_grid_wide_avx512(
   const __m512d high=_mm512_setr_pd(thresholds[17*sixteen_step-1],thresholds[19*sixteen_step-1],
       thresholds[21*sixteen_step-1],thresholds[23*sixteen_step-1],thresholds[25*sixteen_step-1],
       thresholds[27*sixteen_step-1],thresholds[29*sixteen_step-1],thresholds[31*sixteen_step-1]);
-  __m512 levels0{},levels1{},levels2{},levels3{};
-  if constexpr (Bits<=6) {
-    levels0=_mm512_loadu_ps(model.levels[Bits].data());
-    levels1=_mm512_loadu_ps(model.levels[Bits].data()+16);
-    if constexpr (Bits==6) {
-      levels2=_mm512_loadu_ps(model.levels[Bits].data()+32);
-      levels3=_mm512_loadu_ps(model.levels[Bits].data()+48);
+  // Depth 5 (32 thresholds) and up to 128 levels also stay in registers; only 8-bit tiers gather beyond depth 5.
+  constexpr size_t thirty_two_step=sixteen_step/2>0 ? sixteen_step/2 : 1;
+  constexpr size_t lanes=8,depth_five_vectors=4;
+  __m512d depth_five[depth_five_vectors]{};
+  if constexpr (Bits>=6)
+    for (size_t part=0;part<depth_five_vectors;++part) {
+      alignas(64) double values[lanes];
+      for (size_t i=0;i<lanes;++i) values[i]=thresholds[(2*(part*lanes+i)+1)*thirty_two_step-1];
+      depth_five[part]=_mm512_load_pd(values);
     }
-  }
+  constexpr size_t register_levels=Bits<=7 ? size_t(1)<<Bits : 0,level_vectors=register_levels/16;
+  __m512 levels[level_vectors>0 ? level_vectors : 1]{};
+  for (size_t part=0;part<level_vectors;++part) levels[part]=_mm512_loadu_ps(model.levels[Bits].data()+16*part);
   for (size_t j=0;j<tier.dimensions;++j) {
     const size_t r=tier.start+j;
     const __m512d value=_mm512_mul_pd(_mm512_set1_pd(work.z[r]),grid);
@@ -151,17 +155,24 @@ __attribute__((target("avx512f"))) inline void scale_grid_wide_avx512(
       else if (depth==2) threshold=_mm512_permutexvar_pd(node,four);
       else if (depth==3) threshold=_mm512_permutexvar_pd(node,eight);
       else if (depth==4) threshold=_mm512_permutex2var_pd(low,node,high);
+      else if (depth==5) threshold=_mm512_mask_blend_pd(_mm512_cmp_epi64_mask(node,_mm512_set1_epi64(16),_MM_CMPINT_GE),
+          _mm512_permutex2var_pd(depth_five[0],node,depth_five[1]),_mm512_permutex2var_pd(depth_five[2],node,depth_five[3]));
       else threshold=_mm512_i64gather_pd(_mm512_add_epi64(code,_mm512_set1_epi64(step-1)),thresholds,sizeof(double));
       const __mmask8 greater=_mm512_cmp_pd_mask(value,threshold,_CMP_GT_OQ);
       code=_mm512_mask_add_epi64(code,greater,code,_mm512_set1_epi64(step));
     }
     __m512d level;
-    if constexpr (Bits<=6) {
+    if constexpr (register_levels>0) {
+      // Each permute covers 32 levels; blends on the higher code bits pick the right block.
       const __m512i indices=_mm512_castsi256_si512(_mm512_cvtepi64_epi32(code));
-      __m512 values=_mm512_permutex2var_ps(levels0,indices,levels1);
-      if constexpr (Bits==6) {
-        const __m512 upper=_mm512_permutex2var_ps(levels2,indices,levels3);
-        values=_mm512_mask_blend_ps(_mm512_cmp_epi64_mask(code,_mm512_set1_epi64(32),_MM_CMPINT_GE),values,upper);
+      __m512 blocks[level_vectors/2];
+      for (size_t part=0;part<level_vectors/2;++part) blocks[part]=_mm512_permutex2var_ps(levels[2*part],indices,levels[2*part+1]);
+      __m512 values=blocks[0];
+      if constexpr (Bits>=6) {
+        const __mmask8 odd_block=_mm512_test_epi64_mask(code,_mm512_set1_epi64(32));
+        values=_mm512_mask_blend_ps(odd_block,blocks[0],blocks[1]);
+        if constexpr (Bits==7) values=_mm512_mask_blend_ps(_mm512_test_epi64_mask(code,_mm512_set1_epi64(64)),values,
+            _mm512_mask_blend_ps(odd_block,blocks[2],blocks[3]));
       }
       level=_mm512_cvtps_pd(_mm512_castps512_ps256(values));
     } else level=_mm512_cvtps_pd(_mm512_i64gather_ps(code,model.levels[Bits].data(),sizeof(float)));
