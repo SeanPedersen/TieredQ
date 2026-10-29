@@ -1,0 +1,15 @@
+    PID %CPU   RSS COMMAND
+3363735  100 1392668 /app/.venv/bin/python /app/.venv/bin/uvicorn crawler_app:app --host 0.0.0.0 --port 23239 --no-access-log
+  97268  100  3944 pgrep -f uv add tensorrt
+  97269  100  3936 pgrep -f trt_bge.py
+  97280  100  3856 ps -eo pid,pcpu,rss,args --sort=-pcpu
+3361077 69.1 2782384 /app/.venv/bin/python /app/.venv/bin/uvicorn app:app --host 0.0.0.0 --port 23237 --no-access-log
+   1620  4.5 185064 /usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock
+   1287  3.9 69512 /usr/bin/containerd
+  26622  2.7 74400 btop
+   2557  2.4 107616 /usr/bin/kwin_wayland --wayland-fd 7 --socket wayland-0 --xwayland-fd 8 --xwayland-fd 9 --xwayland-display :0 --xwayland-xauthority /run/user/1000/xauth_fVJnJa --xwayland
+    507  1.9     0 [nv_queue]
+3455506  1.7 904560 /app/llama-server --model /models/Qwen_Qwen3.5-4B-Q4_K_M.gguf --alias SemIf-Q4 --n-gpu-layers 999 --ctx-size 6144 --parallel 1 --cache-ram 0 --host 0.0.0.0 --port 8080 --jinja
+   4088  1.3 243384 /usr/bin/plasmashell --no-respawn
+  26228  1.0 10604 mosh-server new -c 256 -s -l LANG=en_US.UTF-8
+  49498  0.9  2356 redis-server *:6379

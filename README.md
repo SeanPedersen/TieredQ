@@ -53,6 +53,12 @@ index = TieredQIndex.load("index.tq")
   per vector. Other layouts, backends, and multi-vector queries use the full scanner.
 - Matrix queries use OpenMP workers. Set `OMP_NUM_THREADS` before starting Python
   to control parallelism.
+- `mode` also steers training. Fast models whose tiers all fit 4 bits use an additive
+  3-bit codebook, so the x86 nibble lookup stores 3-bit tiers at exactly 3 bits.
+  This adds +1.2 to +3.6 R@10 points on GloVe-200 at 2.25–3.9 bits/dim, at equal
+  storage and speed. It is neutral on SIFT, and DBpedia OpenAI/Gemini at 2–4 bits/dim
+  are unchanged. Full mode keeps the Lloyd-Max 3-bit codebook, and either model
+  serves in either mode. See [issue #20 results](benchmark/results/issue20-additive-20261029/README.md).
 
 See [fast-mode measurements](docs/glove200-fast-scan.md) for accuracy and speed.
 Models with tiers wider than 4 bits now retain original codebook precision in fast mode.

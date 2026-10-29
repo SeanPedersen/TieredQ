@@ -1,0 +1,62 @@
+-- The CXX compiler identification is GNU 16.2.1
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP: TRUE (found version "5.2")
+-- Looking for sgemm_
+-- Looking for sgemm_ - not found
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE
+-- Looking for sgemm_
+-- Looking for sgemm_ - found
+-- Found BLAS: /usr/lib/libblas.so
+-- Looking for cheev_
+-- Looking for cheev_ - not found
+-- Looking for cheev_
+-- Looking for cheev_ - found
+-- Found LAPACK: /usr/lib/liblapack.so;/usr/lib/libblas.so
+-- Configuring done (1.9s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue20-ship-20261029/tests-ship
+[  4%] Building CXX object CMakeFiles/dv_tieredq.dir/src/tieredq_index.cpp.o
+[  8%] Building CXX object CMakeFiles/test_training_rng.dir/tests/test_training_rng.cpp.o
+[ 13%] Building CXX object CMakeFiles/dv_tieredq.dir/src/tieredq.cpp.o
+[ 17%] Building CXX object CMakeFiles/dv_tieredq.dir/src/tieredq_index_io.cpp.o
+[ 21%] Linking CXX executable test_training_rng
+[ 21%] Built target test_training_rng
+[ 26%] Linking CXX static library libdv_tieredq.a
+[ 26%] Built target dv_tieredq
+[ 30%] Building CXX object CMakeFiles/tieredq_scan_benchmark.dir/examples/scan_benchmark.cpp.o
+[ 34%] Building CXX object CMakeFiles/tieredq_fast_scan_benchmark.dir/examples/fast_scan_benchmark.cpp.o
+[ 39%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq_encoder.cpp.o
+[ 43%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq_neon.cpp.o
+[ 47%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq.cpp.o
+[ 52%] Building CXX object CMakeFiles/tieredq_example.dir/examples/search.cpp.o
+[ 56%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq_model.cpp.o
+[ 60%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq_lookup.cpp.o
+[ 65%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq_projection.cpp.o
+[ 69%] Linking CXX executable tieredq_example
+[ 69%] Built target tieredq_example
+[ 73%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq_search.cpp.o
+[ 78%] Linking CXX executable tieredq_fast_scan_benchmark
+[ 78%] Built target tieredq_fast_scan_benchmark
+[ 82%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq_fast_mode.cpp.o
+[ 86%] Linking CXX executable tieredq_scan_benchmark
+[ 86%] Built target tieredq_scan_benchmark
+[ 91%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq_range_checkpoint.cpp.o
+[ 95%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq_additive.cpp.o
+[100%] Linking CXX executable test_tieredq
+[100%] Built target test_tieredq
+Test project /home/sean/experiments/TieredQ-issue20-ship-20261029/tests-ship
+    Start 1: tieredq
+1/2 Test #1: tieredq ..........................   Passed   45.94 sec
+    Start 2: training_rng
+2/2 Test #2: training_rng .....................   Passed    0.01 sec
+
+100% tests passed out of 2
+
+Total Test time (real) =  45.95 sec
