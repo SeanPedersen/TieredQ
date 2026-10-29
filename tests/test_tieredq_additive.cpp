@@ -6,6 +6,7 @@
 #include "tieredq_train_allocation.h"
 #include "tieredq_train_codebook.h"
 #include "tieredq_train_codebook_data.h"
+#include "tieredq_train_distortion.h"
 #include <algorithm>
 #include <bit>
 #include <climits>
@@ -102,13 +103,14 @@ void split_derivation_test() {
   require(lookup_stored_bits(bits,true)==408 && lookup_stored_bits(Allocation(200,2),true)==400,"padded storage");
 }
 // The 3-bit allocation spends the whole budget, never stores more than code_bits or the 2/4-bit allocation, and
-// must predict less distortion. On a flat spectrum at 2 bits/dim, one padded 3-bit coordinate falls back.
+// must predict less distortion. The exact allocation fits the same storage and never predicts more than a nibble
+// choice (a 2/4 fallback that reaches 5 bits leaves the nibble layout). On a flat spectrum at 2 bits/dim, one padded 3-bit coordinate falls back.
 void padded_allocation_test() {
   constexpr int ranks=200;
-  AllocationModel model{std::vector<double>(ranks),std::vector<uint32_t>(ranks,max_code_bits),{}};
-  model.error[0]=1;
-  for (unsigned b=1;b<=max_code_bits;++b) model.error[b]=distortion(gaussian_codebooks()[b]);
-  model.error[split_code_bits]=distortion(additive_three_codebook());
+  DistortionTable error{1};
+  for (unsigned b=1;b<=max_code_bits;++b) error[b]=distortion(gaussian_codebooks()[b]);
+  error[split_code_bits]=distortion(additive_three_codebook());
+  AllocationModel model{std::vector<double>(ranks),std::vector<uint32_t>(ranks,max_code_bits),std::vector(ranks,error)};
   for (int rank=0;rank<ranks;++rank) model.variance[rank]=std::exp(-rank/double(ranks));
   size_t additive=0;
   for (uint32_t code_bits=ranks;code_bits<=4*ranks;code_bits+=ranks/8) for (uint32_t odd:{0u,1u,3u}) {
@@ -117,6 +119,11 @@ void padded_allocation_test() {
     const auto fallback=has_three_bit_tier(dense) ? greedy_allocation(model,budget,true) : dense;
     if (widest_tier(dense)>lookup_code_bits) continue;
     const auto chosen=fast_lookup_allocation(model,budget,dense);
+    const uint32_t limit=lookup_storage_limit(fallback,budget);
+    const auto exact=exact_lookup_allocation(model.variance,error,limit);
+    require(lookup_stored_bits(exact.bits,exact.additive_three)<=limit,"exact allocation exceeds its storage");
+    require(widest_tier(chosen.bits)>lookup_code_bits ||
+            predicted_distortion(model,exact.bits)<=predicted_distortion(model,chosen.bits)*(1+1e-12),"exact allocation loses to greedy");
     require(chosen.additive_three==has_three_bit_tier(chosen.bits),"invalid padded allocation");
     if (!chosen.additive_three) { require(chosen.bits==fallback,"2/4-bit fallback changed"); continue; }
     const bool nibble_fallback=widest_tier(fallback)<=lookup_code_bits;
@@ -130,6 +137,30 @@ void padded_allocation_test() {
   std::fill(model.variance.begin(),model.variance.end(),1.0);
   const auto flat=fast_lookup_allocation(model,2*ranks,greedy_allocation(model,2*ranks,false));
   require(!flat.additive_three && flat.bits==Allocation(ranks,2),"2 bits/dim does not fall back to 2-bit tiers");
+}
+// Measured distortion matches the Gaussian table on Gaussian rows. Rows with random norms (a scale mixture) raise
+// raw distortion, while shape-gain measurement divides out each row's RMS as the encoder does.
+// The RMS of a finite row is noisy, which trims tails by about 1% at 256 ranks.
+void measured_distortion_test() {
+  constexpr size_t ranks=256,rows=8192;
+  constexpr double low_norm=0.5,high_norm=1.5;
+  const auto& book=gaussian_codebooks()[lookup_code_bits];
+  const double gaussian=distortion(book);
+  std::mt19937_64 rng(9); std::normal_distribution<float> normal;
+  std::vector<float> plain(rows*ranks),mixed(plain.size());
+  for (size_t i=0;i<rows;++i) for (size_t r=0;r<ranks;++r) {
+    plain[i*ranks+r]=normal(rng);
+    mixed[i*ranks+r]=plain[i*ranks+r]*float(i%2 ? high_norm : low_norm);
+  }
+  auto mean_error=[&](const std::vector<float>& z,bool shape_gain) {
+    DistortionSums sums(ranks,{book}); sums.add(z.data(),rows,shape_gain);
+    double total=0; for (size_t r=0;r<ranks;++r) total+=sums.mean(r,1)/sums.mean(r,0);
+    return total/ranks;
+  };
+  require(std::fabs(mean_error(plain,false)/gaussian-1)<0.02,"raw distortion differs on Gaussian rows");
+  require(std::fabs(mean_error(plain,true)/gaussian-1)<0.03,"shape-gain distortion differs on Gaussian rows");
+  require(mean_error(mixed,false)>1.2*gaussian,"raw distortion misses the scale mixture");
+  require(std::fabs(mean_error(mixed,true)/gaussian-1)<0.03,"shape-gain distortion keeps the row scale");
 }
 // Fast targets with every tier <= 4 bits use additive 3-bit tiers; training predicts their padded storage.
 void fast_target_allocation_test() {
@@ -194,6 +225,7 @@ void lloyd_max_fast_test() {
 void tieredq_additive_tests() {
   split_derivation_test();
   padded_allocation_test();
+  measured_distortion_test();
   fast_target_allocation_test();
   additive_index_test();
   lloyd_max_fast_test();

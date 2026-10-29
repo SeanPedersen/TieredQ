@@ -1,0 +1,9 @@
+# convex: lloyd 0..8 1, additive 0..4 1, error additive3 0.03527 lloyd3 0.03455
+budget	bits_dim	dense_greedy	dense_exact	fast_mode	fast_stored	fast_greedy	exact_equal	exact_equal_counts	exact_nominal	exact_nominal_stored
+768	1.000	0.153182	0.153182	additive	768	0.153543	0.153543	0/97/167/143	0.153543	768
+1152	1.500	0.080408	0.080408	additive	1152	0.080759	0.080759	45/164/168/144	0.080759	1152
+1536	2.000	0.043986	0.043986	packed
+1920	2.500	0.024484	0.024484	packed
+2304	3.000	0.013386	0.013386	packed
+2688	3.500	0.007201	0.007201	packed
+3072	4.000	0.003795	0.003795	packed

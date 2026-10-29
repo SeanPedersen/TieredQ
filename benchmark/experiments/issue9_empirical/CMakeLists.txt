@@ -1,0 +1,11 @@
+# Builds the issue #9 allocation-gap analysis against one TieredQ source tree: cmake -S . -B out -DTIEREDQ_SOURCE=<tree>
+cmake_minimum_required(VERSION 3.18)
+project(issue9_allocation CXX)
+set(TIEREDQ_TESTS OFF CACHE BOOL "" FORCE)
+set(TIEREDQ_EXAMPLES OFF CACHE BOOL "" FORCE)
+add_subdirectory(${TIEREDQ_SOURCE} tieredq)
+find_package(OpenMP REQUIRED)
+add_executable(allocation_gap allocation_gap.cpp)
+target_compile_features(allocation_gap PRIVATE cxx_std_20)
+target_include_directories(allocation_gap PRIVATE ${TIEREDQ_SOURCE}/src)
+target_link_libraries(allocation_gap PRIVATE TieredQ::TieredQ OpenMP::OpenMP_CXX)
