@@ -1,0 +1,84 @@
+== glove  (train s, add s, 1t·b32 QPS, 8t·b32 QPS; arms as change vs base)
+  1.00 b/d  base: train  0.355  add  0.168  q1   3595  q8  18729  w2 249b (3 rounds)
+              layout-p1: train  +0.6%  add  +6.0%  q1  +1.6%  q8  +2.1%  w2 249b
+            layout-p1.5: train  +0.3%  add  +3.0%  q1  +1.3%  q8  -2.0%  w2 249b
+              layout-p2: train  -2.3%  add  +3.0%  q1  -1.2%  q8  -0.6%  w2 249b
+           layout-query: train  -2.8%  add  +0.0%  q1  +2.8%  q8  +1.1%  w4 249b
+  2.00 b/d  base: train  0.339  add  0.207  q1   2699  q8  15297  w2 441b (3 rounds)
+              layout-p1: train  -2.9%  add  +4.3%  q1  +0.7%  q8  -0.8%  w2 441b
+            layout-p1.5: train  -3.5%  add  +1.9%  q1  +0.6%  q8  -1.3%  w3 441b
+              layout-p2: train  -5.9%  add  +5.8%  q1  -1.9%  q8  -9.5%  w3 441b
+           layout-query: train  +4.7%  add  +7.2%  q1  -1.2%  q8  -5.8%  w4 441b
+  3.00 b/d  base: train  0.338  add  0.276  q1   2110  q8  12498  w4 642b (3 rounds)
+              layout-p1: train  -3.8%  add +27.2%  q1  +2.5%  q8  -2.3%  w3 642b
+            layout-p1.5: train  -1.2%  add +23.9%  q1  +2.8%  q8  -5.7%  w4 642b
+              layout-p2: train  -1.8%  add +16.7%  q1  +0.4%  q8  -1.8%  w4 642b
+           layout-query: train  +7.7%  add +17.4%  q1  +3.0%  q8  -1.4%  w4 642b
+  4.00 b/d  base: train  0.333  add  0.361  q1   1823  q8  10448  w4 843b (3 rounds)
+              layout-p1: train  -2.1%  add  -2.5%  q1  -4.2%  q8  +0.2%  w4 843b
+            layout-p1.5: train  -2.7%  add  -2.2%  q1  -2.0%  q8  -4.0%  w4 843b
+              layout-p2: train  +0.9%  add  -0.3%  q1  -0.4%  q8  +0.5%  w4 843b
+           layout-query: train  +7.5%  add  -1.7%  q1  -2.1%  q8  -0.3%  w4 843b
+== sift  (train s, add s, 1t·b32 QPS, 8t·b32 QPS; arms as change vs base)
+  1.00 b/d  base: train  0.202  add  0.091  q1   4613  q8  28102  w3 169b (3 rounds)
+              layout-p1: train  -1.0%  add  +7.7%  q1  -1.8%  q8  -5.9%  w3 169b
+            layout-p1.5: train  +0.5%  add  +1.1%  q1  -1.5%  q8  -8.2%  w3 169b
+              layout-p2: train  +0.0%  add  +1.1%  q1  -1.2%  q8  -5.4%  w4 169b
+           layout-query: train  -5.0%  add  -4.4%  q1 -20.3%  q8 -12.2%  w4 169b
+  2.00 b/d  base: train  0.198  add  0.146  q1   3440  q8  19325  w4 297b (3 rounds)
+              layout-p1: train  -1.0%  add  +2.1%  q1  +2.6%  q8  -6.2%  w4 297b
+            layout-p1.5: train  -3.5%  add  -1.4%  q1  +2.2%  q8  -6.7%  w4 297b
+              layout-p2: train  -2.5%  add  -4.1%  q1  +2.8%  q8  -2.3%  w4 297b
+           layout-query: train  +0.0%  add  -5.5%  q1 -14.2%  q8  -7.5%  w4 297b
+  3.00 b/d  base: train  0.202  add  0.192  q1   2921  q8  16140  w4 425b (3 rounds)
+              layout-p1: train  -5.9%  add  +5.7%  q1  -4.0%  q8  -5.8%  w4 433b
+            layout-p1.5: train  -4.5%  add  +1.6%  q1  -4.0%  q8  -7.0%  w4 433b
+              layout-p2: train  -4.0%  add  -3.6%  q1  -6.4%  q8  -4.8%  w4 433b
+           layout-query: train  -3.5%  add  -2.6%  q1 -14.6%  q8 -13.9%  w4 433b
+  4.00 b/d  base: train  0.188  add  0.162  q1   2680  q8  15218  w5 552b (3 rounds)
+              layout-p1: train +22.3%  add  -2.5%  q1  +4.6%  q8  -0.2%  w5 552b
+            layout-p1.5: train  +2.7%  add  +4.9%  q1  -2.4%  q8  -3.8%  w6 552b
+              layout-p2: train  +8.5%  add +21.0%  q1  +0.7%  q8  -4.7%  w7 552b
+           layout-query: train  +3.7%  add +40.1%  q1  -1.2%  q8  -6.4%  w8 552b
+== openai  (train s, add s, 1t·b32 QPS, 8t·b32 QPS; arms as change vs base)
+  1.00 b/d  base: train 11.780  add  1.352  q1    649  q8   4673  w4 1589b (3 rounds)
+              layout-p1: train  +1.5%  add  -0.5%  q1 +10.2%  q8  -0.8%  w4 1589b
+            layout-p1.5: train  +0.8%  add  -7.8%  q1 +13.7%  q8  +5.7%  w4 1589b
+              layout-p2: train  +0.8%  add  -9.8%  q1  +3.2%  q8  -1.8%  w4 1589b
+           layout-query: train  +1.2%  add -12.8%  q1  +8.3%  q8  +3.3%  w4 1589b
+  2.00 b/d  base: train 12.156  add  1.661  q1    287  q8   1475  w5 3113b (3 rounds)
+              layout-p1: train  -3.5%  add  -8.4%  q1  -1.0%  q8  +3.9%  w5 3113b
+            layout-p1.5: train  -2.0%  add  -5.1%  q1 +17.4%  q8 +19.5%  w6 3112b
+              layout-p2: train  -0.6%  add  -2.0%  q1 +32.1%  q8 +31.1%  w8 3113b
+           layout-query: train  -4.1%  add  -8.2%  q1 +30.3%  q8 +33.8%  w8 3113b
+  3.00 b/d  base: train 11.971  add  2.089  q1    211  q8   1344  w6 4649b (3 rounds)
+              layout-p1: train  -1.9%  add  -7.8%  q1  +0.0%  q8  +0.6%  w6 4649b
+            layout-p1.5: train  -0.3%  add  +6.5%  q1 +25.6%  q8  +1.3%  w7 4649b
+              layout-p2: train  +0.5%  add +16.1%  q1 +24.6%  q8 +13.2%  w8 4649b
+           layout-query: train  -2.3%  add  +8.5%  q1 +15.2%  q8 +16.7%  w8 4649b
+  4.00 b/d  base: train 12.145  add  2.572  q1    208  q8   1240  w7 6185b (3 rounds)
+              layout-p1: train  -0.9%  add  -4.2%  q1  +0.0%  q8  +5.2%  w7 6185b
+            layout-p1.5: train  -0.8%  add +11.9%  q1  +2.9%  q8  +6.9%  w8 6185b
+              layout-p2: train  -3.2%  add +27.3%  q1  +2.4%  q8  +9.3%  w8 6185b
+           layout-query: train  -3.3%  add +22.7%  q1 +18.8%  q8  +9.4%  w8 6185b
+== gemini  (train s, add s, 1t·b32 QPS, 8t·b32 QPS; arms as change vs base)
+  1.00 b/d  base: train  2.852  add  0.538  q1   1614  q8   9094  w3 810b (3 rounds)
+              layout-p1: train  -0.7%  add  +3.7%  q1  -2.5%  q8  +2.5%  w3 819b
+            layout-p1.5: train  -0.8%  add  +0.7%  q1  -0.1%  q8  +3.7%  w4 819b
+              layout-p2: train  -0.1%  add  -2.0%  q1  +1.9%  q8  +7.3%  w4 819b
+           layout-query: train  -0.1%  add  +2.6%  q1  +1.7%  q8  +3.8%  w4 819b
+  2.00 b/d  base: train  2.821  add  0.597  q1    536  q8   3308  w5 1576b (3 rounds)
+              layout-p1: train  -0.6%  add  +7.4%  q1  +0.4%  q8  -5.0%  w5 1576b
+            layout-p1.5: train  -2.1%  add  +4.0%  q1 +16.6%  q8 +15.3%  w5 1576b
+              layout-p2: train  -1.4%  add  +1.7%  q1 +31.7%  q8 +31.1%  w6 1576b
+           layout-query: train  -1.0%  add  -4.2%  q1 +18.1%  q8 +18.7%  w6 1576b
+  3.00 b/d  base: train  2.796  add  0.790  q1    439  q8   2718  w5 2345b (3 rounds)
+              layout-p1: train  +0.4%  add  +8.1%  q1 +19.6%  q8  +1.4%  w5 2345b
+            layout-p1.5: train  +0.3%  add +11.9%  q1 +14.1%  q8 +15.5%  w6 2344b
+              layout-p2: train  -1.0%  add +26.5%  q1 +26.2%  q8 +24.8%  w8 2345b
+           layout-query: train  +0.6%  add  +7.3%  q1 +26.0%  q8 +22.3%  w7 2344b
+  4.00 b/d  base: train  2.803  add  1.009  q1    429  q8   2611  w6 3113b (3 rounds)
+              layout-p1: train  +0.6%  add  +5.6%  q1  +0.7%  q8  +5.1%  w6 3113b
+            layout-p1.5: train  -0.4%  add +28.7%  q1 +21.0%  q8  +5.4%  w7 3113b
+              layout-p2: train  -0.4%  add +52.3%  q1  +6.8%  q8  +9.7%  w8 3113b
+           layout-query: train  -0.4%  add +33.0%  q1 +12.6%  q8 +15.3%  w8 3113b

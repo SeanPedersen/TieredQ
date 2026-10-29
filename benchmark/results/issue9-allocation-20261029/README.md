@@ -13,3 +13,13 @@ Code and job scripts: `benchmark/experiments/issue9_empirical/`; eval program: `
   +3.0 pt); power < 1 loses 1-4 pt. MSE-optimal allocation is not recall-optimal.
 
 `summary.txt` files are `summarize.py` output; columns per arm are R@10, change in points and stored bits/vector.
+- `round2/`: layout-preserving exact allocator (nibble path and padded limit from the unweighted model, so stored
+  bits match base) on variance^power 1-2.5 and on query-energy weights (`job_round2.sh`). Power 1.5 peaks
+  (SIFT +0.2 to +2.0, OpenAI +0.4 to +1.1, Gemini +0.4 to +1.1 pt at equal stored bits); query-energy weighting
+  trails it everywhere. `time-*.tsv` / `timing-summary.txt`: train and add seconds (median of 3 interleaved
+  rounds, CPUs 0-7) and batch-32 search QPS (best of 3). Training is unchanged (within ±4%); add grows 12-52% in
+  packed cells where steeper allocations widen the top tier to 7-8 bits; search QPS is unchanged or higher.
+- `heldout/`: even/odd query split (`job_heldout.sh`, `heldout.py`). Chosen on even queries, power 1.5 also wins
+  on odd ones: pooled +0.77 pt even, +0.72 pt odd; per dataset it is chosen on SIFT, OpenAI and Gemini. The
+  ScaNN-style parallel weight `1 + η·λ/mean(λ)` trails it (η=1: +0.68 odd; η=0.1: +0.46 odd). The parallel arms were
+  rerun with `LANES` after a case-order bug in the first run; they produced no rows then.

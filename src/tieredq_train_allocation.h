@@ -83,15 +83,18 @@ inline FastLookupAllocation fast_lookup_allocation(const AllocationModel& model,
     return {fallback,false};
   return {std::move(bits),true};
 }
-// Exact nibble-layout allocation under padded storage <= limit_bits (#9), for descending variances and one
-// distortion table shared by all ranks (error[3] is the additive codebook's). For fixed per-width counts the best
-// allocation gives wider codes to leading ranks, and 1-bit codes always help, so enumerating the 4-, 3- and 2-bit
-// counts and filling the remaining padded 1-bit slots is exact. Without 3-bit tiers the layout is plain 1/2/4.
+// Exact nibble-layout allocation under padded storage <= limit_bits (#9), for one distortion table shared by all
+// ranks (error[3] is the additive codebook's). For fixed per-width counts the best allocation gives wider codes to
+// larger variances, and 1-bit codes always help, so enumerating the 4-, 3- and 2-bit counts over ranks sorted by
+// variance and filling the remaining padded 1-bit slots is exact. Without 3-bit tiers the layout is plain 1/2/4.
 inline FastLookupAllocation exact_lookup_allocation(const std::vector<double>& variance,const DistortionTable& error,uint32_t limit_bits) {
   const uint32_t d=uint32_t(variance.size()),groups=uint32_t(limit_bits/CHAR_BIT*lookup_pair_groups);
   const uint32_t low_slots=lookup_coordinates_per_group(split_low_bits),high_slots=lookup_coordinates_per_group(split_high_bits);
+  std::vector<uint32_t> order(d);
+  for (uint32_t r=0;r<d;++r) order[r]=r;
+  std::stable_sort(order.begin(),order.end(),[&](uint32_t a,uint32_t b) { return variance[a]>variance[b]; });
   std::vector<double> prefix(d+1,0);
-  for (uint32_t r=0;r<d;++r) prefix[r+1]=prefix[r]+std::max(0.0,variance[r]);
+  for (uint32_t r=0;r<d;++r) prefix[r+1]=prefix[r]+std::max(0.0,variance[order[r]]);
   auto span=[&](uint32_t begin,uint32_t count) { return prefix[begin+count]-prefix[begin]; };
   struct Best { double distortion=INFINITY; LookupWidthCounts counts{}; } best;
 #pragma omp parallel
@@ -112,8 +115,9 @@ inline FastLookupAllocation exact_lookup_allocation(const std::vector<double>& v
 #pragma omp critical
     if (local.distortion<best.distortion) best=local;
   }
-  Allocation bits;
-  for (uint32_t b=lookup_code_bits+1;b-->0;) bits.insert(bits.end(),best.counts[b],b);
+  Allocation bits(d);
+  uint32_t position=0;
+  for (uint32_t b=lookup_code_bits+1;b-->0;) for (uint32_t i=0;i<best.counts[b];++i) bits[order[position++]]=b;
   return {std::move(bits),best.counts[split_code_bits]>0};
 }
 } // namespace dv::tieredq_detail

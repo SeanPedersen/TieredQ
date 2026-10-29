@@ -2,9 +2,11 @@
 // Link once against each library build and interleave processes; rows are tagged with LABEL.
 // Recall is the mean over seeds 0-2 (inner-product truth on the raw base); QPS is seed 0, best of REPEATS,
 // at 1 thread batch 1, 1 thread batch 32 and THREADS threads batch 32. model_id identifies identical models.
+// The last two columns split recall into even and odd query ids, for choosing a setting on one half (#9).
 // Usage: issue20_ab_eval LABEL DATA_DIR D TIMED(0|1) BUDGET...
 #include "tieredq/tieredq.h"
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cstdio>
 #include <fstream>
@@ -29,7 +31,7 @@ template<class F> double best_seconds(F run) {
   }
   return best;
 }
-struct Result { double recall=0,stored_bits=0,vector_bytes=0,three=0,realised=0,widest=0,t1b1=0,t1b32=0,t8b32=0; uint32_t model=0; };
+struct Result { double recall=0,recall_even=0,recall_odd=0,stored_bits=0,vector_bytes=0,three=0,realised=0,widest=0,t1b1=0,t1b32=0,t8b32=0; uint32_t model=0; };
 Result evaluate(const std::vector<float>& base,const std::vector<float>& queries,const std::vector<uint32_t>& truth,
                 uint32_t d,uint32_t code_bits,uint64_t seed,bool timed) {
   const size_t n=base.size()/d,nq=queries.size()/d,train_count=std::min(n,training_limit);
@@ -44,10 +46,13 @@ Result evaluate(const std::vector<float>& base,const std::vector<float>& queries
   std::vector<float> scores(nq*top_k); std::vector<uint32_t> ids(nq*top_k);
   omp_set_num_threads(threads);
   index.search_batch(queries.data(),nq,top_k,scores.data(),ids.data());
-  size_t hits=0;
-  for (size_t q=0;q<nq;++q) for (size_t j=0;j<top_k;++j)
-    hits+=std::count(truth.begin()+q*top_k,truth.begin()+(q+1)*top_k,ids[q*top_k+j]);
-  Result r; r.recall=double(hits)/double(nq*top_k); r.stored_bits=8.0*double(index.storage_bytes())/double(n);
+  std::array<size_t,2> hits{},half_queries{};
+  for (size_t q=0;q<nq;++q) {
+    ++half_queries[q%2];
+    for (size_t j=0;j<top_k;++j) hits[q%2]+=std::count(truth.begin()+q*top_k,truth.begin()+(q+1)*top_k,ids[q*top_k+j]);
+  }
+  Result r; r.recall=double(hits[0]+hits[1])/double(nq*top_k);
+  r.recall_even=double(hits[0])/double(half_queries[0]*top_k); r.recall_odd=double(hits[1])/double(half_queries[1]*top_k); r.stored_bits=8.0*double(index.storage_bytes())/double(n);
   r.vector_bytes=double(index.bytes_per_vector()); r.realised=index.codec().config().code_bits; r.model=index.codec().model_id();
   for (const auto& t:index.codec().tiers()) { if (t.bits==3) r.three+=t.dimensions; r.widest=std::max<double>(r.widest,t.bits); }
   if (!timed) return r;
@@ -69,13 +74,13 @@ int main(int argc,char** argv) {
     Result mean; std::string models;
     for (uint64_t seed=0;seed<seeds;++seed) {
       const auto r=evaluate(base,queries,truth,d,budget,seed,timed && seed==0);
-      mean.recall+=r.recall/seeds; mean.stored_bits+=r.stored_bits/seeds; mean.three+=r.three/seeds;
+      mean.recall+=r.recall/seeds; mean.recall_even+=r.recall_even/seeds; mean.recall_odd+=r.recall_odd/seeds; mean.stored_bits+=r.stored_bits/seeds; mean.three+=r.three/seeds;
       mean.realised+=r.realised/seeds; mean.vector_bytes+=r.vector_bytes/seeds; mean.widest=std::max(mean.widest,r.widest);
       models+=(seed ? "," : "")+std::to_string(r.model);
       if (seed==0) { mean.t1b1=r.t1b1; mean.t1b32=r.t1b32; mean.t8b32=r.t8b32; }
     }
-    std::printf("%s\t%u\t%.3f\t%.1f\t%.0f\t%.1f\t%.2f\t%.1f\t%.4f\t%.0f\t%.0f\t%.0f\t%s\n",label.c_str(),budget,double(budget)/d,
-                mean.realised,mean.widest,mean.three,mean.vector_bytes,mean.stored_bits,mean.recall,mean.t1b1,mean.t1b32,mean.t8b32,models.c_str());
+    std::printf("%s\t%u\t%.3f\t%.1f\t%.0f\t%.1f\t%.2f\t%.1f\t%.4f\t%.0f\t%.0f\t%.0f\t%s\t%.4f\t%.4f\n",label.c_str(),budget,double(budget)/d,
+                mean.realised,mean.widest,mean.three,mean.vector_bytes,mean.stored_bits,mean.recall,mean.t1b1,mean.t1b32,mean.t8b32,models.c_str(),mean.recall_even,mean.recall_odd);
     std::fflush(stdout);
   }
 }
