@@ -31,7 +31,8 @@ def assert_same(actual, expected):
         np.testing.assert_array_equal(left, right)
 
 
-@pytest.mark.parametrize("code_bits", [64, DIMENSIONS * 8])
+# Fast and full training must yield the same model here: budgets whose allocation has no 3-bit tiers.
+@pytest.mark.parametrize("code_bits", [DIMENSIONS, DIMENSIONS * 8])
 def test_fast_only_search_storage_append_and_roundtrip(code_bits, tmp_path):
     rows = np.random.default_rng(13).normal(size=(INITIAL_ROWS * 2, DIMENSIONS)).astype(np.float32)
     fast = TieredQIndex(dimensions=DIMENSIONS, code_bits=code_bits, mode="fast")

@@ -157,6 +157,21 @@ void odd_budget_allocation() {
   check(stored==2*d && codec.config().code_bits==stored,"odd budget not realised as stored bits");
   std::cout<<"PASS odd budget allocation\n";
 }
+// Full mode packs codes densely, so training for it keeps 3-bit tiers and spends every requested bit.
+void full_mode_allocation() {
+  constexpr unsigned d=64;
+  std::vector<float> sample(2*d*d,0);
+  for(unsigned i=0;i<d;++i) { sample[i*d+i]=1; sample[(d+i)*d+i]=-1; }
+  for (uint32_t code_bits:{3*d,2*d+1}) {
+    TieredQConfig config{d,code_bits,1,false}; config.target_mode=dv::TieredQIndexMode::full;
+    auto codec=TieredQ::train(config,sample.data(),2*d);
+    uint32_t stored=0,three=0;
+    for (const auto& tier:codec.tiers()) { stored+=tier.dimensions*tier.bits; if (tier.bits==3) three+=tier.dimensions; }
+    check(stored==code_bits && codec.config().code_bits==code_bits,"full-mode allocation did not spend the budget");
+    check(three==(code_bits==3*d ? d : 1),"full-mode allocation dropped 3-bit tiers");
+  }
+  std::cout<<"PASS full mode allocation\n";
+}
 // A diagonal covariance forces uniform tiers and exercises every table half in the exact
 // register-permutation path, independently of greedy fitting. A uniform 3-bit budget fits
 // the nibble lookup layout, so training spends it on 2- and 4-bit tiers instead.
@@ -312,6 +327,7 @@ int main() {
     tieredq_lookup_tests();
     for (unsigned bits=1;bits<=8;++bits) wide_register_parity(bits);
     odd_budget_allocation();
+    full_mode_allocation();
     for(unsigned d:{1u,7u,65u,384u,511u,512u,768u,1024u,1536u}) exercise(d,std::min(257u,d*8),d<=65,prefix);
     for(unsigned bytes:{32u,48u,64u,96u,128u}) exercise(512,bytes*8,bytes==64,prefix);
     exercise(768,512,true,prefix); exercise(768,1024,false,prefix);

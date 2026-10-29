@@ -37,7 +37,9 @@ struct SearchResult {
 class PythonIndex {
  public:
   PythonIndex(uint32_t dimensions, uint32_t code_bits, const std::string& mode)
-      : config_(dv::TieredQConfig::target_code_bits(dimensions, code_bits)), mode_(parse_index_mode(mode)) {}
+      : config_(dv::TieredQConfig::target_code_bits(dimensions, code_bits)), mode_(parse_index_mode(mode)) {
+    config_.target_mode = mode_;
+  }
 
   size_t size() const {
     std::shared_lock lock(mutex_);

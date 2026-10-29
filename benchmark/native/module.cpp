@@ -45,6 +45,7 @@ class Index {
       const size_t budget = code_bits ? code_bits : bits * (width_ - (l2 ? 1 : 0));
       auto config = dv::TieredQConfig::target_code_bits(width_, budget);
       config.num_centroids = std::min<size_t>(256, count_ / 2);
+      config.target_mode = fast ? dv::TieredQIndexMode::fast : dv::TieredQIndexMode::full;
       const size_t train_count = std::min(count_, training_limit);
       std::vector<size_t> order(count_);
       std::iota(order.begin(), order.end(), 0);

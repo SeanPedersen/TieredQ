@@ -308,6 +308,7 @@ void TieredQConfig::validate() const {
     bad("dimensions must be positive and budget must be in [1, 8*D]");
   if (!num_centroids || num_centroids>256) bad("centroid count must be in [1, 256]");
   if (!max_bits || max_bits>8) bad("max bits per coordinate must be in [1, 8]");
+  if (target_mode!=TieredQIndexMode::fast && target_mode!=TieredQIndexMode::full) bad("invalid target index mode");
 }
 TieredQ TieredQ::train(TieredQConfig config,const float* sample,size_t rows,uint64_t seed) {
   config.validate(); if (rows<std::max<size_t>(2,size_t(config.num_centroids)*2) || rows>INT32_MAX) bad("training needs at least 2*K rows and at most INT32_MAX rows");
@@ -403,9 +404,10 @@ TieredQ TieredQ::train(TieredQConfig config,const float* sample,size_t rows,uint
   auto bits=allocate(false);
   // When every tier fits the x86 nibble-lookup fast layout (<= 4 bits), each 3-bit code is stored in 4 bits, so
   // 3-bit tiers spend storage the budget does not count; allocate without them to keep storage = code_bits.
-  // Training precedes the index mode, so full-mode indexes (dense codes) get the same allocation.
+  // Full mode packs codes densely, where 3-bit tiers cost exactly 3 bits.
   const unsigned widest=*std::max_element(bits.begin(),bits.end());
-  if (widest<=tieredq_detail::lookup_code_bits && std::count(bits.begin(),bits.end(),3u)) bits=allocate(true);
+  const bool nibble_layout=config.target_mode==TieredQIndexMode::fast && widest<=tieredq_detail::lookup_code_bits;
+  if (nibble_layout && std::count(bits.begin(),bits.end(),3u)) bits=allocate(true);
   profile.mark("bit_allocation");
   // Group equal precisions; retain source PCA ranks explicitly in the unrotated basis.
   std::vector<int> ranks; uint32_t offset=0;
