@@ -146,6 +146,17 @@ void exercise(unsigned d,unsigned bits,bool rotate,const std::string& prefix) {
   rejects([&]{TieredQ::load(prefix+".index");}); rejects([&]{TieredQIndex::load(prefix+".codec");});
   std::cout<<"PASS D="<<d<<" bits="<<bits<<" rotate="<<rotate<<'\n';
 }
+// With every coordinate at 2 bits, an odd leftover bit cannot become a 3-bit tier in the nibble layout:
+// training realises one bit less than requested and records it.
+void odd_budget_allocation() {
+  constexpr unsigned d=64;
+  std::vector<float> sample(2*d*d,0);
+  for(unsigned i=0;i<d;++i) { sample[i*d+i]=1; sample[(d+i)*d+i]=-1; }
+  auto codec=TieredQ::train(TieredQConfig{d,2*d+1,1,false},sample.data(),2*d);
+  uint32_t stored=0; for (const auto& tier:codec.tiers()) { check(tier.bits!=3,"3-bit tier in nibble layout"); stored+=tier.dimensions*tier.bits; }
+  check(stored==2*d && codec.config().code_bits==stored,"odd budget not realised as stored bits");
+  std::cout<<"PASS odd budget allocation\n";
+}
 // A diagonal covariance forces uniform tiers and exercises every table half in the exact
 // register-permutation path, independently of greedy fitting. A uniform 3-bit budget fits
 // the nibble lookup layout, so training spends it on 2- and 4-bit tiers instead.
@@ -300,6 +311,7 @@ int main() {
     tieredq_projection_tests();
     tieredq_lookup_tests();
     for (unsigned bits=1;bits<=8;++bits) wide_register_parity(bits);
+    odd_budget_allocation();
     for(unsigned d:{1u,7u,65u,384u,511u,512u,768u,1024u,1536u}) exercise(d,std::min(257u,d*8),d<=65,prefix);
     for(unsigned bytes:{32u,48u,64u,96u,128u}) exercise(512,bytes*8,bytes==64,prefix);
     exercise(768,512,true,prefix); exercise(768,1024,false,prefix);

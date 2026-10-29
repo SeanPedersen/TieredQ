@@ -377,7 +377,7 @@ TieredQ TieredQ::train(TieredQConfig config,const float* sample,size_t rows,uint
     return uint32_t(rank)<config.wide_dims ? config.max_bits : std::min<uint32_t>(config.max_bits,6);
   };
   // Greedy rate-distortion allocation by gain per stored bit. With skip_three a coordinate moves 2 -> 4 bits in
-  // one 2-bit step, so no tier has 3 bits (see below); budget a step cannot fill exactly is left unused.
+  // one 2-bit step, so no tier has 3 bits (see below); a final bit no step can take is left unused.
   auto allocate=[&](bool skip_three) {
     std::vector<unsigned> bits(d,0);
     auto step=[&](int rank) { return skip_three && bits[rank]==2 ? 2u : 1u; };
@@ -416,6 +416,8 @@ TieredQ TieredQ::train(TieredQConfig config,const float* sample,size_t rows,uint
       c.tiers_.push_back({uint32_t(start),count,uint32_t(b),0,offset}); offset+=count*b;
     }
   }
+  // Storage-aware allocation may realise fewer bits than requested; the model stores what its codes use.
+  c.config_.code_bits=offset;
   const int m=int(ranks.size());
   std::vector<float> pca_basis(product(d,m));
   std::vector<std::vector<float>> rotations;
