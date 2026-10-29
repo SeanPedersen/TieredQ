@@ -164,6 +164,12 @@ files. These are the same model bytes used by the file API; engine containers
 must checksum their complete model and payload. Neither method serializes index
 rows. Persist the trained model instead of retraining it when reopening an index.
 
+Model format 3 stores the PCA basis as IEEE binary16. Training rounds the basis once
+and fits the projection statistics to the rounded values, so serving and encoding use
+exactly what is persisted; that halves the basis on disk and in RAM. Format-2 models
+(FP32 basis) still load, serve with identical results, and serialize back to identical
+bytes. Older readers reject format 3 explicitly.
+
 The zvec integration in its `src/core/algorithm/ivf_tieredq/` module uses this
 API to embed the model alongside inverted lists. It registers native
 `IvfTieredqBuilder` and `IvfTieredqStreamer` factories. Its initial scope is dense

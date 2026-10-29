@@ -102,7 +102,9 @@ class TieredQ {
   std::vector<TieredQQuery> query_weights(const float* vectors, size_t rows) const;
   void score(const uint8_t* payload, size_t count, const TieredQQuery& query,
              float* scores, TieredQKernel kernel = TieredQKernel::automatic) const;
-  static constexpr uint32_t model_format = 2;
+  // Format 3 stores the PCA basis as IEEE binary16; format-2 files (FP32 basis) still load and serve unchanged.
+  static constexpr uint32_t model_format = 3;
+  static constexpr uint32_t fp32_basis_model_format = 2;
   static constexpr size_t metadata_bytes = 5;
   static bool kernel_available(TieredQKernel kernel);
   void save(const std::string& path) const;
@@ -117,6 +119,9 @@ class TieredQ {
   TieredQConfig config_;
   std::vector<TieredQTier> tiers_;
   std::vector<float> centroids_, basis_, mean_, sigma_;
+  // Binary16 basis of format-3 models; exactly one of basis_ and basis_half_ holds the d x m basis.
+  std::vector<uint16_t> basis_half_;
+  float basis_value(size_t index) const;
   std::vector<std::vector<float>> levels_;
   // Derived serving state (not serialized): float half norms supply query correction weights.
   std::vector<float> centroid_half_norms_;

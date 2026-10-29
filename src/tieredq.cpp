@@ -402,6 +402,12 @@ TieredQ TieredQ::train(TieredQConfig config,const float* sample,size_t rows,uint
     for (int j=0;j<d;++j) std::copy_n(out.data()+size_t(j)*width,width,c.basis_.data()+size_t(j)*m+t.start);
     profile.mark("tier_rotation_apply");
   }
+  // Serving reads the binary16 basis, so the projection stats are fitted to exactly those values.
+  c.basis_half_.resize(c.basis_.size());
+  for (size_t i=0;i<c.basis_.size();++i) {
+    c.basis_half_[i]=tieredq_detail::half_encode(c.basis_[i]);
+    c.basis_[i]=tieredq_detail::half_decode(c.basis_half_[i]);
+  }
   if (spectral_stats) {
     tieredq_detail::spectral_projection_stats(eigenvalues,ranks,c.tiers_,rotations,mean,c.basis_,rows,c.mean_,c.sigma_);
   } else {
@@ -411,6 +417,7 @@ TieredQ TieredQ::train(TieredQConfig config,const float* sample,size_t rows,uint
     std::vector<float> projected(product(rows,m)); multiply(rfloat.data(),n,d,c.basis_.data(),m,projected.data());
     tieredq_detail::projection_stats(projected,rows,m,c.mean_,c.sigma_);
   }
+  std::vector<float>().swap(c.basis_);
   profile.mark("projection_stats");
   c.prepare_serving();
   profile.mark("prepare_serving");
@@ -426,9 +433,9 @@ tieredq_detail::EncoderData TieredQ::build_encoder() const {
   const size_t d=config_.dimensions,m=coded_dimensions(),k=config_.num_centroids;
   tieredq_detail::EncoderData encoder;
   encoder.fused_panels=pack_panels(d,m+k,[&](size_t j,size_t r) {
-    return r<m ? basis_[j*m+r] : centroids_[(r-m)*d+j];
+    return r<m ? basis_value(j*m+r) : centroids_[(r-m)*d+j];
   });
-  const auto projection=pack_panels(d,m,[&](size_t j,size_t r) { return basis_[j*m+r]; });
+  const auto projection=pack_panels(d,m,[&](size_t j,size_t r) { return basis_value(j*m+r); });
   const std::vector<double> centers(centroids_.begin(),centroids_.end());
   encoder.centroid_projections.resize(product(k,projection.padded_columns()));
   tieredq_detail::ordered_matrix(centers.data(),k,projection,encoder.centroid_projections.data());
@@ -495,15 +502,64 @@ void centroid_dot_tile(const float* lanes,const float* centroids,size_t d,size_t
     }
   }
 }
+// transformed[row][j] += vectors[row][i] * basis[i][j] for one binary16 basis row, widened in registers.
+// Each element keeps the FP32 path's multiply-then-add, so results equal an FP32 basis of the same values.
+#ifdef DV_TIEREDQ_X86
+__attribute__((target("avx512f")))
+void accumulate_half_row_avx512(const uint16_t* basis,size_t m,const float* vectors,size_t d,size_t i,
+                                size_t rows,float* transformed) {
+  constexpr size_t lanes=16;
+  for (size_t j=0;j<m;j+=lanes) {
+    const size_t active=std::min(lanes,m-j);
+    const auto mask=__mmask16((1u<<active)-1);
+    alignas(32) uint16_t tail[lanes]={};
+    const uint16_t* bits=basis+j;
+    if (active<lanes) { std::copy_n(bits,active,tail); bits=tail; }
+    const auto widened=_mm512_cvtph_ps(_mm256_loadu_si256(reinterpret_cast<const __m256i*>(bits)));
+    for (size_t row=0;row<rows;++row) {
+      float* projected=transformed+row*m+j;
+      const auto sum=_mm512_add_ps(_mm512_maskz_loadu_ps(mask,projected),_mm512_mul_ps(_mm512_set1_ps(vectors[row*d+i]),widened));
+      _mm512_mask_storeu_ps(projected,mask,sum);
+    }
+  }
+}
+__attribute__((target("avx2,f16c")))
+void accumulate_half_row_avx2(const uint16_t* basis,size_t m,const float* vectors,size_t d,size_t i,
+                              size_t rows,float* transformed) {
+  constexpr size_t lanes=8;
+  size_t j=0;
+  for (;j+lanes<=m;j+=lanes) {
+    const auto widened=_mm256_cvtph_ps(_mm_loadu_si128(reinterpret_cast<const __m128i*>(basis+j)));
+    for (size_t row=0;row<rows;++row) {
+      float* projected=transformed+row*m+j;
+      _mm256_storeu_ps(projected,_mm256_add_ps(_mm256_loadu_ps(projected),_mm256_mul_ps(_mm256_set1_ps(vectors[row*d+i]),widened)));
+    }
+  }
+  for (;j<m;++j) {
+    const float widened=tieredq_detail::half_decode(basis[j]);
+    for (size_t row=0;row<rows;++row) transformed[row*m+j]+=vectors[row*d+i]*widened;
+  }
+}
+#endif
 } // namespace
 void TieredQ::project_query_tile(const float* vectors,size_t rows,TieredQQuery* out) const {
   const size_t m=coded_dimensions(),d=config_.dimensions,centroids=config_.num_centroids;
-  std::vector<float> transformed(rows*m,0);
-  for (size_t i=0;i<d;++i) for (size_t row=0;row<rows;++row) {
-    const float value=vectors[row*d+i];
-    float* projected=transformed.data()+row*m;
-    const float* basis=basis_.data()+i*m;
-    for (size_t j=0;j<m;++j) projected[j]+=value*basis[j];
+  std::vector<float> transformed(rows*m,0),decoded;
+  for (size_t i=0;i<d;++i) {
+    const float* basis=basis_half_.empty() ? basis_.data()+i*m : nullptr;
+    if (!basis_half_.empty()) {
+      const uint16_t* half=basis_half_.data()+i*m;
+#ifdef DV_TIEREDQ_X86
+      if (__builtin_cpu_supports("avx512f")) { accumulate_half_row_avx512(half,m,vectors,d,i,rows,transformed.data()); continue; }
+      if (__builtin_cpu_supports("avx2") && __builtin_cpu_supports("f16c")) { accumulate_half_row_avx2(half,m,vectors,d,i,rows,transformed.data()); continue; }
+#endif
+      decoded.resize(m); tieredq_detail::half_decode_row(half,decoded.data(),m); basis=decoded.data();
+    }
+    for (size_t row=0;row<rows;++row) {
+      const float value=vectors[row*d+i];
+      float* projected=transformed.data()+row*m;
+      for (size_t j=0;j<m;++j) projected[j]+=value*basis[j];
+    }
   }
   std::array<float,query_weight_tile> correction{};
   for (size_t row=0;row<rows;++row) {
@@ -617,7 +673,9 @@ void TieredQ::validate_model() const {
   config_.validate(); const size_t d=config_.dimensions,m=sigma_.size();
   if (!m || m>d || tiers_.empty() || tiers_.size()>8 || levels_.size()!=9)
     bad("invalid model layout");
-  if (centroids_.size()!=product(config_.num_centroids,d) || basis_.size()!=product(d,m) || mean_.size()!=m) bad("invalid model array shape");
+  const size_t basis_size=basis_half_.empty() ? basis_.size() : basis_half_.size();
+  if (!basis_.empty() && !basis_half_.empty()) bad("model holds two basis encodings");
+  if (centroids_.size()!=product(config_.num_centroids,d) || basis_size!=product(d,m) || mean_.size()!=m) bad("invalid model array shape");
   uint32_t rank=0; uint64_t offset=0;
   for (size_t i=0;i<tiers_.size();++i) {
     const auto& t=tiers_[i];
@@ -629,16 +687,20 @@ void TieredQ::validate_model() const {
   for (unsigned b=1;b<=8;++b) if (levels_[b].size()!=(size_t(1)<<b) || !std::is_sorted(levels_[b].begin(),levels_[b].end())) bad("invalid Lloyd-Max table");
   for (float s:sigma_) if (!(s>0) || !std::isfinite(s)) bad("invalid sigma");
   for (const auto* a:{&centroids_,&basis_,&mean_}) finite_rows(a->data(),a->size());
+  for (uint16_t v:basis_half_) if (!std::isfinite(tieredq_detail::half_decode(v))) bad("nonfinite model");
   for (const auto& a:levels_) finite_rows(a.data(),a.size());
 }
 std::vector<uint8_t> TieredQ::serialize() const {
   validate_model(); Writer w;
   w.u32(config_.dimensions); w.u32(config_.code_bits); w.u32(config_.num_centroids);
-  w.u32(config_.rotate_tiers); w.u32(model_format); w.u32(uint32_t(code_bytes())); w.u32(uint32_t(bytes_per_vector()));
+  const bool half_basis=!basis_half_.empty();
+  w.u32(config_.rotate_tiers); w.u32(half_basis ? model_format : fp32_basis_model_format);
+  w.u32(uint32_t(code_bytes())); w.u32(uint32_t(bytes_per_vector()));
   w.u32(uint32_t(tiers_.size()));
   for (const auto& t:tiers_) { w.u32(t.start); w.u32(t.dimensions); w.u32(t.bits); w.u32(t.scale_group); w.u32(t.bit_offset); }
   w.floats(centroids_);
-  for (const auto* v:{&basis_,&mean_,&sigma_}) w.floats(*v);
+  if (half_basis) w.halves(basis_half_); else w.floats(basis_);
+  w.floats(mean_); w.floats(sigma_);
   w.u32(uint32_t(levels_.size())); for (const auto& l:levels_) w.floats(l);
   return w.data;
 }
@@ -646,12 +708,14 @@ TieredQ TieredQ::deserialize(const std::vector<uint8_t>& data) {
   Reader r{data}; TieredQ c;
   c.config_.dimensions=r.u32(); c.config_.code_bits=r.u32(); c.config_.num_centroids=r.u32();
   const auto rotate=r.u32(); if (rotate>1) bad("invalid rotation flag"); c.config_.rotate_tiers=rotate;
-  if (r.u32()!=model_format) bad("unsupported codec format");
+  const auto format=r.u32();
+  if (format!=model_format && format!=fp32_basis_model_format) bad("unsupported codec format");
   c.config_.validate();
   auto cb=r.u32(),pb=r.u32(),nt=r.u32(); if (cb!=c.code_bytes() || nt==0 || nt>8) bad("invalid layout header");
   for (uint32_t i=0;i<nt;++i) c.tiers_.push_back({r.u32(),r.u32(),r.u32(),r.u32(),r.u32()});
   c.centroids_=r.floats();
-  for (auto* v:{&c.basis_,&c.mean_,&c.sigma_}) *v=r.floats();
+  if (format==model_format) c.basis_half_=r.halves(); else c.basis_=r.floats();
+  c.mean_=r.floats(); c.sigma_=r.floats();
   if (r.u32()!=9) bad("table count mismatch"); for (int i=0;i<9;++i) c.levels_.push_back(r.floats());
   if (r.pos!=data.size() || pb!=c.bytes_per_vector()) bad("metadata length mismatch");
   c.validate_model(); c.prepare_serving(); return c;
@@ -769,14 +833,18 @@ void TieredQ::decode(const uint8_t* payload,size_t count,float* rows) const {
       precise[r]=mean_[r]+factor*(double(sigma_[r])*level);
     }
     for (size_t j=0;j<d;++j) {
-      double residual=0; for (size_t r=0;r<m;++r) residual+=basis_[j*m+r]*precise[r];
+      double residual=0; for (size_t r=0;r<m;++r) residual+=basis_value(j*m+r)*precise[r];
       rows[i*d+j]=float(centroids_[size_t(cid)*d+j]+residual);
     }
   }
 }
+float TieredQ::basis_value(size_t index) const {
+  return basis_half_.empty() ? basis_[index] : tieredq_detail::half_decode(basis_half_[index]);
+}
 size_t TieredQ::memory_bytes() const {
   size_t n=sizeof(*this)+tiers_.capacity()*sizeof(TieredQTier);
   for (const auto* v:{&centroids_,&basis_,&mean_,&sigma_}) n+=v->capacity()*sizeof(float);
+  n+=basis_half_.capacity()*sizeof(uint16_t);
   n+=levels_.capacity()*sizeof(std::vector<float>);
   for (const auto& v:levels_) n+=v.capacity()*sizeof(float);
   n+=centroid_half_norms_.capacity()*sizeof(float)+scan_plan_.capacity()*sizeof(tieredq_detail::ScanGroupPlan);

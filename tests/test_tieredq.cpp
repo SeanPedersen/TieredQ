@@ -28,14 +28,21 @@ struct Model {
   uint64_t u64() { uint64_t lo=u32(); return lo|(uint64_t(u32())<<32); }
   float f32() { return std::bit_cast<float>(u32()); }
   std::vector<float> floats() { auto n=u64(); std::vector<float> v(n); for(auto& x:v) x=f32(); return v; }
+  // Format 3 persists the basis as binary16; format 2 as FP32.
+  std::vector<float> basis(uint32_t format) {
+    if (format!=TieredQ::model_format) return floats();
+    auto n=u64(); std::vector<float> v(n);
+    for(auto& x:v) { const uint16_t bits=uint16_t(data.at(pos)|data.at(pos+1)<<8); pos+=2; x=tieredq_detail::half_decode(bits); }
+    return v;
+  }
 };
 // Independent coordinate dot product from the persisted model and the encoded bytes.
 std::vector<float> reference(const TieredQ& codec,const std::string& path,const std::vector<uint8_t>& codes,const float* query,size_t n) {
   Model r{read(path)}; unsigned d=r.u32(); r.u32(); unsigned k=r.u32();
-  r.u32(); r.u32(); r.u32(); r.u32(); unsigned nt=r.u32();
+  r.u32(); const uint32_t format=r.u32(); r.u32(); r.u32(); unsigned nt=r.u32();
   std::vector<TieredQTier> tiers;
   for(unsigned i=0;i<nt;++i) tiers.push_back({r.u32(),r.u32(),r.u32(),r.u32(),r.u32()});
-  auto centers=r.floats(); auto basis=r.floats(),mean=r.floats(),sigma=r.floats();
+  auto centers=r.floats(); auto basis=r.basis(format); auto mean=r.floats(),sigma=r.floats();
   std::vector<std::vector<float>> levels; unsigned nl=r.u32(); for(unsigned i=0;i<nl;++i) levels.push_back(r.floats());
   std::vector<double> transformed(sigma.size(),0); for(unsigned i=0;i<d;++i) for(size_t j=0;j<sigma.size();++j) transformed[j]+=query[i]*double(basis[i*sigma.size()+j]);
   std::vector<float> out(n);

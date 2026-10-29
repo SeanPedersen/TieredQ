@@ -418,12 +418,50 @@ void wide_dims_cap() {
   auto capped6=TieredQ::train(TieredQConfig{.dimensions=d,.code_bits=d*6,.num_centroids=4,.rotate_tiers=true,.max_bits=7,.wide_dims=0},sample.data(),rows,42);
   for (const auto& tier:capped6.tiers()) require(tier.bits<=6,"wide_dims=0 must cap at 6 bits");
 }
+// Format-3 models store a binary16 basis. Rewriting it as a format-2 FP32 basis holding the same rounded
+// values must leave encoding, exact search and fast search unchanged, while each format round-trips.
+void binary16_basis_equivalence() {
+  constexpr size_t d=40,rows=300,documents=513,k=10;
+  std::mt19937 rng(11); std::normal_distribution<float> normal;
+  std::vector<float> sample(rows*d),docs(documents*d),query(d);
+  for (auto* values:{&sample,&docs,&query}) for (auto& value:*values) value=normal(rng);
+  for (unsigned bits:{1u,2u}) {
+    const auto half_model=TieredQ::train(TieredQConfig{.dimensions=uint32_t(d),.code_bits=uint32_t(d*bits),.num_centroids=8,.rotate_tiers=true},sample.data(),rows,3);
+    const auto bytes=half_model.serialize();
+    auto u32=[&](size_t at) { uint32_t value=0; for (size_t i=0;i<4;++i) value|=uint32_t(bytes[at+i])<<(8*i); return value; };
+    auto u64=[&](size_t at) { return uint64_t(u32(at))|uint64_t(u32(at+4))<<32; };
+    constexpr size_t format_offset=16,tier_count_offset=28;
+    require(u32(format_offset)==TieredQ::model_format,"trained models use the binary16 format");
+    const size_t centroids_offset=tier_count_offset+4+u32(tier_count_offset)*5*4;
+    const size_t basis_offset=centroids_offset+8+u64(centroids_offset)*4,basis_count=u64(basis_offset);
+    Bytes fp32; fp32.data.assign(bytes.begin(),bytes.begin()+basis_offset);
+    for (size_t i=0;i<4;++i) fp32.data[format_offset+i]=uint8_t(TieredQ::fp32_basis_model_format>>(8*i));
+    std::vector<float> rounded(basis_count);
+    for (size_t i=0;i<basis_count;++i)
+      rounded[i]=tieredq_detail::half_decode(uint16_t(bytes[basis_offset+8+2*i]|bytes[basis_offset+9+2*i]<<8));
+    fp32.floats(rounded);
+    fp32.data.insert(fp32.data.end(),bytes.begin()+basis_offset+8+2*basis_count,bytes.end());
+    const auto fp32_model=TieredQ::deserialize(fp32.data);
+    require(fp32_model.serialize()==fp32.data,"format-2 round trip");
+    require(TieredQ::deserialize(bytes).serialize()==bytes,"format-3 round trip");
+    require(TieredQ::deserialize(bytes).memory_bytes()+basis_count*2==fp32_model.memory_bytes(),"binary16 basis halves its memory");
+    require(half_model.encode(docs.data(),documents)==fp32_model.encode(docs.data(),documents),"binary16 basis changes encoding");
+    for (auto mode:{TieredQIndexMode::fast,TieredQIndexMode::full}) {
+      TieredQIndex half_index(half_model,mode),fp32_index(fp32_model,mode);
+      half_index.add(docs.data(),documents); fp32_index.add(docs.data(),documents);
+      for (const auto& [half_hits,fp32_hits]:{std::pair{half_index.search(query.data(),k),fp32_index.search(query.data(),k)},
+                                              std::pair{half_index.search_fast(query.data(),k),fp32_index.search_fast(query.data(),k)}})
+        for (size_t i=0;i<k;++i)
+          require(half_hits.at(i).id==fp32_hits.at(i).id && half_hits[i].score==fp32_hits[i].score,"binary16 basis changes search");
+    }
+  }
+}
 void tieredq_encoder_tests();
 void tieredq_model_tests(const std::string& prefix) {
   half_tests(); encoder_boundaries(); encoder_reductions(); grid_kernels(); tieredq_encoder_tests();
   parity(prefix+".model",7,1); parity(prefix+".model",16,4); parity(prefix+".model",65,2);
   for (unsigned bits:{3u,5u,6u,7u,8u}) parity(prefix+".model",16,bits);
-  grouped_scan(); wide_dims_cap(); lazy_encoder();
+  grouped_scan(); wide_dims_cap(); lazy_encoder(); binary16_basis_equivalence();
   parity(prefix+".model",3072,2); parity(prefix+".model",3072,4);
   std::vector<float> sample(128*16); std::mt19937 rng(7); std::normal_distribution<float> normal;
   for (auto& value:sample) value=normal(rng);
@@ -432,7 +470,7 @@ void tieredq_model_tests(const std::string& prefix) {
   require(trained.model_id()==loaded.model_id(),"trained roundtrip");
   require(loaded.config().rotate_tiers,"training rotation flag");
   const size_t retained=trained.coded_dimensions();
-  const size_t expected_bytes=8*4+trained.tiers().size()*5*4+4*8+4+9*8+4*(4*16+16*retained+2*retained+510);
+  const size_t expected_bytes=8*4+trained.tiers().size()*5*4+4*8+4+9*8+4*(4*16+2*retained+510)+2*16*retained;
   require(trained.model_bytes()==expected_bytes,"compact sections");
   const auto encoded=trained.encode(sample.data(),128);
   require(encoded==loaded.encode(sample.data(),128),"loaded encoder");

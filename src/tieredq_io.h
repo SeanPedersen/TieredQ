@@ -28,6 +28,9 @@ struct Writer {
   void u64(uint64_t x) { u32(uint32_t(x)); u32(uint32_t(x>>32)); }
   void f32(float x) { u32(std::bit_cast<uint32_t>(x)); }
   void floats(const std::vector<float>& x) { u64(x.size()); for (float v:x) f32(v); }
+  void halves(const std::vector<uint16_t>& x) {
+    u64(x.size()); for (uint16_t v:x) { data.push_back(uint8_t(v)); data.push_back(uint8_t(v>>8)); }
+  }
 };
 struct Reader {
   const std::vector<uint8_t>& data; size_t pos=0;
@@ -40,6 +43,12 @@ struct Reader {
   std::vector<float> floats() {
     uint64_t n=u64(); if (n>(data.size()-pos)/4) bad("invalid array length");
     std::vector<float> x(static_cast<size_t>(n)); for (auto& v:x) v=f32(); return x;
+  }
+  std::vector<uint16_t> halves() {
+    uint64_t n=u64(); if (n>(data.size()-pos)/2) bad("invalid array length");
+    std::vector<uint16_t> x(static_cast<size_t>(n));
+    for (auto& v:x) { v=uint16_t(data[pos]|uint16_t(data[pos+1])<<8); pos+=2; }
+    return x;
   }
   size_t remaining() const { return data.size()-pos; }
   void bytes(void* out,size_t n) {

@@ -75,7 +75,9 @@ void lookup_kernel_test(size_t count,bool avx512) {
   for (size_t i=0;i<basis.size();++i) basis[i]=std::sin(float(i));
   for (size_t i=0;i<weights;++i) { sigma[i]=float(i+1)/weights; mean[i]=std::cos(float(i)); }
   for (size_t i=0;i<centers.size();++i) centers[i]=float(i)/centers.size();
-  const auto map=build_fast_query_projection(dimensions,basis,sigma,mean,norms);
+  const std::vector<uint16_t> fp32_basis_only;
+  const FastQueryBasis source{basis,fp32_basis_only,sigma,centers,norms};
+  const auto map=build_fast_query_projection(dimensions,source,mean);
   std::vector<uint8_t> rows(count*stride);
   const Layout layout{code_bytes};
   for (size_t d=0;d<count;++d) {
@@ -88,8 +90,8 @@ void lookup_kernel_test(size_t count,bool avx512) {
   }
   const auto cache=build_fast_lookup_cache(levels,tiers,map,count,stride,code_bytes,centroids,rows.data());
   const std::vector<float> input{.3f,-.7f,.1f,.2f};
-  auto query=prepare_fast_lookup_query(*cache->lookup,input.data(),{basis,sigma,centers,norms});
-  const auto output=project_fast_query(map,input.data(),{basis,sigma,centers,norms});
+  auto query=prepare_fast_lookup_query(*cache->lookup,input.data(),source);
+  const auto output=project_fast_query(map,input.data(),source);
   for (size_t r=0;r<weights;++r) {
     float expected=0; for (size_t i=0;i<dimensions;++i) expected+=input[i]*basis[i*weights+r];
     require(std::fabs(output[r]-expected*sigma[r])<1e-5f,"fast query projection differs");
@@ -154,7 +156,7 @@ void lookup_kernel_test(size_t count,bool avx512) {
   }
 
   const std::vector<float> zero(dimensions);
-  const auto zero_query=prepare_fast_lookup_query(*cache->lookup,zero.data(),{basis,sigma,centers,norms});
+  const auto zero_query=prepare_fast_lookup_query(*cache->lookup,zero.data(),source);
   scan(zero_query,0,count,scores.data());
   require(std::all_of(scores.begin(),scores.begin()+count,[](float x){return x==0;}),"zero byte-table query differs");
 }

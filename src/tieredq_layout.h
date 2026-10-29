@@ -4,6 +4,9 @@
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
+#if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
+#include <immintrin.h>
+#endif
 
 namespace dv::tieredq_detail {
 inline void write_code(uint8_t* data, uint32_t offset, unsigned bits, unsigned value) {
@@ -30,6 +33,23 @@ inline float half_decode(uint16_t value) {
   const float magnitude=exponent==31 ? (mantissa ? NAN : INFINITY) :
       exponent ? std::ldexp(float(1024+mantissa),int(exponent)-25) : std::ldexp(float(mantissa),-24);
   return value&0x8000 ? -magnitude : magnitude;
+}
+// Binary16 to FP32 is exact, so the F16C and portable paths produce identical values.
+#if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
+__attribute__((target("avx,f16c")))
+inline void half_decode_row_f16c(const uint16_t* in,float* out,size_t count) {
+  constexpr size_t lanes=8;
+  size_t i=0;
+  for (;i+lanes<=count;i+=lanes)
+    _mm256_storeu_ps(out+i,_mm256_cvtph_ps(_mm_loadu_si128(reinterpret_cast<const __m128i*>(in+i))));
+  for (;i<count;++i) out[i]=half_decode(in[i]);
+}
+#endif
+inline void half_decode_row(const uint16_t* in,float* out,size_t count) {
+#if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
+  if (__builtin_cpu_supports("f16c")) return half_decode_row_f16c(in,out,count);
+#endif
+  for (size_t i=0;i<count;++i) out[i]=half_decode(in[i]);
 }
 struct Layout {
   size_t code_bytes;

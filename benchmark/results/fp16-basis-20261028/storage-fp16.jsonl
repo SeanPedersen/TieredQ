@@ -1,0 +1,9 @@
+{"label": "fp16", "index": "gemini-1", "disk_bits": 1059.2, "accounted_bits": 1060.7, "recall10": 0.8337}
+{"label": "fp16", "index": "gemini-2", "disk_bits": 1749.2, "accounted_bits": 1750.8, "recall10": 0.9251}
+{"label": "fp16", "index": "gemini-4", "disk_bits": 3303.8, "accounted_bits": 3306.7, "recall10": 0.9779}
+{"label": "fp16", "index": "glove-1", "disk_bits": 303.3, "accounted_bits": 304.0, "recall10": 0.411}
+{"label": "fp16", "index": "glove-2", "disk_bits": 503.6, "accounted_bits": 504.4, "recall10": 0.6717}
+{"label": "fp16", "index": "glove-4", "disk_bits": 895.9, "accounted_bits": 897.2, "recall10": 0.9009}
+{"label": "fp16", "index": "openai-1", "disk_bits": 2089.1, "accounted_bits": 2091.8, "recall10": 0.8933}
+{"label": "fp16", "index": "openai-2", "disk_bits": 3609.6, "accounted_bits": 3612.6, "recall10": 0.947}
+{"label": "fp16", "index": "openai-4", "disk_bits": 6720.0, "accounted_bits": 6725.4, "recall10": 0.9847}

@@ -1,0 +1,9 @@
+{"label": "fp32", "index": "gemini-1", "disk_bits": 1109.7, "accounted_bits": 1111.2, "recall10": 0.8337}
+{"label": "fp32", "index": "gemini-2", "disk_bits": 1826.2, "accounted_bits": 1827.8, "recall10": 0.9252}
+{"label": "fp32", "index": "gemini-4", "disk_bits": 3399.1, "accounted_bits": 3402.0, "recall10": 0.9784}
+{"label": "fp32", "index": "glove-1", "disk_bits": 309.7, "accounted_bits": 310.3, "recall10": 0.4121}
+{"label": "fp32", "index": "glove-2", "disk_bits": 510.0, "accounted_bits": 510.8, "recall10": 0.6719}
+{"label": "fp32", "index": "glove-4", "disk_bits": 902.3, "accounted_bits": 903.6, "recall10": 0.9011}
+{"label": "fp32", "index": "openai-1", "disk_bits": 2298.0, "accounted_bits": 2300.7, "recall10": 0.8939}
+{"label": "fp32", "index": "openai-2", "disk_bits": 3948.2, "accounted_bits": 3951.2, "recall10": 0.9474}
+{"label": "fp32", "index": "openai-4", "disk_bits": 7097.0, "accounted_bits": 7102.4, "recall10": 0.9839}

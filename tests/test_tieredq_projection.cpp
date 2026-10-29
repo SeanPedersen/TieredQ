@@ -4,6 +4,40 @@
 #include <cmath>
 #include <stdexcept>
 
+// A binary16 basis must serve exactly like an FP32 basis holding the same rounded values, on every path.
+void half_basis_matches_rounded_fp32(size_t dimensions,size_t weights,const std::vector<float>& basis,
+    const std::vector<float>& sigma,const std::vector<float>& mean,const std::vector<float>& centers,
+    const std::vector<float>& norms,const std::vector<float>& query) {
+  using namespace dv::tieredq_detail;
+  std::vector<uint16_t> half(basis.size());
+  std::vector<float> rounded(basis.size());
+  for (size_t i=0;i<basis.size();++i) { half[i]=half_encode(basis[i]); rounded[i]=half_decode(half[i]); }
+  const std::vector<uint16_t> fp32_basis_only;
+  const std::vector<float> half_basis_only;
+  const FastQueryBasis fp32{rounded,fp32_basis_only,sigma,centers,norms},binary16{half_basis_only,half,sigma,centers,norms};
+  const auto fp32_map=build_fast_query_projection(dimensions,fp32,mean),half_map=build_fast_query_projection(dimensions,binary16,mean);
+  if (fp32_map.correction!=half_map.correction) throw std::runtime_error("binary16 basis changes the mean shift");
+  if (project_fast_query(fp32_map,query.data(),fp32)!=project_fast_query(half_map,query.data(),binary16))
+    throw std::runtime_error("binary16 basis changes the dispatched projection");
+#if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
+  std::vector<float> expected(weights,0),actual(weights,0);
+  if (__builtin_cpu_supports("avx2") && __builtin_cpu_supports("f16c")) {
+    project_fast_weights_avx2<false>(fp32_map,query.data(),fp32,expected.data());
+    project_fast_weights_avx2<true>(half_map,query.data(),binary16,actual.data());
+    if (expected!=actual) throw std::runtime_error("AVX2 binary16 weights differ");
+  }
+  if (__builtin_cpu_supports("avx512f")) {
+    std::fill(expected.begin(),expected.end(),0); std::fill(actual.begin(),actual.end(),0);
+    project_fast_weights_avx512<false>(fp32_map,query.data(),fp32,expected.data());
+    project_fast_weights_avx512<true>(half_map,query.data(),binary16,actual.data());
+    if (expected!=actual) throw std::runtime_error("AVX512 binary16 weights differ");
+  }
+#endif
+  std::vector<float> decoded(basis.size());
+  half_decode_row(half.data(),decoded.data(),half.size());
+  if (decoded!=rounded) throw std::runtime_error("binary16 row decode differs");
+}
+
 void tieredq_projection_tests() {
   using namespace dv::tieredq_detail;
   constexpr size_t dimensions=37,centroids=19;
@@ -14,7 +48,9 @@ void tieredq_projection_tests() {
     for (size_t i=0;i<centers.size();++i) centers[i]=std::cos(float(i));
     for (size_t i=0;i<centroids;++i) norms[i]=float(i);
     for (size_t i=0;i<dimensions;++i) query[i]=std::sin(float(i+3));
-    const auto map=build_fast_query_projection(dimensions,basis,sigma,mean,norms);
+    const std::vector<uint16_t> fp32_basis_only;
+    const FastQueryBasis source{basis,fp32_basis_only,sigma,centers,norms};
+    const auto map=build_fast_query_projection(dimensions,source,mean);
     if (map.allocated_bytes()!=dimensions*sizeof(float))
       throw std::runtime_error("compact projection retains per-centroid panels");
     std::vector<float> expected(weights+2*centroids,0),term_magnitude(expected.size(),0);
@@ -30,7 +66,6 @@ void tieredq_projection_tests() {
         expected[weights+centroids+cid]+=scaled; term_magnitude[weights+centroids+cid]+=std::fabs(scaled);
       }
     }
-    const FastQueryBasis source{basis,sigma,centers,norms};
     const auto actual_query=project_fast_query(map,query.data(),source);
     if (!std::equal(actual_query.begin(),actual_query.begin()+weights,expected.begin()))
       throw std::runtime_error("compact projection changes materialized FP32 weight results");
@@ -51,14 +86,15 @@ void tieredq_projection_tests() {
     }
     std::vector<float> actual(weights,0);
     if (__builtin_cpu_supports("avx2")) {
-      project_fast_weights_avx2(map,query.data(),source,actual.data());
+      project_fast_weights_avx2<false>(map,query.data(),source,actual.data());
       if (!std::equal(actual.begin(),actual.end(),expected.begin())) throw std::runtime_error("AVX2 regenerated weights differ");
     }
     if (__builtin_cpu_supports("avx512f")) {
       std::fill(actual.begin(),actual.end(),0);
-      project_fast_weights_avx512(map,query.data(),source,actual.data());
+      project_fast_weights_avx512<false>(map,query.data(),source,actual.data());
       if (!std::equal(actual.begin(),actual.end(),expected.begin())) throw std::runtime_error("AVX512 regenerated weights differ");
     }
 #endif
+    half_basis_matches_rounded_fp32(dimensions,weights,basis,sigma,mean,centers,norms,query);
   }
 }
