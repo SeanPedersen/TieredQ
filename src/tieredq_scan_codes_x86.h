@@ -68,74 +68,92 @@ inline __m512i period_codes_avx512(const __m512i* words) {
   else if constexpr (shift+Width<=fast_code_word_bits) return _mm512_srli_epi32(words[word],shift);
   else return _mm512_or_si512(_mm512_srli_epi32(words[word],shift),_mm512_slli_epi32(words[word+1],fast_code_word_bits-shift));
 }
-template<size_t Width,size_t Phase,size_t Pairs,class Sink,size_t... Index>
+// Blocks consecutive 16-document blocks (block_bytes apart) walk together: each rank's lookups for all blocks are
+// independent, so their accumulation chains overlap; every block sees the same per-rank sequence as alone.
+template<size_t Width,size_t Phase,size_t Pairs,size_t Index,size_t Blocks,size_t Words,class Sink>
 __attribute__((target("avx512f,avx512bw"),always_inline))
-inline void walk_period_avx512(const __m512* table,const __m512i* words,size_t rank,Sink& sink,std::index_sequence<Index...>) {
-  (sink(rank+Index,table_lookup_avx512<Pairs>(table,period_codes_avx512<Width,Phase,Index>(words))),...);
+inline void walk_period_rank_avx512(const __m512* table,const __m512i (&words)[Blocks][Words],size_t rank,Sink& sink) {
+  for (size_t block=0;block<Blocks;++block)
+    sink(rank+Index,block,table_lookup_avx512<Pairs>(table,period_codes_avx512<Width,Phase,Index>(words[block])));
 }
-// Walks one tier segment of a 16-document block, handing each coordinate's FP32 levels to `sink` in rank order.
-// Ranks between bit offsets congruent to Phase mod 32 form periods whose code positions are compile-time.
-template<size_t Width,size_t Phase,class Sink>
+template<size_t Width,size_t Phase,size_t Pairs,size_t Blocks,size_t Words,class Sink,size_t... Index>
 __attribute__((target("avx512f,avx512bw"),always_inline))
-inline void walk_segment_avx512(const int8_t* base,const CodeTableSegment& segment,Sink& sink) {
+inline void walk_period_blocks_avx512(const __m512* table,const __m512i (&words)[Blocks][Words],size_t rank,Sink& sink,std::index_sequence<Index...>) {
+  (walk_period_rank_avx512<Width,Phase,Pairs,Index>(table,words,rank,sink),...);
+}
+template<size_t Width,size_t Pairs,size_t Blocks,class Sink>
+__attribute__((target("avx512f,avx512bw"),always_inline))
+inline void walk_rank_blocks_avx512(const __m512* table,const int8_t* base,size_t block_bytes,size_t rank,size_t offset,Sink& sink) {
+  for (size_t block=0;block<Blocks;++block)
+    sink(rank,block,table_lookup_avx512<Pairs>(table,load_codes_avx512<Width>(base+block*block_bytes,offset)));
+}
+// Walks one tier segment of Blocks 16-document blocks, handing each coordinate's FP32 levels to `sink` in rank
+// order. Ranks between bit offsets congruent to Phase mod 32 form periods whose code positions are compile-time.
+template<size_t Width,size_t Phase,size_t Blocks,class Sink>
+__attribute__((target("avx512f,avx512bw"),always_inline))
+inline void walk_segment_avx512(const int8_t* base,size_t block_bytes,const CodeTableSegment& segment,Sink& sink) {
   constexpr size_t pairs=code_table_pairs(Width),period_bits=std::lcm(Width,fast_code_word_bits);
   constexpr size_t period_ranks=period_bits/Width,period_words=(Phase+period_bits+fast_code_word_bits-1)/fast_code_word_bits;
   __m512 table[2*pairs];
   for (size_t i=0;i<2*pairs;++i) table[i]=_mm512_loadu_ps(segment.table.data()+i*code_register_lanes);
   size_t rank=segment.begin,offset=segment.offset;
   for (;rank<segment.end && offset%fast_code_word_bits!=Phase;++rank,offset+=Width)
-    sink(rank,table_lookup_avx512<pairs>(table,load_codes_avx512<Width>(base,offset)));
+    walk_rank_blocks_avx512<Width,pairs,Blocks>(table,base,block_bytes,rank,offset,sink);
   for (;rank+period_ranks<=segment.end;rank+=period_ranks,offset+=period_bits) {
     const int8_t* low=base+offset/fast_code_word_bits*fast_scan_group_bytes;
-    __m512i words[period_words];
-    for (size_t word=0;word<period_words;++word) words[word]=_mm512_loadu_si512(low+word*fast_scan_group_bytes);
-    walk_period_avx512<Width,Phase,pairs>(table,words,rank,sink,std::make_index_sequence<period_ranks>{});
+    __m512i words[Blocks][period_words];
+    for (size_t block=0;block<Blocks;++block) for (size_t word=0;word<period_words;++word)
+      words[block][word]=_mm512_loadu_si512(low+block*block_bytes+word*fast_scan_group_bytes);
+    walk_period_blocks_avx512<Width,Phase,pairs,Blocks>(table,words,rank,sink,std::make_index_sequence<period_ranks>{});
   }
-  for (;rank<segment.end;++rank,offset+=Width) sink(rank,table_lookup_avx512<pairs>(table,load_codes_avx512<Width>(base,offset)));
+  for (;rank<segment.end;++rank,offset+=Width) walk_rank_blocks_avx512<Width,pairs,Blocks>(table,base,block_bytes,rank,offset,sink);
 }
 // Bit offsets of one segment share a residue mod gcd(Width, 32); that residue selects the period phase.
-template<size_t Width,size_t Phase=0,class Sink>
+template<size_t Width,size_t Blocks,size_t Phase=0,class Sink>
 __attribute__((target("avx512f,avx512bw"),always_inline))
-inline void walk_segment_phase_avx512(const int8_t* base,const CodeTableSegment& segment,Sink& sink) {
+inline void walk_segment_phase_avx512(const int8_t* base,size_t block_bytes,const CodeTableSegment& segment,Sink& sink) {
   constexpr size_t phases=std::gcd(Width,fast_code_word_bits);
-  if constexpr (Phase+1<phases) if (segment.offset%phases!=Phase) return walk_segment_phase_avx512<Width,Phase+1>(base,segment,sink);
-  walk_segment_avx512<Width,Phase>(base,segment,sink);
+  if constexpr (Phase+1<phases) if (segment.offset%phases!=Phase) return walk_segment_phase_avx512<Width,Blocks,Phase+1>(base,block_bytes,segment,sink);
+  walk_segment_avx512<Width,Phase,Blocks>(base,block_bytes,segment,sink);
 }
-template<class Sink>
+template<size_t Blocks=1,class Sink>
 __attribute__((target("avx512f,avx512bw"),always_inline))
-inline void walk_code_segment_avx512(const int8_t* base,const CodeTableSegment& segment,Sink& sink) {
+inline void walk_code_segment_avx512(const int8_t* base,size_t block_bytes,const CodeTableSegment& segment,Sink& sink) {
   switch (segment.width) {
-    case 1: walk_segment_phase_avx512<1>(base,segment,sink); break;
-    case 2: walk_segment_phase_avx512<2>(base,segment,sink); break;
-    case 3: walk_segment_phase_avx512<3>(base,segment,sink); break;
-    case 4: walk_segment_phase_avx512<4>(base,segment,sink); break;
-    case 5: walk_segment_phase_avx512<5>(base,segment,sink); break;
-    case 6: walk_segment_phase_avx512<6>(base,segment,sink); break;
-    case 7: walk_segment_phase_avx512<7>(base,segment,sink); break;
-    default: walk_segment_phase_avx512<fast_scan_code_bits>(base,segment,sink); break;
+    case 1: walk_segment_phase_avx512<1,Blocks>(base,block_bytes,segment,sink); break;
+    case 2: walk_segment_phase_avx512<2,Blocks>(base,block_bytes,segment,sink); break;
+    case 3: walk_segment_phase_avx512<3,Blocks>(base,block_bytes,segment,sink); break;
+    case 4: walk_segment_phase_avx512<4,Blocks>(base,block_bytes,segment,sink); break;
+    case 5: walk_segment_phase_avx512<5,Blocks>(base,block_bytes,segment,sink); break;
+    case 6: walk_segment_phase_avx512<6,Blocks>(base,block_bytes,segment,sink); break;
+    case 7: walk_segment_phase_avx512<7,Blocks>(base,block_bytes,segment,sink); break;
+    default: walk_segment_phase_avx512<fast_scan_code_bits,Blocks>(base,block_bytes,segment,sink); break;
   }
 }
-template<class Sink>
+template<size_t Blocks=1,class Sink>
 __attribute__((target("avx512f,avx512bw"),always_inline))
 inline void walk_code_block_avx512(const FastScanCache& cache,const std::vector<CodeTableSegment>& segments,
     size_t block,Sink& sink) {
   const int8_t* base=cache.levels.data()+block*cache.level_block_bytes();
-  for (const auto& segment:segments) walk_code_segment_avx512(base,segment,sink);
+  for (const auto& segment:segments) walk_code_segment_avx512<Blocks>(base,cache.level_block_bytes(),segment,sink);
 }
 struct DecodeLevelsAvx512 {
   float* decoded;
-  __attribute__((target("avx512f,avx512bw"),always_inline)) void operator()(size_t rank,__m512 levels) {
+  __attribute__((target("avx512f,avx512bw"),always_inline)) void operator()(size_t rank,size_t,__m512 levels) {
     _mm512_storeu_ps(decoded+rank*fast_scan_block_docs,levels);
   }
 };
-// A single query consumes levels directly instead of storing and reloading a decoded block.
+// A single query consumes levels directly instead of storing and reloading a decoded block; one dot per block.
+template<size_t Blocks=1>
 struct AccumulateLevelsAvx512 {
   const float* weights;
-  __m512 dot;
-  __attribute__((target("avx512f,avx512bw"),always_inline)) void operator()(size_t rank,__m512 levels) {
-    dot=_mm512_add_ps(dot,_mm512_mul_ps(levels,_mm512_set1_ps(weights[rank])));
+  __m512 dot[Blocks];
+  __attribute__((target("avx512f,avx512bw"),always_inline)) void operator()(size_t rank,size_t block,__m512 levels) {
+    dot[block]=_mm512_add_ps(dot[block],_mm512_mul_ps(levels,_mm512_set1_ps(weights[rank])));
   }
 };
+// Single-query blocks walked together (independent accumulation chains).
+constexpr size_t code_interleaved_blocks=4;
 __attribute__((target("avx512f,avx512bw")))
 inline void decode_code_block_avx512(const FastScanCache& cache,const std::vector<CodeTableSegment>& segments,
     size_t block,float* decoded) {
@@ -239,15 +257,28 @@ inline void accumulate_codes_avx512(const FastScanCache& cache,const float* deco
   }
   store_code_scores_avx512<Rows>(cache,dots,centers,corrections,doc,valid,scores,stride);
 }
+template<size_t Blocks>
+__attribute__((target("avx512f,avx512bw"),always_inline))
+inline void scan_single_code_blocks_avx512(const FastScanCache& cache,const std::vector<CodeTableSegment>& segments,
+    const float* weights,const float* centers,const float* corrections,size_t doc,size_t first,size_t count,float* scores) {
+  AccumulateLevelsAvx512<Blocks> sink{weights,{}};
+  for (auto& dot:sink.dot) dot=_mm512_setzero_ps();
+  walk_code_block_avx512<Blocks>(cache,segments,doc/fast_scan_block_docs,sink);
+  for (size_t block=0;block<Blocks;++block) {
+    const size_t at=doc+block*fast_scan_block_docs;
+    store_code_scores_avx512<1>(cache,&sink.dot[block],centers,corrections,at,std::min(fast_scan_block_docs,first+count-at),
+        scores+at-first,count);
+  }
+}
 __attribute__((target("avx512f,avx512bw")))
 inline void scan_single_code_avx512(const FastScanCache& cache,const std::vector<CodeTableSegment>& segments,
     const float* weights,const float* centers,const float* corrections,size_t first,size_t count,float* scores) {
-  for (size_t doc=first;doc<first+count;doc+=fast_scan_block_docs) {
-    AccumulateLevelsAvx512 sink{weights,_mm512_setzero_ps()};
-    walk_code_block_avx512(cache,segments,doc/fast_scan_block_docs,sink);
-    store_code_scores_avx512<1>(cache,&sink.dot,centers,corrections,doc,std::min(fast_scan_block_docs,first+count-doc),
-        scores+doc-first,count);
-  }
+  constexpr size_t span=code_interleaved_blocks*fast_scan_block_docs;
+  size_t doc=first;
+  for (;doc+span<=first+count;doc+=span)
+    scan_single_code_blocks_avx512<code_interleaved_blocks>(cache,segments,weights,centers,corrections,doc,first,count,scores);
+  for (;doc<first+count;doc+=fast_scan_block_docs)
+    scan_single_code_blocks_avx512<1>(cache,segments,weights,centers,corrections,doc,first,count,scores);
 }
 
 template<size_t Rows,class QueryAt>

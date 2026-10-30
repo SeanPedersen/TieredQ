@@ -10,7 +10,8 @@
 #include "tieredq/detail/tieredq_scan_plan.h"
 
 namespace dv {
-namespace tieredq_detail { class StageProfile; struct FastScanCache; struct FastQueryBasis; struct EncoderData; class LazyEncoder; }
+namespace tieredq_detail { class StageProfile; struct FastScanCache; struct FastQueryBasis; struct EncoderData; class LazyEncoder;
+                           struct CoarseQuantizer; struct Writer; }
 enum class TieredQIndexMode { fast, full };
 enum class TieredQKernel { automatic, scalar, avx2, avx512, neon };
 // Similarity an index serves; scores are always larger-is-better. Cosine normalizes rows and queries. L2 lifts rows
@@ -140,13 +141,16 @@ class TieredQ {
   static TieredQ deserialize(const std::vector<uint8_t>& data);
  private:
   friend class TieredQIndex;
+  friend class TieredQIVFIndex;
   friend struct tieredq_detail::FastQueryBasis;
   TieredQ() = default;
   TieredQConfig config_;
   std::vector<TieredQTier> tiers_;
   std::vector<float> centroids_, basis_, mean_, sigma_;
-  // Binary16 basis of format-3 models; exactly one of basis_ and basis_half_ holds the d x m basis.
+  // Binary16 basis of format-3 models in 16-rank panels (tieredq_basis_panels.h; files keep d x m row order);
+  // exactly one of basis_ (row-major) and basis_half_ holds the d x m basis.
   std::vector<uint16_t> basis_half_;
+  // Basis entry at row-major index input * m + rank, in either encoding.
   float basis_value(size_t index) const;
   std::vector<std::vector<float>> levels_;
   // L2 lift: input scale and the lower Cholesky factor of the lifted query second moment (row-major; the base map).
@@ -232,6 +236,11 @@ class TieredQIndex {
   void search_batch_model(const float* queries, size_t rows, size_t k, float* scores, uint32_t* ids) const;
   void search_batch_fast_model(const float* queries, size_t rows, size_t k, float* scores, uint32_t* ids) const;
   void finish_scores(const float* query, float* scores, size_t count) const;
+  // Appends rows already encoded by codec() (bytes_per_vector() each).
+  void add_encoded(const uint8_t* rows, size_t count);
+  // Fills an empty fast-mode index from a serialized fast payload (tieredq_index_read.h).
+  template<class Reader> void read_fast_payload(Reader& reader, size_t rows);
+  friend class TieredQIVFIndex;
   std::shared_ptr<tieredq_detail::FastScanCache> make_fast_storage(
       const uint8_t* rows, size_t count, bool lookup, int level_max) const;
   std::shared_ptr<tieredq_detail::FastScanCache> make_fast_storage(const uint8_t* rows, size_t count) const;
@@ -241,5 +250,57 @@ class TieredQIndex {
   std::vector<uint8_t> payload_;
   std::shared_ptr<tieredq_detail::FastScanCache> fast_;
   size_t count_ = 0;
+};
+// Fast-mode inverted-file index. With lists == 0 each of the codec's k-means centroids (at most 256) forms one list
+// at no extra storage; otherwise build trains a separate model-space k-means coarse quantizer with that many lists
+// (seeded sample of at least 32,768 or 64 rows per list) and stores its centroids. Lists are stored contiguously in
+// one fast representation, so every list scan uses the flat index's kernels; each list starts on a 32-document
+// boundary (padded with copies of its last row, which are never returned). Search ranks lists by model-space
+// distance to the query and scans the nearest nprobe nonempty lists. Ids are input row order. Build replaces the
+// content.
+// Range-checkpoint pruning of list scans for models with more than prefix_tiers tiers (AVX-512): after its prefix
+// tiers a document skips the rest when its score bound cannot reach the running top k. With confidence 0 (default)
+// the bound covers every suffix code, so hits equal the unpruned scan. A positive confidence bounds the suffix at that
+// many standard deviations of its score for unit-Gaussian coordinates: approximate and faster. On OpenAI 100k at
+// 4 bits/dim, confidence 8 kept recall at every nprobe; prefix_tiers 3 prunes more for a small recall loss.
+struct TieredQPruning {
+  double confidence = 0;
+  uint32_t prefix_tiers = 4;
+};
+class TieredQIVFIndex {
+ public:
+  explicit TieredQIVFIndex(TieredQ codec, uint32_t lists = 0, uint64_t seed = 0);
+  const TieredQ& codec() const { return documents_.codec(); }
+  void build(const float* rows, size_t count);
+  size_t size() const { return size_; }
+  size_t lists() const { return list_rows_.size(); }
+  size_t list_size(size_t list) const { return list_rows_.at(list); }
+  // The list of every input row (row order), e.g. to share the partition with another index.
+  std::vector<uint32_t> list_assignment() const;
+  // Fast representation (including list padding), list offsets and the id map.
+  size_t storage_bytes() const;
+  std::vector<TieredQHit> search(const float* query, size_t k, size_t nprobe, TieredQPruning pruning = {}) const;
+  // Results are rows x min(k, size()) in row-major order; slots past the probed rows hold id UINT32_MAX and
+  // score -inf. Queries are split across OpenMP workers; a single query scans on the calling thread.
+  void search_batch(const float* queries, size_t rows, size_t k, size_t nprobe, float* scores, uint32_t* ids,
+                    TieredQPruning pruning = {}) const;
+  // Self-contained bytes (model, lists and fast payload) for an engine's own storage container.
+  std::vector<uint8_t> serialize() const;
+  static TieredQIVFIndex deserialize(const std::vector<uint8_t>& bytes);
+  void save(const std::string& path) const;
+  static TieredQIVFIndex load(const std::string& path);
+ private:
+  std::vector<uint8_t> fast_payload() const;
+  const float* model_rows(const float* rows, size_t first, size_t count, std::vector<float>& buffer) const;
+  std::vector<uint32_t> coarse_lists(const float* rows, size_t count);
+  void write_lists(tieredq_detail::Writer& writer) const;
+  template<class Reader> static TieredQIVFIndex read_lists(TieredQ model, Reader& reader);
+  TieredQIndex documents_;
+  std::vector<uint32_t> list_begin_, list_rows_; // first padded document and live rows per list
+  std::vector<uint32_t> ids_;                    // padded document -> input row; UINT32_MAX for padding
+  size_t size_ = 0;
+  uint32_t coarse_lists_ = 0;                    // 0: lists are the codec's centroids
+  uint64_t seed_ = 0;
+  std::shared_ptr<const tieredq_detail::CoarseQuantizer> coarse_;
 };
 } // namespace dv

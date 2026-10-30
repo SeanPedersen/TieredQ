@@ -1,4 +1,5 @@
 // Independent persisted-model references for layout, binary16, reconstruction, and scans.
+#include "tieredq_basis_panels.h"
 #include "tieredq/tieredq.h"
 #include "tieredq_layout.h"
 #include "tieredq_encode.h"
@@ -444,7 +445,9 @@ void binary16_basis_equivalence() {
     const auto fp32_model=TieredQ::deserialize(fp32.data);
     require(fp32_model.serialize()==fp32.data,"format-2 round trip");
     require(TieredQ::deserialize(bytes).serialize()==bytes,"format-3 round trip");
-    require(TieredQ::deserialize(bytes).memory_bytes()+basis_count*2==fp32_model.memory_bytes(),"binary16 basis halves its memory");
+    // Rank panels pad the binary16 basis to whole 16-rank panels.
+    const size_t panel_halves=tieredq_detail::basis_panel_size(fp32_model.model_dimensions(),fp32_model.coded_dimensions());
+    require(TieredQ::deserialize(bytes).memory_bytes()+basis_count*4==fp32_model.memory_bytes()+panel_halves*2,"binary16 basis halves its memory");
     require(half_model.encode(docs.data(),documents)==fp32_model.encode(docs.data(),documents),"binary16 basis changes encoding");
     for (auto mode:{TieredQIndexMode::fast,TieredQIndexMode::full}) {
       TieredQIndex half_index(half_model,mode),fp32_index(fp32_model,mode);

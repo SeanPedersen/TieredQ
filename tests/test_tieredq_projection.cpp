@@ -12,27 +12,34 @@ void half_basis_matches_rounded_fp32(size_t dimensions,size_t weights,const std:
   std::vector<uint16_t> half(basis.size());
   std::vector<float> rounded(basis.size());
   for (size_t i=0;i<basis.size();++i) { half[i]=half_encode(basis[i]); rounded[i]=half_decode(half[i]); }
+  const auto panels=basis_panels_from_rows(half,dimensions,weights);
+  if (basis_rows_from_panels(panels,dimensions,weights)!=half || !basis_panel_padding_zero(panels,dimensions,weights))
+    throw std::runtime_error("basis panels do not round-trip");
   const std::vector<uint16_t> fp32_basis_only;
   const std::vector<float> half_basis_only;
-  const FastQueryBasis fp32{rounded,fp32_basis_only,sigma,centers,norms},binary16{half_basis_only,half,sigma,centers,norms};
+  const FastQueryBasis fp32{rounded,fp32_basis_only,sigma,centers,norms,dimensions},
+      binary16{half_basis_only,panels,sigma,centers,norms,dimensions};
   const auto fp32_map=build_fast_query_projection(dimensions,fp32,mean),half_map=build_fast_query_projection(dimensions,binary16,mean);
   if (fp32_map.correction!=half_map.correction) throw std::runtime_error("binary16 basis changes the mean shift");
-  if (project_fast_query(fp32_map,query.data(),fp32)!=project_fast_query(half_map,query.data(),binary16))
+  const auto expected=project_fast_query(fp32_map,query.data(),fp32);
+  if (expected!=project_fast_query(half_map,query.data(),binary16))
     throw std::runtime_error("binary16 basis changes the dispatched projection");
-#if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
-  std::vector<float> expected(weights,0),actual(weights,0);
-  if (__builtin_cpu_supports("avx2") && __builtin_cpu_supports("f16c")) {
-    project_fast_weights_avx2<false>(fp32_map,query.data(),fp32,expected.data());
-    project_fast_weights_avx2<true>(half_map,query.data(),binary16,actual.data());
-    if (expected!=actual) throw std::runtime_error("AVX2 binary16 weights differ");
+  // Every query tile height and every ISA keeps each query's weights; unfolded panels match the codec's rounding.
+  constexpr size_t batch=11;
+  std::vector<float> queries(batch*dimensions),unfolded(batch*weights);
+  for (size_t i=0;i<queries.size();++i) queries[i]=std::cos(float(3*i+1));
+  const auto tiles=project_fast_queries(half_map,queries.data(),batch,binary16);
+  project_basis_panels({panels.data(),dimensions,weights,nullptr,queries.data(),dimensions,unfolded.data(),weights},batch);
+  std::vector<float> folded(weights);
+  for (size_t row=0;row<batch;++row) {
+    const float* x=queries.data()+row*dimensions;
+    if (tiles[row]!=project_fast_query(fp32_map,x,fp32)) throw std::runtime_error("query tile changes binary16 weights");
+    std::vector<float> plain(weights,0);
+    for (size_t i=0;i<dimensions;++i) for (size_t r=0;r<weights;++r) plain[r]=plain[r]+x[i]*rounded[i*weights+r];
+    if (!std::equal(plain.begin(),plain.end(),unfolded.begin()+row*weights)) throw std::runtime_error("unfolded panel projection differs");
+    project_queries_scalar({panels.data(),dimensions,weights,sigma.data(),x,dimensions,folded.data(),weights},1);
+    if (!std::equal(folded.begin(),folded.end(),tiles[row].begin())) throw std::runtime_error("scalar panel projection differs");
   }
-  if (__builtin_cpu_supports("avx512f")) {
-    std::fill(expected.begin(),expected.end(),0); std::fill(actual.begin(),actual.end(),0);
-    project_fast_weights_avx512<false>(fp32_map,query.data(),fp32,expected.data());
-    project_fast_weights_avx512<true>(half_map,query.data(),binary16,actual.data());
-    if (expected!=actual) throw std::runtime_error("AVX512 binary16 weights differ");
-  }
-#endif
   std::vector<float> decoded(basis.size());
   half_decode_row(half.data(),decoded.data(),half.size());
   if (decoded!=rounded) throw std::runtime_error("binary16 row decode differs");
@@ -49,7 +56,7 @@ void tieredq_projection_tests() {
     for (size_t i=0;i<centroids;++i) norms[i]=float(i);
     for (size_t i=0;i<dimensions;++i) query[i]=std::sin(float(i+3));
     const std::vector<uint16_t> fp32_basis_only;
-    const FastQueryBasis source{basis,fp32_basis_only,sigma,centers,norms};
+    const FastQueryBasis source{basis,fp32_basis_only,sigma,centers,norms,dimensions};
     const auto map=build_fast_query_projection(dimensions,source,mean);
     if (map.allocated_bytes()!=dimensions*sizeof(float))
       throw std::runtime_error("compact projection retains per-centroid panels");
@@ -86,12 +93,12 @@ void tieredq_projection_tests() {
     }
     std::vector<float> actual(weights,0);
     if (__builtin_cpu_supports("avx2")) {
-      project_fast_weights_avx2<false>(map,query.data(),source,actual.data());
+      project_fast_weights_avx2(map,query.data(),source,actual.data());
       if (!std::equal(actual.begin(),actual.end(),expected.begin())) throw std::runtime_error("AVX2 regenerated weights differ");
     }
     if (__builtin_cpu_supports("avx512f")) {
       std::fill(actual.begin(),actual.end(),0);
-      project_fast_weights_avx512<false>(map,query.data(),source,actual.data());
+      project_fast_weights_avx512(map,query.data(),source,actual.data());
       if (!std::equal(actual.begin(),actual.end(),expected.begin())) throw std::runtime_error("AVX512 regenerated weights differ");
     }
 #endif

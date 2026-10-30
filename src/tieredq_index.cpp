@@ -4,20 +4,8 @@
 #include "tieredq_layout.h"
 #include "tieredq_search.h"
 #include "tieredq_search_fast.h"
-#include "tieredq_scan_int8.h"
 #include "tieredq_fast_storage.h"
-#include "tieredq_fast_dispatch.h"
-#include "tieredq_scan_fast_scalar.h"
-#if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
-#define DV_TIEREDQ_X86 1
-#include "tieredq_scan_int8_avx512.h"
-#include "tieredq_scan_int8_avx2.h"
-#include "tieredq_range_checkpoint_avx512.h"
-#endif
-#if defined(__aarch64__) || defined(_M_ARM64)
-#define DV_TIEREDQ_NEON 1
-#include "tieredq_scan_int8_neon.h"
-#endif
+#include "tieredq_fast_scan.h"
 namespace dv {
 using tieredq_detail::Layout;
 using tieredq_detail::bad;
@@ -69,14 +57,18 @@ size_t TieredQIndex::bytes_per_vector() const {
 }
 void TieredQIndex::add(const float* rows,size_t count) {
   if (count>UINT32_MAX-size()) bad("index exceeds uint32 document ids");
-  auto encoded=codec_.encode(rows,count);
+  const auto encoded=codec_.encode(rows,count);
+  add_encoded(encoded.data(),count);
+}
+void TieredQIndex::add_encoded(const uint8_t* encoded,size_t count) {
+  if (count>UINT32_MAX-size()) bad("index exceeds uint32 document ids");
   if (fast_mode_) {
     if (!count) return;
-    if (!fast_) fast_=make_fast_storage(encoded.data(),count);
+    if (!fast_) fast_=make_fast_storage(encoded,count);
     else {
       auto storage=fast_.use_count()==1 ? fast_ : tieredq_detail::copy_fast_storage(*fast_);
       tieredq_detail::append_fast_rows(*storage,codec_.levels_,codec_.tiers_,codec_.bytes_per_vector(),
-          codec_.code_bytes(),codec_.config().num_centroids,encoded.data(),count);
+          codec_.code_bytes(),codec_.config().num_centroids,encoded,count);
       fast_=std::move(storage);
     }
     count_+=count;
@@ -147,16 +139,6 @@ void TieredQIndex::build_fast_scan() {
 #endif
 }
 namespace {
-// Code-ID scans consume only query weights; batched projection shares basis traffic across queries.
-template<class Prepare>
-auto fast_search_queries(const tieredq_detail::FastScanCache& cache,const TieredQ& codec,
-    const float* queries,size_t rows,Prepare prepare) {
-  if (!cache.code_lookup()) return prepare_search_queries(queries,rows,codec.model_dimensions(),prepare);
-  auto weights=codec.model_query_weights(queries,rows);
-  std::vector<decltype(prepare(queries))> prepared(rows);
-  for (size_t row=0;row<rows;++row) prepared[row].codes=std::move(weights[row]);
-  return prepared;
-}
 #ifdef DV_TIEREDQ_X86
 // Keep checkpoint preparation and selection scheduling separate from CPU/layout dispatch.
 template<class Finish>
@@ -175,44 +157,16 @@ void fast_range_search(const tieredq_detail::FastScanCache& cache,const TieredQ&
 template<class Finish>
 void fast_search(const tieredq_detail::FastScanCache& cache,const TieredQ& codec,
     const float* queries,size_t rows,size_t k,Finish finish) {
-  [[maybe_unused]] const auto backend=tieredq_detail::fast_scan_backend(cache);
-#ifdef DV_TIEREDQ_NEON
-  if (backend==tieredq_detail::FastScanBackend::neon) {
-    auto prepare=[&](const float* vector) { return tieredq_detail::fast_scan_query(cache,codec.model_query_weights(vector)); };
-    auto scan=[&](const auto* prepared,size_t count,size_t first,size_t documents,float* scores,size_t stride) {
-      tieredq_detail::scan_fast_neon_tile(cache,prepared,count,first,documents,scores,stride);
-    };
-    auto prepared=fast_search_queries(cache,codec,queries,rows,prepare);
-    tieredq_detail::search_fast_tiles(prepared,cache.count,k,cache.code_lookup() ? tieredq_detail::fast_code_query_group : tieredq_detail::fast_scan_query_tile_neon,scan,finish);
-    return;
-  }
-#endif
 #ifdef DV_TIEREDQ_X86
-  if (rows==1 && backend==tieredq_detail::FastScanBackend::avx512 &&
+  if (rows==1 && tieredq_detail::fast_scan_backend(cache)==tieredq_detail::FastScanBackend::avx512 &&
       tieredq_detail::fast_range_checkpoint_supported(cache,codec.tiers())) {
     fast_range_search(cache,codec,queries,k,finish);
     return;
   }
-  if (backend==tieredq_detail::FastScanBackend::avx512 || backend==tieredq_detail::FastScanBackend::avx2) {
-    auto prepare=[&](const float* vector) { return tieredq_detail::fast_scan_query_x86(cache,codec,vector); };
-    auto scan=[&](const auto* prepared,size_t count,size_t first,size_t documents,float* scores,size_t stride) {
-      if (backend==tieredq_detail::FastScanBackend::avx512)
-        tieredq_detail::scan_fast_avx512_tile(cache,prepared,count,first,documents,scores,stride);
-      else tieredq_detail::scan_fast_avx2_tile(cache,prepared,count,first,documents,scores,stride);
-    };
-    const size_t query_tile=cache.lookup ? 1 : cache.code_lookup() ? tieredq_detail::fast_code_query_group : backend==tieredq_detail::FastScanBackend::avx512
-        ? tieredq_detail::fast_scan_query_tile_x86 : tieredq_detail::fast_scan_query_tile_avx2;
-    auto prepared=fast_search_queries(cache,codec,queries,rows,prepare);
-    tieredq_detail::search_fast_tiles(prepared,cache.count,k,query_tile,scan,finish);
-    return;
-  }
 #endif
-  auto prepared=fast_search_queries(cache,codec,queries,rows,
-      [&](const float* vector) { return tieredq_detail::fast_scan_query_scalar(cache,codec,vector); });
-  auto scan=[&](const auto* prepared,size_t count,size_t first,size_t documents,float* scores,size_t stride) {
-    tieredq_detail::scan_fast_scalar_tile(cache,prepared,count,first,documents,scores,stride);
-  };
-  tieredq_detail::search_fast_tiles(prepared,cache.count,k,1,scan,finish);
+  tieredq_detail::with_fast_scan(cache,codec,queries,rows,[&](const auto& prepared,size_t query_tile,auto scan) {
+    tieredq_detail::search_fast_tiles(prepared,cache.count,k,query_tile,scan,finish);
+  });
 }
 } // namespace
 std::vector<TieredQHit> TieredQIndex::search_fast(const float* vector,size_t k) const {

@@ -3,6 +3,7 @@
 #include "tieredq/tieredq.h"
 #include <algorithm>
 #include <cstdlib>
+#include <limits>
 #include <stdexcept>
 #if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
 #include <immintrin.h>
@@ -101,6 +102,15 @@ inline void float_matrix_neon(const float* a, size_t rows, size_t lda, const Tie
   }
 }
 #endif
+// Packs b(k, c) for k < depth, c < columns into PANEL-wide column panels for float_matrix.
+template<class F> TieredQPanels pack_panels(size_t depth, size_t columns, F at) {
+  constexpr size_t PANEL = TieredQPanels::PANEL;
+  TieredQPanels p; p.depth = depth; p.columns = columns;
+  if (columns && depth > std::numeric_limits<size_t>::max() / p.padded_columns()) throw std::runtime_error("TieredQ: size overflow");
+  p.data.assign(depth * p.padded_columns(), 0);
+  for (size_t c = 0; c < columns; ++c) for (size_t k = 0; k < depth; ++k) p.data[(c / PANEL * depth + k) * PANEL + c % PANEL] = at(k, c);
+  return p;
+}
 inline void float_matrix(const float* a, size_t rows, size_t lda, const TieredQPanels& b, float* c, size_t ldc,
                          TieredQKernel kernel=TieredQKernel::automatic) {
   if (!rows) return;

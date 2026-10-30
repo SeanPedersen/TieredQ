@@ -84,7 +84,7 @@ void lookup_kernel_test(size_t count,bool avx512,const LookupLayout& layout_spec
   for (size_t i=0;i<weights;++i) { sigma[i]=float(i+1)/weights; mean[i]=std::cos(float(i)); }
   for (size_t i=0;i<centers.size();++i) centers[i]=float(i)/centers.size();
   const std::vector<uint16_t> fp32_basis_only;
-  const FastQueryBasis source{basis,fp32_basis_only,sigma,centers,norms};
+  const FastQueryBasis source{basis,fp32_basis_only,sigma,centers,norms,dimensions};
   const auto map=build_fast_query_projection(dimensions,source,mean);
   std::vector<uint8_t> rows(count*stride);
   const Layout layout{code_bytes};
@@ -104,6 +104,21 @@ void lookup_kernel_test(size_t count,bool avx512,const LookupLayout& layout_spec
   const std::vector<float> input{.3f,-.7f,.1f,.2f};
   auto query=prepare_fast_lookup_query(*cache->lookup,input.data(),source);
   const auto output=project_fast_query(map,input.data(),source);
+  {
+    // Dispatched (AVX-512) tables equal the portable builder, also on exact .5 ties after scaling.
+    FastScanLookupQuery portable;
+    portable.tables.assign(query.tables.size(),0);
+    fast_lookup_tables_scalar(*cache->lookup,output.data(),portable);
+    require(portable.tables==query.tables && portable.scales==query.scales,"lookup tables differ from portable build");
+    for (float r:{2.5f,-2.5f,0.5f,-0.5f,1.49999988f,126.5f,-126.5f,0.0f,-0.0f})
+      require(round_half_away(r)==float(std::lround(r)),"half-away rounding differs from lround");
+    auto ties=output;
+    for (size_t r=0;r<weights;++r) ties[r]=float(r%5)*0.25f-0.5f;
+    auto dispatched=fast_lookup_query(*cache->lookup,ties);
+    portable.tables.assign(query.tables.size(),0); portable.scales.clear();
+    fast_lookup_tables_scalar(*cache->lookup,ties.data(),portable);
+    require(portable.tables==dispatched.tables && portable.scales==dispatched.scales,"lookup ties differ from portable build");
+  }
   for (size_t r=0;r<weights;++r) {
     float expected=0; for (size_t i=0;i<dimensions;++i) expected+=input[i]*basis[i*weights+r];
     require(std::fabs(output[r]-expected*sigma[r])<1e-5f,"fast query projection differs");

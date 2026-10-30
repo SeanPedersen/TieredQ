@@ -119,13 +119,59 @@ inline std::shared_ptr<FastScanCache> build_fast_lookup_cache(
   cache->lookup=std::move(lookup);
   return cache;
 }
-inline FastScanLookupQuery prepare_fast_lookup_query(const FastScanLookupCache& cache,const float* vector,FastQueryBasis source) {
-  const auto output=project_fast_query(cache.projection,vector,source);
-  const size_t m=cache.projection.weights,k=cache.projection.centroids;
-  FastScanLookupQuery query;
-  query.centroid_scores.assign(output.begin()+m,output.begin()+m+k);
-  query.correction_weights.assign(output.begin()+m+k,output.begin()+m+2*k);
-  query.tables.assign(cache.pairs()*lookup_pair_groups*lookup_table_entries,0);
+// std::lround's half-away-from-zero rounding without the libm call (exact: x - trunc(x) is representable).
+inline float round_half_away(float x) {
+  const float whole=std::trunc(x);
+  return std::fabs(x-whole)>=0.5f ? whole+std::copysign(1.0f,x) : whole;
+}
+#if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
+// One register per group holds its 16 entries; each entry keeps the scalar sequence (0, then + weight * level per
+// slot in order), the same scale and the same half-away rounding, so tables match the portable build bit for bit.
+__attribute__((target("avx512f,avx512bw")))
+inline void fast_lookup_tables_avx512(const FastScanLookupCache& cache,const float* weights,FastScanLookupQuery& query) {
+  static_assert(lookup_table_entries==16);
+  const auto codes=_mm512_setr_epi32(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15);
+  const auto magnitude=_mm512_set1_epi32(INT32_MAX);
+  alignas(64) float values[lookup_scale_groups*lookup_table_entries];
+  for (size_t start=0;start<cache.groups.size();start+=lookup_scale_groups) {
+    const size_t count=std::min(lookup_scale_groups,cache.groups.size()-start);
+    auto peak=_mm512_setzero_ps();
+    for (size_t g=0;g<count;++g) {
+      const auto& group=cache.groups[start+g];
+      const auto mask=_mm512_set1_epi32(int((1u<<group.bits)-1));
+      auto value=_mm512_setzero_ps();
+      for (uint32_t j=0;j<group.count;++j) {
+        const auto& levels=cache.slot_levels(group.slots[j]);
+        const auto book=_mm512_maskz_loadu_ps(__mmask16((1u<<levels.size())-1),levels.data());
+        const auto index=_mm512_and_si512(_mm512_srlv_epi32(codes,_mm512_set1_epi32(int(j*group.bits))),mask);
+        value=_mm512_add_ps(value,_mm512_mul_ps(_mm512_set1_ps(weights[group.slots[j].rank]),_mm512_permutexvar_ps(index,book)));
+      }
+      // x - x is zero exactly for finite x.
+      if (_mm512_cmp_ps_mask(_mm512_sub_ps(value,value),_mm512_setzero_ps(),_CMP_EQ_OQ)!=0xFFFF)
+        throw std::runtime_error("TieredQ: nonfinite fast scan table");
+      _mm512_store_ps(values+g*lookup_table_entries,value);
+      peak=_mm512_max_ps(peak,_mm512_castsi512_ps(_mm512_and_si512(_mm512_castps_si512(value),magnitude)));
+    }
+    const float largest=_mm512_reduce_max_ps(peak);
+    const float scale=largest>0 ? std::max(largest/lookup_quant_max,std::numeric_limits<float>::min()) : 1;
+    query.scales.push_back(scale);
+    const auto divisor=_mm512_set1_ps(scale),half=_mm512_set1_ps(0.5f),one=_mm512_set1_ps(1.0f);
+    const auto low=_mm512_set1_ps(-float(lookup_quant_max)),high=_mm512_set1_ps(float(lookup_quant_max));
+    for (size_t g=0;g<count;++g) {
+      const auto x=_mm512_div_ps(_mm512_load_ps(values+g*lookup_table_entries),divisor);
+      const auto whole=_mm512_roundscale_ps(x,_MM_FROUND_TO_ZERO|_MM_FROUND_NO_EXC);
+      const auto fraction=_mm512_castsi512_ps(_mm512_and_si512(_mm512_castps_si512(_mm512_sub_ps(x,whole)),magnitude));
+      const auto away=_mm512_castsi512_ps(_mm512_or_si512(_mm512_castps_si512(one),
+          _mm512_andnot_si512(magnitude,_mm512_castps_si512(x))));
+      auto rounded=_mm512_mask_add_ps(whole,_mm512_cmp_ps_mask(fraction,half,_CMP_GE_OQ),whole,away);
+      rounded=_mm512_min_ps(_mm512_max_ps(rounded,low),high);
+      _mm_storeu_si128(reinterpret_cast<__m128i*>(query.tables.data()+(start+g)*lookup_table_entries),
+          _mm512_cvtepi32_epi8(_mm512_cvttps_epi32(rounded)));
+    }
+  }
+}
+#endif
+inline void fast_lookup_tables_scalar(const FastScanLookupCache& cache,const float* output,FastScanLookupQuery& query) {
   std::array<float,lookup_scale_groups*lookup_table_entries> values;
   for (size_t start=0;start<cache.groups.size();start+=lookup_scale_groups) {
     const size_t count=std::min(lookup_scale_groups,cache.groups.size()-start);
@@ -145,8 +191,26 @@ inline FastScanLookupQuery prepare_fast_lookup_query(const FastScanLookupCache& 
     const float scale=peak>0 ? std::max(peak/lookup_quant_max,std::numeric_limits<float>::min()) : 1;
     query.scales.push_back(scale);
     for (size_t i=0;i<count*lookup_table_entries;++i)
-      query.tables[start*lookup_table_entries+i]=int8_t(std::clamp<long>(std::lround(values[i]/scale),-lookup_quant_max,lookup_quant_max));
+      query.tables[start*lookup_table_entries+i]=int8_t(std::clamp(round_half_away(values[i]/scale),-float(lookup_quant_max),float(lookup_quant_max)));
   }
+}
+// Byte tables from one query's projection (project_fast_queries layout).
+inline FastScanLookupQuery fast_lookup_query(const FastScanLookupCache& cache,const std::vector<float>& output) {
+  const size_t m=cache.projection.weights,k=cache.projection.centroids;
+  FastScanLookupQuery query;
+  query.centroid_scores.assign(output.begin()+m,output.begin()+m+k);
+  query.correction_weights.assign(output.begin()+m+k,output.begin()+m+2*k);
+  query.tables.assign(cache.pairs()*lookup_pair_groups*lookup_table_entries,0);
+#if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
+  if (__builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512bw")) {
+    fast_lookup_tables_avx512(cache,output.data(),query);
+    return query;
+  }
+#endif
+  fast_lookup_tables_scalar(cache,output.data(),query);
   return query;
+}
+inline FastScanLookupQuery prepare_fast_lookup_query(const FastScanLookupCache& cache,const float* vector,FastQueryBasis source) {
+  return fast_lookup_query(cache,project_fast_query(cache.projection,vector,source));
 }
 } // namespace dv::tieredq_detail

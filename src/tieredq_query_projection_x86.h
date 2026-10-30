@@ -4,6 +4,7 @@
 #pragma once
 #include "tieredq/tieredq.h"
 #include "tieredq_layout.h"
+#include "tieredq_basis_panels.h"
 #include <algorithm>
 #include <cmath>
 #if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
@@ -14,18 +15,21 @@
 
 namespace dv::tieredq_detail {
 // Borrow only for a query call: caches may outlive, move or copy their model.
-// Exactly one of basis (FP32, format 2) and basis_half (binary16, format 3) is populated.
+// Exactly one of basis (FP32 row-major, format 2) and basis_half (binary16 rank panels, format 3) is populated.
 struct FastQueryBasis {
   const std::vector<float>& basis;
   const std::vector<uint16_t>& basis_half;
   const std::vector<float>& sigma;
   const std::vector<float>& centroids;
   const std::vector<float>& half_norms;
+  size_t inputs;
   static FastQueryBasis from(const TieredQ& codec) {
-    return {codec.basis_,codec.basis_half_,codec.sigma_,codec.centroids_,codec.centroid_half_norms_};
+    return {codec.basis_,codec.basis_half_,codec.sigma_,codec.centroids_,codec.centroid_half_norms_,codec.model_dimensions()};
   }
   bool half() const { return !basis_half.empty(); }
-  float at(size_t index) const { return half() ? half_decode(basis_half[index]) : basis[index]; }
+  float at(size_t input,size_t rank) const {
+    return half() ? half_decode(basis_half[basis_panel_position(inputs,input,rank)]) : basis[input*sigma.size()+rank];
+  }
 };
 // Centroid outputs are regenerated from the model per query; only the per-dimension mean shift is kept.
 struct FastQueryProjection {
@@ -39,7 +43,7 @@ inline FastQueryProjection build_fast_query_projection(size_t dimensions,FastQue
   map.dimensions=dimensions; map.weights=source.sigma.size(); map.centroids=source.half_norms.size();
   map.correction.assign(dimensions,0);
   for (size_t i=0;i<dimensions;++i)
-    for (size_t r=0;r<map.weights;++r) map.correction[i]+=source.at(i*map.weights+r)*mean[r];
+    for (size_t r=0;r<map.weights;++r) map.correction[i]+=source.at(i,r)*mean[r];
   return map;
 }
 inline void validate_fast_query(const FastQueryProjection& map,const float* vector) {
@@ -104,12 +108,11 @@ inline void project_fast_centroids(const FastQueryProjection& map,const float* v
     output[k+cid]=norm>0 ? dot/norm : 0;
   }
 }
-// Regenerate basis*sigma before multiplying by the query, preserving the old FP32 rounding.
-// Basis rows are contiguous; vectorizing ranks avoids a second dense serving matrix. A binary16 basis is
-// widened exactly on load, so both encodings share every arithmetic step.
+// Regenerate basis*sigma before multiplying by the query, preserving the old FP32 rounding. A binary16 basis
+// projects through its rank panels (tieredq_basis_panels.h) with the same arithmetic; the FP32 basis of format-2
+// models keeps its row order.
 #if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
-template<bool half>
-__attribute__((target("avx2,f16c")))
+__attribute__((target("avx2")))
 inline void project_fast_weights_avx2(const FastQueryProjection& map,const float* vector,
     FastQueryBasis source,float* output) {
   constexpr size_t lanes=8;
@@ -118,18 +121,13 @@ inline void project_fast_weights_avx2(const FastQueryProjection& map,const float
     const size_t row=i*map.weights;
     size_t rank=0;
     for (;rank+lanes<=map.weights;rank+=lanes) {
-      __m256 basis;
-      if constexpr (half) basis=_mm256_cvtph_ps(_mm_loadu_si128(reinterpret_cast<const __m128i*>(source.basis_half.data()+row+rank)));
-      else basis=_mm256_loadu_ps(source.basis.data()+row+rank);
-      const auto coefficient=_mm256_mul_ps(basis,_mm256_loadu_ps(source.sigma.data()+rank));
-      const auto sum=_mm256_add_ps(_mm256_loadu_ps(output+rank),_mm256_mul_ps(query,coefficient));
-      _mm256_storeu_ps(output+rank,sum);
+      const auto coefficient=_mm256_mul_ps(_mm256_loadu_ps(source.basis.data()+row+rank),_mm256_loadu_ps(source.sigma.data()+rank));
+      _mm256_storeu_ps(output+rank,_mm256_add_ps(_mm256_loadu_ps(output+rank),_mm256_mul_ps(query,coefficient)));
     }
     for (;rank<map.weights;++rank)
-      output[rank]+=vector[i]*(source.at(row+rank)*source.sigma[rank]);
+      output[rank]+=vector[i]*(source.basis[row+rank]*source.sigma[rank]);
   }
 }
-template<bool half>
 __attribute__((target("avx512f")))
 inline void project_fast_weights_avx512(const FastQueryProjection& map,const float* vector,
     FastQueryBasis source,float* output) {
@@ -138,39 +136,47 @@ inline void project_fast_weights_avx512(const FastQueryProjection& map,const flo
     const auto query=_mm512_set1_ps(vector[i]);
     const size_t row=i*map.weights;
     for (size_t rank=0;rank<map.weights;rank+=lanes) {
-      const size_t active=std::min(lanes,map.weights-rank);
-      const auto mask=__mmask16((1u<<active)-1);
-      __m512 basis;
-      if constexpr (half) {
-        alignas(32) uint16_t tail[lanes]={};
-        const uint16_t* bits=source.basis_half.data()+row+rank;
-        if (active<lanes) { std::copy_n(bits,active,tail); bits=tail; }
-        basis=_mm512_cvtph_ps(_mm256_loadu_si256(reinterpret_cast<const __m256i*>(bits)));
-      } else basis=_mm512_maskz_loadu_ps(mask,source.basis.data()+row+rank);
-      const auto coefficient=_mm512_mul_ps(basis,_mm512_maskz_loadu_ps(mask,source.sigma.data()+rank));
+      const auto mask=__mmask16((1u<<std::min(lanes,map.weights-rank))-1);
+      const auto coefficient=_mm512_mul_ps(_mm512_maskz_loadu_ps(mask,source.basis.data()+row+rank),
+          _mm512_maskz_loadu_ps(mask,source.sigma.data()+rank));
       const auto sum=_mm512_add_ps(_mm512_maskz_loadu_ps(mask,output+rank),_mm512_mul_ps(query,coefficient));
       _mm512_mask_storeu_ps(output+rank,mask,sum);
     }
   }
 }
 #endif
-inline std::vector<float> project_fast_query(const FastQueryProjection& map,const float* vector,FastQueryBasis source) {
-  std::vector<float> output(map.weights+2*map.centroids,0);
-  project_fast_centroids(map,vector,source,output.data()+map.weights);
+inline void project_fast_weights_fp32(const FastQueryProjection& map,const float* vector,FastQueryBasis source,float* output) {
 #if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
-  if (__builtin_cpu_supports("avx512f")) {
-    if (source.half()) project_fast_weights_avx512<true>(map,vector,source,output.data());
-    else project_fast_weights_avx512<false>(map,vector,source,output.data());
-    return output;
-  }
-  if (__builtin_cpu_supports("avx2") && __builtin_cpu_supports("f16c")) {
-    if (source.half()) project_fast_weights_avx2<true>(map,vector,source,output.data());
-    else project_fast_weights_avx2<false>(map,vector,source,output.data());
-    return output;
-  }
+  if (__builtin_cpu_supports("avx512f")) return project_fast_weights_avx512(map,vector,source,output);
+  if (__builtin_cpu_supports("avx2")) return project_fast_weights_avx2(map,vector,source,output);
 #endif
   for (size_t i=0;i<map.dimensions;++i) for (size_t rank=0;rank<map.weights;++rank)
-    output[rank]+=vector[i]*(source.at(i*map.weights+rank)*source.sigma[rank]);
-  return output;
+    output[rank]+=vector[i]*(source.basis[i*map.weights+rank]*source.sigma[rank]);
+}
+// Per query: weights [0, m), centroid scores [m, m + k) and correction weights [m + k, m + 2k). A binary16
+// basis projects up to basis_query_tile queries per pass over the basis.
+inline std::vector<std::vector<float>> project_fast_queries(const FastQueryProjection& map,const float* vectors,
+    size_t rows,FastQueryBasis source) {
+  std::vector<std::vector<float>> outputs(rows);
+  for (size_t row=0;row<rows;++row) {
+    outputs[row].assign(map.weights+2*map.centroids,0);
+    project_fast_centroids(map,vectors+row*map.dimensions,source,outputs[row].data()+map.weights);
+  }
+  if (!source.half()) {
+    for (size_t row=0;row<rows;++row) project_fast_weights_fp32(map,vectors+row*map.dimensions,source,outputs[row].data());
+    return outputs;
+  }
+  std::vector<float> weights(std::min(rows,basis_query_tile)*map.weights);
+  for (size_t first=0;first<rows;first+=basis_query_tile) {
+    const size_t count=std::min(basis_query_tile,rows-first);
+    project_basis_panels({source.basis_half.data(),map.dimensions,map.weights,source.sigma.data(),
+        vectors+first*map.dimensions,map.dimensions,weights.data(),map.weights},count);
+    for (size_t row=0;row<count;++row)
+      std::copy_n(weights.data()+row*map.weights,map.weights,outputs[first+row].data());
+  }
+  return outputs;
+}
+inline std::vector<float> project_fast_query(const FastQueryProjection& map,const float* vector,FastQueryBasis source) {
+  return std::move(project_fast_queries(map,vector,1,source)[0]);
 }
 } // namespace dv::tieredq_detail

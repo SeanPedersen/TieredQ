@@ -15,7 +15,7 @@
 #include <string>
 #include <vector>
 namespace dv::tieredq_detail {
-constexpr uint32_t codec_file_kind=1,exact_index_file_kind=2,fast_index_file_kind=3;
+constexpr uint32_t codec_file_kind=1,exact_index_file_kind=2,fast_index_file_kind=3,ivf_index_file_kind=4;
 inline void bad(const std::string& message) { throw std::runtime_error("TieredQ: "+message); }
 inline size_t product(size_t a,size_t b) {
   if (b && a>std::numeric_limits<size_t>::max()/b) bad("size overflow");

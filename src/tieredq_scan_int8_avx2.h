@@ -22,7 +22,7 @@ inline void fast_epilogue_avx2(const FastScanCache& cache,const std::vector<floa
   std::copy_n(tail,count,out);
 }
 
-// Range starts are aligned to lookup_block_docs; only the final block may be partial.
+// Range starts are aligned to fast_lookup_avx2_docs (a chunk never crosses a lookup block); the final chunk may be partial.
 __attribute__((target("avx2,f16c")))
 inline void scan_fast_lookup_avx2_range(const FastScanCache& cache,const FastScanLookupQuery& q,
     size_t first,size_t count,float* scores) {

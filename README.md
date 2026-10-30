@@ -91,6 +91,31 @@ Include `<tieredq/tieredq.h>`, use `find_package(TieredQ CONFIG REQUIRED)`, and
 link `TieredQ::TieredQ`. FetchContent also works. See [integration.md](integration.md)
 for layouts, threading, ownership and dependency setup.
 
+### IVF (C++)
+
+`dv::TieredQIVFIndex` is a fast-mode inverted-file index. With `lists = 0` the codec's k-means centroids
+(at most 256) are the lists, at no extra storage. Any other count trains a separate coarse quantizer, whose
+centroids are stored.
+
+```cpp
+dv::TieredQIVFIndex index(codec, /*lists=*/1024);
+index.build(rows, count);
+auto hits = index.search(query, /*k=*/10, /*nprobe=*/16);
+// Opt-in approximate pruning for models with more than four tiers (about 2+ bits/dim):
+auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*prefix_tiers=*/4});
+```
+
+- **Pruning.** By default the scan prunes exactly: hits equal an unpruned scan. A positive `confidence`
+  bounds the remaining tiers statistically instead, which is faster and approximate. On OpenAI 100k, confidence 8
+  kept recall unchanged (±0.0001) at 1.7× the QPS at 4 bits/dim. With `prefix_tiers = 3` it gave 1.6–2.4× the QPS
+  for 0.001–0.003 recall at 2 and 4 bits/dim. Confidence 4 or less loses clearly more recall.
+- **Bit cap.** At about 2 bits/dim or less, training with `TieredQConfig::max_bits = 4` keeps every tier on the
+  nibble lookup kernel. That gave 1.7× RaBitQ's IVF QPS at equal recall and memory (OpenAI 100k), for about
+  0.006 recall at full probe. Don't use it at 4 bits/dim, where it loses recall.
+- **Results** against RaBitQ's IVF at equal measured memory are in
+  [issue #19](https://github.com/SeanPedersen/TieredQ/issues/19) and the
+  [issue #6 eval](benchmark/experiments/issue6_ivf/ivf_eval.cpp).
+
 ## Codec comparison benchmark
 
 See [benchmark/README.md](benchmark/README.md) for the one-command CPU comparison

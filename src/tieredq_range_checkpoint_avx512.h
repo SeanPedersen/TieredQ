@@ -33,23 +33,52 @@ struct FastRangeCheckpoint {
   }
 };
 
+// Blocks interleave as in scan_single_code_avx512; blocks that pass the checkpoint finish their suffix together
+// when all pass, else one at a time.
+template<size_t Blocks>
+__attribute__((target("avx512f,avx512bw"),always_inline))
+inline void scan_range_code_group_avx512(const FastScanCache& cache,const std::vector<CodeTableSegment>& segments,
+    const float* weights,const float* centers,const float* corrections,size_t doc,size_t first,size_t count,
+    float* scores,const FastRangeCheckpoint& checkpoint) {
+  const size_t block_bytes=cache.level_block_bytes();
+  const auto* packed=cache.levels.data()+doc/fast_scan_block_docs*block_bytes;
+  AccumulateLevelsAvx512<Blocks> sink{weights,{}};
+  for (auto& dot:sink.dot) dot=_mm512_setzero_ps();
+  size_t tier=0;
+  for (;tier<segments.size() && segments[tier].end<=checkpoint.rank;++tier)
+    walk_code_segment_avx512<Blocks>(packed,block_bytes,segments[tier],sink);
+  uint16_t keep[Blocks];
+  __m512 terms[Blocks][fast_code_query_tile_avx512];
+  bool live[Blocks];
+  size_t survivors=0;
+  for (size_t block=0;block<Blocks;++block) {
+    const size_t at=doc+block*fast_scan_block_docs;
+    live[block]=checkpoint.check(cache,&sink.dot[block],centers,corrections,at,std::min(fast_scan_block_docs,first+count-at),
+        keep+block,terms[block]);
+    survivors+=live[block];
+  }
+  if (survivors==Blocks) for (size_t t=tier;t<segments.size();++t) walk_code_segment_avx512<Blocks>(packed,block_bytes,segments[t],sink);
+  else for (size_t block=0;block<Blocks;++block) if (live[block]) {
+    AccumulateLevelsAvx512<1> single{weights,{sink.dot[block]}};
+    for (size_t t=tier;t<segments.size();++t) walk_code_segment_avx512<1>(packed+block*block_bytes,block_bytes,segments[t],single);
+    sink.dot[block]=single.dot[0];
+  }
+  for (size_t block=0;block<Blocks;++block) {
+    const size_t at=doc+block*fast_scan_block_docs;
+    store_code_scores_avx512<1,true>(cache,&sink.dot[block],centers,corrections,at,std::min(fast_scan_block_docs,first+count-at),
+        scores+at-first,count,keep+block,terms[block]);
+  }
+}
 __attribute__((target("avx512f,avx512bw")))
 inline void scan_range_code_blocks_avx512(const FastScanCache& cache,
     const std::vector<CodeTableSegment>& segments,const float* weights,const float* centers,
     const float* corrections,size_t first,size_t count,float* scores,const FastRangeCheckpoint& checkpoint) {
-  for (size_t doc=first;doc<first+count;doc+=fast_scan_block_docs) {
-    const size_t valid=std::min(fast_scan_block_docs,first+count-doc);
-    const auto* packed=cache.levels.data()+doc/fast_scan_block_docs*cache.level_block_bytes();
-    AccumulateLevelsAvx512 sink{weights,_mm512_setzero_ps()};
-    size_t tier=0;
-    for (;tier<segments.size() && segments[tier].end<=checkpoint.rank;++tier)
-      walk_code_segment_avx512(packed,segments[tier],sink);
-    uint16_t keep[1];
-    __m512 terms[fast_code_query_tile_avx512];
-    if (checkpoint.check(cache,&sink.dot,centers,corrections,doc,valid,keep,terms))
-      for (;tier<segments.size();++tier) walk_code_segment_avx512(packed,segments[tier],sink);
-    store_code_scores_avx512<1,true>(cache,&sink.dot,centers,corrections,doc,valid,scores+doc-first,count,keep,terms);
-  }
+  constexpr size_t span=code_interleaved_blocks*fast_scan_block_docs;
+  size_t doc=first;
+  for (;doc+span<=first+count;doc+=span)
+    scan_range_code_group_avx512<code_interleaved_blocks>(cache,segments,weights,centers,corrections,doc,first,count,scores,checkpoint);
+  for (;doc<first+count;doc+=fast_scan_block_docs)
+    scan_range_code_group_avx512<1>(cache,segments,weights,centers,corrections,doc,first,count,scores,checkpoint);
 }
 
 inline void scan_fast_range_avx512(const FastScanCache& cache,const TieredQQuery& query,

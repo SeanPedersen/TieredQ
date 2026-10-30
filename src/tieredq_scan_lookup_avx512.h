@@ -13,51 +13,71 @@ inline void lookup_epilogue(const FastScanCache& c, const FastScanLookupQuery& q
   const size_t n = std::min(lookup_vector_docs, output_end - first);
   _mm512_mask_storeu_ps(out + first - output_first, n == lookup_vector_docs ? 0xffff : (1u << n) - 1, score);
 }
-// first is aligned to lookup_block_docs; count may end within the final block.
-__attribute__((target("avx512f,avx512bw")))
-inline void scan_fast_lookup_avx512_range(const FastScanCache& c, const FastScanLookupQuery& q,
-    size_t first, size_t count, float* out) {
-  const auto& lookup=*c.lookup;
-  constexpr size_t chunks = lookup_block_docs / lookup_chunk_docs;
-  const size_t pairs = lookup.pairs();
+// Chunks consecutive 64-document chunks of one block, starting at chunk `first_chunk`: dots[chunk][vector].
+template<size_t Chunks>
+__attribute__((target("avx512f,avx512bw"),always_inline))
+inline void lookup_chunks_avx512(const FastScanLookupCache& lookup, const FastScanLookupQuery& q, const uint8_t* base,
+    size_t first_chunk, __m512 (&dots)[Chunks][4]) {
   const auto mask = _mm512_set1_epi8(lookup_table_entries-1), ones = _mm512_set1_epi8(1);
   const auto order0 = _mm512_setr_epi64(0,1,8,9,2,3,10,11);
   const auto order1 = _mm512_setr_epi64(4,5,12,13,6,7,14,15);
-  for (size_t b = first / lookup_block_docs; b < (first + count + lookup_block_docs - 1) / lookup_block_docs; ++b) {
-    __m512 dots[chunks][4];
-    for(size_t chunk=0;chunk<chunks;++chunk)for(auto& dot:dots[chunk])dot=_mm512_setzero_ps();
-    const uint8_t* base = lookup.codes.data()+b*pairs*lookup_block_docs;
-    for (size_t start = 0; start < lookup.groups.size(); start += lookup_scale_groups) {
-      __m512i sum[chunks][2];
-      for(size_t chunk=0;chunk<chunks;++chunk)for(auto& x:sum[chunk])x=_mm512_setzero_si512();
-      const size_t end = std::min(start+lookup_scale_groups,lookup.groups.size());
-      for (size_t g = start; g < end; g += lookup_pair_groups) {
-        const auto t0 = _mm512_broadcast_i32x4(_mm_loadu_si128(reinterpret_cast<const __m128i*>(q.tables.data()+g*lookup_table_entries)));
-        const auto t1 = _mm512_broadcast_i32x4(_mm_loadu_si128(reinterpret_cast<const __m128i*>(q.tables.data()+(g+1)*lookup_table_entries)));
+  for(size_t chunk=0;chunk<Chunks;++chunk)for(auto& dot:dots[chunk])dot=_mm512_setzero_ps();
+  base += first_chunk*lookup_chunk_docs;
+  for (size_t start = 0; start < lookup.groups.size(); start += lookup_scale_groups) {
+    __m512i sum[Chunks][2];
+    for(size_t chunk=0;chunk<Chunks;++chunk)for(auto& x:sum[chunk])x=_mm512_setzero_si512();
+    const size_t end = std::min(start+lookup_scale_groups,lookup.groups.size());
+    for (size_t g = start; g < end; g += lookup_pair_groups) {
+      const auto t0 = _mm512_broadcast_i32x4(_mm_loadu_si128(reinterpret_cast<const __m128i*>(q.tables.data()+g*lookup_table_entries)));
+      const auto t1 = _mm512_broadcast_i32x4(_mm_loadu_si128(reinterpret_cast<const __m128i*>(q.tables.data()+(g+1)*lookup_table_entries)));
 #pragma GCC unroll 4
-        for(size_t chunk=0;chunk<chunks;++chunk){
-          const auto packed = _mm512_loadu_si512(base+g/lookup_pair_groups*lookup_block_docs+chunk*lookup_chunk_docs);
-          const auto v0 = _mm512_shuffle_epi8(t0,_mm512_and_si512(packed,mask));
-          const auto v1 = _mm512_shuffle_epi8(t1,_mm512_and_si512(_mm512_srli_epi16(packed,lookup_code_bits),mask));
-          sum[chunk][0] = _mm512_add_epi16(sum[chunk][0],_mm512_maddubs_epi16(ones,_mm512_unpacklo_epi8(v0,v1)));
-          sum[chunk][1] = _mm512_add_epi16(sum[chunk][1],_mm512_maddubs_epi16(ones,_mm512_unpackhi_epi8(v0,v1)));
-        }
-      }
-      const auto scale = _mm512_set1_ps(q.scales[start/lookup_scale_groups]);
-      // Byte unpacking is lane-local: restore document order before widening the section sums.
-#pragma GCC unroll 4
-      for(size_t chunk=0;chunk<chunks;++chunk){
-        const auto a = _mm512_permutex2var_epi64(sum[chunk][0],order0,sum[chunk][1]);
-        const auto z = _mm512_permutex2var_epi64(sum[chunk][0],order1,sum[chunk][1]);
-        dots[chunk][0] = _mm512_add_ps(dots[chunk][0],_mm512_mul_ps(_mm512_cvtepi32_ps(_mm512_cvtepi16_epi32(_mm512_castsi512_si256(a))),scale));
-        dots[chunk][1] = _mm512_add_ps(dots[chunk][1],_mm512_mul_ps(_mm512_cvtepi32_ps(_mm512_cvtepi16_epi32(_mm512_extracti64x4_epi64(a,1))),scale));
-        dots[chunk][2] = _mm512_add_ps(dots[chunk][2],_mm512_mul_ps(_mm512_cvtepi32_ps(_mm512_cvtepi16_epi32(_mm512_castsi512_si256(z))),scale));
-        dots[chunk][3] = _mm512_add_ps(dots[chunk][3],_mm512_mul_ps(_mm512_cvtepi32_ps(_mm512_cvtepi16_epi32(_mm512_extracti64x4_epi64(z,1))),scale));
+      for(size_t chunk=0;chunk<Chunks;++chunk){
+        const auto packed = _mm512_loadu_si512(base+g/lookup_pair_groups*lookup_block_docs+chunk*lookup_chunk_docs);
+        const auto v0 = _mm512_shuffle_epi8(t0,_mm512_and_si512(packed,mask));
+        const auto v1 = _mm512_shuffle_epi8(t1,_mm512_and_si512(_mm512_srli_epi16(packed,lookup_code_bits),mask));
+        sum[chunk][0] = _mm512_add_epi16(sum[chunk][0],_mm512_maddubs_epi16(ones,_mm512_unpacklo_epi8(v0,v1)));
+        sum[chunk][1] = _mm512_add_epi16(sum[chunk][1],_mm512_maddubs_epi16(ones,_mm512_unpackhi_epi8(v0,v1)));
       }
     }
-    for(size_t chunk=0;chunk<chunks;++chunk)for(size_t t=0;t<4;++t){
-      const size_t doc=b*lookup_block_docs+chunk*lookup_chunk_docs+t*lookup_vector_docs;
-      if(doc<first+count)lookup_epilogue(c,q,doc,dots[chunk][t],out,first,first+count);
+    const auto scale = _mm512_set1_ps(q.scales[start/lookup_scale_groups]);
+    // Byte unpacking is lane-local: restore document order before widening the section sums.
+#pragma GCC unroll 4
+    for(size_t chunk=0;chunk<Chunks;++chunk){
+      const auto a = _mm512_permutex2var_epi64(sum[chunk][0],order0,sum[chunk][1]);
+      const auto z = _mm512_permutex2var_epi64(sum[chunk][0],order1,sum[chunk][1]);
+      dots[chunk][0] = _mm512_add_ps(dots[chunk][0],_mm512_mul_ps(_mm512_cvtepi32_ps(_mm512_cvtepi16_epi32(_mm512_castsi512_si256(a))),scale));
+      dots[chunk][1] = _mm512_add_ps(dots[chunk][1],_mm512_mul_ps(_mm512_cvtepi32_ps(_mm512_cvtepi16_epi32(_mm512_extracti64x4_epi64(a,1))),scale));
+      dots[chunk][2] = _mm512_add_ps(dots[chunk][2],_mm512_mul_ps(_mm512_cvtepi32_ps(_mm512_cvtepi16_epi32(_mm512_castsi512_si256(z))),scale));
+      dots[chunk][3] = _mm512_add_ps(dots[chunk][3],_mm512_mul_ps(_mm512_cvtepi32_ps(_mm512_cvtepi16_epi32(_mm512_extracti64x4_epi64(z,1))),scale));
+    }
+  }
+}
+template<size_t Chunks>
+__attribute__((target("avx512f,avx512bw")))
+inline void scan_lookup_chunks_avx512(const FastScanCache& c, const FastScanLookupQuery& q, size_t block,
+    size_t first_chunk, size_t first, size_t count, float* out) {
+  const auto& lookup=*c.lookup;
+  __m512 dots[Chunks][4];
+  lookup_chunks_avx512<Chunks>(lookup,q,lookup.codes.data()+block*lookup.pairs()*lookup_block_docs,first_chunk,dots);
+  for(size_t chunk=0;chunk<Chunks;++chunk)for(size_t t=0;t<4;++t){
+    const size_t doc=block*lookup_block_docs+(first_chunk+chunk)*lookup_chunk_docs+t*lookup_vector_docs;
+    if(doc>=first && doc<first+count)lookup_epilogue(c,q,doc,dots[chunk][t],out,first,first+count);
+  }
+}
+// Scores only the 64-document chunks that overlap [first, first + count); first is aligned to lookup_vector_docs.
+__attribute__((target("avx512f,avx512bw")))
+inline void scan_fast_lookup_avx512_range(const FastScanCache& c, const FastScanLookupQuery& q,
+    size_t first, size_t count, float* out) {
+  constexpr size_t chunks = lookup_block_docs / lookup_chunk_docs;
+  for (size_t b = first / lookup_block_docs; b < (first + count + lookup_block_docs - 1) / lookup_block_docs; ++b) {
+    const size_t block_first=b*lookup_block_docs;
+    const size_t chunk_begin=std::max(first,block_first)%lookup_block_docs/lookup_chunk_docs;
+    const size_t chunk_end=(std::min(first+count,block_first+lookup_block_docs)-block_first+lookup_chunk_docs-1)/lookup_chunk_docs;
+    switch (chunk_end-chunk_begin) {
+      case chunks: scan_lookup_chunks_avx512<chunks>(c,q,b,0,first,count,out); break;
+      case 3: scan_lookup_chunks_avx512<3>(c,q,b,chunk_begin,first,count,out); break;
+      case 2: scan_lookup_chunks_avx512<2>(c,q,b,chunk_begin,first,count,out); break;
+      default: scan_lookup_chunks_avx512<1>(c,q,b,chunk_begin,first,count,out); break;
     }
   }
 }
