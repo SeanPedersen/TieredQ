@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import numpy as np
 
-DATASET_NAMES = {'sift': 'SIFT1M', 'glove': 'GloVe-200', 'openai': 'OpenAI3-1536', 'gemini': 'DBpedia Gemini-768'}
+DATASET_NAMES = {'sift': 'SIFT1M', 'glove': 'GloVe-200', 'openai': 'OpenAI3-1536', 'gemini': 'DBpedia Gemini-768', 'openai1m': 'OpenAI3-1536 1M'}
 CODEC_STYLES = {'tieredq': ('TieredQ', '#1769aa'), 'rabitq': ('RaBitQ', '#d95f02'), 'qdrant': ('Qdrant TQ+', '#1b9e77')}
 # Vertical label offsets (points) keep budget labels of overlapping codecs apart.
 LABEL_OFFSETS = {'tieredq': 12, 'rabitq': -17, 'qdrant': 24}

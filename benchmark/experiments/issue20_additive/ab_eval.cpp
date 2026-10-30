@@ -3,7 +3,8 @@
 // Recall is the mean over seeds 0-2 (inner-product truth on the raw base); QPS is seed 0, best of REPEATS,
 // at 1 thread batch 1, 1 thread batch 32 and THREADS threads batch 32. model_id identifies identical models.
 // The last two columns split recall into even and odd query ids, for choosing a setting on one half (#9).
-// AB_MODE=full trains for and serves full mode instead (#9 full-mode A/B).
+// AB_MODE=full trains for and serves full mode instead (#9 full-mode A/B). AB_POWER sets allocation_power
+// (variance^power bit allocation; unset keeps the metric default) for the #4 1M α check.
 // Usage: issue20_ab_eval LABEL DATA_DIR D TIMED(0|1) BUDGET...
 #include "tieredq/tieredq.h"
 #include <algorithm>
@@ -46,6 +47,7 @@ Result evaluate(const std::vector<float>& base,const std::vector<float>& queries
   config.num_centroids=centroids;
   const char* mode=std::getenv("AB_MODE");
   config.target_mode=mode && !std::strcmp(mode,"full") ? dv::TieredQIndexMode::full : dv::TieredQIndexMode::fast;
+  if (const char* power=std::getenv("AB_POWER")) config.allocation_power=std::stod(power);
   dv::TieredQIndex index(dv::TieredQ::train(config,sample.data(),train_count,seed),config.target_mode);
   index.add(base.data(),n);
   std::vector<float> scores(nq*top_k); std::vector<uint32_t> ids(nq*top_k);

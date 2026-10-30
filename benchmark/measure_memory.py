@@ -24,7 +24,7 @@ import time
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
-DATASETS = ["sift", "glove", "openai", "gemini"]
+DATASETS = ["sift", "glove", "openai", "gemini", "openai1m"]
 CODECS = ["tieredq", "rabitq"]
 # Qdrant TQ+ needs the Rust shim (turboquant/native), so it is opt-in via --codecs.
 OPTIONAL_CODECS = ["qdrant"]

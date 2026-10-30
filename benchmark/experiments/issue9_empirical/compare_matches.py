@@ -10,7 +10,7 @@ import statistics
 import sys
 from pathlib import Path
 
-DIMENSIONS = {"sift": 128, "glove": 200, "openai": 1536, "gemini": 768}
+DIMENSIONS = {"sift": 128, "glove": 200, "openai": 1536, "gemini": 768, "openai1m": 1536}
 REFERENCES = ["rabitq", "qdrant"]
 FLOAT_BITS = 32
 

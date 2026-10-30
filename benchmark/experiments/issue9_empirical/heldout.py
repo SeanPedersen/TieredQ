@@ -9,7 +9,7 @@ import statistics
 import sys
 from pathlib import Path
 
-DATASETS = ["glove", "sift", "openai", "gemini"]
+DATASETS = ["glove", "sift", "openai", "gemini", "openai1m"]
 BASE = "base"
 BUDGET, RECALL_EVEN, RECALL_ODD = 1, -2, -1
 

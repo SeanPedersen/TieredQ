@@ -46,6 +46,9 @@ def prepare(root, name, max_base=None, query_count=QUERY_COUNT):
     if name == "gemini":
         from gemini_data import prepare_gemini
         return prepare_gemini(root, max_base, query_count)
+    if name == "openai1m":
+        from openai1m_data import prepare_openai1m
+        return prepare_openai1m(root, max_base, query_count)
     n = min(max_base or BASE_COUNTS[name], BASE_COUNTS[name])
     if n < TOP_K or not 1 <= query_count <= QUERY_COUNT:
         raise ValueError("Need at least 10 base rows and 1–1000 queries")
