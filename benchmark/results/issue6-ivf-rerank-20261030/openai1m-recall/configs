@@ -1,0 +1,22 @@
+default 256 tieredq 1558
+default 256 tieredq 3133
+max4 256 tieredq 3133 MAX_BITS=4
+z8-p3 256 tieredq 3133 PRUNE_Z=8 PRUNE_PREFIX=3
+z8-p4 256 tieredq 3133 PRUNE_Z=8 PRUNE_PREFIX=4
+default 256 tieredq 6173
+z8-p3 256 tieredq 6173 PRUNE_Z=8 PRUNE_PREFIX=3
+z8-p4 256 tieredq 6173 PRUNE_Z=8 PRUNE_PREFIX=4
+rabitq 256 rabitq 1
+rabitq 256 rabitq 2
+rabitq 256 rabitq 4
+default 1024 tieredq 1558
+default 1024 tieredq 3102
+max4 1024 tieredq 3115 MAX_BITS=4
+z8-p3 1024 tieredq 3102 PRUNE_Z=8 PRUNE_PREFIX=3
+z8-p4 1024 tieredq 3102 PRUNE_Z=8 PRUNE_PREFIX=4
+default 1024 tieredq 6112
+z8-p3 1024 tieredq 6112 PRUNE_Z=8 PRUNE_PREFIX=3
+z8-p4 1024 tieredq 6112 PRUNE_Z=8 PRUNE_PREFIX=4
+rabitq 1024 rabitq 1
+rabitq 1024 rabitq 2
+rabitq 1024 rabitq 4

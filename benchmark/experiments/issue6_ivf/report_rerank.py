@@ -1,7 +1,7 @@
 """Issue #19.1 / #22: pick timing cells from the untimed IVF + rerank recall pass, and tabulate the timed result.
 
 Rows are job_rerank.sh output: label codec budget lists nprobe disk_bits code_bits rerank_k cand_recall recall reads
-fp32_bits qps_1t_b1 qps_8t_b32 build_s list_hash.
+fp32_bits qps_1t_b1 qps_8t_b32 build_s list_hash [rescore rescore_bytes] (rows without the RESCORE columns are fp32).
 
   select RECALL_DIR [TARGETS...] [--lists L]
                                 -> job_rerank.sh CONFIGS lines: per configuration and k', the smallest nprobe that
@@ -9,6 +9,8 @@ fp32_bits qps_1t_b1 qps_8t_b32 build_s list_hash.
                                    for runs on the codec's own lists, whose rows print the codec list count
   report DIR... [--targets ...] -> markdown: per codec the least index RAM per target, and per memory level the
                                    fastest configuration per target (index RAM vs QPS)
+  rescore DIR... [--targets ...] -> markdown: per first stage and target, each rerank tier's first cell reaching it
+                                   (least nprobe, then k'), and the smallest tier that does
 """
 import argparse
 import csv
@@ -17,9 +19,9 @@ from collections import defaultdict
 from pathlib import Path
 
 COLUMNS = ("label codec budget lists nprobe disk_bits code_bits rerank_k cand_recall recall reads fp32_bits "
-           "qps_1t qps_8t build_s list_hash").split()
+           "qps_1t qps_8t build_s list_hash rescore rescore_bytes").split()
 NUMERIC = {"budget", "disk_bits", "code_bits", "cand_recall", "recall", "reads", "fp32_bits", "qps_1t", "qps_8t",
-           "build_s"}
+           "build_s", "rescore_bytes"}
 INTEGER = {"lists", "nprobe", "rerank_k"}
 DEFAULT_TARGETS = (0.90, 0.95, 0.99)
 # Matched budgets share a memory level when their disk bits/vector are within this fraction of each other.
@@ -38,12 +40,15 @@ def load_rows(paths: list[Path]) -> list[dict]:
     rows = []
     for path in files:
         for fields in csv.reader(path.open(), delimiter="\t"):
-            rows.append({c: parse(v, c) for c, v in zip(COLUMNS, fields)})
+            row = {c: parse(v, c) for c, v in zip(COLUMNS, fields)}
+            row.setdefault("rescore", "fp32")
+            row.setdefault("rescore_bytes", row["fp32_bits"] / 8)
+            rows.append(row)
     return rows
 
 
 def config_key(row: dict) -> tuple:
-    return row["label"], row["lists"], row["codec"], row["budget"]
+    return row["label"], row["lists"], row["codec"], row["budget"], row["rescore"]
 
 
 def minimal_cells(rows: list[dict], target: float) -> list[dict]:
@@ -57,13 +62,13 @@ def select(recall_dir: Path, targets: list[float], lists_arg: int | None) -> Non
     configs = defaultdict(list)
     for row in load_rows([recall_dir]):
         configs[config_key(row)].append(row)
-    for (label, lists, codec, budget), rows in sorted(configs.items()):
+    for (label, lists, codec, budget, rescore), rows in sorted(configs.items()):
         cells = defaultdict(set)
         for target in targets:
             for row in minimal_cells(rows, target):
                 cells[row["rerank_k"]].add(row["nprobe"])
         mode = "rabitq" if codec == "rabitq" else "tieredq"
-        env = TUNING_ENV.get(label, "")
+        env = " ".join(filter(None, [TUNING_ENV.get(label, ""), "" if rescore == "fp32" else f"RESCORE={rescore}"]))
         for depth, nprobes in sorted(cells.items()):
             nprobe_list = ",".join(str(n) for n in sorted(nprobes))
             print(f"{label} {lists if lists_arg is None else lists_arg} {mode} {budget:g} RERANK={depth} NPROBES={nprobe_list} {env}".rstrip())
@@ -127,6 +132,37 @@ def report(paths: list[Path], targets: list[float]) -> None:
         print()
 
 
+def rescore_report(paths: list[Path], targets: list[float]) -> None:
+    rows = load_rows(paths)
+    tiers = sorted({(r["rescore_bytes"], r["rescore"]) for r in rows})
+    for (lists, codec, budget, index_bits) in sorted({(r["lists"], r["codec"], r["budget"], r["disk_bits"]) for r in rows}):
+        stage = [r for r in rows if (r["lists"], r["codec"], r["budget"]) == (lists, codec, budget)]
+        print(f"### {family(codec)} {budget:g} first stage ({index_bits:,.0f} index bits/vector), {lists} lists\n")
+        print("| Rerank tier | Bytes/vector | " + " | ".join(f"R@10 ≥ {t:.2f}: nprobe, k' (recall)" for t in targets)
+              + " | Best recall |")
+        print("|---|---|" + "---|" * len(targets) + "---|")
+        for size, name in tiers:
+            cells = [r for r in stage if r["rescore"] == name]
+            if not cells:
+                continue
+            firsts = []
+            for target in targets:
+                ok = [r for r in cells if r["recall"] >= target]
+                first = min(ok, key=lambda r: (r["nprobe"], r["rerank_k"])) if ok else None
+                firsts.append(f"{first['nprobe']}, {first['rerank_k']} ({first['recall']:.3f})" if first else "—")
+            best = max(cells, key=lambda r: r["recall"])
+            print(f"| {name} | {size:,.0f} | " + " | ".join(firsts)
+                  + f" | {best['recall']:.3f} (nprobe {best['nprobe']}, k' {best['rerank_k']}) |")
+        print()
+        for target in targets:
+            ok = [r for r in stage if r["recall"] >= target]
+            if ok:
+                small = min(ok, key=lambda r: (r["rescore_bytes"], r["nprobe"], r["rerank_k"]))
+                print(f"- R@10 ≥ {target:.2f}: smallest tier {small['rescore']} ({small['rescore_bytes']:,.0f} B), "
+                      f"nprobe {small['nprobe']}, k' {small['rerank_k']}, recall {small['recall']:.3f}")
+        print()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -137,9 +173,14 @@ def main() -> None:
     table = sub.add_parser("report")
     table.add_argument("paths", type=Path, nargs="+")
     table.add_argument("--targets", type=float, nargs="+", default=list(DEFAULT_TARGETS))
+    rescore = sub.add_parser("rescore")
+    rescore.add_argument("paths", type=Path, nargs="+")
+    rescore.add_argument("--targets", type=float, nargs="+", default=[0.95, 0.99])
     args = parser.parse_args()
     if args.command == "select":
         select(args.recall_dir, args.targets, args.lists)
+    elif args.command == "rescore":
+        rescore_report(args.paths, args.targets)
     else:
         report(args.paths, args.targets)
 

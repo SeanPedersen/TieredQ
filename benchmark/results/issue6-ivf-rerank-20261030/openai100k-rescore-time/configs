@@ -1,0 +1,6 @@
+prefix1416 0 tieredq 1416 PREFIX_BITS=1416 RESCORE=fp32,int8,tieredq-refinement:3,tieredq-refinement:4 NPROBES=16,32 RERANK=20,50
+prefix1024 0 tieredq 1024 PREFIX_BITS=1024 RESCORE=fp32,int8,tieredq-refinement:3,tieredq-refinement:4 NPROBES=16,32 RERANK=20,50
+prefix768 0 tieredq 768 PREFIX_BITS=768 RESCORE=fp32,int8,tieredq-refinement:3,tieredq-refinement:4 NPROBES=16,32,64 RERANK=50
+prefix512 0 tieredq 512 PREFIX_BITS=512 RESCORE=fp32,int8,tieredq-refinement:3,tieredq-refinement:4 NPROBES=16,32,64 RERANK=50,100
+z8-p3 0 tieredq 1416 PREFIX_BITS=1416 PRUNE_Z=8 PRUNE_PREFIX=3 RESCORE=fp32,tieredq-refinement:4 NPROBES=16,32 RERANK=20,50
+rabitq 0 rabitq 1 RESCORE=fp32,int8,rabitq:5,rabitq:6 NPROBES=16,32 RERANK=20,50

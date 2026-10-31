@@ -1,0 +1,5 @@
+nesting	model	1416	code_bits 1424	bytes 183	tiers 4x110 3x123 2x191 1x233
+nesting	model	2876	code_bits 2876	bytes 365	tiers 6x38 5x89 4x151 3x240 2x296 1x287
+nesting	model	5820	code_bits 5820	bytes 733	tiers 8x23 7x71 6x143 5x244 4x341 3x360 2x272 1x73
+nesting	1416->2876	centroid_diff 6.28e-06	basis_diff 0.00e+00 (positions 657)	positions_losing_bits 0 of 657	tiers_equal 0 inside_one 0 of 4
+nesting	2876->5820	centroid_diff 7.95e-08	basis_diff 0.00e+00 (positions 1101)	positions_losing_bits 0 of 1101	tiers_equal 0 inside_one 1 of 6

@@ -1,0 +1,4 @@
+prefix256 0 tieredq 256 PREFIX_BITS=256 RESCORE=fp32,tieredq-nested:3,tieredq-nested:4
+prefix512 0 tieredq 512 PREFIX_BITS=512 RESCORE=fp32,tieredq-nested:3,tieredq-nested:4
+prefix768 0 tieredq 768 PREFIX_BITS=768 RESCORE=fp32,tieredq-nested:3,tieredq-nested:4
+prefix1024 0 tieredq 1024 PREFIX_BITS=1024 RESCORE=fp32,tieredq-nested:3,tieredq-nested:4
