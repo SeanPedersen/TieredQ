@@ -1,0 +1,11 @@
+prefix1024 256 tieredq 1024 RERANK=20 NPROBES=32,64,128 PREFIX_BITS=1024 RESCORE=int8,tieredq-refinement:3,tieredq-refinement:4
+prefix1024 256 tieredq 1024 RERANK=50 NPROBES=64,128 PREFIX_BITS=1024 RESCORE=tieredq-refinement:4
+prefix512 256 tieredq 512 RERANK=50 NPROBES=32,64 PREFIX_BITS=512 RESCORE=int8,tieredq-refinement:3,tieredq-refinement:4
+prefix512 256 tieredq 512 RERANK=100 NPROBES=32,128 PREFIX_BITS=512 RESCORE=int8,tieredq-refinement:3,tieredq-refinement:4
+prefix512 256 tieredq 512 RERANK=200 NPROBES=64,128 PREFIX_BITS=512 RESCORE=int8,tieredq-refinement:3
+prefix512 256 tieredq 512 RERANK=500 NPROBES=64,128 PREFIX_BITS=512 RESCORE=tieredq-refinement:4
+prefix768 256 tieredq 768 RERANK=20 NPROBES=64 PREFIX_BITS=768 RESCORE=int8,tieredq-refinement:3,tieredq-refinement:4
+prefix768 256 tieredq 768 RERANK=50 NPROBES=32,64,128 PREFIX_BITS=768 RESCORE=int8,tieredq-refinement:3,tieredq-refinement:4
+prefix768 256 tieredq 768 RERANK=100 NPROBES=64,128 PREFIX_BITS=768 RESCORE=tieredq-refinement:4
+rabitq1 256 rabitq 1 RERANK=20 NPROBES=64 RESCORE=int8,rabitq:5,rabitq:6
+rabitq1 256 rabitq 1 RERANK=50 NPROBES=32,64,128 RESCORE=int8,rabitq:5,rabitq:6

@@ -1,0 +1,37 @@
+building rerank tier fp32
+building rerank tier int8
+building rerank tier fp32
+building rerank tier int8
+building rerank tier tieredq-refinement:3
+building rerank tier fp32
+building rerank tier int8
+building rerank tier tieredq-refinement:3
+building rerank tier tieredq-refinement:3
+refinement tier 3: prefix 384 code bits (236 ranks), suffix 2673 bits, 339 bytes, 789 positions
+building rerank tier tieredq-refinement:4
+refinement tier 3: prefix 264 code bits (175 ranks), suffix 2757 bits, 349 bytes, 789 positions
+building rerank tier tieredq-refinement:4
+refinement tier 3: prefix 512 code bits (300 ranks), suffix 2580 bits, 327 bytes, 789 positions
+building rerank tier tieredq-refinement:4
+refinement tier 4: prefix 384 code bits (236 ranks), suffix 3722 bits, 470 bytes, 942 positions
+refinement tier 4: prefix 264 code bits (175 ranks), suffix 3784 bits, 477 bytes, 942 positions
+refinement tier 4: prefix 512 code bits (300 ranks), suffix 3607 bits, 455 bytes, 942 positions
+building rerank tier fp32
+building rerank tier int8
+building rerank tier tieredq-refinement:3
+building rerank tier fp32
+building rerank tier int8
+building rerank tier tieredq-refinement:3
+FhtKacRotator is selected
+building rerank tier fp32
+building rerank tier int8
+building rerank tier rabitq:5
+FhtKacRotator is selected
+refinement tier 3: prefix 1032 code bits (488 ranks), suffix 2081 bits, 265 bytes, 789 positions
+building rerank tier tieredq-refinement:4
+refinement tier 3: prefix 768 code bits (408 ranks), suffix 2212 bits, 281 bytes, 789 positions
+building rerank tier tieredq-refinement:4
+refinement tier 4: prefix 1032 code bits (488 ranks), suffix 3105 bits, 393 bytes, 942 positions
+refinement tier 4: prefix 768 code bits (408 ranks), suffix 3236 bits, 409 bytes, 942 positions
+building rerank tier rabitq:6
+FhtKacRotator is selected

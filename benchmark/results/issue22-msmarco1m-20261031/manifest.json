@@ -1,0 +1,27 @@
+{
+  "source": {
+    "repo": "CohereLabs/beir-embed-english-v3",
+    "revision": "f018922a46a51388348a307ec2fef28019a33026",
+    "files": {
+      "msmarco/corpus/0000.parquet": "54975b13fb21770eb6a516cc4698b048c1ac0e559688043ce79f09cc1448f004",
+      "msmarco/corpus/0001.parquet": "0a014aa458e22611821b3f99107b093c8f9ee2efdb7904b68b0327aa1ee1782f",
+      "msmarco/queries/dev.parquet": "c10f47166ec7b883e7a4c43594fe8e55f164686351d82069e4d615a5fd37d6c0"
+    }
+  },
+  "dataset": "msmarco1m",
+  "corpus_rows": 2000000,
+  "base_n": 1000000,
+  "queries": 1000,
+  "dev_queries": 6980,
+  "split": "seed 42: base + doc queries drawn from the first two corpus shards; real = dev queries",
+  "normalization": "FP32 L2 normalization for base and both query sets",
+  "truth": "exhaustive FP32 inner-product top-100 (top-10 = first 10)",
+  "base_sha256": "1b146689d3c1662d076ec6c3ae636014d57774f8749789cba95fd00f8ea52a80",
+  "base_ids_sha256": "666c588028f4ce8ffc1a9477c02d8f64212aa826d6fb34cc7b7505dc4eaa215b",
+  "real_sha256": "520416980a3713e1560de172b98b66126b649ff72c727adfc1200ca7ed11597a",
+  "real_ids_sha256": "6ea2c058816a4c0e6a6e7c37ec867c19cf124187be0f58d57fefb0e7357d1955",
+  "doc_sha256": "33a6c22e97df3010dd8104902698cc926ff50cbf140d71ecdb541348dbc73e7c",
+  "doc_ids_sha256": "23cec1cb4a9f0670632ec56bb5163298435b140102828b64f116d7d3e6cbe899",
+  "truth_real_sha256": "255dab8891d8bc023f36cc34b9c962f2a1a2ecf975508464821017bf1a56679e",
+  "truth_doc_sha256": "994e68e7c36005be740cd7e92b0651140ece67e000fdda285cf2d15441134701"
+}
