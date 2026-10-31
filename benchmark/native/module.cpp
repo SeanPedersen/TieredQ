@@ -51,14 +51,12 @@ class Index {
       config.num_centroids = std::min<size_t>(256, count_ / 2);
       config.target_mode = fast ? dv::TieredQIndexMode::fast : dv::TieredQIndexMode::full;
       const size_t train_count = std::min(count_, training_limit);
-      std::vector<size_t> order(count_);
+      std::vector<uint32_t> order(count_);
       std::iota(order.begin(), order.end(), 0);
       std::mt19937_64 rng(seed);
       std::shuffle(order.begin(), order.end(), rng);
-      std::vector<float> sample(train_count * width_);
-      for (size_t i=0; i<train_count; ++i)
-        std::copy_n(base.data()+order[i]*width_, width_, sample.data()+i*width_);
-      tq_ = std::make_unique<dv::TieredQIndex>(dv::TieredQ::train(config, sample.data(), train_count, seed), fast ? dv::TieredQIndexMode::fast : dv::TieredQIndexMode::full);
+      // The first train_count shuffled rows, read in place (the same model as training on them gathered).
+      tq_ = std::make_unique<dv::TieredQIndex>(dv::TieredQ::train_sampled(config, base.data(), count_, order.data(), train_count, seed), fast ? dv::TieredQIndexMode::fast : dv::TieredQIndexMode::full);
       const auto start = std::chrono::steady_clock::now();
       tq_->add(base.data(), count_);
       encode_s_ = std::chrono::duration<double>(std::chrono::steady_clock::now()-start).count();

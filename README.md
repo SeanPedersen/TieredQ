@@ -26,7 +26,7 @@ from tieredq import TieredQIndex
 
 vectors = api.load("glove-wiki-gigaword-100").vectors  # (400000, 100), float32
 index = TieredQIndex(dimensions=100, code_bits=200) # 2 bits per dim
-index.add(vectors)  # first add trains; later adds only encode
+index.add(vectors)  # first add trains (a seeded 32,768-row sample of larger batches); later adds only encode
 scores, ids = index.search(vectors[:2], k=10)  # (2, 10) float32, uint32
 
 index.save("index.tq")
@@ -91,6 +91,11 @@ Include `<tieredq/tieredq.h>`, use `find_package(TieredQ CONFIG REQUIRED)`, and
 link `TieredQ::TieredQ`. FetchContent also works. See [integration.md](integration.md)
 for layouts, threading, ownership and dependency setup.
 
+`dv::TieredQ::train(config, sample, rows, seed)` trains on a contiguous sample. To train on part of a larger
+array without copying it, `dv::TieredQ::train_sampled(config, data, count, sample_ids, sample_rows, seed)` reads
+the named rows in place (the same model). About 8–16K training rows reach full recall on 1M-row sets; fewer than
+~32 rows per centroid lose recall ([#19.2 results](benchmark/results/issue19-drift-20261031/README.md)).
+
 ### IVF (C++)
 
 `dv::TieredQIVFIndex` is a fast-mode inverted-file index. With `lists = 0` the codec's k-means centroids
@@ -99,6 +104,7 @@ centroids are stored.
 
 ```cpp
 dv::TieredQIVFIndex index(codec, /*lists=*/1024);
+index.train_lists(sample, sample_rows);  // optional: fix the lists on a sample; builds then only assign rows
 index.build(rows, count);
 auto hits = index.search(query, /*k=*/10, /*nprobe=*/16);
 // Opt-in approximate pruning for models with more than four tiers (about 2+ bits/dim):

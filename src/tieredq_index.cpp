@@ -57,7 +57,7 @@ size_t TieredQIndex::bytes_per_vector() const {
 }
 // Rows encoded at a time when filling an empty fast index, which then holds one chunk of payload rows next to its
 // storage instead of all of them.
-constexpr size_t add_chunk_rows=65536;
+constexpr size_t add_chunk_rows=16384;
 void TieredQIndex::add(const float* rows,size_t count) {
   if (count>UINT32_MAX-size()) bad("index exceeds uint32 document ids");
   if (!fast_mode_ || size() || count<=add_chunk_rows) {

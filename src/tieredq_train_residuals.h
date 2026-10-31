@@ -7,8 +7,10 @@
 
 namespace dv::tieredq_detail {
 struct CenteredResiduals { std::vector<double> values,mean; };
-inline CenteredResiduals centered_residuals(const float* sample,size_t rows,size_t dimensions,
-                                           const uint32_t* ids,const std::vector<float>& centroids) {
+// value(row, j) reads a sample coordinate.
+template<class Value>
+CenteredResiduals centered_residuals_with(Value value,size_t rows,size_t dimensions,const uint32_t* ids,
+                                          const std::vector<float>& centroids) {
   constexpr size_t column_tile=16;
   CenteredResiduals result; result.mean.resize(dimensions);
 #pragma omp parallel for schedule(static)
@@ -17,8 +19,7 @@ inline CenteredResiduals centered_residuals(const float* sample,size_t rows,size
     std::array<double,column_tile> sums{};
     for (size_t i=0;i<rows;++i) {
       const float* center=centroids.data()+size_t(ids[i])*dimensions+begin;
-      const float* row=sample+i*dimensions+begin;
-      for (size_t j=0;j<width;++j) sums[j]+=double(row[j])-center[j];
+      for (size_t j=0;j<width;++j) sums[j]+=double(value(i,begin+j))-center[j];
     }
     for (size_t j=0;j<width;++j) result.mean[begin+j]=sums[j]/rows;
   }
@@ -27,8 +28,13 @@ inline CenteredResiduals centered_residuals(const float* sample,size_t rows,size
   for (size_t i=0;i<rows;++i) {
     const float* center=centroids.data()+size_t(ids[i])*dimensions;
     for (size_t j=0;j<dimensions;++j)
-      result.values[i*dimensions+j]=(double(sample[i*dimensions+j])-center[j])-result.mean[j];
+      result.values[i*dimensions+j]=(double(value(i,j))-center[j])-result.mean[j];
   }
   return result;
+}
+inline CenteredResiduals centered_residuals(const float* sample,size_t rows,size_t dimensions,
+                                           const uint32_t* ids,const std::vector<float>& centroids) {
+  return centered_residuals_with([&](size_t row,size_t j) { return sample[row*dimensions+j]; },rows,dimensions,ids,
+                                 centroids);
 }
 } // namespace dv::tieredq_detail

@@ -128,6 +128,48 @@ void cosine_test() {
   path_parity(index,probes);
   require(TieredQ::deserialize(codec.serialize()).model_id()==codec.model_id(),"cosine model does not round-trip");
 }
+// train_sampled trains on the named rows in place: the same model as train() on those rows gathered, in every metric.
+void sampled_training_test() {
+  const auto data=rows_with_norms(rows,31);
+  std::vector<uint32_t> ids;
+  for (uint32_t i=0;i<rows;i+=2) ids.push_back(uint32_t(rows-1-i));
+  std::vector<float> gathered;
+  for (uint32_t id:ids) gathered.insert(gathered.end(),data.begin()+size_t(id)*dimensions,data.begin()+size_t(id+1)*dimensions);
+  for (auto metric:{TieredQMetric::inner_product,TieredQMetric::cosine,TieredQMetric::l2}) {
+    auto config=TieredQConfig::target_code_bits(dimensions,dimensions*2);
+    config.num_centroids=centroids; config.metric=metric;
+    const auto expected=TieredQ::train(config,gathered.data(),ids.size(),7);
+    const auto sampled=TieredQ::train_sampled(config,data.data(),rows,ids.data(),ids.size(),7);
+    require(sampled.model_id()==expected.model_id() && sampled.encode(data.data(),rows)==expected.encode(data.data(),rows),
+            "sampled training differs from training on the gathered rows");
+  }
+  auto invalid=ids; invalid.back()=uint32_t(rows);
+  bool rejected=false;
+  try { TieredQ::train_sampled(TieredQConfig::target_code_bits(dimensions,dimensions),data.data(),rows,invalid.data(),invalid.size()); }
+  catch (const std::exception&) { rejected=true; }
+  require(rejected,"out-of-range training sample id accepted");
+}
+// Cosine training reads normalized rows on access; it equals inner-product training on rows normalized beforehand.
+void cosine_training_test() {
+  const auto sample=rows_with_norms(rows,3),data=rows_with_norms(rows,29);
+  auto normalized=[](const std::vector<float>& input) {
+    std::vector<float> out(input.size());
+    for (size_t i=0;i<input.size()/dimensions;++i) {
+      double square=0; for (uint32_t j=0;j<dimensions;++j) square+=double(input[i*dimensions+j])*input[i*dimensions+j];
+      const double norm=std::sqrt(square);
+      for (uint32_t j=0;j<dimensions;++j) out[i*dimensions+j]=float(input[i*dimensions+j]/norm);
+    }
+    return out;
+  };
+  const auto unit_sample=normalized(sample);
+  auto config=TieredQConfig::target_code_bits(dimensions,dimensions*2);
+  config.num_centroids=centroids;
+  const auto inner=TieredQ::train(config,unit_sample.data(),rows,7);
+  config.metric=TieredQMetric::cosine;
+  const auto cosine=TieredQ::train(config,sample.data(),rows,7);
+  require(cosine.encode(data.data(),rows)==inner.encode(normalized(data).data(),rows),
+          "cosine training differs from inner-product training on normalized rows");
+}
 // The default power follows the metric in both modes (1 for L2, 1.5 otherwise); inner-product models keep format 3.
 void power_and_format_test() {
   require(train(TieredQMetric::l2,2,TieredQIndexMode::fast).model_id()==train(TieredQMetric::l2,2,TieredQIndexMode::fast,1.0).model_id(),
@@ -152,6 +194,8 @@ void tieredq_metric_tests() {
   l2_test();
   l2_codec_test();
   cosine_test();
+  cosine_training_test();
+  sampled_training_test();
   power_and_format_test();
   std::cout<<"PASS native metrics\n";
 }

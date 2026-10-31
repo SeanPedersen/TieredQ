@@ -18,12 +18,21 @@ inline void update_centroids_reference(const float* sample,size_t rows,size_t di
   for (size_t id=0;id<clusters;++id) if (counts[id])
     for (size_t j=0;j<dimensions;++j) centroids[id*dimensions+j]=float(sums[id*dimensions+j]/counts[id]);
 }
-inline void update_centroids(const float* sample,size_t rows,size_t dimensions,const uint32_t* ids,
-                             std::vector<float>& centroids) {
+// value(row, j) reads a sample coordinate; rows are summed in input order per centroid, as the reference does.
+template<class Value>
+void update_centroids_with(Value value,size_t rows,size_t dimensions,const uint32_t* ids,std::vector<float>& centroids) {
   const size_t clusters=centroids.size()/dimensions;
   constexpr size_t minimum_parallel_dimensions=1536;
-  if (dimensions<minimum_parallel_dimensions)
-    return update_centroids_reference(sample,rows,dimensions,ids,centroids);
+  if (dimensions<minimum_parallel_dimensions) {
+    std::vector<double> sums(centroids.size()); std::vector<size_t> counts(clusters);
+    for (size_t i=0;i<rows;++i) {
+      const size_t id=ids[i]; ++counts[id];
+      for (size_t j=0;j<dimensions;++j) sums[id*dimensions+j]+=value(i,j);
+    }
+    for (size_t id=0;id<clusters;++id) if (counts[id])
+      for (size_t j=0;j<dimensions;++j) centroids[id*dimensions+j]=float(sums[id*dimensions+j]/counts[id]);
+    return;
+  }
   std::vector<size_t> offsets(clusters+1),grouped(rows);
   for (size_t i=0;i<rows;++i) ++offsets[ids[i]+1];
   for (size_t id=0;id<clusters;++id) offsets[id+1]+=offsets[id];
@@ -37,11 +46,13 @@ inline void update_centroids(const float* sample,size_t rows,size_t dimensions,c
     const size_t width=std::min(dimension_tile,dimensions-begin),count=offsets[id+1]-offsets[id];
     if (!count) continue;
     std::array<double,dimension_tile> sums{};
-    for (size_t p=offsets[id];p<offsets[id+1];++p) {
-      const float* row=sample+grouped[p]*dimensions+begin;
-      for (size_t j=0;j<width;++j) sums[j]+=row[j];
-    }
+    for (size_t p=offsets[id];p<offsets[id+1];++p)
+      for (size_t j=0;j<width;++j) sums[j]+=value(grouped[p],begin+j);
     for (size_t j=0;j<width;++j) centroids[id*dimensions+begin+j]=float(sums[j]/count);
   }
+}
+inline void update_centroids(const float* sample,size_t rows,size_t dimensions,const uint32_t* ids,
+                             std::vector<float>& centroids) {
+  update_centroids_with([&](size_t row,size_t j) { return sample[row*dimensions+j]; },rows,dimensions,ids,centroids);
 }
 } // namespace dv::tieredq_detail

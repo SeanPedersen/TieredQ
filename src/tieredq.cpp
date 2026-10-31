@@ -12,6 +12,7 @@
 #include "tieredq_train_kmeans.h"
 #include "tieredq_train_stats.h"
 #include "tieredq_train_residuals.h"
+#include "tieredq_train_rows.h"
 #include "tieredq_train_codebook.h"
 #include "tieredq_train_codebook_data.h"
 #include "tieredq_train_allocation.h"
@@ -96,15 +97,16 @@ std::vector<float> half_norms(const std::vector<float>& centroids,size_t k,size_
   const auto exact=exact_half_norms(centroids,k,d);
   return {exact.begin(),exact.end()};
 }
-void nearest_centroids(const float* x, size_t rows, size_t d, const std::vector<float>& centroids, size_t k, uint32_t* ids) {
+void nearest_centroids(const tieredq_detail::TrainingRows& x, size_t rows, size_t d, const std::vector<float>& centroids,
+                       size_t k, uint32_t* ids) {
   const auto panels = pack_panels(d, k, [&](size_t i, size_t c) { return centroids[c * d + i]; });
   const auto half = half_norms(centroids, k, d);
   const size_t width = panels.padded_columns(), blocks = (rows + BLOCK_ROWS - 1) / BLOCK_ROWS;
 #pragma omp parallel for schedule(dynamic) if(blocks > 1)
   for (size_t blk = 0; blk < blocks; ++blk) {
     const size_t r0 = blk * BLOCK_ROWS, n = std::min(BLOCK_ROWS, rows - r0);
-    std::vector<float> dots(n * width);
-    float_matrix(x + r0 * d, n, d, panels, dots.data(), width);
+    std::vector<float> dots(n * width), buffer;
+    float_matrix(x.block(r0, n, buffer), n, d, panels, dots.data(), width);
     for (size_t r = 0; r < n; ++r) ids[r0 + r] = argmin_centroid(dots.data() + r * width, half.data(), k);
   }
 }
@@ -339,25 +341,61 @@ TieredQ TieredQ::train(TieredQConfig config,const float* sample,size_t rows,uint
       lifted.lift_base_map_=tieredq_detail::l2_base_map(moment,d+1,tieredq_detail::TrainingLinalg::get().eigen);
       lifted.prepare_lift();
     }
-    std::vector<float> model_rows(product(rows,lifted.model_dimensions()));
-    lifted.lift(sample,rows,false,model_rows.data());
     auto model_config=config;
     model_config.dimensions=uint32_t(lifted.model_dimensions()); model_config.metric=TieredQMetric::inner_product;
     if (!config.allocation_power)
       model_config.allocation_power=config.metric==TieredQMetric::l2 ? 1.0 : 0.0;
-    auto c=train(model_config,model_rows.data(),rows,seed);
+    // Cosine rows are normalized on access; the L2 lift is a matrix product, so its rows are lifted once.
+    std::vector<float> model_rows;
+    auto model_sample=tieredq_detail::TrainingRows{sample,d}.normalized(rows);
+    if (config.metric==TieredQMetric::l2) {
+      model_rows.resize(product(rows,lifted.model_dimensions()));
+      lifted.lift(sample,rows,false,model_rows.data());
+      finite_rows(model_rows.data(),model_rows.size());
+      model_sample=tieredq_detail::TrainingRows{model_rows.data(),lifted.model_dimensions()};
+    }
+    auto c=train_model(model_config,model_sample,rows,seed);
     c.config_.dimensions=config.dimensions; c.config_.metric=config.metric; c.config_.allocation_power=config.allocation_power;
     c.lift_scale_=lifted.lift_scale_; c.lift_base_map_=std::move(lifted.lift_base_map_);
     c.prepare_lift(); c.validate_model();
     return c;
   }
+  finite_rows(sample,product(rows,config.dimensions));
+  return train_model(config,tieredq_detail::TrainingRows{sample,config.dimensions},rows,seed);
+}
+TieredQ TieredQ::train_sampled(TieredQConfig config,const float* data,size_t count,const uint32_t* sample_ids,
+                               size_t sample_rows,uint64_t seed) {
+  config.validate();
+  if (sample_rows && (!data || !sample_ids)) bad("null training data");
+  for (size_t i=0;i<sample_rows;++i) if (sample_ids[i]>=count) bad("training sample id out of range");
+  // Metrics with a matrix lift (L2) and tiny samples train on a gathered copy, which is the same model.
+  if (config.metric==TieredQMetric::l2 || sample_rows<std::max<size_t>(2,size_t(config.num_centroids)*2) ||
+      sample_rows>INT32_MAX) {
+    std::vector<float> gathered(product(sample_rows,config.dimensions));
+    for (size_t i=0;i<sample_rows;++i)
+      std::copy_n(data+size_t(sample_ids[i])*config.dimensions,config.dimensions,gathered.data()+i*config.dimensions);
+    return train(config,gathered.data(),sample_rows,seed);
+  }
+  const tieredq_detail::TrainingRows rows{data,config.dimensions,sample_ids};
+  for (size_t i=0;i<sample_rows;++i) finite_rows(rows.row(i),config.dimensions);
+  if (config.metric==TieredQMetric::inner_product) return train_model(config,rows,sample_rows,seed);
+  auto model_config=config;
+  model_config.metric=TieredQMetric::inner_product;
+  auto c=train_model(model_config,rows.normalized(sample_rows),sample_rows,seed);
+  c.config_.metric=config.metric; c.config_.allocation_power=config.allocation_power;
+  c.prepare_lift(); c.validate_model();
+  return c;
+}
+// Inner-product training on model-space rows, which the caller has checked to be finite.
+TieredQ TieredQ::train_model(TieredQConfig config,const tieredq_detail::TrainingRows& sample,size_t rows,uint64_t seed) {
   const int d=int(config.dimensions), n=int(rows); const unsigned k=config.num_centroids;
   tieredq_detail::StageProfile profile;
   const auto& linalg=tieredq_detail::TrainingLinalg::get();
-  finite_rows(sample,product(rows,d)); TieredQ c; c.config_=config;
+  TieredQ c; c.config_=config;
   tieredq_detail::TrainingRng rng(seed); auto initial=rng.choice(rows,k);
   c.centroids_.resize(product(k,d));
-  for (unsigned j=0;j<k;++j) std::copy_n(sample+initial[j]*d,d,c.centroids_.data()+size_t(j)*d);
+  std::vector<float> buffer;
+  for (unsigned j=0;j<k;++j) std::copy_n(sample.block(initial[j],1,buffer),d,c.centroids_.data()+size_t(j)*d);
   std::vector<uint32_t> ids(rows);
   profile.mark("init");
   constexpr int kmeans_iterations=20;
@@ -365,7 +403,7 @@ TieredQ TieredQ::train(TieredQConfig config,const float* sample,size_t rows,uint
   for (int it=0;it<iterations;++it) {
     if (k>1) nearest_centroids(sample,rows,d,c.centroids_,k,ids.data());
     profile.mark("kmeans_assign");
-    tieredq_detail::update_centroids(sample,rows,d,ids.data(),c.centroids_);
+    sample.visit([&](auto value) { tieredq_detail::update_centroids_with(value,rows,d,ids.data(),c.centroids_); });
     profile.mark("kmeans_update");
   }
   const bool spectral_stats=!std::getenv("DV_TIEREDQ_REFERENCE_STATS");
@@ -373,29 +411,33 @@ TieredQ TieredQ::train(TieredQConfig config,const float* sample,size_t rows,uint
   if (k>1) nearest_centroids(sample,rows,d,c.centroids_,k,ids.data());
   profile.mark("kmeans_assign");
   if (spectral_stats && linalg.syrk) {
-    auto centered=tieredq_detail::centered_residuals(sample,rows,d,ids.data(),c.centroids_);
+    auto centered=sample.visit([&](auto value) {
+      return tieredq_detail::centered_residuals_with(value,rows,d,ids.data(),c.centroids_);
+    });
     mean=std::move(centered.mean);
     profile.mark("residual");
     cov=linalg.covariance_centered(centered.values,d,n);
   } else {
     // Spectral stats only need centered rows; recomputing differences per chunk avoids any rows x d copy.
     const bool keep_residual=!spectral_stats;
-    auto difference=[&](size_t i,int j) { return double(sample[i*d+j])-c.centroids_[size_t(ids[i])*d+j]; };
-    if (keep_residual) residual.resize(product(rows,d));
-    mean.assign(d,0);
-    for (size_t i=0;i<rows;++i) for (int j=0;j<d;++j) {
-      const double v=difference(i,j);
-      if (keep_residual) residual[i*d+j]=v;
-      mean[j]+=v;
-    }
-    for (int j=0;j<d;++j) mean[j]/=rows;
-    if (linalg.syrk) cov=linalg.covariance(residual,mean,d,n,profile);
-    else {
-      profile.mark("residual");
-      cov=chunked_covariance(d,rows,[&](size_t r0,size_t n,double* out) {
-        for (size_t i=0;i<n;++i) for (int j=0;j<d;++j) out[size_t(j)*n+i]=difference(r0+i,j)-mean[j];
-      });
-    }
+    sample.visit([&](auto value) {
+      auto difference=[&](size_t i,int j) { return double(value(i,size_t(j)))-c.centroids_[size_t(ids[i])*d+j]; };
+      if (keep_residual) residual.resize(product(rows,d));
+      mean.assign(d,0);
+      for (size_t i=0;i<rows;++i) for (int j=0;j<d;++j) {
+        const double v=difference(i,j);
+        if (keep_residual) residual[i*d+j]=v;
+        mean[j]+=v;
+      }
+      for (int j=0;j<d;++j) mean[j]/=rows;
+      if (linalg.syrk) cov=linalg.covariance(residual,mean,d,n,profile);
+      else {
+        profile.mark("residual");
+        cov=chunked_covariance(d,rows,[&](size_t r0,size_t n,double* out) {
+          for (size_t i=0;i<n;++i) for (int j=0;j<d;++j) out[size_t(j)*n+i]=difference(r0+i,j)-mean[j];
+        });
+      }
+    });
   }
   profile.mark("covariance");
   tieredq_detail::dump_training_stage("covariance.f64",cov);

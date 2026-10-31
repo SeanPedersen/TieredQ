@@ -1,7 +1,8 @@
 // Trained exhaustive index with turbovec-style ergonomics: construct with a
 // budget, then add/search/save/load. The first non-empty add() trains the
-// codec on that batch. Mutations and searches may run concurrently; the GIL
-// is released for every native call.
+// codec on that batch, or on a seeded sample of training_sample_rows of it
+// read in place. Mutations and searches may run concurrently; the GIL is
+// released for every native call.
 #include "arrays.h"
 #include "search.h"
 #include <nanobind/stl/optional.h>
@@ -10,7 +11,9 @@
 #include <algorithm>
 #include <memory>
 #include <mutex>
+#include <numeric>
 #include <optional>
+#include <random>
 #include <shared_mutex>
 
 namespace tieredq_python {
@@ -20,6 +23,9 @@ namespace {
 // centroids, so the default shrinks to fit instead of failing at train time.
 constexpr uint32_t maximum_auto_centroids = 256;
 constexpr uint64_t training_seed = 0;
+// Recall saturates at 8-16K training rows on 1M-row sets (#19.2), so larger
+// first batches train on this many rows.
+constexpr size_t training_sample_rows = 32768;
 uint32_t auto_centroids(size_t sample_rows) {
   return std::min(maximum_auto_centroids, static_cast<uint32_t>(sample_rows / 2));
 }
@@ -86,8 +92,12 @@ class PythonIndex {
       if (!rows.shape(0)) return;
       if (rows.shape(0) < 2)
         throw std::runtime_error("the first add() needs at least 2 rows to train");
-      config_.num_centroids = auto_centroids(rows.shape(0));
-      index_.emplace(dv::TieredQ::train(config_, rows.data(), rows.shape(0), training_seed), mode_);
+      const size_t count = rows.shape(0), sample = std::min(count, training_sample_rows);
+      std::vector<uint32_t> ids(count);
+      std::iota(ids.begin(), ids.end(), 0);
+      if (sample < count) std::shuffle(ids.begin(), ids.end(), std::mt19937_64(training_seed));
+      config_.num_centroids = auto_centroids(sample);
+      index_.emplace(dv::TieredQ::train_sampled(config_, rows.data(), count, ids.data(), sample, training_seed), mode_);
     }
     index_->add(rows.data(), rows.shape(0));
   }

@@ -11,6 +11,7 @@
 
 namespace dv {
 namespace tieredq_detail { class StageProfile; struct FastScanCache; struct FastQueryBasis; struct EncoderData; class LazyEncoder;
+                           struct TrainingRows;
                            struct CoarseQuantizer; struct Writer; }
 enum class TieredQIndexMode { fast, full };
 enum class TieredQKernel { automatic, scalar, avx2, avx512, neon };
@@ -80,6 +81,10 @@ class TieredQRefinement;
 class TieredQ {
  public:
   static TieredQ train(TieredQConfig config, const float* sample, size_t rows, uint64_t seed = 0);
+  // Trains on the rows sample_ids[0..sample_rows) of data (count rows) in that order without copying them: the same
+  // model as train() on those rows gathered into one array.
+  static TieredQ train_sampled(TieredQConfig config, const float* data, size_t count, const uint32_t* sample_ids,
+                               size_t sample_rows, uint64_t seed = 0);
   const TieredQConfig& config() const { return config_; }
   const std::vector<TieredQTier>& tiers() const { return tiers_; }
   size_t coded_dimensions() const { return sigma_.size(); }
@@ -146,6 +151,7 @@ class TieredQ {
   friend struct tieredq_detail::FastQueryBasis;
   friend class TieredQRefinement;
   TieredQ() = default;
+  static TieredQ train_model(TieredQConfig config, const tieredq_detail::TrainingRows& sample, size_t rows, uint64_t seed);
   TieredQConfig config_;
   std::vector<TieredQTier> tiers_;
   std::vector<float> centroids_, basis_, mean_, sigma_;
