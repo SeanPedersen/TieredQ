@@ -19,5 +19,14 @@
       "data/train-00000-of-00002.parquet": "73d3b212a797fdd6239edcef92616dfcb791a6660a9d15127fa3ff02afc4c488",
       "data/train-00001-of-00002.parquet": "4acbd56186ea9afc9410becac479b7c41309dfcb8e601ccea97bbe0a8fbfdaef"
     }
+  },
+  "msmarco": {
+    "repo": "CohereLabs/beir-embed-english-v3",
+    "revision": "f018922a46a51388348a307ec2fef28019a33026",
+    "files": {
+      "msmarco/corpus/0000.parquet": "54975b13fb21770eb6a516cc4698b048c1ac0e559688043ce79f09cc1448f004",
+      "msmarco/corpus/0001.parquet": "0a014aa458e22611821b3f99107b093c8f9ee2efdb7904b68b0327aa1ee1782f",
+      "msmarco/queries/dev.parquet": "c10f47166ec7b883e7a4c43594fe8e55f164686351d82069e4d615a5fd37d6c0"
+    }
   }
 }

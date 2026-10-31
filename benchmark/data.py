@@ -49,6 +49,9 @@ def prepare(root, name, max_base=None, query_count=QUERY_COUNT):
     if name == "openai1m":
         from openai1m_data import prepare_openai1m
         return prepare_openai1m(root, max_base, query_count)
+    if name in {"msmarco1m", "msmarco1m-doc"}:
+        from msmarco1m_data import prepare_msmarco1m
+        return prepare_msmarco1m(root, "doc" if name.endswith("-doc") else "real", max_base, query_count)
     n = min(max_base or BASE_COUNTS[name], BASE_COUNTS[name])
     if n < TOP_K or not 1 <= query_count <= QUERY_COUNT:
         raise ValueError("Need at least 10 base rows and 1–1000 queries")
