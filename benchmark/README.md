@@ -39,6 +39,9 @@ The <1h acceptance bound requires a measured full run; smoke results cannot esta
   101K sample (`default_rng(42)`), 1K randomly selected disjoint query positions,
   remaining 100K base rows, normalized cosine. Dataset revision
   `4a9731217921bc476a0f03544f11f22ae4903fa5` is pinned.
+- OpenAI3-1536 1M (`openai1m`, [openai1m_data.py](openai1m_data.py)): the same 1,000 held-out
+  queries (bit-identical) against all 999,000 other rows of that dataset, in source order. The
+  float64 column streams in Arrow chunks into normalized float32; the 6.1 GB cache needs that much RAM per process.
 
 GloVe and OpenAI split logic follows the
 [reference comparison](https://github.com/VectorDB-NTU/rabitq-turboquant-comparison/tree/main/ann).

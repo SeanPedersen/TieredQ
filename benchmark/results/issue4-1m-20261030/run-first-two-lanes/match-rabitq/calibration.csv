@@ -1,0 +1,2 @@
+dataset,reference_codec,reference_bits,metric,target_bits_per_vector,probe,code_bits,realised_code_bits,measured_bits_per_vector,fits,seed
+openai1m,rabitq,1,disk,1632.0688048048048,0,1632,1632,1703.2216216216216,False,0

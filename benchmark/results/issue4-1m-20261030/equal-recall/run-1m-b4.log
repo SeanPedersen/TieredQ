@@ -1,0 +1,2 @@
+{'dataset': 'openai1m', 'reference_codec': 'qdrant', 'reference_bits': 4, 'reference_recall10': 0.9722999999999999, 'code_bits': 4190, 'recall10_seed0': 0.9757, 'recall10_mean': 0.9735333333333334, 'recall10_std': 0.0018770544300400998, 'probes': 11}
+{'dataset': 'openai1m', 'reference_codec': 'rabitq', 'reference_bits': 4, 'reference_recall10': 0.9700666666666667, 'code_bits': 3968, 'recall10_seed0': 0.9716000000000001, 'recall10_mean': 0.9706000000000001, 'recall10_std': 0.0011135528725660512, 'probes': 11}

@@ -1,0 +1,10 @@
+== openai1m: mean Δ R@10 pt [min, max] over budgets; even = selection half, odd = held out
+ *          p1.75  even -0.03 [-0.11, +0.06]  odd -0.04 [-0.23, +0.20]
+            p1.25  even -0.15 [-0.39, +0.19]  odd -0.12 [-0.41, +0.27]
+               p2  even -0.36 [-0.73, +0.03]  odd -0.13 [-0.31, -0.01]
+               p1  even -0.49 [-0.80, -0.28]  odd -0.37 [-0.73, +0.24]
+== pooled over datasets (one global setting)
+            p1.75  even -0.03 [-0.11, +0.06]  odd -0.04 [-0.23, +0.20]
+            p1.25  even -0.15 [-0.39, +0.19]  odd -0.12 [-0.41, +0.27]
+               p2  even -0.36 [-0.73, +0.03]  odd -0.13 [-0.31, -0.01]
+               p1  even -0.49 [-0.80, -0.28]  odd -0.37 [-0.73, +0.24]

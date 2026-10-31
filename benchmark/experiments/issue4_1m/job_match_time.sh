@@ -1,7 +1,8 @@
 #!/bin/bash
 # Issue #4 at 1M: equal-memory match and timing on DBpedia OpenAI-1536 1M.
-#  1. match_memory.py --quick against RaBitQ (CPUs 8-15) and Qdrant TQ+ (16-23) at 1/2/4 bits/dim, seeds 0-2, in
-#     separate output directories. No reference cells exist at 1M, so each reference is measured once here.
+#  1. match_memory.py --quick against RaBitQ, then Qdrant TQ+, at 1/2/4 bits/dim and seeds 0-2: one lane and output
+#     directory per bits/dim (CPUs 8-15, 16-23, 24-31), so both references share the TieredQ probes near their
+#     targets. No reference cells exist at 1M, so each reference is measured once here.
 #  2. alone on CPUs 0-7, through run.py (seed 0, threads 1/8 x batch 1/32, build time): per bits/dim the reference,
 #     then TieredQ at every budget matched to it (disk, RAM and peak targets of both references), then the other
 #     reference.
@@ -17,12 +18,15 @@ mkdir -p $B/turboquant/native/target/release && cp -n $TQ_LIB $B/turboquant/nati
 # Build the native module once so the parallel lanes do not race on it.
 (cd $B && taskset -c 8-23 $P -c "from native_build import build_native; build_native()") > native-build.log 2>&1 ||
   { echo native > match-exit-code; exit 1; }
-match() {  # $1 reference, $2 cpus
-  (cd $B && taskset -c $2 $P -u match_memory.py --quick --reference $1 --reference-bits 1 2 4 --datasets openai1m \
-    --data $W/data --output $W/match-$1 >> $W/match-$1.log 2>&1)
-  echo $? > match-$1-exit-code
+match() {  # $1 bits/dim, $2 cpus
+  status=0
+  for ref in rabitq qdrant; do
+    (cd $B && taskset -c $2 $P -u match_memory.py --quick --reference $ref --reference-bits $1 --datasets openai1m \
+      --data $W/data --output $W/match-b$1 >> $W/match-b$1.log 2>&1) || { status=$?; break; }
+  done
+  echo $status > match-b$1-exit-code
 }
-match rabitq 8-15 & match qdrant 16-23 & wait
+match 1 8-15 & match 2 16-23 & match 4 24-31 & wait
 date -u > match-finished-utc.txt
 O=$W/timing
 mkdir -p $O
@@ -38,8 +42,8 @@ cell() {  # $1 codec, $2 bits, $3 code bits (TieredQ only)
 }
 budgets() {  # $1 bits -> distinct TieredQ code budgets matched to either reference at these bits/dim
   $P -c "import json
-print(*sorted({r['code_bits'] for ref in ('rabitq', 'qdrant') for r in json.load(open('$W/match-'+ref+'/matches-'+ref+'.json'))
-               if r['reference_bits'] == $1 and r['code_bits']}))"
+print(*sorted({r['code_bits'] for ref in ('rabitq', 'qdrant') for r in json.load(open('$W/match-b$1/matches-'+ref+'.json'))
+               if r['code_bits']}))"
 }
 for bits in 1 2 4; do
   cell rabitq $bits

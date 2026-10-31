@@ -1,0 +1,32 @@
+-- The CXX compiler identification is GNU 16.2.1
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP: TRUE (found version "5.2")
+-- Looking for sgemm_
+-- Looking for sgemm_ - not found
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE
+-- Looking for sgemm_
+-- Looking for sgemm_ - found
+-- Found BLAS: /usr/lib/libblas.so
+-- Looking for cheev_
+-- Looking for cheev_ - not found
+-- Looking for cheev_
+-- Looking for cheev_ - found
+-- Found LAPACK: /usr/lib/liblapack.so;/usr/lib/libblas.so
+-- Configuring done (2.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue4-1m-20261030/build-ab
+[ 16%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_index.cpp.o
+[ 33%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq.cpp.o
+[ 50%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_index_io.cpp.o
+[ 66%] Linking CXX static library libdv_tieredq.a
+[ 66%] Built target dv_tieredq
+[ 83%] Building CXX object CMakeFiles/ab_eval.dir/ab_eval.cpp.o
+[100%] Linking CXX executable ab_eval
+[100%] Built target ab_eval

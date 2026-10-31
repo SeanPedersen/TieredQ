@@ -1,0 +1,73 @@
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Configuring done (0.3s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue4-1m-20261030/source/benchmark/build-native
+[ 20%] Built target dv_tieredq
+[ 25%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 85%] Built target nanobind-static
+[ 90%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 95%] Linking CXX executable codec_reference
+[ 95%] Built target codec_reference
+[100%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+Built target codec_native
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-openai1m-rabitq-4-0: disk 6304.1, peak RAM 6310.5 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-openai1m-rabitq-4-1: disk 6304.1, peak RAM 6310.4 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-openai1m-rabitq-4-2: disk 6304.1, peak RAM 6310.3 bits/vector
+cell-openai1m-tieredq-c6304-0: disk 6394.4, peak RAM 6443.5 bits/vector
+cell-openai1m-tieredq-c6209-0: disk 6330.4, peak RAM 6379.5 bits/vector
+cell-openai1m-tieredq-c6181-0: disk 6298.4, peak RAM 6347.0 bits/vector
+cell-openai1m-tieredq-c6188-0: disk 6298.4, peak RAM 6347.0 bits/vector
+cell-openai1m-tieredq-c6193-0: disk 6298.4, peak RAM 6349.8 bits/vector
+cell-openai1m-tieredq-c6197-0: disk 6298.4, peak RAM 6351.0 bits/vector
+cell-openai1m-tieredq-c6200-0: disk 6298.4, peak RAM 6346.5 bits/vector
+cell-openai1m-tieredq-c6202-0: disk 6298.4, peak RAM 6347.0 bits/vector
+cell-openai1m-tieredq-c6202-1: disk 6298.4, peak RAM 6346.5 bits/vector
+cell-openai1m-tieredq-c6202-2: disk 6298.4, peak RAM 6346.7 bits/vector
+cell-openai1m-tieredq-c6173-0: disk 6266.4, peak RAM 6314.1 bits/vector
+cell-openai1m-tieredq-c6173-1: disk 6266.4, peak RAM 6314.7 bits/vector
+cell-openai1m-tieredq-c6173-2: disk 6266.4, peak RAM 6315.2 bits/vector
+cell-openai1m-tieredq-c6165-0: disk 6266.4, peak RAM 6315.5 bits/vector
+cell-openai1m-tieredq-c6157-0: disk 6266.4, peak RAM 6319.7 bits/vector
+cell-openai1m-tieredq-c6147-0: disk 6266.4, peak RAM 6314.7 bits/vector
+cell-openai1m-tieredq-c6139-0: disk 6234.4, peak RAM 6282.7 bits/vector
+cell-openai1m-tieredq-c6139-1: disk 6234.4, peak RAM 6282.7 bits/vector
+cell-openai1m-tieredq-c6139-2: disk 6234.4, peak RAM 6283.2 bits/vector
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue4-1m-20261030/source/benchmark/build-native
+[  5%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 25%] Built target dv_tieredq
+[ 85%] Built target nanobind-static
+[ 90%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 95%] Linking CXX executable codec_reference
+[ 95%] Built target codec_reference
+[100%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[100%] Built target codec_native
+cell-openai1m-qdrant-4-0: disk 6208.3, peak RAM 6215.6 bits/vector
+cell-openai1m-qdrant-4-1: disk 6208.3, peak RAM 6216.2 bits/vector
+cell-openai1m-qdrant-4-2: disk 6208.3, peak RAM 6217.2 bits/vector
+cell-openai1m-tieredq-c6112-0: disk 6202.4, peak RAM 6250.7 bits/vector
+cell-openai1m-tieredq-c6118-0: disk 6234.4, peak RAM 6283.4 bits/vector
+cell-openai1m-tieredq-c6112-1: disk 6202.4, peak RAM 6251.2 bits/vector
+cell-openai1m-tieredq-c6112-2: disk 6202.4, peak RAM 6250.7 bits/vector
+cell-openai1m-tieredq-c6104-0: disk 6202.4, peak RAM 6250.7 bits/vector
+cell-openai1m-tieredq-c6096-0: disk 6202.4, peak RAM 6250.7 bits/vector
+cell-openai1m-tieredq-c6088-0: disk 6202.4, peak RAM 6250.7 bits/vector
+cell-openai1m-tieredq-c6080-0: disk 6170.4, peak RAM 6218.6 bits/vector
+cell-openai1m-tieredq-c6080-1: disk 6170.4, peak RAM 6222.6 bits/vector
+cell-openai1m-tieredq-c6080-2: disk 6170.4, peak RAM 6219.5 bits/vector
+cell-openai1m-tieredq-c6072-0: disk 6170.4, peak RAM 6218.6 bits/vector
+cell-openai1m-tieredq-c6064-0: disk 6170.4, peak RAM 6219.3 bits/vector
+cell-openai1m-tieredq-c6056-0: disk 6170.4, peak RAM 6218.6 bits/vector
+cell-openai1m-tieredq-c6048-0: disk 6138.4, peak RAM 6186.7 bits/vector
+cell-openai1m-tieredq-c6048-1: disk 6138.4, peak RAM 6186.7 bits/vector
+cell-openai1m-tieredq-c6048-2: disk 6138.4, peak RAM 6187.1 bits/vector

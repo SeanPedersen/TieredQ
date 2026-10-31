@@ -1,0 +1,6 @@
+Exact FP32 truth: openai1m (999000, 1536), queries=1000
+(999000, 1536) (1000, 1536) (1000, 10) 48s
+queries equal 100k: True
+100k base rows equal 1M rows: True
+truth spot check: True
+norms 1.1920928955078125e-07

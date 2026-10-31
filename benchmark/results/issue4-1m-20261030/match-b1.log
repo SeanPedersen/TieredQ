@@ -1,0 +1,43 @@
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue4-1m-20261030/source/benchmark/build-native
+[ 20%] Built target dv_tieredq
+[ 25%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 85%] Built target nanobind-static
+[ 90%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 95%] Linking CXX executable codec_reference
+[ 95%] Built target codec_reference
+[100%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[100%] Built target codec_native
+cell-openai1m-tieredq-c1557-0: disk 1630.5, peak RAM 1644.8 bits/vector
+cell-openai1m-tieredq-c1575-0: disk 1646.7, peak RAM 1661.1 bits/vector
+cell-openai1m-tieredq-c1561-0: disk 1638.6, peak RAM 1652.6 bits/vector
+cell-openai1m-tieredq-c1557-1: disk 1630.6, peak RAM 1646.6 bits/vector
+cell-openai1m-tieredq-c1557-2: disk 1630.5, peak RAM 1645.2 bits/vector
+cell-openai1m-tieredq-c1549-0: disk 1622.5, peak RAM 1637.1 bits/vector
+cell-openai1m-tieredq-c1549-1: disk 1622.5, peak RAM 1636.9 bits/vector
+cell-openai1m-tieredq-c1549-2: disk 1622.5, peak RAM 1637.1 bits/vector
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Configuring done (0.3s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue4-1m-20261030/source/benchmark/build-native
+[ 20%] Built target dv_tieredq
+[ 25%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 85%] Built target nanobind-static
+[ 90%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 95%] Linking CXX executable codec_reference
+[ 95%] Built target codec_reference
+[100%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[100%] Built target codec_native
+cell-openai1m-qdrant-1-1: disk 1600.3, peak RAM 1607.6 bits/vector
+cell-openai1m-qdrant-1-2: disk 1600.3, peak RAM 1607.7 bits/vector
+cell-openai1m-tieredq-c1526-0: disk 1598.2, peak RAM 1612.6 bits/vector
+cell-openai1m-tieredq-c1531-0: disk 1606.3, peak RAM 1620.1 bits/vector
+cell-openai1m-tieredq-c1526-1: disk 1598.2, peak RAM 1613.4 bits/vector
+cell-openai1m-tieredq-c1526-2: disk 1598.2, peak RAM 1614.7 bits/vector
+cell-openai1m-tieredq-c1518-0: disk 1590.1, peak RAM 1604.9 bits/vector
+cell-openai1m-tieredq-c1518-1: disk 1590.2, peak RAM 1604.5 bits/vector
+cell-openai1m-tieredq-c1518-2: disk 1590.2, peak RAM 1606.1 bits/vector

@@ -1,0 +1,23 @@
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue4-1m-20261030/source/benchmark/build-native
+[ 25%] Built target dv_tieredq
+[ 25%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 85%] Built target nanobind-static
+[ 90%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 95%] Linking CXX executable codec_reference
+[ 95%] Built target codec_reference
+[100%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+Built target codec_native
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-openai1m-rabitq-1-0: disk 1632.1, peak RAM 1638.6 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-openai1m-rabitq-1-1: disk 1632.1, peak RAM 1638.5 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-openai1m-rabitq-1-2: disk 1632.1, peak RAM 1638.5 bits/vector
+cell-openai1m-tieredq-c1632-0: disk 1703.2, peak RAM 1720.5 bits/vector
