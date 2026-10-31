@@ -255,7 +255,7 @@ class TieredQIndex {
 };
 // Fast-mode inverted-file index. With lists == 0 each of the codec's k-means centroids (at most 256) forms one list
 // at no extra storage; otherwise build trains a separate model-space k-means coarse quantizer with that many lists
-// (seeded sample of at least 32,768 or 64 rows per list) and stores its centroids. Lists are stored contiguously in
+// (seeded sample of at least 32,768 or 64 rows per list, or the sample given to train_lists) and stores its centroids. Lists are stored contiguously in
 // one fast representation, so every list scan uses the flat index's kernels; each list starts on a 32-document
 // boundary (padded with copies of its last row, which are never returned). Search ranks lists by model-space
 // distance to the query and scans the nearest nprobe nonempty lists. Ids are input row order. Build replaces the
@@ -273,6 +273,10 @@ class TieredQIVFIndex {
  public:
   explicit TieredQIVFIndex(TieredQ codec, uint32_t lists = 0, uint64_t seed = 0);
   const TieredQ& codec() const { return documents_.codec(); }
+  // Coarse indexes only: trains the lists on sample (rows x config().dimensions, at least one row per list) instead
+  // of on a sample of build()'s rows, so a partition learned on earlier data serves later builds unchanged. Loaded
+  // indexes with trained lists keep them the same way.
+  void train_lists(const float* sample, size_t rows);
   void build(const float* rows, size_t count);
   size_t size() const { return size_; }
   size_t lists() const { return list_rows_.size(); }
@@ -313,6 +317,7 @@ class TieredQIVFIndex {
   size_t size_ = 0;
   uint32_t coarse_lists_ = 0;                    // 0: lists are the codec's centroids
   uint64_t seed_ = 0;
+  bool fixed_lists_ = false;                     // train_lists() trained coarse_; build() only assigns
   std::shared_ptr<const tieredq_detail::CoarseQuantizer> coarse_;
 };
 } // namespace dv

@@ -150,6 +150,33 @@ void persistence_test(uint32_t lists) {
   TieredQIVFIndex empty(codec,lists);
   require(TieredQIVFIndex::deserialize(empty.serialize()).size()==0,"empty IVF does not round-trip");
 }
+// train_lists fixes the partition: builds of other data assign to the same lists, a saved trained index keeps them,
+// and indexes without coarse lists reject it.
+void fixed_lists_test(TieredQMetric metric) {
+  constexpr uint32_t lists=20;
+  const auto codec=train(metric,2*dimensions);
+  const auto sample=clustered_rows(rows,31),first=clustered_rows(rows,37),second=clustered_rows(rows,41);
+  TieredQIVFIndex fixed(codec,lists); fixed.train_lists(sample.data(),rows);
+  const auto trained=TieredQIVFIndex::deserialize(fixed.serialize());
+  fixed.build(first.data(),rows); fixed.build(second.data(),rows);
+  TieredQIVFIndex fresh(codec,lists); fresh.train_lists(sample.data(),rows); fresh.build(second.data(),rows);
+  require(fixed.list_assignment()==fresh.list_assignment(),"fixed lists change between builds");
+  auto reloaded=trained; reloaded.build(second.data(),rows);
+  require(reloaded.list_assignment()==fresh.list_assignment(),"saved trained lists are not kept");
+  TieredQIVFIndex learned(codec,lists); learned.build(second.data(),rows);
+  require(learned.list_assignment()!=fresh.list_assignment(),"lists trained on the build rows equal the fixed ones");
+  TieredQIndex flat(codec,TieredQIndexMode::fast); flat.add(second.data(),rows);
+  const auto probes=clustered_rows(queries,43);
+  Results expected{std::vector<float>(queries*k),std::vector<uint32_t>(queries*k)};
+  flat.search_batch(probes.data(),queries,k,expected.scores.data(),expected.ids.data());
+  same(run(fresh,probes,lists),expected,"full probe over fixed lists differs from the flat index");
+  bool rejected=false;
+  try { TieredQIVFIndex plain(codec); plain.train_lists(sample.data(),rows); } catch (const std::runtime_error&) { rejected=true; }
+  require(rejected,"train_lists without coarse lists accepted");
+  rejected=false;
+  try { TieredQIVFIndex few(codec,lists); few.train_lists(sample.data(),lists-1); } catch (const std::runtime_error&) { rejected=true; }
+  require(rejected,"train_lists with fewer rows than lists accepted");
+}
 } // namespace
 void tieredq_ivf_tests() {
   // 1 bit/dim takes the nibble lookup layout on x86, 4 bits int8 levels or codes, 6 bits wide code lookups.
@@ -172,5 +199,6 @@ void tieredq_ivf_tests() {
   partial_probe_test();
   persistence_test(0);
   persistence_test(20);
+  for (auto metric:{TieredQMetric::inner_product,TieredQMetric::l2}) fixed_lists_test(metric);
   std::cout<<"PASS IVF\n";
 }

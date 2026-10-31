@@ -7,7 +7,10 @@
 // bits/vector fit, storage only) | tieredq-profile CODE_BITS (single-query loops only, for perf; prints qps_1t_b1) | rescore-profile CODE_BITS (RESCORE tiers on fixed candidates, for perf; prints microseconds per query). Rows: codec budget nlist nprobe disk_bits code_bits recall qps_1t_b1 qps_8t_b32
 // build_s list_hash. LISTS gives TieredQ a coarse quantizer with that many lists (the codec keeps NLIST centroids) and
 // RaBitQ the same partition. PRUNE_Z and PRUNE_PREFIX set TieredQPruning. MAX_BITS caps TieredQ bits per coordinate (TieredQConfig::max_bits) and ALLOCATION_POWER sets
-// TieredQConfig::allocation_power, for every TieredQ model the run trains. Data as ab_eval: DATA_DIR/{base.f32,queries.f32,truth.u32}, inner-product truth.
+// TieredQConfig::allocation_power, for every TieredQ model the run trains. Training (#19.2): every TieredQ model
+// trains on the first TRAIN_ROWS (default 32,768) rows of a seeded shuffle that skips the row ids in
+// TRAIN_EXCLUDE_ROWS (u32 file); PARTITION_FROM=subset also trains the coarse lists and RaBitQ's list means on them
+// (default full: all rows). Data as ab_eval: DATA_DIR/{base.f32,queries.f32,truth.u32}, inner-product truth.
 // RERANK=K1,K2,... adds exact rerank: each codec returns its top-k' and one shared rescoring (inner product on the raw
 // float base, as the truth) keeps the top 10. Rows then read: codec budget nlist nprobe disk_bits code_bits rerank_k
 // cand_recall recall reads fp32_bits qps_1t_b1 qps_8t_b32 build_s list_hash, where cand_recall counts the true top 10
@@ -111,14 +114,28 @@ size_t rerank(const Rescorer& tier,const float* query,const dv::TieredQQuery* pr
   for (size_t i=0;i<top_k;++i) out[i]=i<kept ? scored[i].second : UINT32_MAX;
   return scored.size();
 }
-// Up to training_limit rows in a seeded shuffle.
-std::vector<float> training_sample(const Data& data) {
-  const size_t count=std::min(data.n,training_limit);
+// The first TRAIN_ROWS (default training_limit) rows of a seeded shuffle, skipping the TRAIN_EXCLUDE_ROWS ids.
+std::vector<size_t> training_rows(const Data& data) {
+  std::vector<bool> excluded(data.n,false);
+  if (const char* path=std::getenv("TRAIN_EXCLUDE_ROWS")) for (uint32_t row:load<uint32_t>(path)) excluded.at(row)=true;
+  const size_t limit=std::getenv("TRAIN_ROWS") ? std::stoul(std::getenv("TRAIN_ROWS")) : training_limit;
   std::vector<size_t> order(data.n); std::iota(order.begin(),order.end(),0);
   std::mt19937_64 rng(seed); std::shuffle(order.begin(),order.end(),rng);
-  std::vector<float> sample(count*data.d);
-  for (size_t i=0;i<count;++i) std::copy_n(data.base.data()+order[i]*data.d,data.d,sample.data()+i*data.d);
+  std::erase_if(order,[&](size_t row) { return excluded[row]; });
+  order.resize(std::min(order.size(),limit));
+  return order;
+}
+std::vector<float> training_sample(const Data& data) {
+  const auto rows=training_rows(data);
+  std::vector<float> sample(rows.size()*data.d);
+  for (size_t i=0;i<rows.size();++i) std::copy_n(data.base.data()+rows[i]*data.d,data.d,sample.data()+i*data.d);
   return sample;
+}
+// PARTITION_FROM=subset trains the coarse lists (and RaBitQ's list means) on the training rows; full (default) on all.
+bool partition_from_subset() {
+  const std::string from=std::getenv("PARTITION_FROM") ? std::getenv("PARTITION_FROM") : "full";
+  if (from!="full" && from!="subset") { std::fprintf(stderr,"PARTITION_FROM must be full or subset\n"); std::exit(2); }
+  return from=="subset";
 }
 dv::TieredQ train(const Data& data,uint32_t code_bits,size_t nlist,bool rotate_tiers=true) {
   const auto sample=training_sample(data);
@@ -238,11 +255,14 @@ Rescorer tieredq_refinement_rescorer(const Data& data,uint32_t bits,size_t nlist
                       prefix_query ? refinement->query(query,*prefix_query) : refinement->query(query),scores);
   },prefix->model_id()};
 }
-// Mean row of every list: RaBitQ's centroids on a shared partition.
+// Mean row of every list (over the training rows with PARTITION_FROM=subset): RaBitQ's centroids on a shared
+// partition.
 std::vector<float> list_means(const Data& data,const std::vector<uint32_t>& partition,size_t nlist) {
   std::vector<float> centroids(nlist*data.d,0.0f);
   std::vector<size_t> sizes(nlist,0);
-  for (size_t i=0;i<data.n;++i) {
+  std::vector<size_t> rows(data.n); std::iota(rows.begin(),rows.end(),0);
+  if (partition_from_subset()) rows=training_rows(data);
+  for (size_t i:rows) {
     ++sizes[partition[i]];
     for (size_t j=0;j<data.d;++j) centroids[partition[i]*data.d+j]+=data.base[i*data.d+j];
   }
@@ -413,6 +433,15 @@ void sweep(const char* codec,double budget,size_t nlist,const Data& data,const S
 double tieredq_disk_bits(const dv::TieredQIVFIndex& index) { return 8.0*double(index.serialize().size())/double(index.size()); }
 
 size_t coarse_lists() { return std::getenv("LISTS") ? std::stoul(std::getenv("LISTS")) : 0; }
+// The run's IVF over codec; PARTITION_FROM=subset fixes its coarse lists on the training rows before build.
+dv::TieredQIVFIndex ivf_index(const Data& data,dv::TieredQ codec) {
+  dv::TieredQIVFIndex index(std::move(codec),uint32_t(coarse_lists()));
+  if (coarse_lists() && partition_from_subset()) {
+    const auto sample=training_sample(data);
+    index.train_lists(sample.data(),sample.size()/data.d);
+  }
+  return index;
+}
 // PRUNE_Z / PRUNE_PREFIX: TieredQPruning confidence and prefix tiers (defaults: exact bound, 4 tiers).
 dv::TieredQPruning pruning() {
   dv::TieredQPruning options;
@@ -424,7 +453,7 @@ dv::TieredQPruning pruning() {
 void run_tieredq(const Data& data,uint32_t code_bits,size_t nlist,bool timed,const std::vector<size_t>& nprobes,double label) {
   const auto start=std::chrono::steady_clock::now();
   omp_set_num_threads(threads);
-  dv::TieredQIVFIndex index(train(data,code_bits,nlist),uint32_t(coarse_lists()));
+  auto index=ivf_index(data,train(data,code_bits,nlist));
   index.build(data.base.data(),data.n);
   const double build_s=seconds_since(start);
   std::vector<size_t> sizes(index.lists());
@@ -452,7 +481,7 @@ void run_tieredq(const Data& data,uint32_t code_bits,size_t nlist,bool timed,con
 void profile_tieredq(const Data& data,uint32_t code_bits,size_t nlist,const std::vector<size_t>& nprobes) {
   const size_t profile_rounds=std::getenv("PROFILE_ROUNDS") ? std::stoul(std::getenv("PROFILE_ROUNDS")) : 10;
   omp_set_num_threads(threads);
-  dv::TieredQIVFIndex index(train(data,code_bits,nlist),uint32_t(coarse_lists()));
+  auto index=ivf_index(data,train(data,code_bits,nlist));
   index.build(data.base.data(),data.n);
   omp_set_num_threads(1);
   std::fprintf(stderr,"coded ranks %zu of %zu, tiers (bits x dims):",index.codec().coded_dimensions(),index.codec().model_dimensions());
@@ -475,7 +504,7 @@ void profile_rescore(const Data& data,uint32_t code_bits,size_t nlist,size_t npr
   const size_t profile_rounds=std::getenv("PROFILE_ROUNDS") ? std::stoul(std::getenv("PROFILE_ROUNDS")) : 10;
   const size_t depth=rerank_depths().empty() ? top_k : rerank_depths()[0];
   omp_set_num_threads(threads);
-  dv::TieredQIVFIndex index(train(data,code_bits,nlist),uint32_t(coarse_lists()));
+  auto index=ivf_index(data,train(data,code_bits,nlist));
   index.build(data.base.data(),data.n);
   const auto tiers=rescorers(data,index.list_assignment(),index.lists(),nlist);
   const auto weights=index.codec().query_weights(data.queries.data(),data.nq);
@@ -499,7 +528,7 @@ void profile_rescore(const Data& data,uint32_t code_bits,size_t nlist,size_t npr
 // Largest code budget (to match_resolution) whose serialized IVF fits target bits/vector; storage only.
 uint32_t match_code_bits(const Data& data,double target,size_t nlist) {
   auto fits=[&](uint32_t code_bits) {
-    dv::TieredQIVFIndex index(train(data,code_bits,nlist),uint32_t(coarse_lists()));
+    auto index=ivf_index(data,train(data,code_bits,nlist));
     index.build(data.base.data(),data.n);
     const double bits=tieredq_disk_bits(index);
     std::fprintf(stderr,"match target %.1f: code_bits %u -> %.1f bits/vector\n",target,code_bits,bits);
@@ -567,7 +596,7 @@ std::vector<uint32_t> tieredq_partition(const Data& data,size_t nlist) {
     for (size_t i=0;i<data.n;++i) lists[i]=encoded[i*codec.bytes_per_vector()+codec.code_bytes()];
     return lists;
   }
-  dv::TieredQIVFIndex index(train(data,uint32_t(data.d),nlist),uint32_t(coarse_lists()));
+  auto index=ivf_index(data,train(data,uint32_t(data.d),nlist));
   index.build(data.base.data(),data.n);
   return index.list_assignment();
 }

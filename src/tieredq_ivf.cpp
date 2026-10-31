@@ -58,17 +58,29 @@ const float* TieredQIVFIndex::model_rows(const float* rows,size_t first,size_t c
   return buffer.data();
 }
 
-// Coarse lists: k-means on a seeded sample, then every row's nearest list.
+void TieredQIVFIndex::train_lists(const float* sample,size_t rows) {
+  if (!coarse_lists_) bad("train_lists needs an index with coarse lists");
+  if (!sample && rows) bad("null vector data");
+  std::vector<float> lifted;
+  coarse_=std::make_shared<const CoarseQuantizer>(tieredq_detail::train_coarse(
+      model_rows(sample,0,rows,lifted),rows,codec().model_dimensions(),coarse_lists_,seed_));
+  fixed_lists_=true;
+}
+
+// Coarse lists: k-means on a seeded sample (unless train_lists fixed them), then every row's nearest list.
 std::vector<uint32_t> TieredQIVFIndex::coarse_lists(const float* rows,size_t count) {
   const TieredQ& model=codec();
   const size_t d=model.config().dimensions,md=model.model_dimensions();
-  const size_t sample_rows=std::min(count,std::max(coarse_minimum_sample,product(coarse_rows_per_list,coarse_lists_)));
-  tieredq_detail::TrainingRng rng(seed_);
-  const auto picked=rng.choice(count,sample_rows);
-  std::vector<float> sample(product(sample_rows,d)),lifted;
-  for (size_t i=0;i<sample_rows;++i) std::copy_n(rows+picked[i]*d,d,sample.data()+i*d);
-  const float* model_sample=model_rows(sample.data(),0,sample_rows,lifted);
-  coarse_=std::make_shared<const CoarseQuantizer>(tieredq_detail::train_coarse(model_sample,sample_rows,md,coarse_lists_,seed_));
+  std::vector<float> lifted;
+  if (!fixed_lists_) {
+    const size_t sample_rows=std::min(count,std::max(coarse_minimum_sample,product(coarse_rows_per_list,coarse_lists_)));
+    tieredq_detail::TrainingRng rng(seed_);
+    const auto picked=rng.choice(count,sample_rows);
+    std::vector<float> sample(product(sample_rows,d));
+    for (size_t i=0;i<sample_rows;++i) std::copy_n(rows+picked[i]*d,d,sample.data()+i*d);
+    const float* model_sample=model_rows(sample.data(),0,sample_rows,lifted);
+    coarse_=std::make_shared<const CoarseQuantizer>(tieredq_detail::train_coarse(model_sample,sample_rows,md,coarse_lists_,seed_));
+  }
   std::vector<uint32_t> lists(count);
   for (size_t first=0;first<count;first+=coarse_assign_chunk) {
     const size_t n=std::min(coarse_assign_chunk,count-first);
@@ -291,6 +303,7 @@ TieredQIVFIndex TieredQIVFIndex::read_lists(TieredQ model,Reader& reader) {
     std::vector<float> centroids(product(lists,md));
     tieredq_detail::read_f32_array(reader,centroids.data(),centroids.size());
     index.coarse_=std::make_shared<const CoarseQuantizer>(CoarseQuantizer::from(centroids,lists,md));
+    index.fixed_lists_=true;
   }
   index.size_=size_t(reader.u64());
   size_t padded=0,live=0;
