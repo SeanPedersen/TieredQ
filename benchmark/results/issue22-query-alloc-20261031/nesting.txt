@@ -1,0 +1,5 @@
+nesting	model	512	code_bits 512	bytes 69	tiers 4x3 3x49 2x105 1x143
+nesting	model	768	code_bits 768	bytes 101	tiers 4x14 3x96 2x126 1x172
+nesting	model	1024	code_bits 1032	bytes 134	tiers 4x51 3x109 2x173 1x155
+nesting	512->768	centroid_diff 7.11e-07	basis_diff 0.00e+00 (positions 300)	positions_losing_bits 0 of 300	tiers_equal 0 inside_one 1 of 4
+nesting	768->1024	centroid_diff 3.05e-07	basis_diff 0.00e+00 (positions 408)	positions_losing_bits 0 of 408	tiers_equal 0 inside_one 1 of 4

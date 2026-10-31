@@ -42,6 +42,10 @@ The <1h acceptance bound requires a measured full run; smoke results cannot esta
 - OpenAI3-1536 1M (`openai1m`, [openai1m_data.py](openai1m_data.py)): the same 1,000 held-out
   queries (bit-identical) against all 999,000 other rows of that dataset, in source order. The
   float64 column streams in Arrow chunks into normalized float32; the 6.1 GB cache needs that much RAM per process.
+- MS MARCO-1M (`msmarco1m` / `msmarco1m-doc`, [msmarco1m_data.py](msmarco1m_data.py)): Cohere embed-english-v3.0
+  passages with real dev questions or held-out passages as queries on one base (#22).
+  `python msmarco1m_data.py train-queries DATA OUT` exports a seed-42 sample of 20,000 train questions (disjoint from
+  dev) for fitting query-side statistics; it is cached apart from the base.
 
 GloVe and OpenAI split logic follows the
 [reference comparison](https://github.com/VectorDB-NTU/rabitq-turboquant-comparison/tree/main/ann).
@@ -183,6 +187,8 @@ both codecs or neither, since the timing harness adds about 160 bits/vector of p
 Results before and after the RAM work (issue #18): `results/issue4-equal-memory-20261028/README.md`.
 Final issue #4 results against Qdrant TQ+ and RaBitQ on all four datasets, with speed at every matched
 budget: `results/issue4-final-20261029/README.md`.
+The final issue #4 report, including DBpedia OpenAI-1536 at 1M and speed at equal recall:
+[`docs/benchmark-report.md`](../docs/benchmark-report.md).
 
 Each timing point uses three warmup queries and three complete repeats of all
 queries. All timings use seed 0; seeds 1 and 2 record recall with `NaN` timing fields.

@@ -1,0 +1,7 @@
+{
+  "file": "msmarco/queries/train.parquet",
+  "train_queries": 502939,
+  "count": 20000,
+  "split": "seed 42 sample of train rows",
+  "queries_sha256": "5f379fc5cf2ef48c6d2de102236cd6f13952f72a932b99738e5a9cab3f9ddee7"
+}

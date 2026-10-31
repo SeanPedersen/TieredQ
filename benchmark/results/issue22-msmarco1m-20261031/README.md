@@ -44,5 +44,6 @@ codecs need about 4x nprobe for the doc-query recall, and FP32 rerank reaches 0.
 - Refinement recall tops out at 0.972-0.975 on real queries (0.982-0.985 on doc); 0.98+ needs INT8 / FP32.
 - RaBitQ's native IVF and the `rabitq:B` rescore glue run at the same speed here.
 
-Next for #22: query-aware allocation to recover the 512 prefix's real-query loss, the equal-memory flat match and the
-alpha run on both query sets, and the cost model.
+Query-aware allocation was checked and is a no-go ([issue22-query-alloc-20261031](../issue22-query-alloc-20261031/README.md)):
+the real-query loss is not mainly misallocated bits. Next for #22: the equal-memory flat match and the alpha run on
+both query sets.

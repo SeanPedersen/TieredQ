@@ -6,6 +6,8 @@ The base is 1,000,000 passages drawn with seed 42 from the first two corpus shar
 of the full 8.8M rows); the doc queries come from the same draw and are disjoint from it. Their recall difference
 isolates the query distribution with everything else fixed. Rows are normalized FP32; truth is exact inner-product
 top-10 and top-100. Shards stream batch by batch, so peak memory stays near the base itself.
+A third set, `train`, is a seed-42 sample of MS MARCO train questions (disjoint from dev) for fitting query-aware
+allocation; it is cached on its own and never enters the v1 base cache or its truth.
 """
 import hashlib
 import json
@@ -18,6 +20,8 @@ QUERY_COUNT = 1000
 DEEP_K = 100
 CORPUS_SHARDS = ("msmarco/corpus/0000.parquet", "msmarco/corpus/0001.parquet")
 DEV_QUERIES = "msmarco/queries/dev.parquet"
+TRAIN_QUERIES = "msmarco/queries/train.parquet"
+TRAIN_SAMPLE = 20_000
 QUERY_SETS = ("real", "doc")
 BATCH_ROWS = 65_536
 TRUTH_BASE_CHUNK = 65_536
@@ -138,6 +142,25 @@ def prepare_msmarco1m(root, query_set, max_base=None, query_count=QUERY_COUNT):
     return arrays["base"], arrays[query_set][:query_count], arrays[f"truth_{query_set}"][:query_count, :10]
 
 
+def load_train_queries(root, count=TRAIN_SAMPLE):
+    """Seed-42 sample of `count` normalized train questions with their ids (cached as msmarco-train-queries-*-v1)."""
+    import pyarrow.parquet as pq
+    from data import SPLIT_SEED
+    root = Path(root)
+    cache = root / f"msmarco-train-queries-{count}-v1.npz"
+    if not cache.exists():
+        source = fetch(root, TRAIN_QUERIES)
+        total = pq.ParquetFile(source).metadata.num_rows
+        rows = np.sort(np.random.default_rng(SPLIT_SEED).choice(total, count, replace=False))
+        queries, ids = stream_rows([source], rows)
+        np.savez(cache, queries=queries, ids=ids)
+        cache.with_suffix(".json").write_text(json.dumps(dict(
+            file=TRAIN_QUERIES, train_queries=int(total), count=count, split=f"seed {SPLIT_SEED} sample of train rows",
+            queries_sha256=digest(queries)), indent=2) + "\n")
+    with np.load(cache) as data:
+        return data["queries"], data["ids"]
+
+
 def export(root, output):
     """Eval directories output/msmarco1m-{real,doc} (base.f32, queries.f32, truth.u32 top-10, truth100.u32); the doc
     set's base.f32 links to the real set's."""
@@ -157,6 +180,17 @@ def export(root, output):
         print(name, arrays["base"].shape, arrays[name].shape, flush=True)
 
 
+def export_train_queries(root, output):
+    """output/train_queries.f32: the train-question sample, for QUERY_SAMPLE in the IVF eval."""
+    queries, _ = load_train_queries(root)
+    Path(output).mkdir(parents=True, exist_ok=True)
+    queries.tofile(Path(output) / "train_queries.f32")
+    print("train", queries.shape, flush=True)
+
+
 if __name__ == "__main__":
     import sys
-    export(Path(sys.argv[1]), Path(sys.argv[2]))
+    if sys.argv[1] == "train-queries":
+        export_train_queries(Path(sys.argv[2]), Path(sys.argv[3]))
+    else:
+        export(Path(sys.argv[1]), Path(sys.argv[2]))

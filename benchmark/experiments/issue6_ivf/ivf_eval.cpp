@@ -6,7 +6,8 @@
 // Modes: tieredq CODE_BITS | rabitq BITS_PER_DIM | tieredq-match TARGET_DISK_BITS (largest code budget whose disk
 // bits/vector fit, storage only) | tieredq-profile CODE_BITS (single-query loops only, for perf; prints qps_1t_b1) | rescore-profile CODE_BITS (RESCORE tiers on fixed candidates, for perf; prints microseconds per query). Rows: codec budget nlist nprobe disk_bits code_bits recall qps_1t_b1 qps_8t_b32
 // build_s list_hash. LISTS gives TieredQ a coarse quantizer with that many lists (the codec keeps NLIST centroids) and
-// RaBitQ the same partition. PRUNE_Z and PRUNE_PREFIX set TieredQPruning. MAX_BITS caps TieredQ bits per coordinate (TieredQConfig::max_bits). Data as ab_eval: DATA_DIR/{base.f32,queries.f32,truth.u32}, inner-product truth.
+// RaBitQ the same partition. PRUNE_Z and PRUNE_PREFIX set TieredQPruning. MAX_BITS caps TieredQ bits per coordinate (TieredQConfig::max_bits) and ALLOCATION_POWER sets
+// TieredQConfig::allocation_power, for every TieredQ model the run trains. Data as ab_eval: DATA_DIR/{base.f32,queries.f32,truth.u32}, inner-product truth.
 // RERANK=K1,K2,... adds exact rerank: each codec returns its top-k' and one shared rescoring (inner product on the raw
 // float base, as the truth) keeps the top 10. Rows then read: codec budget nlist nprobe disk_bits code_bits rerank_k
 // cand_recall recall reads fp32_bits qps_1t_b1 qps_8t_b32 build_s list_hash, where cand_recall counts the true top 10
@@ -125,6 +126,7 @@ dv::TieredQ train(const Data& data,uint32_t code_bits,size_t nlist,bool rotate_t
   auto config=dv::TieredQConfig::target_code_bits(uint32_t(data.d),code_bits);
   config.num_centroids=uint32_t(nlist);
   if (const char* max_bits=std::getenv("MAX_BITS")) config.max_bits=uint32_t(std::stoul(max_bits));
+  if (const char* power=std::getenv("ALLOCATION_POWER")) config.allocation_power=std::stod(power);
   config.rotate_tiers=rotate_tiers;
   return dv::TieredQ::train(config,sample.data(),count,seed);
 }
