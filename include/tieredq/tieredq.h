@@ -76,6 +76,7 @@ struct TieredQPanels {
   size_t padded_columns() const { return (columns + PANEL - 1) / PANEL * PANEL; }
 };
 class TieredQIndex;
+class TieredQRefinement;
 class TieredQ {
  public:
   static TieredQ train(TieredQConfig config, const float* sample, size_t rows, uint64_t seed = 0);
@@ -143,6 +144,7 @@ class TieredQ {
   friend class TieredQIndex;
   friend class TieredQIVFIndex;
   friend struct tieredq_detail::FastQueryBasis;
+  friend class TieredQRefinement;
   TieredQ() = default;
   TieredQConfig config_;
   std::vector<TieredQTier> tiers_;

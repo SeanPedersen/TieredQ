@@ -295,6 +295,8 @@ bool same_scan_geometry(const TieredQQuery& a,const TieredQQuery& b) {
          std::equal(a.scan_groups.begin(),a.scan_groups.end(),b.scan_groups.begin(),tieredq_detail::same_group);
 }
 } // namespace
+// Tier rotation for other translation units (TieredQRefinement's suffix-only runs).
+std::vector<float> tieredq_detail::seeded_rotation(int n,uint64_t seed) { return rotation(n,seed,tieredq_detail::TrainingLinalg::get()); }
 TieredQConfig TieredQConfig::target_bytes(uint32_t d,uint32_t bytes) {
   if (bytes>UINT32_MAX/8) bad("byte budget overflow"); return target_code_bits(d,bytes*8);
 }

@@ -32,4 +32,6 @@ class TrainingRng {
   std::mt19937_64 engine_;
   std::normal_distribution<double> normal_;
 };
+// Seeded n x n orthogonal matrix (row-major), as training rotates each tier; defined in tieredq.cpp.
+std::vector<float> seeded_rotation(int n, uint64_t seed);
 }  // namespace dv::tieredq_detail
