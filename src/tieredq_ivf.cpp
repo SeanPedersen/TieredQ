@@ -122,10 +122,20 @@ size_t TieredQIVFIndex::storage_bytes() const {
 }
 
 std::vector<TieredQHit> TieredQIVFIndex::search(const float* query,size_t k,size_t nprobe,TieredQPruning pruning) const {
+  return search_hits(query,nullptr,k,nprobe,pruning);
+}
+
+std::vector<TieredQHit> TieredQIVFIndex::search(const float* query,const TieredQQuery& weights,size_t k,size_t nprobe,
+                                                TieredQPruning pruning) const {
+  return search_hits(query,&weights,k,nprobe,pruning);
+}
+
+std::vector<TieredQHit> TieredQIVFIndex::search_hits(const float* query,const TieredQQuery* weights,size_t k,size_t nprobe,
+                                                     TieredQPruning pruning) const {
   const size_t found=std::min(k,size_);
   std::vector<float> scores(found);
   std::vector<uint32_t> ids(found);
-  search_batch(query,1,k,nprobe,scores.data(),ids.data(),pruning);
+  search_rows(query,weights,1,k,nprobe,scores.data(),ids.data(),pruning);
   std::vector<TieredQHit> hits;
   for (size_t hit=0;hit<found && ids[hit]!=padding_id;++hit) hits.push_back({scores[hit],ids[hit]});
   return hits;
@@ -133,10 +143,25 @@ std::vector<TieredQHit> TieredQIVFIndex::search(const float* query,size_t k,size
 
 void TieredQIVFIndex::search_batch(const float* queries,size_t rows,size_t k,size_t nprobe,
     float* scores,uint32_t* ids,TieredQPruning pruning) const {
+  search_rows(queries,nullptr,rows,k,nprobe,scores,ids,pruning);
+}
+
+void TieredQIVFIndex::search_batch(const float* queries,const TieredQQuery* weights,size_t rows,size_t k,size_t nprobe,
+    float* scores,uint32_t* ids,TieredQPruning pruning) const {
+  if (rows && !weights) bad("null query weights");
+  search_rows(queries,weights,rows,k,nprobe,scores,ids,pruning);
+}
+
+void TieredQIVFIndex::search_rows(const float* queries,const TieredQQuery* weights,size_t rows,size_t k,size_t nprobe,
+    float* scores,uint32_t* ids,TieredQPruning pruning) const {
   if (!(pruning.confidence>=0) || !std::isfinite(pruning.confidence) || !pruning.prefix_tiers) bad("invalid pruning");
   if (!rows || !k || !size_) return;
   if (!queries || !scores || !ids) bad("null search buffer");
   const TieredQ& model=codec();
+  for (size_t row=0;weights && row<rows;++row)
+    if (weights[row].weights.size()!=model.coded_dimensions() || weights[row].centroid_scores.size()!=model.config().num_centroids ||
+        weights[row].correction_weights.size()!=model.config().num_centroids)
+      bad("query weight shape mismatch");
   const size_t found=std::min(k,size_),probes=std::clamp<size_t>(nprobe,1,lists()),d=model.config().dimensions;
   std::vector<float> lifted;
   const float* model_queries=queries;
@@ -218,7 +243,7 @@ void TieredQIVFIndex::search_batch(const float* queries,size_t rows,size_t k,siz
       }
     }
     if (failure) std::rethrow_exception(failure);
-  });
+  },weights);
 }
 
 // Payload: version, list count, coarse flag (+ seed, trained flag and centroids), size, per-list offset and rows,

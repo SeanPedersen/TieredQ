@@ -41,8 +41,9 @@ class TieredQRefinement {
   TieredQRefinementQuery query(const float* vector, TieredQQuery prefix_query) const;
   // Row-major prefix and suffix rows (their bytes_per_vector() strides) of the same count vectors; scores estimate
   // model-space inner products, as TieredQ::score does.
+  // kernel: automatic, scalar or avx512 (AVX-512F/BW); others are rejected.
   void score(const uint8_t* prefix_rows, const uint8_t* suffix_rows, size_t count, const TieredQRefinementQuery& query,
-             float* scores) const;
+             float* scores, TieredQKernel kernel = TieredQKernel::automatic) const;
   // The prefix is persisted separately; deserialize checks it is the model the suffix was trained on.
   std::vector<uint8_t> serialize() const;
   static TieredQRefinement deserialize(const std::vector<uint8_t>& data, TieredQ prefix);
@@ -61,13 +62,16 @@ class TieredQRefinement {
   std::vector<uint16_t> extra_basis_;
   std::vector<float> extra_mean_, extra_sigma_;
   size_t suffix_bits_ = 0;
-  // Derived serving state (not serialized): the extra basis in binary16 rank panels, and mean / sigma per rank.
-  std::vector<uint16_t> extra_panels_;
+  // Derived serving state (not serialized): the extra basis times sigma as int8 rank panels with a scale per rank,
+  // and mean / sigma per rank.
+  std::vector<int8_t> extra_panels_;
+  std::vector<float> extra_panel_scale_;
   std::vector<float> extra_mean_ratio_;
-  // Per position, as six arrays of positions(): prefix bit offset, prefix code mask, shift of the prefix code over
-  // the suffix code, suffix bit offset, suffix code mask (zero masks where a side holds no bits), and the offset of
-  // its block's or run's levels in level_table_, indexed by (prefix code << shift) | suffix code.
-  std::vector<uint32_t> code_layout_;
+  // Up to 16 consecutive positions of one block or run: fixed-width prefix and suffix fields (0 bits where a side
+  // holds none) and the offset of its levels in level_table_, indexed by (prefix code << shift) | suffix code.
+  struct Segment { uint32_t position, count, prefix_bit, prefix_bits, suffix_bit, suffix_bits, shift, table, table_size; };
+  std::vector<Segment> segments_;
+  size_t extra_segment_ = 0;  // first segment of the ranks only the suffix codes
   std::vector<float> level_table_;
   // Encoder-only state (every position's basis as FP32 panels, centroid projections), built on first use.
   std::shared_ptr<tieredq_detail::RefinementEncoder> encoder_;

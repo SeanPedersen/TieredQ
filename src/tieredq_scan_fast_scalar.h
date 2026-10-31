@@ -12,11 +12,11 @@ struct FastScanScalarQuery {
   std::vector<float> centroid_scores,correction_weights;
   float scale=1;
 };
-inline FastScanScalarQuery fast_scan_query_scalar(const FastScanCache& cache,const TieredQ& codec,const float* vector) {
+// Code-lookup and int8 representations from a query's model_query_weights.
+inline FastScanScalarQuery fast_scan_query_scalar(const FastScanCache& cache,const TieredQQuery& query) {
+  if (query.weights.size()!=cache.dimensions) throw std::runtime_error("TieredQ: int8 query weight shape mismatch");
   FastScanScalarQuery result;
-  if (cache.code_lookup()) { result.codes=codec.model_query_weights(vector); return result; }
-  if (cache.lookup) { result.lookup=prepare_fast_lookup_query(*cache.lookup,vector,FastQueryBasis::from(codec)); return result; }
-  const auto query=codec.model_query_weights(vector);
+  if (cache.code_lookup()) { result.codes=query; return result; }
   float peak=0;
   for (size_t rank=0;rank<cache.dimensions;++rank)
     peak=std::max(peak,std::fabs(query.weights[rank]*cache.level_scale[cache.tier_of[rank]]));
@@ -25,6 +25,12 @@ inline FastScanScalarQuery fast_scan_query_scalar(const FastScanCache& cache,con
   for (size_t rank=0;rank<cache.dimensions;++rank)
     result.weights[rank]=int8_t(std::clamp<long>(std::lround(query.weights[rank]*cache.level_scale[cache.tier_of[rank]]/result.scale),-long(fast_scan_quant_max),long(fast_scan_quant_max)));
   result.centroid_scores=query.centroid_scores;result.correction_weights=query.correction_weights;
+  return result;
+}
+inline FastScanScalarQuery fast_scan_query_scalar(const FastScanCache& cache,const TieredQ& codec,const float* vector) {
+  if (cache.code_lookup() || !cache.lookup) return fast_scan_query_scalar(cache,codec.model_query_weights(vector));
+  FastScanScalarQuery result;
+  result.lookup=prepare_fast_lookup_query(*cache.lookup,vector,FastQueryBasis::from(codec));
   return result;
 }
 inline void scan_fast_scalar_tile(const FastScanCache& cache,const FastScanScalarQuery* queries,

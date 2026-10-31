@@ -63,11 +63,31 @@ std::vector<std::vector<float>> flat_scores(const TieredQ& model,const std::vect
   return out;
 }
 std::vector<std::vector<float>> refined_scores(const TieredQRefinement& refinement,const std::vector<uint8_t>& prefix_codes,
-                                               const std::vector<uint8_t>& suffix_codes,const std::vector<float>& probes) {
+                                               const std::vector<uint8_t>& suffix_codes,const std::vector<float>& probes,
+                                               TieredQKernel kernel=TieredQKernel::automatic) {
   std::vector<std::vector<float>> out(queries,std::vector<float>(rows));
   for (size_t q=0;q<queries;++q)
-    refinement.score(prefix_codes.data(),suffix_codes.data(),rows,refinement.query(probes.data()+q*dimensions),out[q].data());
+    refinement.score(prefix_codes.data(),suffix_codes.data(),rows,refinement.query(probes.data()+q*dimensions),out[q].data(),kernel);
   return out;
+}
+// The AVX-512 kernel (where the host has it) sums the scalar kernel's terms in another order; a query built from the
+// prefix's own query weights scores exactly as one that projects them itself.
+void kernel_parity(const TieredQRefinement& refinement,const std::vector<uint8_t>& prefix_codes,
+                   const std::vector<uint8_t>& suffix_codes,const std::vector<float>& probes) {
+  const auto scalar=refined_scores(refinement,prefix_codes,suffix_codes,probes,TieredQKernel::scalar);
+  const auto automatic=refined_scores(refinement,prefix_codes,suffix_codes,probes);
+  constexpr float tolerance=1e-4f;
+  for (size_t q=0;q<queries;++q) {
+    float scale=0;
+    for (float value:scalar[q]) scale=std::max(scale,std::fabs(value));
+    for (size_t i=0;i<rows;++i) require(std::fabs(scalar[q][i]-automatic[q][i])<=tolerance*scale,"refinement kernels disagree");
+  }
+  const float* probe=probes.data();
+  const auto shared=refinement.query(probe,refinement.prefix().query_weights(probe)),own=refinement.query(probe);
+  std::vector<float> a(rows),b(rows);
+  refinement.score(prefix_codes.data(),suffix_codes.data(),rows,shared,a.data());
+  refinement.score(prefix_codes.data(),suffix_codes.data(),rows,own,b.data());
+  require(a==b,"refinement scores differently from shared prefix query weights");
 }
 void quality_test(TieredQMetric metric,uint32_t prefix_bits,uint32_t total_bits) {
   const auto sample=clustered_rows(rows,3),data=clustered_rows(rows,11),probes=clustered_rows(queries,13);
@@ -78,6 +98,7 @@ void quality_test(TieredQMetric metric,uint32_t prefix_bits,uint32_t total_bits)
   const auto prefix_codes=prefix.encode(data.data(),rows);
   std::vector<uint8_t> suffix_codes(rows*refinement.bytes_per_vector());
   refinement.encode(data.data(),rows,prefix_codes.data(),suffix_codes.data());
+  kernel_parity(refinement,prefix_codes,suffix_codes,probes);
   const double alone=recall(metric,data,probes,flat_scores(prefix,data,probes));
   const double nested=recall(metric,data,probes,refined_scores(refinement,prefix_codes,suffix_codes,probes));
   const double full=recall(metric,data,probes,flat_scores(flat,data,probes));

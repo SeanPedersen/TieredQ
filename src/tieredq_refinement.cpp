@@ -11,6 +11,7 @@
 #include <cstring>
 #include <mutex>
 #include <numeric>
+#include <vector>
 #if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
 #include <immintrin.h>
 #define DV_TIEREDQ_REFINEMENT_X86 1
@@ -71,60 +72,171 @@ std::vector<float> lloyd(std::vector<double>& samples,size_t count,float fallbac
   }
   return {levels.begin(),levels.end()};
 }
-enum LayoutArray : size_t { prefix_bit, prefix_mask, prefix_shift, suffix_bit, suffix_mask, level_offset, layout_arrays };
-// Rows copied into padded buffers so 32-bit code reads never leave them.
-constexpr size_t read_padding=4;
-// Sum over positions [first, last) of weights[r] * levels[offset(r) + (prefix code << shift | suffix code)].
-float level_sum_scalar(const uint8_t* prefix,const uint8_t* suffix,const uint32_t* layout,size_t positions,size_t first,
-                       size_t last,const float* levels,const float* weights) {
+// Rows are copied into buffers padded for 16-byte field windows past their last code byte.
+constexpr size_t read_padding=16;
+constexpr uint32_t segment_lanes=16;
+// Level tables pad past their end so 16-float register loads of the last tables stay inside.
+constexpr size_t level_padding=2*segment_lanes;
+// A field of bits (<= 8) at bit offset `bit` of a padded row.
+uint32_t field(const uint8_t* doc,uint32_t bit,uint32_t bits) {
+  uint32_t word; std::memcpy(&word,doc+bit/8,sizeof(word));
+  return (word>>(bit%8))&((1u<<bits)-1);
+}
+// Sum over the segments' positions of weights[r] * levels[table + (prefix code << shift | suffix code)].
+template<class Segment>
+float segment_sum_scalar(const uint8_t* prefix,const uint8_t* suffix,const Segment* first,const Segment* last,
+                         const float* levels,const float* weights) {
   float sum=0;
-  for (size_t r=first;r<last;++r) {
-    auto code=[&](LayoutArray bit,LayoutArray mask,const uint8_t* doc) {
-      const uint32_t offset=layout[bit*positions+r];
-      uint32_t word; std::memcpy(&word,doc+offset/8,sizeof(word));
-      return (word>>(offset%8))&layout[mask*positions+r];
-    };
-    const uint32_t index=layout[level_offset*positions+r]+
-        (code(prefix_bit,prefix_mask,prefix)<<layout[prefix_shift*positions+r]|code(suffix_bit,suffix_mask,suffix));
-    sum+=weights[r]*levels[index];
+  for (const Segment* s=first;s!=last;++s) for (uint32_t j=0;j<s->count;++j) {
+    const uint32_t code=field(prefix,s->prefix_bit+j*s->prefix_bits,s->prefix_bits)<<s->shift|
+                        field(suffix,s->suffix_bit+j*s->suffix_bits,s->suffix_bits);
+    sum+=weights[s->position+j]*levels[s->table+code];
   }
   return sum;
 }
 #ifdef DV_TIEREDQ_REFINEMENT_X86
-// Codes of 16 positions: (32-bit word at bit / 8) >> bit % 8, masked.
-__attribute__((target("avx512f")))
-inline __m512i codes_avx512(const uint32_t* bits,const uint32_t* masks,const uint8_t* doc,__mmask16 live) {
-  const __m512i offset=_mm512_maskz_loadu_epi32(live,bits);
-  const __m512i word=_mm512_mask_i32gather_epi32(_mm512_setzero_si512(),live,_mm512_srli_epi32(offset,3),doc,1);
-  return _mm512_and_si512(_mm512_srlv_epi32(word,_mm512_and_si512(offset,_mm512_set1_epi32(7))),
-                          _mm512_maskz_loadu_epi32(live,masks));
+// 16 fields of `bits` from a 16-byte window starting `start` (< 8) bits in: lane j shuffles window bytes t / 8 and
+// t / 8 + 1 (t = start + j * bits) into its dword and shifts by t % 8. Only 8-bit fields off a byte boundary need a
+// 17th byte (fits = false).
+struct FieldPattern { alignas(64) uint8_t control[64]; alignas(64) uint32_t shift[segment_lanes]; bool fits; };
+constexpr uint32_t pattern_widths=max_bits+1;
+const FieldPattern* field_patterns() {
+  static const auto patterns=[] {
+    std::vector<FieldPattern> out(8*pattern_widths);
+    for (uint32_t start=0;start<8;++start) for (uint32_t bits=0;bits<pattern_widths;++bits) {
+      FieldPattern& pattern=out[start*pattern_widths+bits];
+      pattern.fits=true;
+      for (uint32_t j=0;j<segment_lanes;++j) {
+        const uint32_t t=start+j*bits,byte=t/8;
+        const bool second=t%8+bits>8;
+        if (second && byte+1>=16) pattern.fits=false;
+        uint8_t* control=pattern.control+4*j;
+        control[0]=uint8_t(byte); control[1]=second && byte+1<16 ? uint8_t(byte+1) : 0x80; control[2]=control[3]=0x80;
+        pattern.shift[j]=t%8;
+      }
+    }
+    return out;
+  }();
+  return patterns.data();
 }
-__attribute__((target("avx512f")))
-float level_sum_avx512(const uint8_t* prefix,const uint8_t* suffix,const uint32_t* layout,size_t positions,size_t first,
-                       size_t last,const float* levels,const float* weights) {
-  constexpr size_t lanes=16;
-  const uint32_t* at[layout_arrays];
-  for (size_t array=0;array<layout_arrays;++array) at[array]=layout+array*positions;
+__attribute__((target("avx512f,avx512bw")))
+inline __m512i fields_avx512(const FieldPattern* patterns,const uint8_t* doc,uint32_t bit,uint32_t bits) {
+  if (!bits) return _mm512_setzero_si512();
+  const __m512i mask=_mm512_set1_epi32(int((1u<<bits)-1));
+  const FieldPattern& pattern=patterns[(bit%8)*pattern_widths+bits];
+  if (!pattern.fits) {
+    const __m512i offset=_mm512_add_epi32(_mm512_set1_epi32(int(bit)),
+        _mm512_mullo_epi32(_mm512_set_epi32(15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0),_mm512_set1_epi32(int(bits))));
+    const __m512i word=_mm512_i32gather_epi32(_mm512_srli_epi32(offset,3),doc,1);
+    return _mm512_and_si512(_mm512_srlv_epi32(word,_mm512_and_si512(offset,_mm512_set1_epi32(7))),mask);
+  }
+  const __m512i window=_mm512_broadcast_i32x4(_mm_loadu_si128(reinterpret_cast<const __m128i*>(doc+bit/8)));
+  const __m512i word=_mm512_shuffle_epi8(window,_mm512_load_si512(pattern.control));
+  return _mm512_and_si512(_mm512_srlv_epi32(word,_mm512_load_si512(pattern.shift)),mask);
+}
+// Tables of up to 32 levels are looked up in registers, larger ones gathered.
+template<class Segment>
+__attribute__((target("avx512f,avx512bw")))
+float segment_sum_avx512(const uint8_t* prefix,const uint8_t* suffix,const Segment* first,const Segment* last,
+                         const float* levels,const float* weights) {
+  const FieldPattern* patterns=field_patterns();
   __m512 sum=_mm512_setzero_ps();
-  for (size_t r=first;r<last;r+=lanes) {
-    const __mmask16 live=__mmask16(last-r>=lanes ? 0xffff : (1u<<(last-r))-1);
-    const __m512i high=_mm512_sllv_epi32(codes_avx512(at[prefix_bit]+r,at[prefix_mask]+r,prefix,live),
-                                         _mm512_maskz_loadu_epi32(live,at[prefix_shift]+r));
-    const __m512i index=_mm512_add_epi32(_mm512_maskz_loadu_epi32(live,at[level_offset]+r),
-                                         _mm512_or_si512(high,codes_avx512(at[suffix_bit]+r,at[suffix_mask]+r,suffix,live)));
-    const __m512 level=_mm512_mask_i32gather_ps(_mm512_setzero_ps(),live,index,levels,4);
-    sum=_mm512_add_ps(sum,_mm512_mul_ps(_mm512_maskz_loadu_ps(live,weights+r),level));
+  for (const Segment* s=first;s!=last;++s) {
+    const __mmask16 live=__mmask16((1u<<s->count)-1);
+    const __m512i code=_mm512_or_si512(
+        _mm512_sllv_epi32(fields_avx512(patterns,prefix,s->prefix_bit,s->prefix_bits),_mm512_set1_epi32(int(s->shift))),
+        fields_avx512(patterns,suffix,s->suffix_bit,s->suffix_bits));
+    const float* table=levels+s->table;
+    const __m512 level=s->table_size<=segment_lanes ? _mm512_permutexvar_ps(code,_mm512_loadu_ps(table)) :
+        s->table_size<=2*segment_lanes ? _mm512_permutex2var_ps(_mm512_loadu_ps(table),code,_mm512_loadu_ps(table+segment_lanes)) :
+        _mm512_mask_i32gather_ps(_mm512_setzero_ps(),live,code,table,4);
+    sum=_mm512_fmadd_ps(_mm512_maskz_loadu_ps(live,weights+s->position),level,sum);
   }
   return _mm512_reduce_add_ps(sum);
 }
 #endif
-using LevelSum=float (*)(const uint8_t*,const uint8_t*,const uint32_t*,size_t,size_t,size_t,const float*,const float*);
-LevelSum level_sum() {
+// Query projection onto int8 rank panels (int8_panel_position, zero padded): out[r] = scale[r] * sum_i x[i] * c(i, r).
+// It streams from memory, so int8 halves the binary16 panels' traffic.
+constexpr double panel_levels=127;
+// Blocks of up to int8_block_panels panels interleave them per input: [block][input][panel in block][rank % 16], so
+// one projection pass reads the panels as a single sequential stream.
+constexpr size_t int8_block_panels=16;
+size_t int8_panel_position(size_t inputs,size_t ranks,size_t input,size_t rank) {
+  using tieredq_detail::basis_panel_ranks;
+  const size_t panel=rank/basis_panel_ranks,first=panel/int8_block_panels*int8_block_panels;
+  const size_t width=std::min(int8_block_panels,tieredq_detail::basis_panel_count(ranks)-first);
+  return (first*inputs+input*width+panel-first)*basis_panel_ranks+rank%basis_panel_ranks;
+}
+void project_int8_panels_scalar(const int8_t* panels,const float* scale,size_t inputs,size_t ranks,const float* x,float* out) {
+  using tieredq_detail::basis_panel_ranks;
+  for (size_t panel=0;panel<tieredq_detail::basis_panel_count(ranks);++panel) {
+    float sums[basis_panel_ranks]={};
+    for (size_t i=0;i<inputs;++i) for (size_t l=0;l<basis_panel_ranks;++l)
+      sums[l]+=x[i]*float(panels[int8_panel_position(inputs,ranks,i,panel*basis_panel_ranks+l)]);
+    for (size_t l=0;l<basis_panel_ranks && panel*basis_panel_ranks+l<ranks;++l)
+      out[panel*basis_panel_ranks+l]=scale[panel*basis_panel_ranks+l]*sums[l];
+  }
+}
 #ifdef DV_TIEREDQ_REFINEMENT_X86
-  static const bool avx512=__builtin_cpu_supports("avx512f") && !std::getenv("DV_TIEREDQ_NO_AVX512");
-  if (avx512) return level_sum_avx512;
+// Blocks of Panels panels keep their accumulators in registers over all inputs.
+template<size_t Panels>
+__attribute__((target("avx512f")))
+void project_int8_block_avx512(const int8_t* panels,const float* scale,size_t inputs,size_t ranks,const float* x,float* out,
+                               size_t panel) {
+  using tieredq_detail::basis_panel_ranks;
+  __m512 acc[Panels];
+  for (auto& value:acc) value=_mm512_setzero_ps();
+  const int8_t* base=panels+panel*inputs*basis_panel_ranks;
+  for (size_t i=0;i<inputs;++i) {
+    const __m512 value=_mm512_set1_ps(x[i]);
+    for (size_t b=0;b<Panels;++b) {
+      const __m128i codes=_mm_loadu_si128(reinterpret_cast<const __m128i*>(base+(i*Panels+b)*basis_panel_ranks));
+      acc[b]=_mm512_fmadd_ps(value,_mm512_cvtepi32_ps(_mm512_cvtepi8_epi32(codes)),acc[b]);
+    }
+  }
+  for (size_t b=0;b<Panels;++b) {
+    const size_t rank=(panel+b)*basis_panel_ranks;
+    const __mmask16 live=__mmask16((1u<<std::min(basis_panel_ranks,ranks-rank))-1);
+    _mm512_mask_storeu_ps(out+rank,live,_mm512_mul_ps(_mm512_maskz_loadu_ps(live,scale+rank),acc[b]));
+  }
+}
+template<size_t Panels>
+__attribute__((target("avx512f")))
+void project_int8_tail_avx512(const int8_t* panels,const float* scale,size_t inputs,size_t ranks,const float* x,float* out,
+                              size_t panel,size_t live) {
+  if constexpr (Panels>1) if (live<Panels) return project_int8_tail_avx512<Panels-1>(panels,scale,inputs,ranks,x,out,panel,live);
+  project_int8_block_avx512<Panels>(panels,scale,inputs,ranks,x,out,panel);
+}
+__attribute__((target("avx512f")))
+void project_int8_panels_avx512(const int8_t* panels,const float* scale,size_t inputs,size_t ranks,const float* x,float* out) {
+  const size_t count=tieredq_detail::basis_panel_count(ranks);
+  size_t panel=0;
+  for (;panel+int8_block_panels<=count;panel+=int8_block_panels)
+    project_int8_block_avx512<int8_block_panels>(panels,scale,inputs,ranks,x,out,panel);
+  if (panel<count) project_int8_tail_avx512<int8_block_panels>(panels,scale,inputs,ranks,x,out,panel,count-panel);
+}
 #endif
-  return level_sum_scalar;
+void project_int8_panels(const int8_t* panels,const float* scale,size_t inputs,size_t ranks,const float* x,float* out) {
+#ifdef DV_TIEREDQ_REFINEMENT_X86
+  static const bool avx512=__builtin_cpu_supports("avx512f");
+  if (avx512) return project_int8_panels_avx512(panels,scale,inputs,ranks,x,out);
+#endif
+  project_int8_panels_scalar(panels,scale,inputs,ranks,x,out);
+}
+bool avx512_kernel_available() {
+#ifdef DV_TIEREDQ_REFINEMENT_X86
+  static const bool available=__builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512bw");
+  return available;
+#else
+  return false;
+#endif
+}
+TieredQKernel resolve_kernel(TieredQKernel kernel) {
+  if (kernel==TieredQKernel::automatic)
+    return avx512_kernel_available() && !std::getenv("DV_TIEREDQ_NO_AVX512") ? TieredQKernel::avx512 : TieredQKernel::scalar;
+  if (kernel==TieredQKernel::scalar || (kernel==TieredQKernel::avx512 && avx512_kernel_available())) return kernel;
+  bad("refinement kernel unavailable");
+  return TieredQKernel::scalar;
 }
 } // namespace
 
@@ -201,30 +313,33 @@ TieredQRefinement TieredQRefinement::train(const TieredQ& prefix,uint32_t total_
 
 void TieredQRefinement::prepare() {
   const size_t d=prefix_.model_dimensions(),extra=extra_mean_.size();
-  extra_panels_=tieredq_detail::basis_panels_from_rows(extra_basis_,d,extra);
+  // basis * sigma per rank as int8 at a per-rank scale, in rank panels.
+  extra_panels_.assign(tieredq_detail::basis_panel_size(d,extra),0);
+  extra_panel_scale_.assign(extra,0.0f);
+  auto coefficient=[&](size_t j,size_t e) { return double(tieredq_detail::half_decode(extra_basis_[j*extra+e]))*extra_sigma_[e]; };
+  for (size_t e=0;e<extra;++e) {
+    double peak=0;
+    for (size_t j=0;j<d;++j) peak=std::max(peak,std::fabs(coefficient(j,e)));
+    const double scale=peak>0 ? peak/panel_levels : 1.0;
+    extra_panel_scale_[e]=float(scale);
+    for (size_t j=0;j<d;++j)
+      extra_panels_[int8_panel_position(d,extra,j,e)]=int8_t(std::lround(coefficient(j,e)/scale));
+  }
   extra_mean_ratio_.resize(extra);
   for (size_t e=0;e<extra;++e) extra_mean_ratio_[e]=extra_mean_[e]/extra_sigma_[e];
-  const size_t p=positions();
-  code_layout_.assign(layout_arrays*p,0);
-  auto set=[&](LayoutArray array,size_t r,uint32_t value) { code_layout_[array*p+r]=value; };
-  level_table_.clear();
-  for (const auto& block:blocks_) {
-    const uint32_t table=uint32_t(level_table_.size());
-    level_table_.insert(level_table_.end(),block.levels.begin(),block.levels.end());
-    for (uint32_t j=0;j<block.dimensions;++j) {
-      const size_t r=block.start+j;
-      set(prefix_bit,r,block.prefix_offset+j*block.bits); set(prefix_mask,r,(1u<<block.bits)-1); set(prefix_shift,r,block.gain);
-      set(suffix_bit,r,block.suffix_offset+j*block.gain); set(suffix_mask,r,(1u<<block.gain)-1); set(level_offset,r,table);
-    }
-  }
-  for (const auto& run:runs_) {
-    const uint32_t table=uint32_t(level_table_.size());
-    level_table_.insert(level_table_.end(),run.levels.begin(),run.levels.end());
-    for (uint32_t c=0;c<run.dimensions;++c) {
-      const size_t r=run.start+c;
-      set(suffix_bit,r,run.suffix_offset+c*run.bits); set(suffix_mask,r,(1u<<run.bits)-1); set(level_offset,r,table);
-    }
-  }
+  level_table_.clear(); segments_.clear();
+  auto add=[&](const std::vector<float>& levels,uint32_t start,uint32_t dimensions,uint32_t prefix_bit,uint32_t prefix_bits,
+               uint32_t suffix_bit,uint32_t suffix_bits) {
+    const uint32_t table=uint32_t(level_table_.size()),size=uint32_t(levels.size());
+    level_table_.insert(level_table_.end(),levels.begin(),levels.end());
+    for (uint32_t j=0;j<dimensions;j+=segment_lanes)
+      segments_.push_back({start+j,std::min(segment_lanes,dimensions-j),prefix_bit+j*prefix_bits,prefix_bits,
+                           suffix_bit+j*suffix_bits,suffix_bits,suffix_bits*(prefix_bits>0),table,size});
+  };
+  for (const auto& b:blocks_) add(b.levels,b.start,b.dimensions,b.prefix_offset,b.bits,b.suffix_offset,b.gain);
+  extra_segment_=segments_.size();
+  for (const auto& run:runs_) add(run.levels,run.start,run.dimensions,0,0,run.suffix_offset,run.bits);
+  level_table_.resize(level_table_.size()+level_padding,0.0f);
   encoder_=std::make_shared<tieredq_detail::RefinementEncoder>();
 }
 
@@ -365,9 +480,9 @@ TieredQRefinementQuery TieredQRefinement::query(const float* vector,TieredQQuery
   prefix_.lift(vector,1,true,lifted.data());
   TieredQRefinementQuery q;
   q.prefix=std::move(prefix_query);
-  // Sigma folded into the panels: weights of the suffix-only ranks.
+  // Weights of the suffix-only ranks (sigma folded into the panels).
   std::vector<float> weights(extra);
-  tieredq_detail::project_basis_panels({extra_panels_.data(),d,extra,extra_sigma_.data(),lifted.data(),d,weights.data(),extra},1);
+  project_int8_panels(extra_panels_.data(),extra_panel_scale_.data(),d,extra,lifted.data(),weights.data());
   q.weights=q.prefix.weights;
   q.weights.insert(q.weights.end(),weights.begin(),weights.end());
   for (size_t e=0;e<extra;++e) q.extra_mean+=weights[e]*extra_mean_ratio_[e];
@@ -375,13 +490,20 @@ TieredQRefinementQuery TieredQRefinement::query(const float* vector,TieredQQuery
 }
 
 void TieredQRefinement::score(const uint8_t* prefix_rows,const uint8_t* suffix_rows,size_t count,
-                              const TieredQRefinementQuery& query,float* scores) const {
+                              const TieredQRefinementQuery& query,float* scores,TieredQKernel kernel) const {
   if (count && (!prefix_rows || !suffix_rows || !scores)) bad("null refinement buffer");
   if (query.weights.size()!=positions()) bad("refinement query shape mismatch");
   const size_t prefix_stride=prefix_.bytes_per_vector(),stride=bytes_per_vector(),code_bytes=suffix_code_bytes();
-  const size_t m1=prefix_.coded_dimensions(),p=positions();
   const tieredq_detail::Layout layout{prefix_.code_bytes()};
-  const LevelSum sum=level_sum();
+  auto sum=segment_sum_scalar<Segment>;
+#ifdef DV_TIEREDQ_REFINEMENT_X86
+  if (resolve_kernel(kernel)==TieredQKernel::avx512) sum=segment_sum_avx512<Segment>;
+#else
+  resolve_kernel(kernel);
+#endif
+  const Segment* segments=segments_.data();
+  const Segment* extra=segments+extra_segment_;
+  const Segment* end=segments+segments_.size();
   thread_local std::vector<uint8_t> prefix_doc,doc;
   prefix_doc.assign(prefix_stride+read_padding,0); doc.assign(stride+read_padding,0);
   for (size_t i=0;i<count;++i) {
@@ -389,11 +511,11 @@ void TieredQRefinement::score(const uint8_t* prefix_rows,const uint8_t* suffix_r
     std::copy_n(suffix_rows+i*stride,stride,doc.data());
     const uint8_t cid=prefix_doc[prefix_.code_bytes()];
     if (cid>=query.prefix.centroid_scores.size()) bad("invalid centroid id");
-    const float refined=sum(prefix_doc.data(),doc.data(),code_layout_.data(),p,0,m1,level_table_.data(),query.weights.data());
-    const float extra=sum(prefix_doc.data(),doc.data(),code_layout_.data(),p,m1,p,level_table_.data(),query.weights.data());
+    const float refined=sum(prefix_doc.data(),doc.data(),segments,extra,level_table_.data(),query.weights.data());
+    const float rest=sum(prefix_doc.data(),doc.data(),extra,end,level_table_.data(),query.weights.data());
     const float scale=tieredq_detail::half_decode(read_half(doc.data()+code_bytes));
     const float correction=tieredq_detail::half_decode(read_half(doc.data()+code_bytes+2));
-    scores[i]=query.prefix.centroid_scores[cid]+query.extra_mean+layout.factor(prefix_doc.data())*refined+scale*extra
+    scores[i]=query.prefix.centroid_scores[cid]+query.extra_mean+layout.factor(prefix_doc.data())*refined+scale*rest
               +query.prefix.correction_weights[cid]*correction;
   }
 }

@@ -286,6 +286,12 @@ class TieredQIVFIndex {
   // score -inf. Queries are split across OpenMP workers; a single query scans on the calling thread.
   void search_batch(const float* queries, size_t rows, size_t k, size_t nprobe, float* scores, uint32_t* ids,
                     TieredQPruning pruning = {}) const;
+  // The same searches with the queries' codec().query_weights() prepared by the caller, which reuses them (e.g. a
+  // TieredQRefinement rescoring the hits from the same weights) instead of projecting each query again.
+  std::vector<TieredQHit> search(const float* query, const TieredQQuery& weights, size_t k, size_t nprobe,
+                                 TieredQPruning pruning = {}) const;
+  void search_batch(const float* queries, const TieredQQuery* weights, size_t rows, size_t k, size_t nprobe,
+                    float* scores, uint32_t* ids, TieredQPruning pruning = {}) const;
   // Self-contained bytes (model, lists and fast payload) for an engine's own storage container.
   std::vector<uint8_t> serialize() const;
   static TieredQIVFIndex deserialize(const std::vector<uint8_t>& bytes);
@@ -293,6 +299,10 @@ class TieredQIVFIndex {
   static TieredQIVFIndex load(const std::string& path);
  private:
   std::vector<uint8_t> fast_payload() const;
+  std::vector<TieredQHit> search_hits(const float* query, const TieredQQuery* weights, size_t k, size_t nprobe,
+                                      TieredQPruning pruning) const;
+  void search_rows(const float* queries, const TieredQQuery* weights, size_t rows, size_t k, size_t nprobe,
+                   float* scores, uint32_t* ids, TieredQPruning pruning) const;
   const float* model_rows(const float* rows, size_t first, size_t count, std::vector<float>& buffer) const;
   std::vector<uint32_t> coarse_lists(const float* rows, size_t count);
   void write_lists(tieredq_detail::Writer& writer) const;

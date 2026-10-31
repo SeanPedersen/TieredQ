@@ -6,7 +6,8 @@ fp32_bits qps_1t_b1 qps_8t_b32 build_s list_hash [rescore rescore_bytes] (rows w
   select RECALL_DIR [TARGETS...] [--lists L]
                                 -> job_rerank.sh CONFIGS lines: per configuration and k', the smallest nprobe that
                                    reaches each target (larger nprobe or k' at equal recall only costs time); --lists 0
-                                   for runs on the codec's own lists, whose rows print the codec list count
+                                   for runs on the codec's own lists, whose rows print the codec list count. A
+                                   `configs` file in RECALL_DIR (the run's CONFIGS) keeps each line's own ENV tokens
   report DIR... [--targets ...] -> markdown: per codec the least index RAM per target, and per memory level the
                                    fastest configuration per target (index RAM vs QPS)
   rescore DIR... [--targets ...] -> markdown: per first stage and target, each rerank tier's first cell reaching it
@@ -58,7 +59,24 @@ def minimal_cells(rows: list[dict], target: float) -> list[dict]:
         o is not r and o["nprobe"] <= r["nprobe"] and o["rerank_k"] <= r["rerank_k"] for o in reached)]
 
 
+def run_env(recall_dir: Path) -> dict[tuple, str]:
+    """Each recall configuration's own ENV tokens (e.g. PREFIX_BITS) from the run's `configs` file, if it was kept;
+    the sweep tokens (NPROBES, RERANK, RESCORE) are chosen again."""
+    path = recall_dir / "configs"
+    if not path.exists():
+        return {}
+    swept = ("NPROBES=", "RERANK=", "RESCORE=")
+    env = {}
+    for line in path.read_text().splitlines():
+        if not line.strip():
+            continue
+        label, _, _, budget, *tokens = line.split()
+        env[label, float(budget)] = " ".join(t for t in tokens if not t.startswith(swept))
+    return env
+
+
 def select(recall_dir: Path, targets: list[float], lists_arg: int | None) -> None:
+    own_env = run_env(recall_dir)
     configs = defaultdict(list)
     for row in load_rows([recall_dir]):
         configs[config_key(row)].append(row)
@@ -68,7 +86,8 @@ def select(recall_dir: Path, targets: list[float], lists_arg: int | None) -> Non
             for row in minimal_cells(rows, target):
                 cells[row["rerank_k"]].add(row["nprobe"])
         mode = "rabitq" if codec == "rabitq" else "tieredq"
-        env = " ".join(filter(None, [TUNING_ENV.get(label, ""), "" if rescore == "fp32" else f"RESCORE={rescore}"]))
+        env = " ".join(filter(None, [own_env.get((label, budget), TUNING_ENV.get(label, "")),
+                                     "" if rescore == "fp32" else f"RESCORE={rescore}"]))
         for depth, nprobes in sorted(cells.items()):
             nprobe_list = ",".join(str(n) for n in sorted(nprobes))
             print(f"{label} {lists if lists_arg is None else lists_arg} {mode} {budget:g} RERANK={depth} NPROBES={nprobe_list} {env}".rstrip())
@@ -134,9 +153,9 @@ def report(paths: list[Path], targets: list[float]) -> None:
 
 def rescore_report(paths: list[Path], targets: list[float]) -> None:
     rows = load_rows(paths)
-    tiers = sorted({(r["rescore_bytes"], r["rescore"]) for r in rows})
     for (lists, codec, budget, index_bits) in sorted({(r["lists"], r["codec"], r["budget"], r["disk_bits"]) for r in rows}):
         stage = [r for r in rows if (r["lists"], r["codec"], r["budget"]) == (lists, codec, budget)]
+        tiers = sorted({(r["rescore_bytes"], r["rescore"]) for r in stage})
         print(f"### {family(codec)} {budget:g} first stage ({index_bits:,.0f} index bits/vector), {lists} lists\n")
         print("| Rerank tier | Bytes/vector | " + " | ".join(f"R@10 ≥ {t:.2f}: nprobe, k' (recall)" for t in targets)
               + " | Best recall |")

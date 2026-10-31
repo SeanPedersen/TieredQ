@@ -1,0 +1,4 @@
+prefix512 256 tieredq 512 PREFIX_BITS=512 RESCORE=fp32,int8,tieredq-refinement:3,tieredq-refinement:4
+prefix768 256 tieredq 768 PREFIX_BITS=768 RESCORE=fp32,int8,tieredq-refinement:3,tieredq-refinement:4
+prefix1024 256 tieredq 1024 PREFIX_BITS=1024 RESCORE=fp32,int8,tieredq-refinement:3,tieredq-refinement:4
+rabitq1 256 rabitq 1 RESCORE=int8,rabitq:5,rabitq:6

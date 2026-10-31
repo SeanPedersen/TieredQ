@@ -112,9 +112,28 @@ auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*p
 - **Bit cap.** At about 2 bits/dim or less, training with `TieredQConfig::max_bits = 4` keeps every tier on the
   nibble lookup kernel. That gave 1.7× RaBitQ's IVF QPS at equal recall and memory (OpenAI 100k), for about
   0.006 recall at full probe. Don't use it at 4 bits/dim, where it loses recall.
+- **Sub-1-bit index + rerank.** With rerank, the in-RAM IVF code can be far below 1 bit/dim. On OpenAI-1M (256
+  lists), a 512-bit prefix (627 index bits/vector) with an INT8 rerank tier reached R@10 0.95 / 0.99 at 2.8x / 3.1x
+  the QPS of RaBitQ 1 bit (1,683 bits) + INT8.
+- **Nested rerank codes.** `dv::TieredQRefinement` (`<tieredq/tieredq_refinement.h>`) trains a suffix that refines
+  the prefix towards a finer model. The suffix is read by id for the scan's candidates and scored with the scan's query
+  weights; nesting costs about no recall against a flat code of the full width:
+
+  ```cpp
+  auto refinement = dv::TieredQRefinement::train(codec, /*total_code_bits=*/4 * d, sample, rows, seed);
+  refinement.encode(rows, count, prefix_rows, suffix_rows);   // prefix_rows: codec.encode() of the same rows
+  auto weights = codec.query_weights(query);
+  auto hits = index.search(query, weights, /*k=*/50, /*nprobe=*/32);
+  auto refined = refinement.query(query, weights);
+  refinement.score(candidate_prefix_rows, candidate_suffix_rows, hits.size(), refined, scores);
+  ```
+
+  At 1M, 512 / 768 bit prefixes + a 4-bit refinement (about 700 B/vector) beat RaBitQ's own 5/6-bit codes by 1.2-2.4x
+  QPS at R@10 0.95-0.98 with 28-43% fewer rerank bytes. Refinement recall tops out near 0.984; above that use INT8.
 - **Results** against RaBitQ's IVF at equal measured memory are in
-  [issue #19](https://github.com/SeanPedersen/TieredQ/issues/19) and the
-  [issue #6 eval](benchmark/experiments/issue6_ivf/ivf_eval.cpp).
+  [issue #19](https://github.com/SeanPedersen/TieredQ/issues/19), [#23](https://github.com/SeanPedersen/TieredQ/issues/23)
+  and the [issue #6 eval](benchmark/experiments/issue6_ivf/ivf_eval.cpp)
+  ([rerank results](benchmark/results/issue6-ivf-rerank-20261030/README.md)).
 
 ## Codec comparison benchmark
 

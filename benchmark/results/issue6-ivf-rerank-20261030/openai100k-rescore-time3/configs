@@ -1,0 +1,4 @@
+prefix1416 0 tieredq 1416 PREFIX_BITS=1416 RESCORE=int8,tieredq-refinement:3,tieredq-refinement:4 NPROBES=16,32 RERANK=20,50
+prefix1024 0 tieredq 1024 PREFIX_BITS=1024 RESCORE=int8,tieredq-refinement:3,tieredq-refinement:4 NPROBES=16,32 RERANK=20,50
+prefix768 0 tieredq 768 PREFIX_BITS=768 RESCORE=int8,tieredq-refinement:3,tieredq-refinement:4 NPROBES=16,32,64 RERANK=50
+prefix512 0 tieredq 512 PREFIX_BITS=512 RESCORE=int8,tieredq-refinement:3,tieredq-refinement:4 NPROBES=16,32,64 RERANK=50,100

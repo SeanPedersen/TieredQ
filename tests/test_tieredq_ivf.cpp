@@ -67,6 +67,20 @@ void full_probe_test(TieredQMetric metric,uint32_t code_bits,uint32_t lists=0) {
     require(hits.size()==k,"single IVF search size");
     for (size_t i=0;i<k;++i) require(hits[i].id==full.ids[q*k+i] && hits[i].score==full.scores[q*k+i],"single and batched IVF differ");
   }
+  // Caller-prepared query weights scan the same lists; lookup layouts round their own projection differently.
+  const auto weights=codec.query_weights(probes.data(),queries);
+  Results prepared{std::vector<float>(queries*k),std::vector<uint32_t>(queries*k)};
+  ivf.search_batch(probes.data(),weights.data(),queries,k,list_count,prepared.scores.data(),prepared.ids.data());
+  size_t shared=0;
+  for (size_t q=0;q<queries;++q) for (size_t i=0;i<k;++i)
+    shared+=std::count(full.ids.begin()+q*k,full.ids.begin()+(q+1)*k,prepared.ids[q*k+i]);
+  require(shared>=queries*k*9/10,"IVF search with prepared weights differs");
+  const auto single=ivf.search(probes.data(),weights[0],k,list_count);
+  for (size_t i=0;i<k;++i) require(single[i].id==prepared.ids[i] && single[i].score==prepared.scores[i],"single and batched prepared IVF differ");
+  bool rejected=false;
+  try { auto bad_weights=weights[0]; bad_weights.weights.pop_back(); ivf.search(probes.data(),bad_weights,k,list_count); }
+  catch (const std::exception&) { rejected=true; }
+  require(rejected,"IVF accepted mis-shaped query weights");
 }
 // Statistical pruning only drops documents, so every returned score is the unpruned score of that row; a huge
 // confidence prunes nothing extra and matches the exact bound, and an invalid one is rejected.

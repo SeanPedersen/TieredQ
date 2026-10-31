@@ -4,7 +4,7 @@
 // and the list ranking (TieredQ: query-centroid score, RaBitQ: its own centroid distance) differ. RaBitQ encodes
 // with its accurate configuration (faster_config off) and high-accuracy scoring. Disk is the serialized index.
 // Modes: tieredq CODE_BITS | rabitq BITS_PER_DIM | tieredq-match TARGET_DISK_BITS (largest code budget whose disk
-// bits/vector fit, storage only) | tieredq-profile CODE_BITS (single-query loops only, for perf; prints qps_1t_b1). Rows: codec budget nlist nprobe disk_bits code_bits recall qps_1t_b1 qps_8t_b32
+// bits/vector fit, storage only) | tieredq-profile CODE_BITS (single-query loops only, for perf; prints qps_1t_b1) | rescore-profile CODE_BITS (RESCORE tiers on fixed candidates, for perf; prints microseconds per query). Rows: codec budget nlist nprobe disk_bits code_bits recall qps_1t_b1 qps_8t_b32
 // build_s list_hash. LISTS gives TieredQ a coarse quantizer with that many lists (the codec keeps NLIST centroids) and
 // RaBitQ the same partition. PRUNE_Z and PRUNE_PREFIX set TieredQPruning. MAX_BITS caps TieredQ bits per coordinate (TieredQConfig::max_bits). Data as ab_eval: DATA_DIR/{base.f32,queries.f32,truth.u32}, inner-product truth.
 // RERANK=K1,K2,... adds exact rerank: each codec returns its top-k' and one shared rescoring (inner product on the raw
@@ -82,25 +82,28 @@ float inner_product(const float* a,const float* b,size_t d) {
   return std::accumulate(sums.begin(),sums.end(),0.0f);
 }
 // A rerank tier: scores (larger is better) of `count` valid base ids for one query; called from parallel workers.
+// Tiers refining a TieredQ prefix name its model_id and reuse the first stage's query weights when it is that model.
 struct Rescorer {
   std::string name;
   double bytes;  // per vector
-  std::function<void(const float*,const uint32_t*,size_t,float*)> score;
+  std::function<void(const float*,const dv::TieredQQuery*,const uint32_t*,size_t,float*)> score;
+  uint32_t prefix_model=0;
 };
 Rescorer fp32_rescorer(const Data& data) {
-  return {"fp32",4.0*double(data.d),[&data](const float* query,const uint32_t* ids,size_t count,float* scores) {
+  return {"fp32",4.0*double(data.d),[&data](const float* query,const dv::TieredQQuery*,const uint32_t* ids,size_t count,float* scores) {
     for (size_t i=0;i<count;++i) scores[i]=inner_product(query,data.base.data()+size_t(ids[i])*data.d,data.d);
   }};
 }
 // Rescoring shared by every codec: top_k of `count` candidates (UINT32_MAX = empty slot) into out; returns reads.
-size_t rerank(const Rescorer& tier,const float* query,const uint32_t* candidates,size_t count,uint32_t* out) {
+size_t rerank(const Rescorer& tier,const float* query,const dv::TieredQQuery* prefix_query,const uint32_t* candidates,
+              size_t count,uint32_t* out) {
   thread_local std::vector<uint32_t> ids;
   thread_local std::vector<float> scores;
   thread_local std::vector<std::pair<float,uint32_t>> scored;
   ids.clear(); scored.clear();
   for (size_t i=0;i<count;++i) if (candidates[i]!=UINT32_MAX) ids.push_back(candidates[i]);
   scores.resize(ids.size());
-  tier.score(query,ids.data(),ids.size(),scores.data());
+  tier.score(query,prefix_query,ids.data(),ids.size(),scores.data());
   for (size_t i=0;i<ids.size();++i) scored.emplace_back(scores[i],ids[i]);
   const size_t kept=std::min(top_k,scored.size());
   std::partial_sort(scored.begin(),scored.begin()+kept,scored.end(),[](const auto& a,const auto& b) { return a.first>b.first; });
@@ -129,7 +132,7 @@ dv::TieredQ train(const Data& data,uint32_t code_bits,size_t nlist,bool rotate_t
 Rescorer fp16_rescorer(const Data& data) {
   auto codes=std::make_shared<std::vector<_Float16>>(data.base.size());
   std::transform(data.base.begin(),data.base.end(),codes->begin(),[](float x) { return static_cast<_Float16>(x); });
-  return {"fp16",2.0*double(data.d),[&data,codes](const float* query,const uint32_t* ids,size_t count,float* scores) {
+  return {"fp16",2.0*double(data.d),[&data,codes](const float* query,const dv::TieredQQuery*,const uint32_t* ids,size_t count,float* scores) {
     thread_local std::vector<float> row;
     row.resize(data.d);
     for (size_t i=0;i<count;++i) {
@@ -151,7 +154,7 @@ Rescorer int8_rescorer(const Data& data) {
 #pragma omp parallel for
   for (size_t i=0;i<data.n;++i) for (size_t j=0;j<data.d;++j)
     (*codes)[i*data.d+j]=uint8_t(std::clamp(std::nearbyint((data.base[i*data.d+j]-low[j])/scale[j]),0.0f,levels));
-  return {"int8",double(data.d),[&data,codes,low,scale](const float* query,const uint32_t* ids,size_t count,float* scores) {
+  return {"int8",double(data.d),[&data,codes,low,scale](const float* query,const dv::TieredQQuery*,const uint32_t* ids,size_t count,float* scores) {
     thread_local std::vector<float> weights,row;
     weights.resize(data.d); row.resize(data.d);
     for (size_t j=0;j<data.d;++j) weights[j]=query[j]*scale[j];
@@ -170,7 +173,7 @@ Rescorer tieredq_rescorer(const Data& data,uint32_t bits,size_t nlist) {
   auto codes=std::make_shared<std::vector<uint8_t>>(data.n*row_bytes);
   codec->encode(data.base.data(),data.n,codes->data());
   return {"tieredq:"+std::to_string(bits),double(row_bytes),
-          [codec,codes,row_bytes](const float* query,const uint32_t* ids,size_t count,float* scores) {
+          [codec,codes,row_bytes](const float* query,const dv::TieredQQuery*,const uint32_t* ids,size_t count,float* scores) {
     thread_local std::vector<uint8_t> rows;
     rows.resize(count*row_bytes);
     for (size_t i=0;i<count;++i) std::copy_n(codes->data()+size_t(ids[i])*row_bytes,row_bytes,rows.data()+i*row_bytes);
@@ -199,7 +202,7 @@ Rescorer tieredq_residual_rescorer(const Data& data,uint32_t bits,size_t nlist) 
   std::fprintf(stderr,"residual tier %u: prefix %u code bits, residual %u code bits\n",bits,prefix.config().code_bits,
                codec->config().code_bits);
   return {"tieredq-residual:"+std::to_string(bits),double(row_bytes),
-          [&data,decoded,codec,codes,row_bytes](const float* query,const uint32_t* ids,size_t count,float* scores) {
+          [&data,decoded,codec,codes,row_bytes](const float* query,const dv::TieredQQuery*,const uint32_t* ids,size_t count,float* scores) {
     thread_local std::vector<uint8_t> rows;
     rows.resize(count*row_bytes);
     for (size_t i=0;i<count;++i) std::copy_n(codes->data()+size_t(ids[i])*row_bytes,row_bytes,rows.data()+i*row_bytes);
@@ -218,19 +221,20 @@ Rescorer tieredq_refinement_rescorer(const Data& data,uint32_t bits,size_t nlist
   auto prefix_codes=std::make_shared<std::vector<uint8_t>>(prefix->encode(data.base.data(),data.n));
   auto suffix_codes=std::make_shared<std::vector<uint8_t>>(data.n*suffix_bytes);
   refinement->encode(data.base.data(),data.n,prefix_codes->data(),suffix_codes->data());
-  std::fprintf(stderr,"refinement tier %u: prefix %u code bits, suffix %zu bits, %zu bytes\n",bits,prefix->config().code_bits,
-               refinement->suffix_bits(),suffix_bytes);
+  std::fprintf(stderr,"refinement tier %u: prefix %u code bits (%zu ranks), suffix %zu bits, %zu bytes, %zu positions\n",bits,
+               prefix->config().code_bits,prefix->coded_dimensions(),refinement->suffix_bits(),suffix_bytes,refinement->positions());
   return {"tieredq-refinement:"+std::to_string(bits),double(suffix_bytes),
-          [refinement,prefix_codes,suffix_codes,prefix_bytes,suffix_bytes](const float* query,const uint32_t* ids,size_t count,
-                                                                            float* scores) {
+          [refinement,prefix_codes,suffix_codes,prefix_bytes,suffix_bytes](const float* query,const dv::TieredQQuery* prefix_query,
+                                                                            const uint32_t* ids,size_t count,float* scores) {
     thread_local std::vector<uint8_t> prefix_rows,suffix_rows;
     prefix_rows.resize(count*prefix_bytes); suffix_rows.resize(count*suffix_bytes);
     for (size_t i=0;i<count;++i) {
       std::copy_n(prefix_codes->data()+size_t(ids[i])*prefix_bytes,prefix_bytes,prefix_rows.data()+i*prefix_bytes);
       std::copy_n(suffix_codes->data()+size_t(ids[i])*suffix_bytes,suffix_bytes,suffix_rows.data()+i*suffix_bytes);
     }
-    refinement->score(prefix_rows.data(),suffix_rows.data(),count,refinement->query(query),scores);
-  }};
+    refinement->score(prefix_rows.data(),suffix_rows.data(),count,
+                      prefix_query ? refinement->query(query,*prefix_query) : refinement->query(query),scores);
+  },prefix->model_id()};
 }
 // Mean row of every list: RaBitQ's centroids on a shared partition.
 std::vector<float> list_means(const Data& data,const std::vector<uint32_t>& partition,size_t nlist) {
@@ -278,7 +282,7 @@ Rescorer rabitq_rescorer(const Data& data,size_t bits,const std::vector<uint32_t
                                             tier->padded,tier->ex_bits,row,row+tier->bin_bytes,rabitqlib::METRIC_IP);
   }
   return {"rabitq:"+std::to_string(bits),double(row_bytes),
-          [tier,row_bytes](const float* query,const uint32_t* ids,size_t count,float* scores) {
+          [tier,row_bytes](const float* query,const dv::TieredQQuery*,const uint32_t* ids,size_t count,float* scores) {
     thread_local std::vector<float> rotated;
     rotated.resize(tier->padded);
     tier->rotator->rotate(query,rotated.data());
@@ -322,26 +326,33 @@ uint64_t list_hash(const std::vector<size_t>& sizes) {
   for (size_t size:sizes) { hash^=size; hash*=1099511628211ULL; }
   return hash;
 }
+// weights (optional, rows of them) receive a TieredQ first stage's query weights, which it then scans with.
 struct Searcher {
-  std::function<void(const float*,size_t,size_t,size_t,uint32_t*)> batch;  // queries, rows, k, nprobe, ids (8 threads)
-  std::function<void(const float*,size_t,size_t,uint32_t*)> single;        // one query on the calling thread
+  std::function<void(const float*,size_t,size_t,size_t,uint32_t*,dv::TieredQQuery*)> batch;  // queries, rows, k, nprobe, ids, weights (8 threads)
+  std::function<void(const float*,size_t,size_t,uint32_t*,dv::TieredQQuery*)> single;        // one query on the calling thread
+  uint32_t model_id=0;  // the TieredQ first stage's model
 };
 void sweep_rerank(const char* codec,double budget,size_t nlist,const Data& data,const Searcher& search,double disk_bits,
                   double code_bits,double build_s,uint64_t lists,bool timed,size_t nprobe,size_t depth,
                   const std::vector<Rescorer>& tiers) {
   std::vector<uint32_t> candidates(data.nq*depth),ids(data.nq*top_k);
+  std::vector<dv::TieredQQuery> weights(data.nq);
   omp_set_num_threads(threads);
-  search.batch(data.queries.data(),data.nq,depth,nprobe,candidates.data());
-  const double candidate_recall=recall(data,candidates,depth);
   for (const auto& tier:tiers) {
+    // Tiers that reuse the first stage's query weights get them from the same search, in every timed loop too.
+    const bool shared=search.model_id && tier.prefix_model==search.model_id;
+    dv::TieredQQuery* out=shared ? weights.data() : nullptr;
+    auto prefix=[&](size_t q) { return shared ? &weights[q] : nullptr; };
+    omp_set_num_threads(threads);
+    search.batch(data.queries.data(),data.nq,depth,nprobe,candidates.data(),out);
+    const double candidate_recall=recall(data,candidates,depth);
     auto rerank_rows=[&](size_t first,size_t rows) {
       size_t reads=0;
 #pragma omp parallel for schedule(dynamic) reduction(+:reads)
       for (size_t q=first;q<first+rows;++q)
-        reads+=rerank(tier,data.queries.data()+q*data.d,candidates.data()+q*depth,depth,ids.data()+q*top_k);
+        reads+=rerank(tier,data.queries.data()+q*data.d,prefix(q),candidates.data()+q*depth,depth,ids.data()+q*top_k);
       return reads;
     };
-    omp_set_num_threads(threads);
     const double reads=double(rerank_rows(0,data.nq))/double(data.nq);
     const double r=recall(data,ids);
     double qps1=0,qps8=0;
@@ -349,15 +360,15 @@ void sweep_rerank(const char* codec,double budget,size_t nlist,const Data& data,
       qps8=double(data.nq)/best_seconds([&] {
         for (size_t q=0;q<data.nq;q+=batch) {
           const size_t rows=std::min(batch,data.nq-q);
-          search.batch(data.queries.data()+q*data.d,rows,depth,nprobe,candidates.data()+q*depth);
+          search.batch(data.queries.data()+q*data.d,rows,depth,nprobe,candidates.data()+q*depth,shared ? out+q : nullptr);
           rerank_rows(q,rows);
         }
       });
       omp_set_num_threads(1);
       qps1=double(data.nq)/best_seconds([&] {
         for (size_t q=0;q<data.nq;++q) {
-          search.single(data.queries.data()+q*data.d,depth,nprobe,candidates.data()+q*depth);
-          rerank(tier,data.queries.data()+q*data.d,candidates.data()+q*depth,depth,ids.data()+q*top_k);
+          search.single(data.queries.data()+q*data.d,depth,nprobe,candidates.data()+q*depth,prefix(q));
+          rerank(tier,data.queries.data()+q*data.d,prefix(q),candidates.data()+q*depth,depth,ids.data()+q*top_k);
         }
       });
     }
@@ -379,17 +390,17 @@ void sweep(const char* codec,double budget,size_t nlist,const Data& data,const S
       continue;
     }
     omp_set_num_threads(threads);
-    search.batch(data.queries.data(),data.nq,top_k,nprobe,ids.data());
+    search.batch(data.queries.data(),data.nq,top_k,nprobe,ids.data(),nullptr);
     const double r=recall(data,ids);
     double qps1=0,qps8=0;
     if (timed) {
       qps8=double(data.nq)/best_seconds([&] {
         for (size_t q=0;q<data.nq;q+=batch)
-          search.batch(data.queries.data()+q*data.d,std::min(batch,data.nq-q),top_k,nprobe,ids.data()+q*top_k);
+          search.batch(data.queries.data()+q*data.d,std::min(batch,data.nq-q),top_k,nprobe,ids.data()+q*top_k,nullptr);
       });
       omp_set_num_threads(1);
       qps1=double(data.nq)/best_seconds([&] {
-        for (size_t q=0;q<data.nq;++q) search.single(data.queries.data()+q*data.d,top_k,nprobe,ids.data()+q*top_k);
+        for (size_t q=0;q<data.nq;++q) search.single(data.queries.data()+q*data.d,top_k,nprobe,ids.data()+q*top_k,nullptr);
       });
     }
     std::printf("%s\t%g\t%zu\t%zu\t%.1f\t%.0f\t%.4f\t%.0f\t%.0f\t%.2f\t%016llx\n",codec,budget,nlist,nprobe,disk_bits,
@@ -417,14 +428,19 @@ void run_tieredq(const Data& data,uint32_t code_bits,size_t nlist,bool timed,con
   std::vector<size_t> sizes(index.lists());
   for (size_t list=0;list<sizes.size();++list) sizes[list]=index.list_size(list);
   Searcher search{
-    [&](const float* q,size_t rows,size_t k,size_t nprobe,uint32_t* ids) {
+    [&](const float* q,size_t rows,size_t k,size_t nprobe,uint32_t* ids,dv::TieredQQuery* weights) {
       std::vector<float> scores(rows*k);
-      index.search_batch(q,rows,k,nprobe,scores.data(),ids,pruning());
+      if (!weights) return index.search_batch(q,rows,k,nprobe,scores.data(),ids,pruning());
+      auto prepared=index.codec().query_weights(q,rows);
+      index.search_batch(q,prepared.data(),rows,k,nprobe,scores.data(),ids,pruning());
+      std::move(prepared.begin(),prepared.end(),weights);
     },
-    [&](const float* q,size_t k,size_t nprobe,uint32_t* ids) {
-      const auto hits=index.search(q,k,nprobe,pruning());
+    [&](const float* q,size_t k,size_t nprobe,uint32_t* ids,dv::TieredQQuery* weights) {
+      if (weights) *weights=index.codec().query_weights(q);
+      const auto hits=weights ? index.search(q,*weights,k,nprobe,pruning()) : index.search(q,k,nprobe,pruning());
       for (size_t i=0;i<k;++i) ids[i]=i<hits.size() ? hits[i].id : UINT32_MAX;
-    }};
+    },
+    index.codec().model_id()};
   const auto tiers=rescorers(data,index.list_assignment(),index.lists(),nlist);
   sweep("tieredq",label,index.lists(),data,search,tieredq_disk_bits(index),index.codec().config().code_bits,build_s,
         list_hash(sizes),timed,nprobes,tiers);
@@ -447,6 +463,33 @@ void profile_tieredq(const Data& data,uint32_t code_bits,size_t nlist,const std:
       for (size_t q=0;q<data.nq;++q) found+=index.search(data.queries.data()+q*data.d,top_k,nprobe,pruning()).size();
     std::printf("profile\t%u\t%zu\t%zu\t%.0f\t%zu\n",code_bits,nlist,nprobe,
                 double(profile_rounds*data.nq)/seconds_since(start),found);
+    std::fflush(stdout);
+  }
+}
+
+// Rescoring alone: each RESCORE tier reranks the first nprobe's RERANK[0] candidates of every query on the calling
+// thread, PROFILE_ROUNDS times (a perf target); prints microseconds per query.
+void profile_rescore(const Data& data,uint32_t code_bits,size_t nlist,size_t nprobe) {
+  const size_t profile_rounds=std::getenv("PROFILE_ROUNDS") ? std::stoul(std::getenv("PROFILE_ROUNDS")) : 10;
+  const size_t depth=rerank_depths().empty() ? top_k : rerank_depths()[0];
+  omp_set_num_threads(threads);
+  dv::TieredQIVFIndex index(train(data,code_bits,nlist),uint32_t(coarse_lists()));
+  index.build(data.base.data(),data.n);
+  const auto tiers=rescorers(data,index.list_assignment(),index.lists(),nlist);
+  const auto weights=index.codec().query_weights(data.queries.data(),data.nq);
+  std::vector<uint32_t> candidates(data.nq*depth),ids(data.nq*top_k);
+  std::vector<float> scores(candidates.size());
+  index.search_batch(data.queries.data(),weights.data(),data.nq,depth,nprobe,scores.data(),candidates.data(),pruning());
+  omp_set_num_threads(1);
+  std::fprintf(stderr,"profile ready\n");
+  for (const auto& tier:tiers) {
+    const bool shared=tier.prefix_model==index.codec().model_id();
+    const auto start=std::chrono::steady_clock::now();
+    for (size_t round=0;round<profile_rounds;++round)
+      for (size_t q=0;q<data.nq;++q)
+        rerank(tier,data.queries.data()+q*data.d,shared ? &weights[q] : nullptr,candidates.data()+q*depth,depth,ids.data()+q*top_k);
+    std::printf("rescore_profile\t%u\t%zu\t%zu\t%s\t%.1f\t%.4f\n",code_bits,nprobe,depth,tier.name.c_str(),
+                1e6*seconds_since(start)/double(profile_rounds*data.nq),recall(data,ids));
     std::fflush(stdout);
   }
 }
@@ -545,12 +588,14 @@ void run_rabitq(const Data& data,size_t bits,size_t codec_lists,bool timed,const
   std::filesystem::remove(path);
   Searcher search{
     // RaBitQ writes only the hits it found; empty slots stay UINT32_MAX.
-    [&](const float* q,size_t rows,size_t k,size_t nprobe,uint32_t* ids) {
+    [&](const float* q,size_t rows,size_t k,size_t nprobe,uint32_t* ids,dv::TieredQQuery*) {
       std::fill_n(ids,rows*k,UINT32_MAX);
 #pragma omp parallel for schedule(dynamic)
       for (size_t row=0;row<rows;++row) index.search(q+row*data.d,k,nprobe,ids+row*k,true);
     },
-    [&](const float* q,size_t k,size_t nprobe,uint32_t* ids) { std::fill_n(ids,k,UINT32_MAX); index.search(q,k,nprobe,ids,true); }};
+    [&](const float* q,size_t k,size_t nprobe,uint32_t* ids,dv::TieredQQuery*) {
+      std::fill_n(ids,k,UINT32_MAX); index.search(q,k,nprobe,ids,true);
+    }};
   sweep("rabitq",double(bits),nlist,data,search,disk_bits,double(bits*data.d),build_s,list_hash(sizes),timed,nprobes,
         rescorers(data,partition,nlist,codec_lists));
 }
@@ -569,6 +614,7 @@ int main(int argc,char** argv) {
   if (mode=="tieredq") run_tieredq(data,uint32_t(budget),nlist,timed,nprobes,budget);
   else if (mode=="tieredq-match") run_tieredq(data,match_code_bits(data,budget,nlist),nlist,timed,nprobes,budget);
   else if (mode=="tieredq-profile") profile_tieredq(data,uint32_t(budget),nlist,nprobes);
+  else if (mode=="rescore-profile") profile_rescore(data,uint32_t(budget),nlist,nprobes[0]);
   else if (mode=="rabitq") run_rabitq(data,size_t(budget),nlist,timed,nprobes);
   else if (mode=="tieredq-nesting") {
     std::vector<uint32_t> budgets;

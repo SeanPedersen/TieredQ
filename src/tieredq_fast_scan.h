@@ -22,11 +22,31 @@ namespace dv::tieredq_detail {
 // Range starts every fast kernel accepts: 16-document int8/code blocks and the 32-document AVX2 lookup chunks.
 constexpr size_t fast_list_alignment = 32;
 
+// The project_fast_queries layout of a query's weights, centroid scores and correction weights.
+inline std::vector<float> fast_query_output(const FastScanCache& cache,const TieredQQuery& q) {
+  if (q.weights.size()!=cache.dimensions || q.centroid_scores.size()!=q.correction_weights.size())
+    throw std::runtime_error("TieredQ: prepared query weight shape mismatch");
+  std::vector<float> output(q.weights);
+  output.insert(output.end(),q.centroid_scores.begin(),q.centroid_scores.end());
+  output.insert(output.end(),q.correction_weights.begin(),q.correction_weights.end());
+  return output;
+}
 // Code-ID scans consume only query weights and lookup scans only their byte tables; both project query tiles so
-// the basis traffic is shared across queries.
-template<class Prepare>
-auto fast_search_queries(const FastScanCache& cache,const TieredQ& codec,const float* queries,size_t rows,Prepare prepare) {
+// the basis traffic is shared across queries. Given weights (model_query_weights of every row), from_weights
+// prepares each row without projecting it again.
+template<class Prepare,class FromWeights>
+auto fast_search_queries(const FastScanCache& cache,const TieredQ& codec,const float* queries,size_t rows,Prepare prepare,
+                         FromWeights from_weights,const TieredQQuery* prepared_weights) {
   using Prepared=decltype(prepare(queries));
+  if (prepared_weights) {
+    std::vector<Prepared> prepared(rows);
+    for (size_t row=0;row<rows;++row) {
+      if constexpr (requires (Prepared query) { query.lookup.tables; })
+        if (cache.lookup) { prepared[row].lookup=fast_lookup_query(*cache.lookup,fast_query_output(cache,prepared_weights[row])); continue; }
+      prepared[row]=from_weights(prepared_weights[row]);
+    }
+    return prepared;
+  }
   if constexpr (requires (Prepared query) { query.lookup.tables; })
     if (cache.lookup) return prepare_search_tiles<Prepared>(queries,rows,codec.model_dimensions(),query_tile_height(rows,basis_query_tile),
         [&](const float* first,size_t count,Prepared* out) {
@@ -51,16 +71,19 @@ const std::vector<float>& prepared_centroid_scores(const Prepared& query) {
 
 // Calls run(prepared, query_tile, scan) for model-space queries, where
 // scan(const Prepared* queries, size_t count, size_t first, size_t documents, float* scores, size_t stride).
+// weights (optional) are the rows' model_query_weights.
 template<class Run>
-void with_fast_scan(const FastScanCache& cache,const TieredQ& codec,const float* queries,size_t rows,Run run) {
+void with_fast_scan(const FastScanCache& cache,const TieredQ& codec,const float* queries,size_t rows,Run run,
+                    const TieredQQuery* weights=nullptr) {
   [[maybe_unused]] const auto backend=fast_scan_backend(cache);
 #ifdef DV_TIEREDQ_NEON
   if (backend==FastScanBackend::neon) {
-    auto prepare=[&](const float* vector) { return fast_scan_query(cache,codec.model_query_weights(vector)); };
+    auto from_weights=[&](const TieredQQuery& q) { return fast_scan_query(cache,q); };
+    auto prepare=[&](const float* vector) { return from_weights(codec.model_query_weights(vector)); };
     auto scan=[&](const auto* prepared,size_t count,size_t first,size_t documents,float* scores,size_t stride) {
       scan_fast_neon_tile(cache,prepared,count,first,documents,scores,stride);
     };
-    run(fast_search_queries(cache,codec,queries,rows,prepare),
+    run(fast_search_queries(cache,codec,queries,rows,prepare,from_weights,weights),
         cache.code_lookup() ? fast_code_query_group : fast_scan_query_tile_neon,scan);
     return;
   }
@@ -68,20 +91,22 @@ void with_fast_scan(const FastScanCache& cache,const TieredQ& codec,const float*
 #ifdef DV_TIEREDQ_X86
   if (backend==FastScanBackend::avx512 || backend==FastScanBackend::avx2) {
     auto prepare=[&](const float* vector) { return fast_scan_query_x86(cache,codec,vector); };
+    auto from_weights=[&](const TieredQQuery& q) { return fast_scan_query_x86(cache,q); };
     auto scan=[&](const auto* prepared,size_t count,size_t first,size_t documents,float* scores,size_t stride) {
       if (backend==FastScanBackend::avx512) scan_fast_avx512_tile(cache,prepared,count,first,documents,scores,stride);
       else scan_fast_avx2_tile(cache,prepared,count,first,documents,scores,stride);
     };
     const size_t query_tile=cache.lookup ? 1 : cache.code_lookup() ? fast_code_query_group :
         backend==FastScanBackend::avx512 ? fast_scan_query_tile_x86 : fast_scan_query_tile_avx2;
-    run(fast_search_queries(cache,codec,queries,rows,prepare),query_tile,scan);
+    run(fast_search_queries(cache,codec,queries,rows,prepare,from_weights,weights),query_tile,scan);
     return;
   }
 #endif
   auto prepare=[&](const float* vector) { return fast_scan_query_scalar(cache,codec,vector); };
+  auto from_weights=[&](const TieredQQuery& q) { return fast_scan_query_scalar(cache,q); };
   auto scan=[&](const auto* prepared,size_t count,size_t first,size_t documents,float* scores,size_t stride) {
     scan_fast_scalar_tile(cache,prepared,count,first,documents,scores,stride);
   };
-  run(fast_search_queries(cache,codec,queries,rows,prepare),size_t(1),scan);
+  run(fast_search_queries(cache,codec,queries,rows,prepare,from_weights,weights),size_t(1),scan);
 }
 } // namespace dv::tieredq_detail

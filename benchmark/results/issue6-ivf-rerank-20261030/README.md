@@ -24,6 +24,9 @@ rerank tier (`fp32`, `fp16`, `int8`, `tieredq:B` flat, `tieredq-residual:B`, `ti
 | `openai100k-rescore-time/` | timed: prefixes x fp32 / int8 / refinement (per-position LUT scorer), `z8-p3` prefix pruning, RaBitQ-1 x fp32 / int8 / rabitq:5,6 |
 | `openai100k-rescore-time2/` | timed: refinement with the shared level-table scorer, int8 anchor in the same process |
 | `openai1m-recall/`, `openai1m-time/`, `openai1m-tables.md` | OpenAI-1M (999k), coarse lists 256 and 1024, matched budgets, FP32 rerank |
+| `openai100k-rescore-time3/` | timed: the time2 cells with this commit's scorer (gather-free AVX-512 fields, int8 query panels, the IVF's query weights shared) |
+| `openai1m-rescore-recall/`, `openai1m-rescore-recall-tables.md` | OpenAI-1M, 256 lists: prefixes 512 / 768 / 1024 x fp32 / int8 / refinement:3,4 and RaBitQ 1 x int8 / rabitq:5,6, untimed |
+| `openai1m-rescore-time/`, `openai1m-rescore-time2/`, `openai1m-rescore-tables.md` | the selected 1M cells timed; the refinement rows of `openai1m-rescore-time/` ran on the default 1416 prefix (a `select` bug, fixed) and are void, `time2` re-times them |
 
 ## Findings
 **Sub-1-bit TieredQ IVF + INT8 rerank beats RaBitQ 1-bit + INT8 on index RAM and QPS** (100k, 1t QPS):
@@ -40,14 +43,34 @@ rerank tier (`fp32`, `fp16`, `int8`, `tieredq:B` flat, `tieredq-residual:B`, `ti
 0.987 vs 0.987 at 4 bits/dim, 0.992 vs 0.993 at 5) and need fewer bytes than RaBitQ's ex-bits at equal recall
 (399 / 599 / 769 vs 584 / 776 / 968 B). Against RaBitQ 1 + its 1->6 codes: 512 + refinement:4 at 0.95 gives -60%
 index RAM, -39% tier bytes, 1.4x QPS; 1024 + refinement:4 at 0.98 gives -26% / -44% / 1.36x (0.981 vs 0.985).
-Refinement rescoring still runs at about 0.5x INT8 rescoring QPS (about 0.24 ms per query + 4 us per candidate).
+(The QPS here are the earlier scorer's; see below.)
 `rabitq:B` rescoring is generic eval glue: its recall matches the native IVF, its speed may understate RaBitQ.
 
 **Dead ends:** residual tiers gain nothing from the prefix (equal to a flat code one bit lower); separately trained
 models are not refinements (tiers do not line up, `nesting.txt`); `z8-p3` pruning of the 1416 prefix does not speed it up.
 
+**Faster refinement scoring** (100k, `openai100k-rescore-time3/` vs `time2`, same cells): 1.5-1.9x the 1t QPS at
+unchanged recall, now 0.6-0.9x of INT8 rescoring on the same candidates (e.g. 1024 + refinement:4, nprobe 32, k' 50:
+1,599 vs INT8 1,956; was 1,051). Rescoring alone at 768, k' 50 went from about 440 to 136 us per query (INT8: 23 us):
+the scan's query weights are reused, fields are unpacked with shuffles instead of gathers (about 0.75 us per candidate,
+was 4) and the query projects onto int8 panels in one sequential stream. What is left is that projection: the finer
+model codes about 1,530 of 1,536 ranks, so a query is projected onto about 1,140 suffix-only ranks (about d^2 / 1.4
+multiply-adds, memory-bound) against k' x d for INT8. Closing it needs a codec change (e.g. a fast structured rotation
+for the tail ranks) or batched queries sharing the panels.
+At 0.95: 512 + refinement:4 (nprobe 16, k' 50) gives 2,929 / 21,261 QPS vs RaBitQ 1 + INT8 2,059 / 14,331 and
+RaBitQ 1 + 1->6 1,215 / 9,181. At 0.98: 1024 + refinement:4 (nprobe 32, k' 50, 0.981) gives 1,599 / 10,893 vs
+RaBitQ 1 + 1->6 (0.985) 774 / 5,860.
+
+**1M confirms it** (`openai1m-rescore-tables.md`, 256 lists, 1t QPS). Index RAM: TieredQ 512 / 768 / 1024 use 627 /
+886 / 1,138 bits/vector vs RaBitQ's 1,683.
+- INT8 rerank: 512 reaches 0.95 / 0.98 / 0.99 at 914 / 520 / 271 QPS vs RaBitQ 1 + INT8 332 / 168 / 87 (2.8-3.1x,
+  -63% index RAM). 1024 matches RaBitQ's cells at -32% index RAM and 1.6x QPS.
+- Refinement vs RaBitQ's own codes: 0.95: 512 + refinement:4 (702 B) 719 QPS vs rabitq:5 (980 B) 298; 0.97: 768 +
+  refinement:4 (672 B) 339 vs 162; 0.98: 768 + refinement:4 at nprobe 128 187 vs rabitq:6 (1,172 B) 157.
+- Refinement tops out at 0.983-0.984 at nprobe 128; 0.99 needs INT8. The 512 prefix needs k' 100-200 with refinement.
+
 **1M, FP32 rerank at 1-bit index RAM:** TieredQ 1558 vs RaBitQ 1 bit is 1.17x faster at 0.95 and 1.23x at 0.99 with 256
 lists, 0.85-0.94x with 1024 lists (whose nprobe <= 128 caps recall at 0.981). More index bits add no speed once rerank is
-there. Sub-1-bit prefixes and refinement are not yet measured at 1M.
+there.
 
 Discussion: #23 (nested codes), #22 (cost model), #19 (adoption).

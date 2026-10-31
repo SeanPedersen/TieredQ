@@ -1,0 +1,20 @@
+building rerank tier int8
+building rerank tier tieredq-refinement:3
+refinement tier 3: prefix 1424 code bits (657 ranks), suffix 3158 bits, 399 bytes, 1459 positions
+building rerank tier tieredq-refinement:4
+refinement tier 4: prefix 1424 code bits (657 ranks), suffix 4756 bits, 599 bytes, 1530 positions
+building rerank tier int8
+building rerank tier tieredq-refinement:3
+refinement tier 3: prefix 1024 code bits (496 ranks), suffix 3649 bits, 461 bytes, 1459 positions
+building rerank tier tieredq-refinement:4
+refinement tier 4: prefix 1024 code bits (496 ranks), suffix 5227 bits, 658 bytes, 1530 positions
+building rerank tier int8
+building rerank tier tieredq-refinement:3
+refinement tier 3: prefix 768 code bits (387 ranks), suffix 3758 bits, 474 bytes, 1459 positions
+building rerank tier tieredq-refinement:4
+refinement tier 4: prefix 768 code bits (387 ranks), suffix 5336 bits, 671 bytes, 1530 positions
+building rerank tier int8
+building rerank tier tieredq-refinement:3
+refinement tier 3: prefix 512 code bits (275 ranks), suffix 4095 bits, 516 bytes, 1459 positions
+building rerank tier tieredq-refinement:4
+refinement tier 4: prefix 512 code bits (275 ranks), suffix 5654 bits, 711 bytes, 1530 positions
