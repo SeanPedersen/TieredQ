@@ -10,7 +10,8 @@
 // TieredQConfig::allocation_power, for every TieredQ model the run trains. Training (#19.2): every TieredQ model
 // trains on the first TRAIN_ROWS (default 32,768) rows of a seeded shuffle that skips the row ids in
 // TRAIN_EXCLUDE_ROWS (u32 file); PARTITION_FROM=subset also trains the coarse lists and RaBitQ's list means on them
-// (default full: all rows). Data as ab_eval: DATA_DIR/{base.f32,queries.f32,truth.u32}, inner-product truth.
+// (default full: all rows). QUERY_PARITY=even|odd keeps every other query for held-out selection. Data as
+// ab_eval: DATA_DIR/{base.f32,queries.f32,truth.u32}, inner-product truth.
 // RERANK=K1,K2,... adds exact rerank: each codec returns its top-k' and one shared rescoring (inner product on the raw
 // float base, as the truth) keeps the top 10. Rows then read: codec budget nlist nprobe disk_bits code_bits rerank_k
 // cand_recall recall reads fp32_bits qps_1t_b1 qps_8t_b32 build_s list_hash, where cand_recall counts the true top 10
@@ -630,6 +631,15 @@ void run_rabitq(const Data& data,size_t bits,size_t codec_lists,bool timed,const
   sweep("rabitq",double(bits),nlist,data,search,disk_bits,double(bits*data.d),build_s,list_hash(sizes),timed,nprobes,
         rescorers(data,partition,nlist,codec_lists));
 }
+// QUERY_PARITY=even|odd keeps the queries (and truth rows) with even or odd ids, for held-out selection.
+void keep_parity(Data& data,size_t parity) {
+  size_t kept=0;
+  for (size_t q=parity;q<data.nq;q+=2,++kept) {
+    std::copy_n(data.queries.begin()+q*data.d,data.d,data.queries.begin()+kept*data.d);
+    std::copy_n(data.truth.begin()+q*top_k,top_k,data.truth.begin()+kept*top_k);
+  }
+  data.nq=kept; data.queries.resize(kept*data.d); data.truth.resize(kept*top_k);
+}
 } // namespace
 
 int main(int argc,char** argv) {
@@ -638,6 +648,7 @@ int main(int argc,char** argv) {
   const double budget=std::stod(argv[2]);
   Data data{load<float>(dir+"/base.f32"),load<float>(dir+"/queries.f32"),load<uint32_t>(dir+"/truth.u32"),std::stoul(argv[4]),0,0};
   data.n=data.base.size()/data.d; data.nq=data.queries.size()/data.d;
+  if (const char* parity=std::getenv("QUERY_PARITY")) keep_parity(data,std::string(parity)=="odd" ? 1 : 0);
   const size_t nlist=std::stoul(argv[5]);
   const bool timed=std::stoi(argv[6]);
   std::vector<size_t> nprobes;
