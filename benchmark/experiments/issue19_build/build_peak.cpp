@@ -15,8 +15,15 @@ void reset_hwm() { std::ofstream("/proc/self/clear_refs")<<"5"; }
 int main(int argc,char** argv) {
   const size_t n=std::stoul(argv[1]),d=std::stoul(argv[2]),bits=std::stoul(argv[3]);
   const bool cosine=!std::strcmp(argv[4],"cos"),ivf=!std::strcmp(argv[5],"ivf"),sampled=argc>6;
-  std::vector<float> data(n*d); std::mt19937 rng(1); std::normal_distribution<float> normal;
-  for (size_t i=0;i<n*d;++i) data[i]=normal(rng)*std::exp(-float(i%d)/float(d)*4);
+  // DATA=base.f32 reads its first N rows; otherwise synthetic rows with a decaying spectrum.
+  std::vector<float> data(n*d);
+  if (const char* path=std::getenv("DATA")) {
+    std::ifstream in(path,std::ios::binary);
+    if (!in.read(reinterpret_cast<char*>(data.data()),std::streamsize(data.size()*sizeof(float)))) return 1;
+  } else {
+    std::mt19937 rng(1); std::normal_distribution<float> normal;
+    for (size_t i=0;i<n*d;++i) data[i]=normal(rng)*std::exp(-float(i%d)/float(d)*4);
+  }
   const double per=8.0*1024/double(n);
   reset_hwm(); long base=hwm_kb();
   const size_t sample_rows=std::min<size_t>(n,std::getenv("TRAIN_ROWS") ? std::stoul(std::getenv("TRAIN_ROWS")) : 32768);
@@ -25,7 +32,8 @@ int main(int argc,char** argv) {
   std::vector<float> sample(sampled ? 0 : sample_rows*d);
   if (!sampled) for (size_t i=0;i<sample_rows;++i) std::copy_n(data.data()+order[i]*d,d,sample.data()+i*d);
   long after_copy=hwm_kb();
-  auto config=dv::TieredQConfig::target_code_bits(uint32_t(d),uint32_t(bits*d));
+  const uint32_t code_bits=std::getenv("CODE_BITS") ? uint32_t(std::stoul(std::getenv("CODE_BITS"))) : uint32_t(bits*d);
+  auto config=dv::TieredQConfig::target_code_bits(uint32_t(d),code_bits);
   if (cosine) config.metric=dv::TieredQMetric::cosine;
   reset_hwm(); long before_train=hwm_kb();
   const auto train_start=std::chrono::steady_clock::now();

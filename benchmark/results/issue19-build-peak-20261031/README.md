@@ -47,3 +47,26 @@ eigendecomposition and the covariance, which then runs as BLAS `syrk` over 1,024
 At 4 bits/dim the OpenBLAS training takes 3.7 s and the add 4.4 s. The extra ~2K bits/vector of training peak with
 OpenBLAS are its thread buffers (~25 MB), not the covariance chunk. 16K training rows reach the recall of 32K on
 OpenAI-1M and MS MARCO-1M (#19.2 sweep).
+
+## Flat build vs RaBitQ and TQ+ (OpenAI, real data)
+`build_peak.cpp` with `DATA=` the OpenAI base and `CODE_BITS=` the #4 budgets matched to RaBitQ's steady RAM at
+1 / 2 / 4 bits/dim, cosine, seeded 32,768-row `train_sampled`, chunked add, 8 threads on CPUs 0-7 (an untimed recall
+job used CPUs 8-31 at the same time). Reference and earlier TieredQ build times are the #4 timing cells (seed 0, run
+alone; [report](../../../docs/benchmark-report.md#build-cost)), not re-measured. Build = train + add, seconds.
+
+| Set, bits/dim | TieredQ #4 (reference LAPACK) | TieredQ now, reference LAPACK | TieredQ now, OpenBLAS | RaBitQ | Qdrant TQ+ |
+|---|---:|---:|---:|---:|---:|
+| 100K, 1 | 12.4 | 13.8 | **3.3** | 0.1 | 3.2 |
+| 100K, 2 | 12.9 | 14.1 | **3.5** | 2.5 | 4.3 |
+| 100K, 4 | 13.6 | 15.0 | **4.7** | 4.1 | 5.8 |
+| 1M, 1 | 21.4 | 25.7 | **15.4** | 1.0 | 31.8 |
+| 1M, 2 | 24.1 | – | **17.5** | 24.9 | 40.5 |
+| 1M, 4 | 34.0 | – | **28.5** | 41.9 | 51.7 |
+
+Build peak RSS growth at 1M (bits/vector), now vs #4: 1,677 vs ~5,000 (index 1,593), 3,343 vs ~8,300 (index
+3,176), 6,573 vs ~14,400 (index 6,216): within 2-6% of the index, as RaBitQ (1,647 / 3,250 / 6,322) and half of TQ+
+(3,254 / 6,321 / 12,473).
+
+- With an optimized LAPACK, TieredQ builds 1.4-1.5x faster than RaBitQ at 2 and 4 bits/dim on 1M and within
+  1.1-1.4x at 100K; RaBitQ's 1-bit build (sign codes, no extra bits) stays 15-33x faster.
+- Training is now a fixed ~2 s at d = 1,536; at 1M the encode (13-26 s) is the remaining build cost.
