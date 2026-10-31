@@ -170,7 +170,8 @@ void cosine_training_test() {
   require(cosine.encode(data.data(),rows)==inner.encode(normalized(data).data(),rows),
           "cosine training differs from inner-product training on normalized rows");
 }
-// The default power follows the metric in both modes (1 for L2, 1.5 otherwise); inner-product models keep format 3.
+// The default power follows the metric in both modes (1 for L2, 1.5 otherwise from 1 bit per dimension up, lower
+// below it); inner-product models keep format 3.
 void power_and_format_test() {
   require(train(TieredQMetric::l2,2,TieredQIndexMode::fast).model_id()==train(TieredQMetric::l2,2,TieredQIndexMode::fast,1.0).model_id(),
           "L2 fast default is not power 1");
@@ -180,6 +181,16 @@ void power_and_format_test() {
           train(TieredQMetric::inner_product,2,TieredQIndexMode::full,1.5).model_id(),"full inner-product default is not power 1.5");
   require(train(TieredQMetric::l2,2,TieredQIndexMode::full).model_id()==
           train(TieredQMetric::l2,2,TieredQIndexMode::full,1.0).model_id(),"full L2 default is not power 1");
+  // Below 1 bit per dimension the inner-product default falls to 1 at 0.5 bits per dimension (1.25 at 0.75).
+  auto sub_bit=[](uint32_t code_bits,double power) {
+    const auto sample=rows_with_norms(rows,3);
+    auto config=TieredQConfig::target_code_bits(dimensions,code_bits);
+    config.num_centroids=centroids; config.allocation_power=power;
+    return TieredQ::train(config,sample.data(),rows,7).model_id();
+  };
+  require(sub_bit(dimensions/4,0)==sub_bit(dimensions/4,1.0) && sub_bit(dimensions/2,0)==sub_bit(dimensions/2,1.0),
+          "inner-product default is not power 1 at 0.5 bits per dimension or below");
+  require(sub_bit(3*dimensions/4,0)==sub_bit(3*dimensions/4,1.25),"inner-product default is not power 1.25 at 0.75 bits");
   auto format=[](const TieredQ& codec) { const auto data=codec.serialize(); uint32_t v; std::memcpy(&v,data.data()+4*sizeof(uint32_t),sizeof v); return v; };
   require(format(train(TieredQMetric::inner_product,2,TieredQIndexMode::fast))==TieredQ::model_format,"inner-product model format changed");
   require(format(train(TieredQMetric::l2,2,TieredQIndexMode::fast))==TieredQ::metric_model_format,"L2 model format");

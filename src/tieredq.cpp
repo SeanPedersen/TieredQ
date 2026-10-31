@@ -475,12 +475,15 @@ TieredQ TieredQ::train_model(TieredQConfig config,const tieredq_detail::Training
     allocation.cap[j]=uint32_t(j)<config.wide_dims ? config.max_bits : std::min<uint32_t>(config.max_bits,6);
   }
   auto bits=tieredq_detail::greedy_allocation(allocation,config.code_bits,false);
-  // Allocation uses variance^1.5 instead of the MSE-optimal variance by default: for queries distributed
-  // like the data it is recall-optimal at equal storage (#9, chosen and confirmed on disjoint query halves). SAQ's
-  // inner-product error model puts the optimum at power 2 and ScaNN's parallel-error argument between 1 and 2.
+  // Allocation uses variance^1.5 instead of the MSE-optimal variance by default from 1 bit per dimension up: for
+  // queries distributed like the data it is recall-optimal at equal storage (#9, chosen and confirmed on disjoint
+  // query halves). SAQ's inner-product error model puts the optimum at power 2 and ScaNN's parallel-error argument
+  // between 1 and 2. Below 1 bit per dimension flatter weights code more ranks and win: power 1 at 0.25-0.5 bits gave
+  // +0.7 to +1.0 pt held-out IVF candidate recall on OpenAI-1M and MS MARCO-1M, real and document queries (#22).
   // Whitened queries (the L2 lift) weight every rank alike, so MSE is optimal there and L2 training passes 1.
   const bool fast_target=config.target_mode==TieredQIndexMode::fast;
-  const double power=config.allocation_power>0 ? config.allocation_power : tieredq_detail::default_allocation_power;
+  const double power=config.allocation_power>0 ? config.allocation_power
+                                               : tieredq_detail::default_allocation_power(config.code_bits,uint32_t(d));
   auto weighted=allocation;
   for (auto& v:weighted.variance) v=std::pow(std::max(0.0,v),power);
   // Fast caches of models with every tier <= 4 bits use the x86 nibble lookup, which stores 3-bit codes exactly

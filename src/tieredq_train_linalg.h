@@ -1,4 +1,4 @@
-// Optional dynamically loaded training backend; otherwise use the linked LAPACK routines.
+// Training's BLAS/LAPACK routines: the linked ones, or a backend loaded at run time from TIEREDQ_BLAS.
 #pragma once
 #include <algorithm>
 #include <cstdlib>
@@ -24,7 +24,7 @@ class TrainingLinalg {
   decltype(&dsyevd_) eigen=&dsyevd_;
   decltype(&dgeqrf_) qr=&dgeqrf_;
   decltype(&dorgqr_) generate_q=&dorgqr_;
-  decltype(&dsyrk_) syrk=nullptr;
+  decltype(&dsyrk_) syrk=&dsyrk_;
 
   std::vector<double> covariance(const std::vector<double>& residual,const std::vector<double>& mean,
                                  int dimensions,int rows,StageProfile& profile) const {
@@ -98,7 +98,7 @@ class TrainingLinalg {
       result.syrk=symbol<decltype(result.syrk)>(handle,"dsyrk_");
     } catch (...) { dlclose(handle); throw; }
     if (selection=="all") return result;
-    if (selection!="covariance") result.syrk=nullptr;
+    if (selection!="covariance") result.syrk=&dsyrk_;
     if (selection!="eigen") result.eigen=&dsyevd_;
     if (selection!="qr") { result.qr=&dgeqrf_; result.generate_q=&dorgqr_; }
     return result;

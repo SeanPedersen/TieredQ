@@ -1,5 +1,8 @@
 @PACKAGE_INIT@
 include(CMakeFindDependencyMacro)
 find_dependency(OpenMP)
+if(NOT DEFINED BLA_VENDOR AND NOT "@TIEREDQ_BLA_VENDOR@" STREQUAL "")
+  set(BLA_VENDOR "@TIEREDQ_BLA_VENDOR@")
+endif()
 find_dependency(LAPACK)
 include("${CMAKE_CURRENT_LIST_DIR}/TieredQTargets.cmake")

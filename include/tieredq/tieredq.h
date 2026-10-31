@@ -35,9 +35,9 @@ struct TieredQConfig {
   // Full mode packs codes densely and keeps the Lloyd-Max 3-bit codebook. Either model serves in either mode.
   TieredQIndexMode target_mode = TieredQIndexMode::fast;
   TieredQMetric metric = TieredQMetric::inner_product;
-  // Training-only: allocate bits on PCA variance^allocation_power. 0 picks the metric's default in either mode
-  // (#9): 1.5 for inner product and cosine, whose queries follow the data, and 1 (MSE) for L2, whose lift
-  // whitens queries.
+  // Training-only: allocate bits on PCA variance^allocation_power. 0 picks the metric's default in either mode:
+  // for inner product and cosine, whose queries follow the data, 1.5 from 1 bit per dimension up (#9), falling to 1
+  // at 0.5 bits per dimension and below (#22); 1 (MSE) for L2, whose lift whitens queries.
   double allocation_power = 0;
   static TieredQConfig target_bytes(uint32_t dimensions, uint32_t bytes);
   static TieredQConfig target_code_bits(uint32_t dimensions, uint32_t bits);

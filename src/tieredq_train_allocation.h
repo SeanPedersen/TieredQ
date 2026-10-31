@@ -72,7 +72,12 @@ inline uint32_t lookup_storage_limit(const Allocation& fallback,uint32_t code_bi
   return widest_tier(fallback)<=lookup_code_bits ? std::max(code_bits,lookup_stored_bits(fallback,false)) : code_bits;
 }
 struct FastLookupAllocation { Allocation bits; bool additive_three; };
-constexpr double default_allocation_power=1.5; // allocation weights variance^power (#9, see TieredQ::train)
+// Default power of the variance weights (see TieredQ::train) at code_bits over dimensions model ranks: 1.5 from
+// 1 bit per dimension up (#9), falling linearly to 1 (MSE) at 0.5 bits per dimension and below (#22).
+inline double default_allocation_power(uint32_t code_bits,uint32_t dimensions) {
+  constexpr double flat_power=1.0,full_power=1.5,flat_below=0.5;
+  return flat_power+std::clamp(double(code_bits)/dimensions-flat_below,0.0,full_power-flat_power);
+}
 // Exact nibble-layout allocation of at most max_width bits per rank under padded storage <= limit_bits (#9), for
 // one distortion table shared by all ranks that is convex in the code width (error[3] is the additive codebook's). With G = 2 * limit_bits / 8 groups,
 // 4-bit codes take a group each, 2-bit codes and 3-bit low parts pair up and 1-bit codes and 3-bit high parts fill
