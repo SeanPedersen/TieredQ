@@ -1,5 +1,6 @@
 // Optional dynamically loaded training backend; otherwise use the linked LAPACK routines.
 #pragma once
+#include <algorithm>
 #include <cstdlib>
 #include <stdexcept>
 #include <string>
@@ -34,10 +35,32 @@ class TrainingLinalg {
     return covariance_centered(centered,dimensions,rows);
   }
 
+  // Up to this width the AVX-512 kernel covers covariance over the whole centered sample.
+  static constexpr int small_covariance_dimensions=200;
+  static bool small_covariance(int dimensions) {
+#if defined(__x86_64__) || defined(__i386__)
+    return dimensions<=small_covariance_dimensions && __builtin_cpu_supports("avx512f");
+#else
+    return false;
+#endif
+  }
+  // syrk accumulated over row chunks: fill(r0, n, out) writes centered rows [r0, r0 + n) row-major, so no rows x d
+  // copy of the sample exists.
+  template<class Fill> std::vector<double> covariance_chunked(int dimensions,size_t rows,Fill fill) const {
+    constexpr size_t chunk_rows=1024;
+    std::vector<double> result(size_t(dimensions)*dimensions,0),chunk(std::min(rows,chunk_rows)*dimensions);
+    const char lower='L',normal='N'; const double alpha=1.0/double(rows-1),one=1;
+    for (size_t r0=0;r0<rows;r0+=chunk_rows) {
+      const int n=int(std::min(chunk_rows,rows-r0));
+      fill(r0,size_t(n),chunk.data());
+      syrk(&lower,&normal,&dimensions,&n,&alpha,chunk.data(),&dimensions,&one,result.data(),&dimensions);
+    }
+    return result;
+  }
+
   std::vector<double> covariance_centered(const std::vector<double>& centered,int dimensions,int rows) const {
 #if defined(__x86_64__) || defined(__i386__)
-    constexpr int small_covariance_dimensions=200;
-    if (dimensions<=small_covariance_dimensions && __builtin_cpu_supports("avx512f"))
+    if (small_covariance(dimensions))
       return small_covariance_avx512(centered,dimensions,rows);
 #endif
     std::vector<double> result(size_t(dimensions)*dimensions);

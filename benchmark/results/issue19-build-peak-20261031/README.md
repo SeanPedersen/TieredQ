@@ -30,3 +30,20 @@ the training stage is ~1K there (the fixed training cost is spread over 1M rows)
   32,768-row sample when the first `add()` is larger (models of smaller first batches are unchanged).
 - Python tests: `test_l2_metric_scores_negative_squared_distances` fails on Hartmut's reference BLAS with and without
   these changes (one estimate 0.85 off a zero distance); all other tests pass.
+
+## Build time (training)
+Same driver (`TRAIN_ROWS` sets the sample), 100K x 1,536 cosine, 1 bit/dim, 8 threads alone on CPUs 0-7. Hartmut's
+system BLAS/LAPACK is the unoptimized reference implementation (Arch `blas` / `lapack` 3.12), which every earlier
+TieredQ build time on Hartmut used. `TIEREDQ_BLAS=/usr/lib/libopenblas.so` loads OpenBLAS at run time for the
+eigendecomposition and the covariance, which then runs as BLAS `syrk` over 1,024-row chunks (no rows x d copy).
+
+| Training | k-means | covariance | eigen | total | training peak |
+|---|---:|---:|---:|---:|---:|
+| default (reference LAPACK, own covariance loops) | 1.9 s | 7.1 s | 6.1 s | 15.5 s | 5.8K |
+| `TIEREDQ_BLAS` OpenBLAS, eigen only | 1.3 s | 7.6 s | 0.35 s | 9.7 s | 7.5K |
+| `TIEREDQ_BLAS` OpenBLAS (syrk + eigen) | 1.8 s | 0.38 s | 0.26 s | 2.8 s | 7.8K |
+| same, 16,384 training rows | 0.9 s | 0.16 s | 0.23 s | 1.5 s | 7.8K |
+
+At 4 bits/dim the OpenBLAS training takes 3.7 s and the add 4.4 s. The extra ~2K bits/vector of training peak with
+OpenBLAS are its thread buffers (~25 MB), not the covariance chunk. 16K training rows reach the recall of 32K on
+OpenAI-1M and MS MARCO-1M (#19.2 sweep).

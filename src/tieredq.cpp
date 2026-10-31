@@ -410,13 +410,25 @@ TieredQ TieredQ::train_model(TieredQConfig config,const tieredq_detail::Training
   std::vector<double> residual,mean,cov;
   if (k>1) nearest_centroids(sample,rows,d,c.centroids_,k,ids.data());
   profile.mark("kmeans_assign");
-  if (spectral_stats && linalg.syrk) {
+  if (spectral_stats && linalg.syrk && linalg.small_covariance(d)) {
     auto centered=sample.visit([&](auto value) {
       return tieredq_detail::centered_residuals_with(value,rows,d,ids.data(),c.centroids_);
     });
     mean=std::move(centered.mean);
     profile.mark("residual");
     cov=linalg.covariance_centered(centered.values,d,n);
+  } else if (spectral_stats && linalg.syrk) {
+    sample.visit([&](auto value) {
+      auto difference=[&](size_t i,size_t j) { return double(value(i,j))-c.centroids_[size_t(ids[i])*d+j]; };
+      mean.assign(d,0);
+      for (size_t i=0;i<rows;++i) for (int j=0;j<d;++j) mean[j]+=difference(i,size_t(j));
+      for (int j=0;j<d;++j) mean[j]/=rows;
+      profile.mark("residual");
+      cov=linalg.covariance_chunked(d,rows,[&](size_t r0,size_t n,double* out) {
+#pragma omp parallel for schedule(static)
+        for (size_t i=0;i<n;++i) for (int j=0;j<d;++j) out[i*d+j]=difference(r0+i,size_t(j))-mean[j];
+      });
+    });
   } else {
     // Spectral stats only need centered rows; recomputing differences per chunk avoids any rows x d copy.
     const bool keep_residual=!spectral_stats;
