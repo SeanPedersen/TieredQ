@@ -24,6 +24,14 @@ inline std::shared_ptr<FastScanCache> copy_fast_storage(const FastScanCache& cac
   if (cache.lookup) copy->lookup=std::make_shared<FastScanLookupCache>(*cache.lookup);
   return copy;
 }
+// Exact capacity for total rows, so appends up to total never reallocate.
+inline void reserve_fast_rows(FastScanCache& cache,size_t total) {
+  const size_t block_docs=cache.lookup ? lookup_block_docs : fast_scan_block_docs;
+  const size_t blocks=(total+block_docs-1)/block_docs,padded=blocks*block_docs;
+  cache.factor.reserve(padded);cache.correction.reserve(padded);cache.centroid.reserve(padded);
+  if (cache.lookup) cache.lookup->codes.reserve(product(product(blocks,cache.lookup->pairs()),block_docs));
+  else cache.levels.reserve(product(blocks,cache.level_block_bytes()));
+}
 inline void append_fast_rows(FastScanCache& cache,const std::vector<std::vector<float>>& books,
     const std::vector<TieredQTier>& tiers,size_t stride,size_t code_bytes,size_t centroids,
     const uint8_t* rows,size_t count) {

@@ -25,6 +25,8 @@ static_assert(ivf_scan_chunk%fast_list_alignment==0 && ivf_scan_chunk%selection_
 constexpr size_t coarse_minimum_sample=32768,coarse_rows_per_list=64;
 // Rows lifted into model space at a time while assigning coarse lists.
 constexpr size_t coarse_assign_chunk=65536;
+// Documents encoded (coarse lists) or copied into the fast storage at a time during build.
+constexpr size_t ivf_build_chunk=8192;
 
 size_t aligned(size_t documents) { return (documents+fast_list_alignment-1)/fast_list_alignment*fast_list_alignment; }
 
@@ -93,30 +95,49 @@ void TieredQIVFIndex::build(const float* rows,size_t count) {
   if (count>=padding_id) bad("index exceeds uint32 document ids");
   const TieredQ& model=codec();
   const size_t stride=model.bytes_per_vector(),centroid_byte=model.code_bytes(),lists=list_rows_.size();
+  const size_t d=model.config().dimensions;
   if (count && !rows) bad("null vector data");
-  const auto coarse=coarse_lists_ && count ? coarse_lists(rows,count) : std::vector<uint32_t>();
-  const auto encoded=model.encode(rows,count);
-  auto list_of=[&](size_t row) -> size_t { return coarse_lists_ ? coarse[row] : encoded[row*stride+centroid_byte]; };
+  // Codec-centroid lists come from the codes; coarse lists are known first, so rows are encoded in list order below.
+  std::vector<uint8_t> encoded;
+  std::vector<uint32_t> list_of=coarse_lists_ && count ? coarse_lists(rows,count) : std::vector<uint32_t>(count);
+  if (!coarse_lists_) {
+    encoded=model.encode(rows,count);
+    for (size_t row=0;row<count;++row) list_of[row]=encoded[row*stride+centroid_byte];
+  }
   std::vector<uint32_t> list_rows(lists,0),list_begin(lists,0);
-  for (size_t row=0;row<count;++row) ++list_rows[list_of(row)];
+  for (size_t row=0;row<count;++row) ++list_rows[list_of[row]];
   size_t padded=0;
   for (size_t list=0;list<lists;++list) { list_begin[list]=uint32_t(padded); padded+=aligned(list_rows[list]); }
   if (padded>=padding_id) bad("index exceeds uint32 document ids");
-  std::vector<uint8_t> grouped(product(padded,stride));
-  std::vector<uint32_t> ids(padded,padding_id),filled(lists,0);
+  // source[doc]: the row stored at doc; padding repeats its list's last row (valid codes for every kernel, never
+  // selected: scans stop at list_rows).
+  std::vector<uint32_t> ids(padded,padding_id),source(padded),filled(lists,0);
   for (size_t row=0;row<count;++row) {
-    const size_t list=list_of(row),doc=list_begin[list]+filled[list]++;
-    std::copy_n(encoded.data()+row*stride,stride,grouped.data()+doc*stride);
-    ids[doc]=uint32_t(row);
+    const size_t list=list_of[row],doc=list_begin[list]+filled[list]++;
+    ids[doc]=source[doc]=uint32_t(row);
   }
-  // Padding repeats the list's last row: valid codes for every kernel, never selected (scans stop at list_rows).
   for (size_t list=0;list<lists;++list) {
     const size_t first=list_begin[list],live=list_rows[list];
-    for (size_t doc=first+live;live && doc<first+aligned(live);++doc)
-      std::copy_n(grouped.data()+(first+live-1)*stride,stride,grouped.data()+doc*stride);
+    for (size_t doc=first+live;live && doc<first+aligned(live);++doc) source[doc]=source[first+live-1];
   }
+  // Documents go to the fast storage a chunk at a time, so a build holds one chunk of codes besides it.
   TieredQIndex documents(model,TieredQIndexMode::fast);
-  documents.add_encoded(grouped.data(),padded);
+  std::vector<uint8_t> chunk_codes;
+  std::vector<float> chunk_rows;
+  for (size_t first=0;first<padded;first+=ivf_build_chunk) {
+    const size_t n=std::min(ivf_build_chunk,padded-first);
+    if (coarse_lists_) {
+      chunk_rows.resize(product(n,d));
+      for (size_t i=0;i<n;++i) std::copy_n(rows+size_t(source[first+i])*d,d,chunk_rows.data()+i*d);
+      chunk_codes.resize(product(n,stride));
+      model.encode(chunk_rows.data(),n,chunk_codes.data());
+    } else {
+      chunk_codes.resize(product(n,stride));
+      for (size_t i=0;i<n;++i) std::copy_n(encoded.data()+size_t(source[first+i])*stride,stride,chunk_codes.data()+i*stride);
+    }
+    documents.add_encoded(chunk_codes.data(),n);
+    if (!first) tieredq_detail::reserve_fast_rows(*documents.fast_,padded);
+  }
   documents_=std::move(documents);
   list_begin_=std::move(list_begin);list_rows_=std::move(list_rows);ids_=std::move(ids);size_=count;
 }

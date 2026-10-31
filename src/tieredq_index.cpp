@@ -55,10 +55,25 @@ size_t TieredQIndex::bytes_per_vector() const {
   if (fast_) return tieredq_detail::fast_vector_bytes(*fast_);
   return tieredq_detail::fast_vector_bytes(*make_fast_storage(nullptr,0));
 }
+// Rows encoded at a time when filling an empty fast index, which then holds one chunk of payload rows next to its
+// storage instead of all of them.
+constexpr size_t add_chunk_rows=65536;
 void TieredQIndex::add(const float* rows,size_t count) {
   if (count>UINT32_MAX-size()) bad("index exceeds uint32 document ids");
-  const auto encoded=codec_.encode(rows,count);
-  add_encoded(encoded.data(),count);
+  if (!fast_mode_ || size() || count<=add_chunk_rows) {
+    const auto encoded=codec_.encode(rows,count);
+    add_encoded(encoded.data(),count);
+    return;
+  }
+  const size_t d=codec_.config().dimensions;
+  try {
+    for (size_t first=0;first<count;first+=add_chunk_rows) {
+      const size_t n=std::min(add_chunk_rows,count-first);
+      const auto encoded=codec_.encode(rows+first*d,n);
+      add_encoded(encoded.data(),n);
+      if (!first) tieredq_detail::reserve_fast_rows(*fast_,count);
+    }
+  } catch (...) { fast_.reset(); count_=0; throw; }
 }
 void TieredQIndex::add_encoded(const uint8_t* encoded,size_t count) {
   if (count>UINT32_MAX-size()) bad("index exceeds uint32 document ids");

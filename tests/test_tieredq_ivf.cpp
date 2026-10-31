@@ -177,6 +177,17 @@ void fixed_lists_test(TieredQMetric metric) {
   try { TieredQIVFIndex few(codec,lists); few.train_lists(sample.data(),lists-1); } catch (const std::runtime_error&) { rejected=true; }
   require(rejected,"train_lists with fewer rows than lists accepted");
 }
+// Builds of more documents than one build chunk still equal the flat index under a full probe.
+void multi_chunk_build_test(uint32_t lists) {
+  constexpr size_t many=20000;
+  const auto codec=train(TieredQMetric::inner_product,2*dimensions);
+  const auto data=clustered_rows(many,47),probes=clustered_rows(queries,53);
+  TieredQIndex flat(codec,TieredQIndexMode::fast); flat.add(data.data(),many);
+  Results expected{std::vector<float>(queries*k),std::vector<uint32_t>(queries*k)};
+  flat.search_batch(probes.data(),queries,k,expected.scores.data(),expected.ids.data());
+  TieredQIVFIndex ivf(codec,lists); ivf.build(data.data(),many);
+  same(run(ivf,probes,ivf.lists()),expected,"multi-chunk IVF build differs from the flat index");
+}
 } // namespace
 void tieredq_ivf_tests() {
   // 1 bit/dim takes the nibble lookup layout on x86, 4 bits int8 levels or codes, 6 bits wide code lookups.
@@ -200,5 +211,6 @@ void tieredq_ivf_tests() {
   persistence_test(0);
   persistence_test(20);
   for (auto metric:{TieredQMetric::inner_product,TieredQMetric::l2}) fixed_lists_test(metric);
+  for (uint32_t lists:{0u,20u}) multi_chunk_build_test(lists);
   std::cout<<"PASS IVF\n";
 }

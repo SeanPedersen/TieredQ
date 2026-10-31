@@ -1,5 +1,6 @@
-// Fast-only copy-on-write ownership and moved/empty index persistence.
+// Fast-only copy-on-write ownership, moved/empty index persistence and chunked bulk adds.
 #include "tieredq/tieredq.h"
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -91,5 +92,38 @@ void streamed_load_test() {
     std::filesystem::remove(path);
   }
 }
+// A bulk add into an empty fast index encodes in chunks; its fast scan equals a full-mode index's fast cache, built
+// over every row at once, and a row failing in a later chunk leaves the index empty.
+void chunked_add_test(uint32_t bits_per_dimension) {
+  constexpr uint32_t dimensions=16,centroids=4;
+  constexpr size_t training_rows=512,rows=2*65536+100,failing_row=70000,queries=8,k=10;
+  std::mt19937 random(23);std::normal_distribution<float> normal;
+  std::vector<float> training(training_rows*dimensions),data(rows*dimensions),probes(queries*dimensions);
+  for (auto& value:training) value=normal(random);
+  for (auto& value:data) value=normal(random);
+  for (auto& value:probes) value=normal(random);
+  const auto codec=dv::TieredQ::train({dimensions,bits_per_dimension*dimensions,centroids,false},training.data(),training_rows);
+  dv::TieredQIndex chunked(codec),bulk(codec,dv::TieredQIndexMode::full);
+  chunked.add(data.data(),rows);
+  bulk.add(data.data(),rows); bulk.build_fast_scan();
+  auto hits=[&](const dv::TieredQIndex& index) {
+    std::pair<std::vector<float>,std::vector<uint32_t>> out{std::vector<float>(queries*k),std::vector<uint32_t>(queries*k)};
+    index.search_batch_fast(probes.data(),queries,k,out.first.data(),out.second.data());
+    return out;
+  };
+  const auto expected=hits(bulk);
+  require(chunked.size()==rows && hits(chunked)==expected,"chunked add differs from a bulk fast cache");
+  auto invalid=data;
+  invalid[failing_row*dimensions]=std::nanf("");
+  dv::TieredQIndex failed(codec);
+  bool rejected=false;
+  try { failed.add(invalid.data(),rows); } catch (const std::exception&) { rejected=true; }
+  require(rejected && failed.size()==0 && failed.storage_bytes()==0,"failed chunked add leaves rows behind");
+  failed.add(data.data(),rows);
+  require(hits(failed)==expected,"index does not recover after a failed chunked add");
+}
 } // namespace
-void tieredq_fast_mode_tests() { ownership_test(16);ownership_test(64);streamed_load_test(); }
+void tieredq_fast_mode_tests() {
+  ownership_test(16);ownership_test(64);streamed_load_test();
+  for (uint32_t bits:{1u,4u,6u}) chunked_add_test(bits);
+}
