@@ -1,0 +1,11 @@
+ex-full-p768 256 tieredq 768 PREFIX_BITS=768 RESCORE=int8,tieredq-refinement:4 TRAIN_EXCLUDE_ROWS=/home/sean/experiments/TieredQ-issue19-drift-20261031/shift-msmarco-doc/excluded_rows.u32
+ex-sub-p768 256 tieredq 768 PREFIX_BITS=768 RESCORE=int8,tieredq-refinement:4 TRAIN_EXCLUDE_ROWS=/home/sean/experiments/TieredQ-issue19-drift-20261031/shift-msmarco-doc/excluded_rows.u32 PARTITION_FROM=subset
+all-full-p768 256 tieredq 768 PREFIX_BITS=768 RESCORE=int8,tieredq-refinement:4
+all-sub-p768 256 tieredq 768 PREFIX_BITS=768 RESCORE=int8,tieredq-refinement:4 PARTITION_FROM=subset
+ex-full-p1024 256 tieredq 1024 PREFIX_BITS=1024 RESCORE=int8,tieredq-refinement:4 TRAIN_EXCLUDE_ROWS=/home/sean/experiments/TieredQ-issue19-drift-20261031/shift-msmarco-doc/excluded_rows.u32
+ex-sub-p1024 256 tieredq 1024 PREFIX_BITS=1024 RESCORE=int8,tieredq-refinement:4 TRAIN_EXCLUDE_ROWS=/home/sean/experiments/TieredQ-issue19-drift-20261031/shift-msmarco-doc/excluded_rows.u32 PARTITION_FROM=subset
+all-full-p1024 256 tieredq 1024 PREFIX_BITS=1024 RESCORE=int8,tieredq-refinement:4
+all-sub-p1024 256 tieredq 1024 PREFIX_BITS=1024 RESCORE=int8,tieredq-refinement:4 PARTITION_FROM=subset
+rabitq1-all-full 256 rabitq 1 RESCORE=int8
+rabitq1-all-sub 256 rabitq 1 RESCORE=int8 PARTITION_FROM=subset
+rabitq1-ex-sub 256 rabitq 1 RESCORE=int8 TRAIN_EXCLUDE_ROWS=/home/sean/experiments/TieredQ-issue19-drift-20261031/shift-msmarco-doc/excluded_rows.u32 PARTITION_FROM=subset
