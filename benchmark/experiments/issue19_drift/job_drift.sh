@@ -19,8 +19,9 @@ declare -A DATA=([openai1m]=$HOME/experiments/TieredQ-issue4-1m-20261030/abdata/
 declare -A DIM=([openai1m]=1536 [msmarco-real]=1024 [msmarco-doc]=1024)
 SETS="openai1m msmarco-real msmarco-doc"
 rerank() {  # set out configs-file data
-  cp "$3" "$2.configs"
-  (cd $E && CONFIGS="$(cat $3)" BIN=$BIN DATA=$4 DIM=${DIM[$1]} OUT=$2 NPROBES=32,128 RERANK=20,50,100 CODEC_LISTS=256 \
+  local configs; configs=$(cat "$3")
+  mkdir -p "$2" && cp "$3" "$2/configs"
+  (cd $E && CONFIGS="$configs" BIN=$BIN DATA=$4 DIM=${DIM[$1]} OUT=$2 NPROBES=32,128 RERANK=20,50,100 CODEC_LISTS=256 \
     OPENBLAS_NUM_THREADS=1 bash job_rerank.sh)
 }
 for set in $SETS; do
