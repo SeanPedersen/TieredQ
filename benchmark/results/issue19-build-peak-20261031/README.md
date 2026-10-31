@@ -28,8 +28,10 @@ the training stage is ~1K there (the fixed training cost is spread over 1M rows)
 - L2 models still lift their training sample once (the lift is a matrix product); only SIFT (d = 128) uses it here.
 - The benchmark adapter and the Python binding now call `train_sampled`; the binding trains on a seeded
   32,768-row sample when the first `add()` is larger (models of smaller first batches are unchanged).
-- Python tests: `test_l2_metric_scores_negative_squared_distances` fails on Hartmut's reference BLAS with and without
-  these changes (one estimate 0.85 off a zero distance); all other tests pass.
+- Python tests: `test_l2_metric_scores_negative_squared_distances` failed on Hartmut with and without these changes.
+  Its tolerance (5% of the mean top-3 distance) passed for 35% of seeds while the ranking was right for all; L2
+  score errors scale with the squared row norms (max 0.06 x mean |x|^2 over 200 seeds at 4 bits/dim), and the test
+  now bounds them by 0.1 x mean |x|^2 (`f26b89f`). All 61 Python tests pass.
 
 ## Build time (training)
 Same driver (`TRAIN_ROWS` sets the sample), 100K x 1,536 cosine, 1 bit/dim, 8 threads alone on CPUs 0-7. Hartmut's
@@ -70,3 +72,22 @@ Build peak RSS growth at 1M (bits/vector), now vs #4: 1,677 vs ~5,000 (index 1,5
 - With an optimized LAPACK, TieredQ builds 1.4-1.5x faster than RaBitQ at 2 and 4 bits/dim on 1M and within
   1.1-1.4x at 100K; RaBitQ's 1-bit build (sign codes, no extra bits) stays 15-33x faster.
 - Training is now a fixed ~2 s at d = 1,536; at 1M the encode (13-26 s) is the remaining build cost.
+
+## Recall with OpenBLAS (default build)
+The OpenBLAS training path (chunked `syrk` covariance, OpenBLAS `syevd`) against the reference-LAPACK cells
+`TRAIN_ROWS=32768` of the [#19.2 sweep](../issue19-drift-20261031/README.md): IVF 256 lists, prefixes 768 / 1024,
+nprobe 32 / 128, k' 20 / 50 / 100, INT8 and `tieredq-refinement:4` rerank, OpenAI-1M and MS MARCO-1M real queries.
+The eval binary predates the budget-dependent α (`07b5d3f`), so the comparison isolates the BLAS change. Raw TSVs:
+[`blascheck/`](blascheck/) (job `job_blascheck.sh`).
+
+| Set, prefix, nprobe 128 | candidates@k'20 | INT8 R@10 @k'100 | refinement:4 R@10 @k'100 |
+|---|---:|---:|---:|
+| OpenAI-1M, 768 | 0.9562 vs 0.9564 | 0.9944 vs 0.9944 | 0.9845 vs 0.9829 |
+| OpenAI-1M, 1024 | 0.9781 vs 0.9779 | 0.9948 vs 0.9949 | 0.9855 vs 0.9837 |
+| MS MARCO real, 768 | 0.9462 vs 0.9445 | 0.9825 vs 0.9822 | 0.9726 vs 0.9710 |
+| MS MARCO real, 1024 | 0.9761 vs 0.9767 | 0.9844 vs 0.9844 | 0.9743 vs 0.9753 |
+
+OpenBLAS vs reference LAPACK. Over all 96 paired values (48 cells x candidates / reranked R@10) the difference is
+at most 0.24 pt (mean +0.02 pt); candidate recall is within 0.17 pt. The models differ only by floating-point
+summation order, and the largest gaps (refinement:4, +0.2 pt on OpenAI, -0.1 pt on MS MARCO 1024) change sign
+between sets.

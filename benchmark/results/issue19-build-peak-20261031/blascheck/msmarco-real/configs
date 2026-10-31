@@ -1,0 +1,2 @@
+fast-p768 256 tieredq 768 PREFIX_BITS=768 RESCORE=int8,tieredq-refinement:4
+fast-p1024 256 tieredq 1024 PREFIX_BITS=1024 RESCORE=int8,tieredq-refinement:4
