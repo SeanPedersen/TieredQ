@@ -37,7 +37,7 @@ std::vector<float> spectrum_rows(size_t count,uint32_t seed) {
   return data;
 }
 // The persisted 3-bit table, read from the serialized model.
-std::vector<float> persisted_three_levels(const TieredQ& codec) {
+std::vector<float> persisted_levels(const TieredQ& codec,unsigned bits=split_code_bits) {
   const auto data=codec.serialize(); size_t pos=0;
   auto u32=[&] { uint32_t v=0; for (int i=0;i<4;++i) v|=uint32_t(data.at(pos++))<<(8*i); return v; };
   auto u64=[&] { const uint64_t lo=u32(); return lo|uint64_t(u32())<<32; };
@@ -50,7 +50,7 @@ std::vector<float> persisted_three_levels(const TieredQ& codec) {
   floats(); floats();
   require(u32()==9,"unexpected codebook count");
   std::vector<float> book;
-  for (unsigned b=0;b<=split_code_bits;++b) book=floats();
+  for (unsigned b=0;b<=bits;++b) book=floats();
   return book;
 }
 bool has_three(const TieredQ& codec) {
@@ -73,6 +73,7 @@ size_t mean_overlap(const TieredQIndex& fast,const TieredQIndex& full,const std:
   }
   return overlap/queries;
 }
+constexpr double max_wide_distortion_ratio=1.5;
 void require_same(const std::vector<TieredQHit>& a,const std::vector<TieredQHit>& b,const char* message) {
   require(a.size()==b.size(),message);
   for (size_t i=0;i<a.size();++i) require(a[i].id==b[i].id && a[i].score==b[i].score,message);
@@ -104,6 +105,58 @@ void split_derivation_test() {
 // Exact allocation stays within the padded storage of the 2/4-bit rule and never predicts more distortion than its
 // 2/4-bit fallback or than a dense greedy allocation whose padded size also fits; mildly decaying spectra keep
 // additive 3-bit tiers. On a flat spectrum at 2 bits/dim uniform 2-bit tiers win.
+// Wide canonical books: every sorted level equals its parts' sum, parts fit nibble streams and codes are a bijection.
+void wide_split_test() {
+  for (uint32_t bits=lookup_code_bits+1;bits<=widest_code_bits;++bits) {
+    const auto& book=additive_wide_codebook(bits);
+    require(book.size()==size_t(1)<<bits && std::is_sorted(book.begin(),book.end()),"wide book is not sorted");
+    std::vector<std::vector<float>> levels(widest_code_bits+1);
+    levels[bits]=book;
+    const auto split=additive_splits(levels)[bits];
+    require(split.has_value(),"canonical wide book does not split");
+    uint32_t total=0;
+    for (uint32_t part:split->part_bits) { require(part==1 || part==2 || part==lookup_code_bits,"part wider than a stream"); total+=part; }
+    require(total==bits,"parts do not cover the code");
+    std::vector<bool> seen(book.size(),false);
+    for (size_t code=0;code<book.size();++code) {
+      uint32_t packed=split->code[code]; float sum=0;
+      require(!seen[packed],"split codes collide"); seen[packed]=true;
+      for (size_t part=0;part<split->part_bits.size();++part) {
+        sum+=split->part_levels[part][packed&((1u<<split->part_bits[part])-1)];
+        packed>>=split->part_bits[part];
+      }
+      require(sum==book[code],"split does not reproduce the level");
+    }
+    require(distortion(book)<distortion(gaussian_codebooks()[bits])*max_wide_distortion_ratio,"wide book distortion regressed");
+    levels[bits]=gaussian_codebooks()[bits];
+    require(!additive_splits(levels)[bits],"Lloyd-Max wide book splits");
+  }
+}
+// Fast-target wide models use additive books and approximate nibble scores close to the codec's exact ones; both
+// survive persistence unchanged.
+void wide_index_test() {
+  constexpr uint32_t dimensions=64,wide_bits=4*dimensions,centroids=4;
+  constexpr size_t training_rows=512,documents=2048,k=10;
+  constexpr double min_overlap=0.8;
+  std::mt19937 random(47); std::normal_distribution<float> normal;
+  std::vector<float> training(training_rows*dimensions),rows(documents*dimensions),query(dimensions);
+  for (auto* values:{&training,&rows,&query}) for (size_t i=0;i<values->size();++i)
+    (*values)[i]=normal(random)*std::exp(-float(i%dimensions)/8);
+  const auto codec=TieredQ::train({dimensions,wide_bits,centroids,true},training.data(),training_rows);
+  require(codec.tiers().front().bits>lookup_code_bits,"wide test needs a wide tier");
+  require(persisted_levels(codec,codec.tiers().front().bits)==additive_wide_codebook(codec.tiers().front().bits),"fast wide tier is not additive");
+  TieredQIndex fast(codec,TieredQIndexMode::fast),full(codec,TieredQIndexMode::full);
+  fast.add(rows.data(),documents); full.add(rows.data(),documents);
+  const auto approximate=fast.search(query.data(),k),exact=full.search(query.data(),k);
+  size_t overlap=0;
+  for (const auto& hit:approximate) overlap+=std::any_of(exact.begin(),exact.end(),[&](const auto& other){return other.id==hit.id;});
+  require(double(overlap)>=min_overlap*k,"nibble scores lost the exact top hits");
+  const auto path=std::filesystem::temp_directory_path()/("tieredq-wide-"+std::to_string(getpid()));
+  fast.save(path.string());
+  const auto loaded=TieredQIndex::load(path.string());
+  std::filesystem::remove(path);
+  require_same(fast.search(query.data(),k),loaded.search(query.data(),k),"wide nibble index changed on reload");
+}
 void padded_allocation_test() {
   constexpr int ranks=200;
   DistortionTable error{1};
@@ -193,10 +246,10 @@ void fast_target_allocation_test() {
     for (const auto& tier:fast.tiers()) bits.insert(bits.end(),tier.dimensions,tier.bits);
     require(!nibble_layout || stored_code_bits(index)==lookup_stored_bits(bits,true),"training mispredicts padded fast storage");
     require(!nibble_layout || fast.config().code_bits<=stored_code_bits(index),"realised code bits exceed padded storage");
-    require(persisted_three_levels(full)==gaussian_codebooks()[split_code_bits],"full target changed the 3-bit codebook");
+    require(persisted_levels(full)==gaussian_codebooks()[split_code_bits],"full target changed the 3-bit codebook");
     if (!has_three(fast)) continue;
     ++with_three;
-    require(persisted_three_levels(fast)==additive_three_codebook(),"fast 3-bit tiers do not use the additive codebook");
+    require(persisted_levels(fast)==additive_three_codebook(),"fast 3-bit tiers do not use the additive codebook");
   }
   require(with_three>=3,"fast target allocates too few 3-bit tiers");
 }
@@ -243,6 +296,8 @@ void lloyd_max_fast_test() {
 } // namespace
 void tieredq_additive_tests() {
   split_derivation_test();
+  wide_split_test();
+  wide_index_test();
   padded_allocation_test();
   exact_allocation_test();
   fast_target_allocation_test();

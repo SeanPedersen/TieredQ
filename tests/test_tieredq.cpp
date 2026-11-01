@@ -100,7 +100,8 @@ void exercise(unsigned d,unsigned bits,bool rotate,const std::string& prefix) {
   // Fast nibble targets bound padded storage under the 2/4-bit rule (#9), so they may realise up to its padding more.
   unsigned widest=0; for(auto t:codec.tiers()) widest=std::max(widest,t.bits);
   constexpr unsigned rule_padding=2+3;
-  check(widest<=4 ? budget<=(bits+rule_padding+7)/8*8 : budget==bits,"allocation exceeds budget");
+  // Wide targets trim instead, so their padded nibble storage stays within the budget (#13).
+  check(widest<=4 ? budget<=(bits+rule_padding+7)/8*8 : budget<=bits,"allocation exceeds budget");
   check(budget==codec.config().code_bits && codec.code_bytes()==(budget+7)/8,"code size mismatch");
   // 520 realised bits fill the padded storage of the 2/4-bit rule (#9): 65 code bytes plus metadata.
   if(d==512 && bits==512) check(codec.bytes_per_vector()==70,"payload size regression");

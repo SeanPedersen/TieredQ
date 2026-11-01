@@ -50,7 +50,10 @@ void high_bit_reference_test(uint32_t bits,float decay=0,uint32_t centroids=4) {
   std::vector<float> training(training_rows*dimensions),rows(documents*dimensions),queries(query_count*dimensions);
   for (auto* values:{&training,&rows,&queries})
     for (size_t i=0;i<values->size();++i) (*values)[i]=normal(random)*std::exp(-decay*float(i%dimensions));
-  auto codec=dv::TieredQ::train({dimensions,uint32_t(dimensions*bits),centroids,true},training.data(),training_rows);
+  // Full-target training keeps Lloyd-Max books, the exact FP32 code-lookup path this test pins.
+  dv::TieredQConfig config{dimensions,uint32_t(dimensions*bits),centroids,true};
+  config.target_mode=dv::TieredQIndexMode::full;
+  auto codec=dv::TieredQ::train(config,training.data(),training_rows);
   const auto encoded=codec.encode(rows.data(),documents);
   auto code_patterns=encoded;
   for (size_t doc=0;doc<documents;++doc) {
@@ -202,7 +205,10 @@ void legacy_byte_payload_test() {
   std::vector<float> training(training_rows*dimensions),rows(documents*dimensions);
   for (auto* values:{&training,&rows})
     for (size_t i=0;i<values->size();++i) (*values)[i]=normal(random)*std::exp(-0.5f*float(i%dimensions));
-  auto codec=dv::TieredQ::train({dimensions,uint32_t(dimensions*5),centroids,true},training.data(),training_rows);
+  // Legacy payloads belong to Lloyd-Max models, which keep the exact code lookup.
+  dv::TieredQConfig config{dimensions,uint32_t(dimensions*5),centroids,true};
+  config.target_mode=dv::TieredQIndexMode::full;
+  auto codec=dv::TieredQ::train(config,training.data(),training_rows);
   dv::TieredQIndex index(codec,dv::TieredQIndexMode::fast);index.add(rows.data(),documents);
   const auto directory=std::filesystem::temp_directory_path();
   const auto packed_path=directory/"tieredq_packed.tq",legacy_path=directory/"tieredq_legacy.tq",resaved_path=directory/"tieredq_resaved.tq";
@@ -254,7 +260,10 @@ void legacy_level_payload_test() {
   std::mt19937 random(11);std::normal_distribution<float> normal;
   std::vector<float> training(training_rows*dimensions),rows(documents*dimensions);
   for (auto* values:{&training,&rows}) for (auto& value:*values) value=normal(random);
-  auto codec=dv::TieredQ::train({dimensions,uint32_t(dimensions*bits),centroids,true},training.data(),training_rows);
+  // Legacy payloads belong to Lloyd-Max models, which keep the exact code lookup.
+  dv::TieredQConfig config{dimensions,uint32_t(dimensions*bits),centroids,true};
+  config.target_mode=dv::TieredQIndexMode::full;
+  auto codec=dv::TieredQ::train(config,training.data(),training_rows);
   const auto widest=std::max_element(codec.tiers().begin(),codec.tiers().end(),
       [](const auto& a,const auto& b){return a.bits<b.bits;})->bits;
   require(widest>lookup_code_bits && widest<fast_scan_code_bits-1,"legacy level model is not mid-width");

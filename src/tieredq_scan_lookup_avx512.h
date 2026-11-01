@@ -23,10 +23,10 @@ inline void lookup_chunks_avx512(const FastScanLookupCache& lookup, const FastSc
   const auto order1 = _mm512_setr_epi64(4,5,12,13,6,7,14,15);
   for(size_t chunk=0;chunk<Chunks;++chunk)for(auto& dot:dots[chunk])dot=_mm512_setzero_ps();
   base += first_chunk*lookup_chunk_docs;
-  for (size_t start = 0; start < lookup.groups.size(); start += lookup_scale_groups) {
+  for (size_t section = 0, start = 0; section < lookup.section_ends.size(); start = lookup.section_ends[section++]) {
     __m512i sum[Chunks][2];
     for(size_t chunk=0;chunk<Chunks;++chunk)for(auto& x:sum[chunk])x=_mm512_setzero_si512();
-    const size_t end = std::min(start+lookup_scale_groups,lookup.groups.size());
+    const size_t end = lookup.section_ends[section];
     for (size_t g = start; g < end; g += lookup_pair_groups) {
       const auto t0 = _mm512_broadcast_i32x4(_mm_loadu_si128(reinterpret_cast<const __m128i*>(q.tables.data()+g*lookup_table_entries)));
       const auto t1 = _mm512_broadcast_i32x4(_mm_loadu_si128(reinterpret_cast<const __m128i*>(q.tables.data()+(g+1)*lookup_table_entries)));
@@ -39,7 +39,7 @@ inline void lookup_chunks_avx512(const FastScanLookupCache& lookup, const FastSc
         sum[chunk][1] = _mm512_add_epi16(sum[chunk][1],_mm512_maddubs_epi16(ones,_mm512_unpackhi_epi8(v0,v1)));
       }
     }
-    const auto scale = _mm512_set1_ps(q.scales[start/lookup_scale_groups]);
+    const auto scale = _mm512_set1_ps(q.scales[section]);
     // Byte unpacking is lane-local: restore document order before widening the section sums.
 #pragma GCC unroll 4
     for(size_t chunk=0;chunk<Chunks;++chunk){

@@ -14,7 +14,7 @@ template<class Reader> void TieredQIndex::read_fast_payload(Reader& reader,size_
   const bool code_lookup=byte_codes || kind==fast_packed_code_kind;
   if (kind!=fast_lookup_kind && kind!=fast_levels_kind && !code_lookup) bad("invalid fast payload kind");
   const bool lookup=kind==fast_lookup_kind;
-  if ((lookup && (level_max || !fast_lookup_supported(codec_.tiers_))) ||
+  if ((lookup && (level_max || !fast_lookup_supported(codec_.tiers_,codec_.levels_))) ||
       (code_lookup && level_max!=fast_code_lookup_levels) ||
       (!lookup && !code_lookup && level_max!=x86_fast_level_max && level_max!=arm_fast_level_max)) bad("invalid fast level configuration");
   auto storage=make_fast_storage(nullptr,0,lookup,int(level_max));

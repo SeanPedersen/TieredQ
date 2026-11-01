@@ -54,7 +54,7 @@ template<class T> std::vector<T> load(const std::string& path) {
   return out;
 }
 constexpr size_t top_k=10,training_limit=32768,batch=32,threads=8,repeats=3,match_resolution=8;
-constexpr uint64_t seed=0;
+const uint64_t seed=std::getenv("TIEREDQ_SEED") ? std::stoull(std::getenv("TIEREDQ_SEED")) : 0; // BENCH_SEED only reaches RaBitQ
 struct Data { std::vector<float> base,queries; std::vector<uint32_t> truth; size_t d,n,nq; };
 double seconds_since(std::chrono::steady_clock::time_point start) {
   return std::chrono::duration<double>(std::chrono::steady_clock::now()-start).count();

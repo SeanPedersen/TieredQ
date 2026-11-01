@@ -496,6 +496,17 @@ TieredQ TieredQ::train_model(TieredQConfig config,const tieredq_detail::Training
     auto fast=tieredq_detail::exact_lookup_allocation(weighted.variance,additive_gaussian,limit,config.max_bits);
     if (fast.additive_three) c.levels_[3]=additive;
     bits=std::move(fast.bits);
+  } else if (fast_target) {
+    // Wide tiers use additive books so every code scores through nibble tables (#13). Allocation sees their distortion.
+    for (auto& table:weighted.error) {
+      table[tieredq_detail::split_code_bits]=tieredq_detail::distortion(additive);
+      for (unsigned b=tieredq_detail::lookup_code_bits+1;b<=tieredq_detail::widest_code_bits;++b)
+        table[b]=tieredq_detail::distortion(tieredq_detail::additive_wide_codebook(b));
+    }
+    c.levels_[tieredq_detail::split_code_bits]=additive;
+    for (unsigned b=tieredq_detail::lookup_code_bits+1;b<=tieredq_detail::widest_code_bits;++b)
+      c.levels_[b]=tieredq_detail::additive_wide_codebook(b);
+    bits=tieredq_detail::additive_wide_allocation(weighted,config.code_bits);
   } else if (power!=1.0) {
     bits=tieredq_detail::greedy_allocation(weighted,config.code_bits,false);
   }

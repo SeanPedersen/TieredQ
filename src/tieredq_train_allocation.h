@@ -72,6 +72,23 @@ inline uint32_t lookup_storage_limit(const Allocation& fallback,uint32_t code_bi
   return widest_tier(fallback)<=lookup_code_bits ? std::max(code_bits,lookup_stored_bits(fallback,false)) : code_bits;
 }
 struct FastLookupAllocation { Allocation bits; bool additive_three; };
+// Bits per vector stored by a nibble layout whose codes all split into 1-, 2- and 4-bit parts.
+inline uint32_t additive_stored_bits(const Allocation& bits) {
+  LookupWidthCounts parts{};
+  for (unsigned b:bits) {
+    if (b==split_code_bits) { ++parts[split_low_bits]; ++parts[split_high_bits]; }
+    else if (b<=lookup_code_bits) ++parts[b];
+    else for (unsigned part:additive_book_parts()[b].bits) ++parts[part];
+  }
+  return uint32_t(lookup_group_bytes(lookup_group_count(parts,false))*CHAR_BIT);
+}
+// Greedy allocation under the additive tables, trimmed until its padded nibble storage fits code_bits.
+inline Allocation additive_wide_allocation(const AllocationModel& model,uint32_t code_bits) {
+  for (uint32_t budget=code_bits;;--budget) {
+    auto bits=greedy_allocation(model,budget,false);
+    if (additive_stored_bits(bits)<=code_bits || !budget) return bits;
+  }
+}
 // Default power of the variance weights (see TieredQ::train) at code_bits over dimensions model ranks: 1.5 from
 // 1 bit per dimension up (#9), falling linearly to 1 (MSE) at 0.5 bits per dimension and below (#22).
 inline double default_allocation_power(uint32_t code_bits,uint32_t dimensions) {

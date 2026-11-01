@@ -3,9 +3,14 @@
 // An additive 3-bit codebook {b} U {b+delta} splits each code into a 2-bit part (levels b) and a 1-bit part
 // (levels {0, delta}). The parts share groups with the 2- and 1-bit tiers; each group table is the sum of its
 // coordinates' own level tables, so scoring stays exact. Any other 3-bit codebook keeps one code per nibble.
+// Canonical additive 5-8 bit codebooks (tieredq_additive_books.h) split the same way into 1-, 2- and 4-bit parts, so
+// wide tiers score at nibble-lookup cost; their byte tables make that path approximate (#13).
 #pragma once
+#include "tieredq_additive_books.h"
+#include <algorithm>
 #include <array>
 #include <cstdint>
+#include <numeric>
 #include <optional>
 #include <vector>
 
@@ -14,11 +19,13 @@ constexpr uint32_t lookup_code_bits=4; // widest tier of the narrow x86 lookup c
 constexpr size_t lookup_pair_groups=2;
 constexpr uint32_t split_code_bits=3,split_low_bits=2,split_high_bits=split_code_bits-split_low_bits;
 constexpr size_t split_levels=size_t(1)<<split_code_bits;
-enum class LookupPart : uint32_t { whole, low, high };
+constexpr uint32_t widest_code_bits=8,whole_code_part=UINT32_MAX;
 struct AdditiveSplit {
-  std::array<uint8_t,split_levels> code{};    // sorted 3-bit code -> low | high << split_low_bits
-  std::array<std::vector<float>,2> part_levels; // low part b (ascending), high part {0, delta}
+  std::vector<uint32_t> part_bits;
+  std::vector<uint8_t> code;                 // sorted code -> part codes packed from the low bit, in part order
+  std::vector<std::vector<float>> part_levels;
 };
+using AdditiveSplits=std::array<std::optional<AdditiveSplit>,widest_code_bits+1>; // indexed by code width
 // The smallest level must be some b, so each candidate delta is a difference to it; pairing then proceeds
 // greedily from the smallest unpaired level. Differences are compared exactly, so only codebooks whose
 // sums b+delta are exact in float split.
@@ -26,7 +33,8 @@ inline std::optional<AdditiveSplit> additive_three_split(const std::vector<float
   if (levels.size()!=split_levels) return std::nullopt;
   for (size_t candidate=1;candidate<levels.size();++candidate) {
     const float delta=levels[candidate]-levels[0];
-    AdditiveSplit split; split.part_levels[1]={0.0f,delta};
+    AdditiveSplit split; split.part_bits={split_low_bits,split_high_bits}; split.code.resize(split_levels);
+    split.part_levels.resize(2); split.part_levels[1]={0.0f,delta};
     auto& low_levels=split.part_levels[0];
     std::array<bool,split_levels> paired{};
     bool valid=delta>0;
@@ -44,6 +52,47 @@ inline std::optional<AdditiveSplit> additive_three_split(const std::vector<float
     if (valid) return split;
   }
   return std::nullopt;
+}
+// Canonical book of a wide code width as its parts: every sum in float, each code's parts in mixed radix.
+inline AdditiveSplit canonical_wide_split(const AdditiveBookParts& book,std::vector<float>& sums) {
+  AdditiveSplit split; split.part_bits.assign(book.bits.begin(),book.bits.end()); split.part_levels=book.levels;
+  sums.assign(1,0.0f); std::vector<uint8_t> packed(1,0);
+  uint32_t shift=0;
+  for (size_t part=0;part<book.bits.size();++part) {
+    std::vector<float> next_sums; std::vector<uint8_t> next_packed;
+    for (size_t code=0;code<book.levels[part].size();++code) for (size_t i=0;i<sums.size();++i) {
+      next_sums.push_back(sums[i]+book.levels[part][code]);
+      next_packed.push_back(uint8_t(packed[i]|code<<shift));
+    }
+    sums=std::move(next_sums); packed=std::move(next_packed); shift+=book.bits[part];
+  }
+  std::vector<size_t> order(sums.size()); std::iota(order.begin(),order.end(),size_t(0));
+  std::stable_sort(order.begin(),order.end(),[&](size_t a,size_t b) { return sums[a]<sums[b]; });
+  split.code.resize(order.size());
+  std::vector<float> sorted(order.size());
+  for (size_t i=0;i<order.size();++i) { split.code[i]=packed[order[i]]; sorted[i]=sums[order[i]]; }
+  sums=std::move(sorted);
+  return split;
+}
+inline const std::vector<float>& additive_wide_codebook(uint32_t bits) {
+  static const auto books=[] {
+    std::array<std::vector<float>,widest_code_bits+1> all;
+    for (uint32_t b=lookup_code_bits+1;b<=widest_code_bits;++b) canonical_wide_split(additive_book_parts()[b],all[b]);
+    return all;
+  }();
+  return books.at(bits);
+}
+// Splits of a model's codebooks: the 3-bit detection above, and wide tables only when they equal the canonical book.
+inline AdditiveSplits additive_splits(const std::vector<std::vector<float>>& levels) {
+  AdditiveSplits splits;
+  if (levels.size()<=split_code_bits) return splits;
+  splits[split_code_bits]=additive_three_split(levels[split_code_bits]);
+  for (uint32_t b=lookup_code_bits+1;b<=widest_code_bits && b<levels.size();++b) {
+    std::vector<float> sums;
+    auto split=canonical_wide_split(additive_book_parts()[b],sums);
+    if (sums==levels[b]) splits[b]=std::move(split);
+  }
+  return splits;
 }
 inline uint32_t ceil_div(uint32_t value,uint32_t divisor) { return (value+divisor-1)/divisor; }
 inline uint32_t lookup_coordinates_per_group(uint32_t bits) { return lookup_code_bits/bits; }

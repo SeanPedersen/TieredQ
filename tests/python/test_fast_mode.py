@@ -31,13 +31,13 @@ def assert_same(actual, expected):
         np.testing.assert_array_equal(left, right)
 
 
-# Fast and full training yield the same model only at 8 bits/dim: fast targets allocate on variance^1.5 and fill
-# nibble padding (#9), so the 1-bit budget compares the fast index with its own fast scan instead.
+# Fast and full training yield the same model only at 8 bits/dim with exact_fast_scores: fast targets allocate on
+# variance^1.5 and fill nibble padding (#9), so the 1-bit budget compares the fast index with its own fast scan instead.
 @pytest.mark.parametrize("code_bits", [DIMENSIONS, DIMENSIONS * 8])
 def test_fast_only_search_storage_append_and_roundtrip(code_bits, tmp_path):
     same_model = code_bits == DIMENSIONS * 8
     rows = np.random.default_rng(13).normal(size=(INITIAL_ROWS * 2, DIMENSIONS)).astype(np.float32)
-    fast = TieredQIndex(dimensions=DIMENSIONS, code_bits=code_bits, mode="fast")
+    fast = TieredQIndex(dimensions=DIMENSIONS, code_bits=code_bits, mode="fast", exact_fast_scores=same_model)
     exact = TieredQIndex(dimensions=DIMENSIONS, code_bits=code_bits, mode="full")
     assert fast.mode == "fast" and exact.mode == "full"
     assert fast.storage_bytes == 0
@@ -119,7 +119,7 @@ def test_mid_width_models_store_packed_codes(code_bits, tmp_path):
     import struct
 
     rows = np.random.default_rng(37).normal(size=(INITIAL_ROWS, DIMENSIONS)).astype(np.float32)
-    index = TieredQIndex(dimensions=DIMENSIONS, code_bits=code_bits, mode="fast")
+    index = TieredQIndex(dimensions=DIMENSIONS, code_bits=code_bits, mode="fast", exact_fast_scores=True)
     index.add(rows)
     assert index.bytes_per_vector == -(-code_bits // CODE_WORD_BITS) * CODE_WORD_BYTES + FAST_METADATA_BYTES
     path = tmp_path / "index.tq"
@@ -144,7 +144,7 @@ def test_rejects_malformed_fast_only_files(tmp_path, corruption):
     import struct
 
     rows = np.random.default_rng(41).normal(size=(INITIAL_ROWS, DIMENSIONS)).astype(np.float32)
-    index = TieredQIndex(dimensions=DIMENSIONS, code_bits=PACKED_CODE_BITS, mode="fast")
+    index = TieredQIndex(dimensions=DIMENSIONS, code_bits=PACKED_CODE_BITS, mode="fast", exact_fast_scores=True)
     index.add(rows)
     path = tmp_path / "index.tq"
     index.save(str(path))
@@ -185,7 +185,7 @@ def foreign_fast_file(tmp_path):
     dimensions, rows = 8, 32
     arm = platform.machine().lower() in ("arm64", "aarch64")
     vectors = np.random.default_rng(59).normal(size=(rows, dimensions)).astype(np.float32)
-    index = TieredQIndex(dimensions=dimensions, code_bits=1 if arm else dimensions * 8, mode="fast")
+    index = TieredQIndex(dimensions=dimensions, code_bits=1 if arm else dimensions * 8, mode="fast", exact_fast_scores=True)
     index.add(vectors)
     path = tmp_path / "foreign.tq"
     index.save(str(path))

@@ -53,9 +53,10 @@ struct SearchResult {
 class PythonIndex {
  public:
   PythonIndex(uint32_t dimensions, uint32_t code_bits, const std::string& mode, const std::string& metric,
-              std::optional<double> allocation_power)
+              std::optional<double> allocation_power, bool exact_fast_scores)
       : config_(dv::TieredQConfig::target_code_bits(dimensions, code_bits)), mode_(parse_index_mode(mode)) {
-    config_.target_mode = mode_;
+    // Full-target training keeps Lloyd-Max books, whose fast scan is bit-exact with the codec but slower (#13).
+    config_.target_mode = exact_fast_scores ? dv::TieredQIndexMode::full : mode_;
     config_.metric = parse_metric(metric);
     if (allocation_power) {
       if (!(*allocation_power > 0)) throw std::invalid_argument("allocation_power must be positive");
@@ -179,11 +180,12 @@ nb::tuple search_result(const PythonIndex& index, FloatArray queries, size_t k, 
 
 void bind_index(nb::module_& module) {
   nb::class_<PythonIndex>(module, "TieredQIndex", "Trained exhaustive in-memory vector index.")
-      .def(nb::init<uint32_t, uint32_t, const std::string&, const std::string&, std::optional<double>>(),
+      .def(nb::init<uint32_t, uint32_t, const std::string&, const std::string&, std::optional<double>, bool>(),
            "dimensions"_a, "code_bits"_a, nb::kw_only(), "mode"_a = "fast", "metric"_a = "ip",
-           "allocation_power"_a = nb::none(),
+           "allocation_power"_a = nb::none(), "exact_fast_scores"_a = false,
            "metric is 'ip', 'cosine' or 'l2' (scores are -squared distances); allocation_power overrides the\n"
-           "variance power bit allocation uses (default: 1.5 for ip/cosine, 1 for l2).")
+           "variance power bit allocation uses (default: 1.5 for ip/cosine, 1 for l2); exact_fast_scores keeps\n"
+           "bit-exact FP32 fast scoring of tiers above 4 bits instead of the faster approximate byte tables.")
       .def("__len__", &PythonIndex::size, nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro("dimensions", &PythonIndex::dimensions)
       .def_prop_ro("code_bits", &PythonIndex::code_bits,

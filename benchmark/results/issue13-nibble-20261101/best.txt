@@ -1,0 +1,5 @@
+3 bits: 1+2 distortion 0.0352671 lloyd 0.0345478 ratio 1.021
+5 bits: 1+4 distortion 0.0025868 lloyd 0.0025047 ratio 1.033
+6 bits: 2+4 distortion 0.0007397 lloyd 0.0006442 ratio 1.148
+7 bits: 4+3 distortion 0.0002102 lloyd 0.0001635 ratio 1.286
+8 bits: 4+4 distortion 0.0000598 lloyd 0.0000412 ratio 1.452

@@ -76,7 +76,10 @@ void automatic_search_test() {
   std::vector<float> training(training_rows*dimensions),rows((documents+append_rows)*dimensions),queries(query_count*dimensions);
   for (auto* values:{&training,&rows,&queries}) for (size_t i=0;i<values->size();++i)
     (*values)[i]=std::ldexp(normal(random),-int(i%dimensions/8));
-  auto codec=dv::TieredQ::train({dimensions,bits,centroids,false},training.data(),training_rows);
+  // Full-target training keeps Lloyd-Max books; additive wide tiers would leave the code lookup this test covers.
+  dv::TieredQConfig config{dimensions,bits,centroids,false};
+  config.target_mode=dv::TieredQIndexMode::full;
+  auto codec=dv::TieredQ::train(config,training.data(),training_rows);
   require(codec.tiers().size()>dv::tieredq_detail::fast_range_prefix_tiers,"automatic range test needs a suffix");
   dv::TieredQIndex index(codec,dv::TieredQIndexMode::fast);index.add(rows.data(),documents);
   size_t code_bits=0;

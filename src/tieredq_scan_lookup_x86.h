@@ -15,8 +15,9 @@ constexpr size_t lookup_vector_docs=16, lookup_chunk_docs=64;
 constexpr size_t lookup_block_docs=256, lookup_table_entries=size_t(1)<<lookup_code_bits, lookup_scale_groups=32;
 constexpr int lookup_quant_max=127;
 static_assert(lookup_scale_groups%2==0 && lookup_scale_groups*lookup_quant_max<=INT16_MAX);
-// One coordinate of a group: the row offset of its whole code, its rank and which part of the code it scores.
-struct LookupSlot { uint32_t bit, rank, code_bits; LookupPart part; };
+// One coordinate of a group: the row offset of its whole code, its rank and which part of the code it scores
+// (whole_code_part, or an index into its width's split, whose bits start at part_shift of the split code).
+struct LookupSlot { uint32_t bit, rank, code_bits, part, part_shift; };
 // count coordinates whose (part) codes are bits wide, packed from the low nibble bit up.
 struct FastLookupGroup { uint32_t count, bits; std::array<LookupSlot,lookup_code_bits> slots; };
 struct FastScanLookupCache {
@@ -24,44 +25,53 @@ struct FastScanLookupCache {
   std::vector<FastLookupGroup> groups;
   std::vector<uint8_t> codes;
   std::vector<std::vector<float>> levels;
-  std::optional<AdditiveSplit> split; // present when the 3-bit codebook is additive
+  AdditiveSplits splits; // per code width, present when that codebook is additive
+  std::vector<uint32_t> section_ends; // exclusive last group of each section of groups sharing a table scale
   size_t pairs() const { return lookup_group_bytes(groups.size()); }
   size_t allocated_bytes() const {
     size_t bytes=sizeof(*this)+projection.allocated_bytes()+groups.capacity()*sizeof(FastLookupGroup)+codes.capacity();
+    bytes+=section_ends.capacity()*sizeof(uint32_t);
     bytes+=levels.capacity()*sizeof(std::vector<float>);
     for (const auto& book:levels) bytes+=book.capacity()*sizeof(float);
-    if (split) for (const auto& book:split->part_levels) bytes+=book.capacity()*sizeof(float);
+    for (const auto& split:splits) if (split) for (const auto& book:split->part_levels) bytes+=book.capacity()*sizeof(float);
     return bytes;
   }
   // Levels of one coordinate's (part) codes: its codebook, or one additive part.
   const std::vector<float>& slot_levels(const LookupSlot& slot) const {
-    if (slot.part==LookupPart::whole) return levels[slot.code_bits];
-    return split->part_levels[slot.part==LookupPart::low ? 0 : 1];
+    if (slot.part==whole_code_part) return levels[slot.code_bits];
+    return splits[slot.code_bits]->part_levels[slot.part];
   }
 };
 // Without a split, each tier packs its own groups in tier order. With one, coordinates join per-width streams
 // (split parts beside the tiers of their width), emitted in order of each width's first appearance.
-inline std::vector<FastLookupGroup> fast_lookup_groups(const std::vector<TieredQTier>& tiers,bool split) {
+inline std::vector<FastLookupGroup> fast_lookup_groups(const std::vector<TieredQTier>& tiers,const AdditiveSplits& splits) {
+  const bool split=std::any_of(splits.begin(),splits.end(),[](const auto& s) { return s.has_value(); });
   std::vector<std::vector<LookupSlot>> streams;
+  std::vector<uint32_t> stream_bits;
   std::array<int,lookup_code_bits+1> stream_of; stream_of.fill(-1);
   auto stream=[&](uint32_t bits) -> std::vector<LookupSlot>& {
-    if (!split || stream_of[bits]<0) { stream_of[bits]=int(streams.size()); streams.emplace_back(); }
+    if (!split || stream_of[bits]<0) { stream_of[bits]=int(streams.size()); streams.emplace_back(); stream_bits.push_back(bits); }
     return streams[size_t(stream_of[bits])];
   };
   for (const auto& tier:tiers) {
-    const bool parts=split && tier.bits==split_code_bits;
-    auto& first=stream(parts ? split_low_bits : tier.bits);
-    for (uint32_t j=0;j<tier.dimensions;++j)
-      first.push_back({tier.bit_offset+j*tier.bits,tier.start+j,tier.bits,parts ? LookupPart::low : LookupPart::whole});
-    if (!parts) continue;
-    auto& second=stream(split_high_bits);
-    for (uint32_t j=0;j<tier.dimensions;++j) second.push_back({tier.bit_offset+j*tier.bits,tier.start+j,tier.bits,LookupPart::high});
+    if (!splits[tier.bits]) {
+      auto& whole=stream(tier.bits);
+      for (uint32_t j=0;j<tier.dimensions;++j) whole.push_back({tier.bit_offset+j*tier.bits,tier.start+j,tier.bits,whole_code_part,0});
+      continue;
+    }
+    uint32_t shift=0;
+    for (uint32_t part=0;part<splits[tier.bits]->part_bits.size();++part) {
+      const uint32_t bits=splits[tier.bits]->part_bits[part];
+      auto& parts=stream(bits);
+      for (uint32_t j=0;j<tier.dimensions;++j) parts.push_back({tier.bit_offset+j*tier.bits,tier.start+j,tier.bits,part,shift});
+      shift+=bits;
+    }
   }
   std::vector<FastLookupGroup> groups;
-  for (const auto& slots:streams) {
+  for (size_t s=0;s<streams.size();++s) {
+    const auto& slots=streams[s];
     if (slots.empty()) continue;
-    const uint32_t bits=slots.front().part==LookupPart::whole ? slots.front().code_bits :
-        slots.front().part==LookupPart::low ? split_low_bits : split_high_bits;
+    const uint32_t bits=stream_bits[s];
     const uint32_t per_group=lookup_coordinates_per_group(bits);
     for (size_t j=0;j<slots.size();j+=per_group) {
       FastLookupGroup group{uint32_t(std::min<size_t>(per_group,slots.size()-j)),bits,{}};
@@ -78,7 +88,7 @@ inline uint32_t lookup_group_code(const FastScanLookupCache& cache,const FastLoo
   for (uint32_t j=0;j<group.count;++j) {
     const auto& slot=group.slots[j];
     uint32_t part=uint32_t(read_code(row,slot.bit,slot.code_bits));
-    if (slot.part!=LookupPart::whole) part=cache.split->code[part]>>(slot.part==LookupPart::low ? 0 : split_low_bits);
+    if (slot.part!=whole_code_part) part=uint32_t(cache.splits[slot.code_bits]->code[part])>>slot.part_shift;
     code|=(part&mask)<<(j*group.bits);
   }
   return code;
@@ -90,20 +100,52 @@ struct FastScanLookupQuery {
   std::vector<int8_t> tables;
   std::vector<float> scales, centroid_scores, correction_weights;
 };
-inline bool fast_lookup_supported(const std::vector<TieredQTier>& tiers) {
-  return std::all_of(tiers.begin(),tiers.end(),[](const auto& tier){return tier.bits<=lookup_code_bits;});
+inline bool fast_lookup_supported(const std::vector<TieredQTier>& tiers,const std::vector<std::vector<float>>& levels) {
+  const auto splits=additive_splits(levels);
+  return std::all_of(tiers.begin(),tiers.end(),[&](const auto& tier){return tier.bits<=lookup_code_bits || splits[tier.bits];});
 }
+// Largest expected table magnitude of a group: query weights scale with sigma^2 for queries distributed like the data.
+inline float lookup_group_range(const FastScanLookupCache& cache,const FastLookupGroup& group,const std::vector<float>& sigma) {
+  float range=0;
+  for (uint32_t j=0;j<group.count;++j) {
+    const auto& slot=group.slots[j]; const auto& book=cache.slot_levels(slot);
+    range=std::max(range,sigma[slot.rank]*sigma[slot.rank]*(book.back()-book.front()));
+  }
+  return range;
+}
+inline void uniform_lookup_sections(FastScanLookupCache& cache,size_t section_groups) {
+  cache.section_ends.clear();
+  for (size_t end=section_groups;end<cache.groups.size();end+=section_groups) cache.section_ends.push_back(uint32_t(end));
+  if (!cache.groups.empty()) cache.section_ends.push_back(uint32_t(cache.groups.size()));
+}
+// Byte tables share a scale per section, so models with wide tiers order groups by range: a low part next to its high
+// part would otherwise round away. Narrow models keep their stream order, which persisted codes depend on.
+inline void order_lookup_groups_by_range(FastScanLookupCache& cache,const std::vector<float>& sigma) {
+  std::vector<std::pair<float,FastLookupGroup>> ranked;
+  for (const auto& group:cache.groups) ranked.emplace_back(lookup_group_range(cache,group,sigma),group);
+  std::stable_sort(ranked.begin(),ranked.end(),[](const auto& a,const auto& b) { return a.first>b.first; });
+  for (size_t g=0;g<ranked.size();++g) cache.groups[g]=ranked[g].second;
+}
+// 7-8 bit tiers appear from about 4 bits/dim, where table rounding limits recall: 32-group sections lost 0.6 pt R@10
+// and 4-group ones 0.2 pt on OpenAI-100K, at the cost of more float conversions (#13). Clipping scales to RMS loses more.
+constexpr uint32_t fine_section_min_bits=7;
+constexpr size_t lookup_fine_scale_groups=4;
+static_assert(lookup_fine_scale_groups%lookup_pair_groups==0 && lookup_fine_scale_groups<=lookup_scale_groups);
 inline std::shared_ptr<FastScanCache> build_fast_lookup_cache(
     const std::vector<std::vector<float>>& levels, const std::vector<TieredQTier>& tiers,
     FastQueryProjection projection, size_t count, size_t stride, size_t code_bytes,
-    size_t num_centroids, const uint8_t* rows) {
+    size_t num_centroids, const uint8_t* rows, const std::vector<float>& sigma={}) {
   auto cache=std::make_shared<FastScanCache>();
   auto lookup=std::make_shared<FastScanLookupCache>();
   cache->count=count; cache->dimensions=projection.weights;
   cache->blocks=(count+lookup_block_docs-1)/lookup_block_docs;
   lookup->projection=std::move(projection); lookup->levels=levels;
-  lookup->split=additive_three_split(levels[split_code_bits]);
-  lookup->groups=fast_lookup_groups(tiers,lookup->split.has_value());
+  lookup->splits=additive_splits(levels);
+  lookup->groups=fast_lookup_groups(tiers,lookup->splits);
+  const bool wide=std::any_of(tiers.begin(),tiers.end(),[](const auto& tier) { return tier.bits>lookup_code_bits; });
+  if (wide && !sigma.empty()) order_lookup_groups_by_range(*lookup,sigma);
+  const bool fine=std::any_of(tiers.begin(),tiers.end(),[](const auto& tier) { return tier.bits>=fine_section_min_bits; });
+  uniform_lookup_sections(*lookup,fine ? lookup_fine_scale_groups : lookup_scale_groups);
   cache->groups=lookup->groups.size();
   lookup->codes.assign(cache->blocks*lookup->pairs()*lookup_block_docs,0);
   build_fast_scan_metadata(*cache,cache->blocks*lookup_block_docs,stride,code_bytes,num_centroids,rows);
@@ -133,8 +175,8 @@ inline void fast_lookup_tables_avx512(const FastScanLookupCache& cache,const flo
   const auto codes=_mm512_setr_epi32(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15);
   const auto magnitude=_mm512_set1_epi32(INT32_MAX);
   alignas(64) float values[lookup_scale_groups*lookup_table_entries];
-  for (size_t start=0;start<cache.groups.size();start+=lookup_scale_groups) {
-    const size_t count=std::min(lookup_scale_groups,cache.groups.size()-start);
+  for (size_t section=0,start=0;section<cache.section_ends.size();start=cache.section_ends[section++]) {
+    const size_t count=cache.section_ends[section]-start;
     auto peak=_mm512_setzero_ps();
     for (size_t g=0;g<count;++g) {
       const auto& group=cache.groups[start+g];
@@ -173,8 +215,8 @@ inline void fast_lookup_tables_avx512(const FastScanLookupCache& cache,const flo
 #endif
 inline void fast_lookup_tables_scalar(const FastScanLookupCache& cache,const float* output,FastScanLookupQuery& query) {
   std::array<float,lookup_scale_groups*lookup_table_entries> values;
-  for (size_t start=0;start<cache.groups.size();start+=lookup_scale_groups) {
-    const size_t count=std::min(lookup_scale_groups,cache.groups.size()-start);
+  for (size_t section=0,start=0;section<cache.section_ends.size();start=cache.section_ends[section++]) {
+    const size_t count=cache.section_ends[section]-start;
     float peak=0;
     for (size_t g=0;g<count;++g) {
       const auto& group=cache.groups[start+g];

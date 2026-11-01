@@ -33,9 +33,9 @@ inline void scan_fast_lookup_avx2_range(const FastScanCache& cache,const FastSca
     __m256 dots[vectors];
     for (auto& dot:dots) dot=_mm256_setzero_ps();
     const auto* base=lookup.codes.data()+doc/lookup_block_docs*lookup.pairs()*lookup_block_docs+doc%lookup_block_docs;
-    for (size_t start=0;start<lookup.groups.size();start+=lookup_scale_groups) {
+    for (size_t section=0,start=0;section<lookup.section_ends.size();start=lookup.section_ends[section++]) {
       auto low=_mm256_setzero_si256(),high=_mm256_setzero_si256();
-      const size_t end=std::min(start+lookup_scale_groups,lookup.groups.size());
+      const size_t end=lookup.section_ends[section];
       for (size_t g=start;g<end;g+=lookup_pair_groups) {
         const auto t0=_mm256_broadcastsi128_si256(_mm_loadu_si128(reinterpret_cast<const __m128i*>(q.tables.data()+g*lookup_table_entries)));
         const auto t1=_mm256_broadcastsi128_si256(_mm_loadu_si128(reinterpret_cast<const __m128i*>(q.tables.data()+(g+1)*lookup_table_entries)));
@@ -45,7 +45,7 @@ inline void scan_fast_lookup_avx2_range(const FastScanCache& cache,const FastSca
         low=_mm256_add_epi16(low,_mm256_maddubs_epi16(ones,_mm256_unpacklo_epi8(v0,v1)));
         high=_mm256_add_epi16(high,_mm256_maddubs_epi16(ones,_mm256_unpackhi_epi8(v0,v1)));
       }
-      const auto scale=_mm256_set1_ps(q.scales[start/lookup_scale_groups]);
+      const auto scale=_mm256_set1_ps(q.scales[section]);
       // Unpack is lane-local: low contains documents 0..7 and 16..23, high the other two vectors.
       const __m128i sums[vectors]={_mm256_castsi256_si128(low),_mm256_castsi256_si128(high),
           _mm256_extracti128_si256(low,1),_mm256_extracti128_si256(high,1)};

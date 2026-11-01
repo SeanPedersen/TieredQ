@@ -100,7 +100,7 @@ void lookup_kernel_test(size_t count,bool avx512,const LookupLayout& layout_spec
   LookupWidthCounts widths{};
   for (const auto& tier:tiers) widths[tier.bits]+=tier.dimensions;
   const size_t group_count=lookup_group_count(widths,true);
-  require(cache->lookup->groups.size()==group_count && cache->lookup->split,"split lookup groups missing");
+  require(cache->lookup->groups.size()==group_count && cache->lookup->splits[split_code_bits],"split lookup groups missing");
   const std::vector<float> input{.3f,-.7f,.1f,.2f};
   auto query=prepare_fast_lookup_query(*cache->lookup,input.data(),source);
   const auto output=project_fast_query(map,input.data(),source);

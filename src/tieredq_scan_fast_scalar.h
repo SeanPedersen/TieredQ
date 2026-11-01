@@ -44,14 +44,14 @@ inline void scan_fast_scalar_tile(const FastScanCache& cache,const FastScanScala
     float dot=0;
     if (cache.lookup) {
       const auto& lookup=*cache.lookup;
-      for (size_t start=0;start<lookup.groups.size();start+=lookup_scale_groups) {
+      for (size_t section=0,start=0;section<lookup.section_ends.size();start=lookup.section_ends[section++]) {
         int sum=0;
-        for (size_t group=start;group<std::min(start+lookup_scale_groups,lookup.groups.size());++group) {
+        for (size_t group=start;group<lookup.section_ends[section];++group) {
           const size_t position=fast_lookup_position(lookup,doc,group);
           const size_t code=(lookup.codes[position]>>(group%lookup_pair_groups*lookup_code_bits))&(lookup_table_entries-1);
           sum+=q.lookup.tables[group*lookup_table_entries+code];
         }
-        dot+=float(sum)*q.lookup.scales[start/lookup_scale_groups];
+        dot+=float(sum)*q.lookup.scales[section];
       }
     } else {
       int32_t sum=0;
