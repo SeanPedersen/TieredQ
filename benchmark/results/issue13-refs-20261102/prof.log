@@ -1,0 +1,25 @@
+=== n2-16
+coded ranks 1152 of 1536, tiers (bits x dims): 6x47 5x94 4x169 3x249 2x304 1x289
+profile	3072	64	16	914	300000
+    82.34%  ivf_eval_final  ivf_eval_final       [.] auto dv::TieredQIVFIndex::search_rows(float const*, dv::TieredQQuery const*, unsigned long, unsig
+    14.07%  ivf_eval_final  ivf_eval_final       [.] void dv::tieredq_detail::project_panel_block_avx512<1ul, 12ul>(dv::tieredq_detail::BasisProjectio
+     1.46%  ivf_eval_final  ivf_eval_final       [.] dv::tieredq_detail::project_fast_queries(dv::tieredq_detail::FastQueryProjection const&, float co
+     0.97%  ivf_eval_final  ivf_eval_final       [.] dv::tieredq_detail::fast_lookup_tables_avx512(dv::tieredq_detail::FastScanLookupCache const&, flo
+=== n2-64
+coded ranks 1152 of 1536, tiers (bits x dims): 6x47 5x94 4x169 3x249 2x304 1x289
+profile	3072	64	64	278	300000
+    91.10%  ivf_eval_final  ivf_eval_final       [.] auto dv::TieredQIVFIndex::search_rows(float const*, dv::TieredQQuery const*, unsigned long, unsig
+     7.00%  ivf_eval_final  ivf_eval_final       [.] void dv::tieredq_detail::project_panel_block_avx512<1ul, 12ul>(dv::tieredq_detail::BasisProjectio
+     0.81%  ivf_eval_final  ivf_eval_final       [.] dv::tieredq_detail::project_fast_queries(dv::tieredq_detail::FastQueryProjection const&, float co
+=== n4-16
+coded ranks 1530 of 1536, tiers (bits x dims): 8x40 7x84 6x145 5x266 4x367 3x347 2x246 1x35
+profile	6144	64	16	362	300000
+    89.00%  ivf_eval_final  ivf_eval_final       [.] auto dv::TieredQIVFIndex::search_rows(float const*, dv::TieredQQuery const*, unsigned long, unsig
+     8.71%  ivf_eval_final  ivf_eval_final       [.] void dv::tieredq_detail::project_panel_block_avx512<1ul, 12ul>(dv::tieredq_detail::BasisProjectio
+     1.12%  ivf_eval_final  ivf_eval_final       [.] dv::tieredq_detail::fast_lookup_tables_avx512(dv::tieredq_detail::FastScanLookupCache const&, flo
+     0.62%  ivf_eval_final  ivf_eval_final       [.] dv::tieredq_detail::project_fast_queries(dv::tieredq_detail::FastQueryProjection const&, float co
+=== n4-64
+coded ranks 1530 of 1536, tiers (bits x dims): 8x40 7x84 6x145 5x266 4x367 3x347 2x246 1x35
+profile	6144	64	64	110	300000
+    94.62%  ivf_eval_final  ivf_eval_final       [.] auto dv::TieredQIVFIndex::search_rows(float const*, dv::TieredQQuery const*, unsigned long, unsig
+     4.30%  ivf_eval_final  ivf_eval_final       [.] void dv::tieredq_detail::project_panel_block_avx512<1ul, 12ul>(dv::tieredq_detail::BasisProjectio
