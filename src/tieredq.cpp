@@ -354,14 +354,15 @@ TieredQ TieredQ::train(TieredQConfig config,const float* sample,size_t rows,uint
       finite_rows(model_rows.data(),model_rows.size());
       model_sample=tieredq_detail::TrainingRows{model_rows.data(),lifted.model_dimensions()};
     }
-    auto c=train_model(model_config,model_sample,rows,seed);
+    // Additive wide tiers lost up to 0.72 pt R@10 on SIFT1M under L2, so its whitened queries keep Lloyd-Max books (#13).
+    auto c=train_model(model_config,model_sample,rows,config.metric!=TieredQMetric::l2,seed);
     c.config_.dimensions=config.dimensions; c.config_.metric=config.metric; c.config_.allocation_power=config.allocation_power;
     c.lift_scale_=lifted.lift_scale_; c.lift_base_map_=std::move(lifted.lift_base_map_);
     c.prepare_lift(); c.validate_model();
     return c;
   }
   finite_rows(sample,product(rows,config.dimensions));
-  return train_model(config,tieredq_detail::TrainingRows{sample,config.dimensions},rows,seed);
+  return train_model(config,tieredq_detail::TrainingRows{sample,config.dimensions},rows,true,seed);
 }
 TieredQ TieredQ::train_sampled(TieredQConfig config,const float* data,size_t count,const uint32_t* sample_ids,
                                size_t sample_rows,uint64_t seed) {
@@ -378,16 +379,16 @@ TieredQ TieredQ::train_sampled(TieredQConfig config,const float* data,size_t cou
   }
   const tieredq_detail::TrainingRows rows{data,config.dimensions,sample_ids};
   for (size_t i=0;i<sample_rows;++i) finite_rows(rows.row(i),config.dimensions);
-  if (config.metric==TieredQMetric::inner_product) return train_model(config,rows,sample_rows,seed);
+  if (config.metric==TieredQMetric::inner_product) return train_model(config,rows,sample_rows,true,seed);
   auto model_config=config;
   model_config.metric=TieredQMetric::inner_product;
-  auto c=train_model(model_config,rows.normalized(sample_rows),sample_rows,seed);
+  auto c=train_model(model_config,rows.normalized(sample_rows),sample_rows,config.metric!=TieredQMetric::l2,seed);
   c.config_.metric=config.metric; c.config_.allocation_power=config.allocation_power;
   c.prepare_lift(); c.validate_model();
   return c;
 }
 // Inner-product training on model-space rows, which the caller has checked to be finite.
-TieredQ TieredQ::train_model(TieredQConfig config,const tieredq_detail::TrainingRows& sample,size_t rows,uint64_t seed) {
+TieredQ TieredQ::train_model(TieredQConfig config,const tieredq_detail::TrainingRows& sample,size_t rows,bool additive_wide_tiers,uint64_t seed) {
   const int d=int(config.dimensions), n=int(rows); const unsigned k=config.num_centroids;
   tieredq_detail::StageProfile profile;
   const auto& linalg=tieredq_detail::TrainingLinalg::get();
@@ -496,7 +497,7 @@ TieredQ TieredQ::train_model(TieredQConfig config,const tieredq_detail::Training
     auto fast=tieredq_detail::exact_lookup_allocation(weighted.variance,additive_gaussian,limit,config.max_bits);
     if (fast.additive_three) c.levels_[3]=additive;
     bits=std::move(fast.bits);
-  } else if (fast_target) {
+  } else if (fast_target && additive_wide_tiers) {
     // Wide tiers use additive books so every code scores through nibble tables (#13). Allocation sees their distortion.
     for (auto& table:weighted.error) {
       table[tieredq_detail::split_code_bits]=tieredq_detail::distortion(additive);

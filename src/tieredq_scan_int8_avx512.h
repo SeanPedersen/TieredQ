@@ -28,8 +28,9 @@ inline void scan_fast_avx512_tile_impl(const FastScanCache& cache, const FastSca
     return;
   }
   if (cache.lookup) {
-    for (size_t row=0; row<query_count; ++row)
-      scan_fast_lookup_avx512_range(cache,queries[row].lookup,first,count,scores+row*stride);
+    scan_lookup_query_group(query_count,first,count,scores,stride,[&](size_t row,size_t begin,size_t documents,float* out) {
+      scan_fast_lookup_avx512_range(cache,queries[row].lookup,begin,documents,out);
+    });
     return;
   }
   const __m512i ones = _mm512_set1_epi16(1);
@@ -72,7 +73,7 @@ inline void scan_fast_avx512(const FastScanCache& cache, const FastScanQueryX86&
 }
 inline void scan_fast_avx512_batch(const FastScanCache& cache,
     const std::vector<FastScanQueryX86>& queries,float* scores) {
-  const size_t tile=cache.lookup ? 1 : cache.code_lookup() ? fast_code_query_group : fast_scan_query_tile_x86;
+  const size_t tile=cache.code_lookup() ? fast_code_query_group : fast_scan_query_tile_x86;
 #pragma omp parallel for schedule(static) if(queries.size()>tile && !omp_in_parallel())
   for (size_t first=0;first<queries.size();first+=tile)
     scan_fast_avx512_tile(cache,queries.data()+first,std::min(tile,queries.size()-first),

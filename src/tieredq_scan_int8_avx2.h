@@ -71,8 +71,9 @@ inline void scan_fast_avx2_tile_impl(const FastScanCache& cache,const FastScanQu
     return;
   }
   if (cache.lookup) {
-    for (size_t row=0;row<rows;++row)
-      scan_fast_lookup_avx2_range(cache,queries[row].lookup,first,count,scores+row*stride);
+    scan_lookup_query_group(rows,first,count,scores,stride,[&](size_t row,size_t begin,size_t documents,float* out) {
+      scan_fast_lookup_avx2_range(cache,queries[row].lookup,begin,documents,out);
+    });
     return;
   }
   const auto ones=_mm256_set1_epi16(1),bias=_mm256_set1_epi8(char(cache.level_max+1));

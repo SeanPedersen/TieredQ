@@ -96,7 +96,7 @@ void with_fast_scan(const FastScanCache& cache,const TieredQ& codec,const float*
       if (backend==FastScanBackend::avx512) scan_fast_avx512_tile(cache,prepared,count,first,documents,scores,stride);
       else scan_fast_avx2_tile(cache,prepared,count,first,documents,scores,stride);
     };
-    const size_t query_tile=cache.lookup ? 1 : cache.code_lookup() ? fast_code_query_group :
+    const size_t query_tile=cache.code_lookup() ? fast_code_query_group :
         backend==FastScanBackend::avx512 ? fast_scan_query_tile_x86 : fast_scan_query_tile_avx2;
     run(fast_search_queries(cache,codec,queries,rows,prepare,from_weights,weights),query_tile,scan);
     return;

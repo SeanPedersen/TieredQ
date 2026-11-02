@@ -44,7 +44,8 @@ index = TieredQIndex.load("index.tq")
   whitened queries.
   `allocation_power=` overrides it.
 - `mode="fast"` is the default and stores the native fast search representation. Models with tiers above 4 bits score
-  through approximate byte tables; `exact_fast_scores=True` keeps bit-exact FP32 scoring at lower speed.
+  through approximate byte tables (L2 models keep exact FP32 scoring); `exact_fast_scores=True` keeps bit-exact
+  FP32 scoring at lower speed.
   Use `mode="full"` for compact packed rows and FP32 scoring of quantized vectors,
   with slower search. Both modes scan every vector; saving and loading preserve
   the selected representation. Read the selection from `index.mode`.

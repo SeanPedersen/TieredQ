@@ -236,6 +236,16 @@ inline void fast_lookup_tables_scalar(const FastScanLookupCache& cache,const flo
       query.tables[start*lookup_table_entries+i]=int8_t(std::clamp(round_half_away(values[i]/scale),-float(lookup_quant_max),float(lookup_quant_max)));
   }
 }
+// Walks a query group over [first, first + count) one code block at a time, so the group shares each block's cache
+// traffic instead of every query streaming the whole range; scan_range(row, begin, documents, out) scores one query.
+template<class ScanRange>
+inline void scan_lookup_query_group(size_t rows,size_t first,size_t count,float* scores,size_t stride,ScanRange scan_range) {
+  for (size_t begin=first,end=first+count;begin<end;) {
+    const size_t documents=std::min((begin/lookup_block_docs+1)*lookup_block_docs,end)-begin;
+    for (size_t row=0;row<rows;++row) scan_range(row,begin,documents,scores+row*stride+(begin-first));
+    begin+=documents;
+  }
+}
 // Byte tables from one query's projection (project_fast_queries layout).
 inline FastScanLookupQuery fast_lookup_query(const FastScanLookupCache& cache,const std::vector<float>& output) {
   const size_t m=cache.projection.weights,k=cache.projection.centroids;

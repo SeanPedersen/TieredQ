@@ -129,6 +129,13 @@ def test_mid_width_models_store_packed_codes(code_bits, tmp_path):
     assert struct.unpack_from("<I", data, payload + 4)[0] == PACKED_CODE_KIND
 
 
+def test_l2_wide_models_keep_packed_codes():
+    rows = np.random.default_rng(29).normal(size=(INITIAL_ROWS, DIMENSIONS)).astype(np.float32)
+    index = TieredQIndex(dimensions=DIMENSIONS, code_bits=DIMENSIONS * 5, mode="fast", metric="l2")
+    index.add(rows)
+    assert index.bytes_per_vector == -(-index.code_bits // CODE_WORD_BITS) * CODE_WORD_BYTES + FAST_METADATA_BYTES
+
+
 def rewrite_payload_checksum(data):
     import struct
 

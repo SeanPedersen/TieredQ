@@ -151,7 +151,7 @@ class TieredQ {
   friend struct tieredq_detail::FastQueryBasis;
   friend class TieredQRefinement;
   TieredQ() = default;
-  static TieredQ train_model(TieredQConfig config, const tieredq_detail::TrainingRows& sample, size_t rows, uint64_t seed);
+  static TieredQ train_model(TieredQConfig config, const tieredq_detail::TrainingRows& sample, size_t rows, bool additive_wide_tiers, uint64_t seed);
   TieredQConfig config_;
   std::vector<TieredQTier> tiers_;
   std::vector<float> centroids_, basis_, mean_, sigma_;
