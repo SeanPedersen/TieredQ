@@ -302,6 +302,21 @@ The other rows of the table above predate #13.
 - On OpenAI at RaBitQ's 4-bit recall, TieredQ is now at 0.88–0.97× RaBitQ's batched QPS (was 0.41–0.47×) with 32–34%
   less stored memory. Single-query p50 is still 1.8–1.9× RaBitQ's.
 
+**Flat nested search (`dv::TieredQNestedIndex`, #13, 2026-11-03).** A 512-bit prefix scanned for every document, then
+the top k' candidates rescored with a 3 bits/dim TieredQRefinement tier in RAM. RaBitQ is timed in the same eval on the
+same data ([issue13-nested-20261103](../benchmark/results/issue13-nested-20261103/README.md)): 2 interleaved rounds,
+alone on CPUs 0-7. R@10 is the mean over seeds 0-2.
+
+| Dataset | k' | R@10 TQ / RaBitQ 4-bit | Stored bits TQ / ref | QPS 1t·b1 TQ / ref | QPS 8t·b32 TQ / ref |
+|---|---:|---|---|---|---|
+| OpenAI-1536 100k | 50 | 0.9686 / 0.9674 | 4,995 / 6,337 (0.79×) | 1,251 / 574 (2.18×) | 9,746 / 4,235 (2.30×) |
+| OpenAI-1536 1M | 100 | 0.9725 / 0.9700 | 4,805 / 6,336 (0.76×) | 142 / 49 (2.90×) | 1,106 / 370 (2.99×) |
+
+- This is the fast flat path at RaBitQ's 4-bit recall on OpenAI. The first pass reads about 77 bytes per document
+  instead of the flat index's 469, so the gain grows with the collection.
+- At RaBitQ's 2-bit memory (OpenAI-100K), a 1536-bit prefix with a 2 bits/dim tier gains +4.2 pt R@10 at 0.94× / 1.15×
+  its QPS.
+
 - At equal recall TieredQ stores 0.49–0.95× the reference's bits (0.58–0.73× on OpenAI and Gemini).
 - **Against RaBitQ:** faster batched at every 1- and 2-bit level (1.05–2.15×); at the 4-bit levels it is
   faster on SIFT (1.17×), equal on GloVe (0.96×) and slower on OpenAI and Gemini (0.41–0.47× batched, p50
