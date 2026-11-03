@@ -156,6 +156,18 @@ auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*p
   index.attach_tier(std::make_shared<dv::TieredQFileRows>("tier.rows"));
   auto hits = index.search(query, /*k=*/10, /*nprobe=*/32, /*candidates=*/50);
   ```
+- **Flat nested search.** `dv::TieredQNestedIndex` (`<tieredq/tieredq_nested_flat.h>`) scans a narrow prefix for
+  every document and rescores the top candidates with an in-RAM suffix tier (a one-list `TieredQNestedIVFIndex`). On
+  OpenAI-1536 it is the fast flat path from about 3 bits/dim. A 512-bit prefix with a 3 bits/dim total tier reached
+  RaBitQ's 4-bit recall at 2.2x (100K, 50 candidates) and 2.9x (1M, 100 candidates) its single-query QPS, with
+  0.76-0.79x its stored bits. The plain flat index is at 0.54x there.
+
+  ```cpp
+  auto prefix = dv::TieredQ::train(dv::TieredQConfig::target_code_bits(d, 512), sample, rows, seed);
+  auto refinement = dv::TieredQRefinement::train(prefix, /*total_code_bits=*/3 * d, sample, rows, seed);
+  dv::TieredQNestedIndex index(std::move(prefix), std::move(refinement), data, n);
+  auto hits = index.search(query, /*k=*/10, /*candidates=*/100);
+  ```
 
   `serialize()` stores the IVF, the refinement and the tier layout; after loading, attach the tier again.
 

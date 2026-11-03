@@ -33,12 +33,13 @@ Mean R@10 over seeds 0-2: RaBitQ 4-bit 0.9674; t3p512 k'=50 0.9686; t3p768 k'=30
 | t3p768 | 100 | 4,641 (0.73x) | 0.9716 | 99 (2.02x) | 798 (2.16x) |
 | t3p1024 | 30 | 4,747 (0.75x) | 0.9725 | 82 (1.66x) | 636 (1.72x) |
 
-k' is the smallest of 30 / 50 / 100 whose seed-0 recall reaches RaBitQ's.
+k' is the smallest of 30 / 50 / 100 whose seed-0 recall reaches RaBitQ's. Mean R@10 over seeds 0-2 (`seeds-1m.tsv`,
+`job_seeds_1m.sh`): RaBitQ 4-bit 0.9700, t3p512 k'=100 0.9725; k'=50 stays below (0.9635-0.9647).
 
 ## Findings
 - At RaBitQ's 4-bit recall, flat nested search is 2.2x (100K) and 2.9x (1M) RaBitQ's single-query QPS and 2.3x / 3.0x
   its batched QPS, with 21-24% less stored memory. The plain flat default is at 0.54x single-query on the same task.
 - The gain grows with the collection: the first pass reads ~77 bytes per document (512-bit prefix) instead of 469.
 - At RaBitQ's 2-bit memory the 1536-bit prefix with 2 bits/dim total gains +4.2 pt R@10 at 0.94x / 1.15x its QPS.
-- The 1M recall margins are seed 0 only (+0.1 to +0.2 pt). The eval's IVF with one list stands in for a flat nested
-  index, which the library does not have yet.
+- The eval's IVF with one list is what `dv::TieredQNestedIndex` (`tieredq_nested_flat.h`) wraps: the library's flat
+  nested index builds this configuration.
