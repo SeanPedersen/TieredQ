@@ -1,12 +1,14 @@
 // Independent scalar checks of byte-table packing, signed accumulation, projection and tail stores.
 #include "tieredq/tieredq.h"
 #include <algorithm>
+#include <bit>
 #include <climits>
 #include <cmath>
 #include <stdexcept>
 #include <vector>
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
 #include "tieredq_scan_int8_avx512.h"
+#include "tieredq_lookup_range_avx512.h"
 #include "tieredq_scan_int8_avx2.h"
 #include "tieredq_scan_fast_scalar.h"
 #include "tieredq_train_codebook_data.h"
@@ -270,6 +272,30 @@ void wide_additive_backend_test(bool fine) {
       bound+=(lookup.section_ends[section]-first)*x86[q].lookup.scales[section]/2;
     require(std::fabs(reference[q*count+d]-exact)<=bound,"wide nibble score differs from whole-code levels");
   }
+  if (!fine || !(__builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512bw"))) return;
+  // Range checkpoint: survivors keep the unpruned score bits; with the exact bound only scores below the threshold drop.
+  require(lookup_range_checkpoint_supported(*cache,tiers),"wide test model has no lookup suffix");
+  constexpr size_t range_first=3*lookup_vector_docs,range_count=700;
+  size_t rejected=0;
+  for (size_t q=0;q<query_count;++q) {
+    std::vector<float> sorted(reference.begin()+q*count,reference.begin()+(q+1)*count);
+    std::sort(sorted.begin(),sorted.end());
+    for (double confidence:{0.0,8.0}) for (float threshold:{-std::numeric_limits<float>::infinity(),sorted[count/2],sorted[count*9/10],
+        sorted[count-1],std::numeric_limits<float>::infinity()}) for (size_t first:{size_t(0),range_first}) {
+      const size_t n=first ? range_count : count;
+      const LookupRangeCheckpoint checkpoint{prepare_lookup_range_bounds(*cache,tiers,x86[q].lookup,fast_range_prefix_tiers,confidence),threshold};
+      std::vector<float> pruned(n);
+      scan_range_lookup_avx512(*cache,x86[q].lookup,first,n,pruned.data(),checkpoint);
+      for (size_t i=0;i<n;++i) {
+        const float full=reference[q*count+first+i];
+        const bool dropped=pruned[i]==-std::numeric_limits<float>::infinity();
+        require(dropped || std::bit_cast<uint32_t>(pruned[i])==std::bit_cast<uint32_t>(full),"pruned lookup changed a surviving score");
+        require(!dropped || confidence>0 || full<threshold,"exact lookup bound rejected a competitive document");
+        rejected+=dropped;
+      }
+    }
+  }
+  require(rejected>0,"lookup range checkpoint rejected nothing");
 }
 } // namespace
 #endif

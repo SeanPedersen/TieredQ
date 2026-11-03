@@ -7,6 +7,7 @@
 #include "tieredq_scan_int8.h"
 #include "tieredq_query_projection_x86.h"
 #include <array>
+#include <cmath>
 #include <limits>
 #include <optional>
 
@@ -27,10 +28,11 @@ struct FastScanLookupCache {
   std::vector<std::vector<float>> levels;
   AdditiveSplits splits; // per code width, present when that codebook is additive
   std::vector<uint32_t> section_ends; // exclusive last group of each section of groups sharing a table scale
+  std::vector<float> code_probability; // per group and nibble code, for unit-Gaussian coordinates (pruning bounds)
   size_t pairs() const { return lookup_group_bytes(groups.size()); }
   size_t allocated_bytes() const {
     size_t bytes=sizeof(*this)+projection.allocated_bytes()+groups.capacity()*sizeof(FastLookupGroup)+codes.capacity();
-    bytes+=section_ends.capacity()*sizeof(uint32_t);
+    bytes+=section_ends.capacity()*sizeof(uint32_t)+code_probability.capacity()*sizeof(float);
     bytes+=levels.capacity()*sizeof(std::vector<float>);
     for (const auto& book:levels) bytes+=book.capacity()*sizeof(float);
     for (const auto& split:splits) if (split) for (const auto& book:split->part_levels) bytes+=book.capacity()*sizeof(float);
@@ -113,6 +115,39 @@ inline float lookup_group_range(const FastScanLookupCache& cache,const FastLooku
   }
   return range;
 }
+// Probability of each sorted code of a unit-Gaussian coordinate quantized to its nearest level.
+inline std::vector<double> gaussian_code_masses(const std::vector<float>& book) {
+  auto cdf=[](double x) { return 0.5*std::erfc(-x/std::sqrt(2.0)); };
+  std::vector<double> masses(book.size());
+  double below=0;
+  for (size_t i=0;i<book.size();++i) {
+    const double above=i+1<book.size() ? cdf(0.5*(double(book[i])+book[i+1])) : 1.0;
+    masses[i]=above-below; below=above;
+  }
+  return masses;
+}
+// Group code probabilities as products of independent slot marginals; bits past a group's slots stay zero.
+inline void lookup_code_probabilities(FastScanLookupCache& cache) {
+  cache.code_probability.assign(cache.groups.size()*lookup_table_entries,0.0f);
+  for (size_t g=0;g<cache.groups.size();++g) {
+    const auto& group=cache.groups[g];
+    std::vector<double> joint(1,1.0);
+    for (uint32_t j=0;j<group.count;++j) {
+      const auto& slot=group.slots[j];
+      const auto masses=gaussian_code_masses(cache.levels[slot.code_bits]);
+      std::vector<double> marginal(size_t(1)<<group.bits,0.0);
+      for (size_t code=0;code<masses.size();++code) {
+        const uint32_t part=slot.part==whole_code_part ? uint32_t(code) : uint32_t(cache.splits[slot.code_bits]->code[code])>>slot.part_shift;
+        marginal[part&((1u<<group.bits)-1)]+=masses[code];
+      }
+      std::vector<double> next(joint.size()*marginal.size());
+      for (size_t value=0;value<marginal.size();++value) for (size_t low=0;low<joint.size();++low)
+        next[(value<<(j*group.bits))|low]=joint[low]*marginal[value];
+      joint=std::move(next);
+    }
+    for (size_t code=0;code<joint.size();++code) cache.code_probability[g*lookup_table_entries+code]=float(joint[code]);
+  }
+}
 inline void uniform_lookup_sections(FastScanLookupCache& cache,size_t section_groups) {
   cache.section_ends.clear();
   for (size_t end=section_groups;end<cache.groups.size();end+=section_groups) cache.section_ends.push_back(uint32_t(end));
@@ -146,6 +181,7 @@ inline std::shared_ptr<FastScanCache> build_fast_lookup_cache(
   if (wide && !sigma.empty()) order_lookup_groups_by_range(*lookup,sigma);
   const bool fine=std::any_of(tiers.begin(),tiers.end(),[](const auto& tier) { return tier.bits>=fine_section_min_bits; });
   uniform_lookup_sections(*lookup,fine ? lookup_fine_scale_groups : lookup_scale_groups);
+  lookup_code_probabilities(*lookup);
   cache->groups=lookup->groups.size();
   lookup->codes.assign(cache->blocks*lookup->pairs()*lookup_block_docs,0);
   build_fast_scan_metadata(*cache,cache->blocks*lookup_block_docs,stride,code_bytes,num_centroids,rows);

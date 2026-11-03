@@ -156,6 +156,16 @@ void wide_index_test() {
   const auto loaded=TieredQIndex::load(path.string());
   std::filesystem::remove(path);
   require_same(fast.search(query.data(),k),loaded.search(query.data(),k),"wide nibble index changed on reload");
+  // Single-query and IVF searches prune by default; the exact bound keeps the unpruned hits.
+  std::vector<float> pair(2*dimensions);
+  std::copy(query.begin(),query.end(),pair.begin()); std::copy(rows.begin(),rows.begin()+dimensions,pair.begin()+dimensions);
+  std::vector<float> scores(2*k); std::vector<uint32_t> ids(2*k);
+  fast.search_batch_fast(pair.data(),2,k,scores.data(),ids.data());
+  const auto single=fast.search(query.data(),k);
+  for (size_t hit=0;hit<k;++hit) require(single[hit].id==ids[hit] && single[hit].score==scores[hit],"pruned flat search changed hits");
+  TieredQIVFIndex ivf(codec,centroids); ivf.build(rows.data(),documents);
+  const auto unpruned=ivf.search(query.data(),k,centroids,TieredQPruning{0,uint32_t(codec.tiers().size())});
+  require_same(ivf.search(query.data(),k,centroids),unpruned,"pruned IVF search changed hits");
 }
 void padded_allocation_test() {
   constexpr int ranks=200;

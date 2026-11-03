@@ -12,6 +12,7 @@
 #include "tieredq_scan_int8_avx512.h"
 #include "tieredq_scan_int8_avx2.h"
 #include "tieredq_range_checkpoint_avx512.h"
+#include "tieredq_lookup_range_avx512.h"
 #endif
 #if defined(__aarch64__) || defined(_M_ARM64)
 #define DV_TIEREDQ_NEON 1

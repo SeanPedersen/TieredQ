@@ -13,17 +13,18 @@ inline void lookup_epilogue(const FastScanCache& c, const FastScanLookupQuery& q
   const size_t n = std::min(lookup_vector_docs, output_end - first);
   _mm512_mask_storeu_ps(out + first - output_first, n == lookup_vector_docs ? 0xffff : (1u << n) - 1, score);
 }
-// Chunks consecutive 64-document chunks of one block, starting at chunk `first_chunk`: dots[chunk][vector].
+// Adds sections [section_begin, section_end) of Chunks consecutive 64-document chunks of one block, starting at chunk
+// `first_chunk`, to dots[chunk][vector]. Split calls add in the same order as one call over every section.
 template<size_t Chunks>
 __attribute__((target("avx512f,avx512bw"),always_inline))
-inline void lookup_chunks_avx512(const FastScanLookupCache& lookup, const FastScanLookupQuery& q, const uint8_t* base,
-    size_t first_chunk, __m512 (&dots)[Chunks][4]) {
+inline void lookup_sections_avx512(const FastScanLookupCache& lookup, const FastScanLookupQuery& q, const uint8_t* base,
+    size_t first_chunk, size_t section_begin, size_t section_end, __m512 (&dots)[Chunks][4]) {
   const auto mask = _mm512_set1_epi8(lookup_table_entries-1), ones = _mm512_set1_epi8(1);
   const auto order0 = _mm512_setr_epi64(0,1,8,9,2,3,10,11);
   const auto order1 = _mm512_setr_epi64(4,5,12,13,6,7,14,15);
-  for(size_t chunk=0;chunk<Chunks;++chunk)for(auto& dot:dots[chunk])dot=_mm512_setzero_ps();
   base += first_chunk*lookup_chunk_docs;
-  for (size_t section = 0, start = 0; section < lookup.section_ends.size(); start = lookup.section_ends[section++]) {
+  for (size_t section = section_begin, start = section ? lookup.section_ends[section-1] : 0; section < section_end;
+       start = lookup.section_ends[section++]) {
     __m512i sum[Chunks][2];
     for(size_t chunk=0;chunk<Chunks;++chunk)for(auto& x:sum[chunk])x=_mm512_setzero_si512();
     const size_t end = lookup.section_ends[section];
@@ -51,6 +52,13 @@ inline void lookup_chunks_avx512(const FastScanLookupCache& lookup, const FastSc
       dots[chunk][3] = _mm512_add_ps(dots[chunk][3],_mm512_mul_ps(_mm512_cvtepi32_ps(_mm512_cvtepi16_epi32(_mm512_extracti64x4_epi64(z,1))),scale));
     }
   }
+}
+template<size_t Chunks>
+__attribute__((target("avx512f,avx512bw"),always_inline))
+inline void lookup_chunks_avx512(const FastScanLookupCache& lookup, const FastScanLookupQuery& q, const uint8_t* base,
+    size_t first_chunk, __m512 (&dots)[Chunks][4]) {
+  for(size_t chunk=0;chunk<Chunks;++chunk)for(auto& dot:dots[chunk])dot=_mm512_setzero_ps();
+  lookup_sections_avx512<Chunks>(lookup,q,base,first_chunk,0,lookup.section_ends.size(),dots);
 }
 template<size_t Chunks>
 __attribute__((target("avx512f,avx512bw")))
