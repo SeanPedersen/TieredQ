@@ -78,6 +78,7 @@ struct TieredQPanels {
 };
 class TieredQIndex;
 class TieredQRefinement;
+class TieredQNestedIVFIndex;
 class TieredQ {
  public:
   static TieredQ train(TieredQConfig config, const float* sample, size_t rows, uint64_t seed = 0);
@@ -150,6 +151,7 @@ class TieredQ {
   friend class TieredQIVFIndex;
   friend struct tieredq_detail::FastQueryBasis;
   friend class TieredQRefinement;
+  friend class TieredQNestedIVFIndex;
   TieredQ() = default;
   static TieredQ train_model(TieredQConfig config, const tieredq_detail::TrainingRows& sample, size_t rows, bool additive_wide_tiers, uint64_t seed);
   TieredQConfig config_;
@@ -302,6 +304,11 @@ class TieredQIVFIndex {
                                  TieredQPruning pruning = {}) const;
   void search_batch(const float* queries, const TieredQQuery* weights, size_t rows, size_t k, size_t nprobe,
                     float* scores, uint32_t* ids, TieredQPruning pruning = {}) const;
+  // Stored document of every input row id (id order), to address document_rows().
+  std::vector<uint32_t> id_documents() const;
+  // codec().encode() rows (bytes_per_vector() each) of stored documents, recovered exactly from the list storage, so
+  // an index keeps no row-major copy of its codes (e.g. for TieredQRefinement rescoring of its hits).
+  void document_rows(const uint32_t* documents, size_t count, uint8_t* rows) const;
   // Self-contained bytes (model, lists and fast payload) for an engine's own storage container.
   std::vector<uint8_t> serialize() const;
   static TieredQIVFIndex deserialize(const std::vector<uint8_t>& bytes);

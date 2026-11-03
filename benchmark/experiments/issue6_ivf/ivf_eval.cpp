@@ -22,10 +22,16 @@
 // B-1 ex-bits). tieredq-residual:B refines a flat TieredQ prefix with a residual TieredQ at B*d total bits;
 // tieredq-refinement:B nests a TieredQRefinement suffix on the flat prefix (B*d total code bits). PREFIX_BITS sets
 // the prefix budget of both (default 1416). Rerank rows end with rescore and rescore_bytes (the tier per vector; fp32_bits stays the FP32 size).
+// Mode tieredq-nested CODE_BITS runs the engine flow (#23), TieredQNestedIVFIndex: the CODE_BITS prefix IVF and a
+// NESTED_BITS (default 4) refinement suffix tier, rescoring each RERANK depth k' (required) of candidates. NESTED_TIER=file
+// writes the suffix to NESTED_FILE (default issue6-nested-PID.rows in the temp directory, removed after) and reads
+// candidates by pread; ram (default) keeps it in memory. Rows: tieredq-nested budget nlist nprobe disk_bits code_bits
+// rerank_k recall suffix_bytes tier qps_1t_b1 qps_8t_b32 build_s list_hash.
 // Mode tieredq-nesting B1,B2,... (storage only) prints whether each budget's model refines the previous one.
 // Usage: issue6_ivf_eval MODE BUDGET DATA_DIR D NLIST TIMED(0|1) NPROBE...   (RaBitQ needs BENCH_SEED set)
 #include "tieredq/tieredq.h"
 #include "tieredq/tieredq_refinement.h"
+#include "tieredq/tieredq_nested.h"
 #include <rabitqlib/index/estimator.hpp>
 #include <rabitqlib/index/ivf/ivf.hpp>
 #include <rabitqlib/index/query.hpp>
@@ -478,6 +484,72 @@ void run_tieredq(const Data& data,uint32_t code_bits,size_t nlist,bool timed,con
         list_hash(sizes),timed,nprobes,tiers);
 }
 
+std::shared_ptr<const dv::TieredQRowSource> nested_suffix(const Data& data,const dv::TieredQNestedIVFIndex& index,
+                                                          const std::string& tier,const std::string& path) {
+  constexpr size_t chunk_rows=65536;
+  const size_t row_bytes=index.suffix_bytes_per_vector();
+  if (tier=="ram") {
+    std::vector<uint8_t> rows(data.n*row_bytes);
+    index.encode_suffix(data.base.data(),0,data.n,rows.data());
+    return std::make_shared<dv::TieredQMemoryRows>(std::move(rows),row_bytes);
+  }
+  if (tier!="file") { std::fprintf(stderr,"NESTED_TIER must be ram or file\n"); std::exit(2); }
+  dv::TieredQRowFileWriter writer(path,row_bytes);
+  std::vector<uint8_t> rows(chunk_rows*row_bytes);
+  for (size_t first=0;first<data.n;first+=chunk_rows) {
+    const size_t count=std::min(chunk_rows,data.n-first);
+    index.encode_suffix(data.base.data()+first*data.d,first,count,rows.data());
+    writer.append(rows.data(),count);
+  }
+  writer.finish();
+  return std::make_shared<dv::TieredQFileRows>(path);
+}
+
+void run_nested(const Data& data,uint32_t code_bits,size_t nlist,bool timed,const std::vector<size_t>& nprobes) {
+  const auto depths=rerank_depths();
+  if (depths.empty()) { std::fprintf(stderr,"tieredq-nested needs RERANK depths\n"); std::exit(2); }
+  const uint32_t bits=std::getenv("NESTED_BITS") ? uint32_t(std::stoul(std::getenv("NESTED_BITS"))) : 4;
+  const std::string tier=std::getenv("NESTED_TIER") ? std::getenv("NESTED_TIER") : "ram";
+  const std::string path=std::getenv("NESTED_FILE") ? std::getenv("NESTED_FILE") :
+      (std::filesystem::temp_directory_path()/("issue6-nested-"+std::to_string(::getpid())+".rows")).string();
+  const auto start=std::chrono::steady_clock::now();
+  omp_set_num_threads(threads);
+  auto index=ivf_index(data,train(data,code_bits,nlist));
+  index.build(data.base.data(),data.n);
+  std::vector<size_t> sizes(index.lists());
+  for (size_t list=0;list<sizes.size();++list) sizes[list]=index.list_size(list);
+  const double disk_bits=tieredq_disk_bits(index);
+  const auto sample=training_sample(data);
+  auto refinement=dv::TieredQRefinement::train(index.codec(),bits*uint32_t(data.d),sample.data(),sample.size()/data.d,seed);
+  dv::TieredQNestedIVFIndex nested(std::move(index),std::move(refinement));
+  nested.attach_suffix(nested_suffix(data,nested,tier,path));
+  const double build_s=seconds_since(start);
+  std::vector<float> scores(data.nq*top_k);
+  std::vector<uint32_t> ids(data.nq*top_k);
+  for (size_t nprobe:nprobes) for (size_t depth:depths) {
+    omp_set_num_threads(threads);
+    nested.search_batch(data.queries.data(),data.nq,top_k,nprobe,depth,scores.data(),ids.data(),pruning());
+    const double r=recall(data,ids);
+    double qps1=0,qps8=0;
+    if (timed) {
+      qps8=double(data.nq)/best_seconds([&] {
+        for (size_t q=0;q<data.nq;q+=batch)
+          nested.search_batch(data.queries.data()+q*data.d,std::min(batch,data.nq-q),top_k,nprobe,depth,
+                              scores.data()+q*top_k,ids.data()+q*top_k,pruning());
+      });
+      omp_set_num_threads(1);
+      qps1=double(data.nq)/best_seconds([&] {
+        for (size_t q=0;q<data.nq;++q) nested.search(data.queries.data()+q*data.d,top_k,nprobe,depth,pruning());
+      });
+    }
+    std::printf("tieredq-nested\t%u\t%zu\t%zu\t%.1f\t%u\t%zu\t%.4f\t%zu\t%s\t%.0f\t%.0f\t%.2f\t%016llx\n",code_bits,
+                nested.index().lists(),nprobe,disk_bits,nested.index().codec().config().code_bits,depth,r,
+                nested.suffix_bytes_per_vector(),tier.c_str(),qps1,qps8,build_s,static_cast<unsigned long long>(list_hash(sizes)));
+    std::fflush(stdout);
+  }
+  if (tier=="file" && !std::getenv("NESTED_FILE")) std::filesystem::remove(path);
+}
+
 // Repeated single-query loops on the calling thread, nothing else timed: a clean perf target.
 void profile_tieredq(const Data& data,uint32_t code_bits,size_t nlist,const std::vector<size_t>& nprobes) {
   const size_t profile_rounds=std::getenv("PROFILE_ROUNDS") ? std::stoul(std::getenv("PROFILE_ROUNDS")) : 10;
@@ -655,6 +727,7 @@ int main(int argc,char** argv) {
   for (int a=7;a<argc;++a) nprobes.push_back(std::stoul(argv[a]));
   if (mode=="tieredq") run_tieredq(data,uint32_t(budget),nlist,timed,nprobes,budget);
   else if (mode=="tieredq-match") run_tieredq(data,match_code_bits(data,budget,nlist),nlist,timed,nprobes,budget);
+  else if (mode=="tieredq-nested") run_nested(data,uint32_t(budget),nlist,timed,nprobes);
   else if (mode=="tieredq-profile") profile_tieredq(data,uint32_t(budget),nlist,nprobes);
   else if (mode=="rescore-profile") profile_rescore(data,uint32_t(budget),nlist,nprobes[0]);
   else if (mode=="rabitq") run_rabitq(data,size_t(budget),nlist,timed,nprobes);
