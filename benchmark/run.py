@@ -33,6 +33,8 @@ def codec_config(args, transform):
         return CONFIG
     if args.codec == "tieredq":
         return "fast-native" if args.legacy_l2_lift or args.datasets[0] != "sift" else "fast-native-metric-l2"
+    if args.codec == "tieredq-nested":
+        return f"nested-native-p{args.prefix_bits}-k{args.candidates}"
     return "flat-fht-full-score-hacc" if args.full_score else "flat-fht-native-bounds-hacc"
 
 
@@ -41,6 +43,8 @@ def build_index(args, vectors):
     if args.codec == "qdrant":
         from qdrant_codec import QdrantIndex
         return QdrantIndex.build(vectors, args.bits[0], args.datasets[0] == "sift")
+    if args.codec == "tieredq-nested":
+        return codec_native.NestedIndex(vectors, args.seeds[0], args.prefix_bits, args.code_bits, args.candidates)
     return codec_native.Index(vectors, args.bits[0], args.seeds[0], args.codec == "tieredq", args.datasets[0] == "sift",
                               True, args.code_bits or 0, not args.legacy_l2_lift)
 
@@ -108,14 +112,19 @@ def main():
     parser.add_argument("--output", type=Path, default=HERE/"output")
     parser.add_argument("--full-score", action="store_true", help="Disable native RaBitQ extra-bit bound pruning")
     parser.add_argument("--legacy-l2-lift", action="store_true", help="Use the original unconditioned TieredQ L2 lift")
-    parser.add_argument("--codec", choices=["tieredq", "rabitq", "qdrant"])
+    parser.add_argument("--codec", choices=["tieredq", "tieredq-nested", "rabitq", "qdrant"])
     parser.add_argument("--cell", type=Path)
-    parser.add_argument("--code-bits", type=int, help="Exact TieredQ code budget per vector (e.g. a match_memory result)")
+    parser.add_argument("--code-bits", type=int, help="Exact TieredQ code budget per vector (e.g. a match_memory result); "
+                        "for tieredq-nested the total prefix plus suffix budget")
+    parser.add_argument("--prefix-bits", type=int, help="tieredq-nested: prefix code budget per vector")
+    parser.add_argument("--candidates", type=int, help="tieredq-nested: candidates rescored per query (k')")
     args = parser.parse_args()
     if args.max_base is not None and args.max_base < 10:
         parser.error("--max-base must be at least 10")
-    if args.code_bits is not None and (args.codec != "tieredq" or args.code_bits < 1):
-        parser.error("--code-bits needs --codec tieredq and a positive budget")
+    if args.code_bits is not None and (args.codec not in ("tieredq", "tieredq-nested") or args.code_bits < 1):
+        parser.error("--code-bits needs --codec tieredq or tieredq-nested and a positive budget")
+    if args.codec == "tieredq-nested" and not (args.code_bits and args.prefix_bits and args.candidates):
+        parser.error("--codec tieredq-nested needs --code-bits, --prefix-bits and --candidates")
     if any(seed < 0 for seed in args.seeds):
         parser.error("seeds must be nonnegative")
     if not args.codec and 0 not in args.seeds:

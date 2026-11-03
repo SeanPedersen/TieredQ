@@ -5,6 +5,7 @@
 #include <numeric>
 #include <random>
 #include <tieredq/tieredq.h>
+#include <tieredq/tieredq_nested_flat.h>
 #include "rabitq_flat.h"
 #include <filesystem>
 #include <chrono>
@@ -118,6 +119,53 @@ class Index {
     return std::max<size_t>(std::filesystem::file_size(path), served.storage_bytes()+served.codec().memory_bytes());
   }
 };
+// Flat nested TieredQ (#13): a prefix_bits prefix scanned for every row, the top `candidates` rescored with a
+// TieredQRefinement tier to code_bits, both trained on the same seeded sample as Index's TieredQ path.
+class NestedIndex {
+  std::unique_ptr<dv::TieredQNestedIndex> nested_;
+  size_t width_, candidates_;
+  double encode_s_ = 0;
+ public:
+  NestedIndex(Matrix base, uint64_t seed, size_t prefix_bits, size_t code_bits, size_t candidates)
+      : width_(base.shape(1)), candidates_(candidates) {
+    const size_t count = base.shape(0);
+    if (count < top_k || !width_ || candidates < top_k || prefix_bits >= code_bits)
+      throw std::invalid_argument("invalid nested index shape/budgets/candidates");
+    const size_t train_count = std::min(count, training_limit);
+    std::vector<uint32_t> order(count);
+    std::iota(order.begin(), order.end(), 0);
+    std::mt19937_64 rng(seed);
+    std::shuffle(order.begin(), order.end(), rng);
+    std::vector<float> sample(train_count*width_);
+    for (size_t i=0; i<train_count; ++i) std::copy_n(base.data()+size_t(order[i])*width_, width_, sample.data()+i*width_);
+    auto config = dv::TieredQConfig::target_code_bits(width_, prefix_bits);
+    config.num_centroids = std::min<size_t>(256, count / 2);
+    auto prefix = dv::TieredQ::train(config, sample.data(), train_count, seed);
+    auto refinement = dv::TieredQRefinement::train(prefix, code_bits, sample.data(), train_count, seed);
+    const auto start = std::chrono::steady_clock::now();
+    nested_ = std::make_unique<dv::TieredQNestedIndex>(std::move(prefix), std::move(refinement), base.data(), count);
+    encode_s_ = std::chrono::duration<double>(std::chrono::steady_clock::now()-start).count();
+  }
+  double encode_seconds() const { return encode_s_; }
+  void search(Matrix queries, Ids ids, int threads) const {
+    const size_t rows=queries.shape(0);
+    if (queries.shape(1)!=width_ || ids.shape(0)!=rows || ids.shape(1)!=top_k || threads<1)
+      throw std::invalid_argument("invalid search shapes/threads");
+    omp_set_num_threads(threads);
+    if (rows==1) {
+      const auto hits = nested_->search(queries.data(), top_k, candidates_);
+      for (size_t i=0; i<top_k; ++i) ids.data()[i] = i<hits.size() ? hits[i].id : UINT32_MAX;
+      return;
+    }
+    std::vector<float> scores(rows*top_k);
+    nested_->search_batch(queries.data(), rows, top_k, candidates_, scores.data(), ids.data());
+  }
+  // Serving footprint: the larger of the serialized index plus tier rows and the in-RAM accounting.
+  size_t storage(const std::string&) const {
+    const size_t tier = nested_->size()*nested_->nested().tier_bytes_per_vector();
+    return std::max(nested_->nested().serialize().size()+tier, nested_->storage_bytes());
+  }
+};
 NB_MODULE(codec_native, m) {
   m.attr("rabitq_high_accuracy") = rabitq_high_accuracy;
   m.attr("rabitq_implicit_ids") = true;
@@ -145,4 +193,9 @@ NB_MODULE(codec_native, m) {
     .def("save", &Index::save, nb::call_guard<nb::gil_scoped_release>())
     .def("resident_bytes", &Index::resident_bytes)
     .def_static("load", &Index::load, nb::call_guard<nb::gil_scoped_release>());
+  nb::class_<NestedIndex>(m,"NestedIndex")
+    .def(nb::init<Matrix,uint64_t,size_t,size_t,size_t>(), nb::call_guard<nb::gil_scoped_release>())
+    .def_prop_ro("encode_seconds", &NestedIndex::encode_seconds)
+    .def("search", &NestedIndex::search, nb::call_guard<nb::gil_scoped_release>())
+    .def("storage", &NestedIndex::storage);
 }

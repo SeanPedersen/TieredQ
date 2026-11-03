@@ -43,3 +43,15 @@ k' is the smallest of 30 / 50 / 100 whose seed-0 recall reaches RaBitQ's. Mean R
 - At RaBitQ's 2-bit memory the 1536-bit prefix with 2 bits/dim total gains +4.2 pt R@10 at 0.94x / 1.15x its QPS.
 - The eval's IVF with one list is what `dv::TieredQNestedIndex` (`tieredq_nested_flat.h`) wraps: the library's flat
   nested index builds this configuration.
+
+## `TieredQNestedIndex` through `run.py` (`runpy/`)
+The library class through the benchmark adapter (`codec_native.NestedIndex`, `run.py --codec tieredq-nested`): a
+512-bit prefix, 4608 total code bits, 2 interleaved rounds alone on CPUs 0-7, seed 0, against the run.py RaBitQ 4-bit
+reference cells. Stored bits here are the larger of the serialized index plus tier rows and the in-RAM accounting.
+
+| Dataset | k' | R@10 seed 0 | Stored bits TQ / ref | QPS 8t·b32 TQ / ref | QPS 1t·b32 TQ / ref | p50 1t·b1 ms TQ / ref |
+|---|---:|---:|---|---|---|---|
+| OpenAI-1536 100k | 50 | 0.9671 | 5,271 / 6,305 (0.84×) | 5,177-9,668 / 3,917 (1.3-2.5×) | 1,534 / 539 (2.85×) | 0.87 / 1.83 (0.48×) |
+| OpenAI-1536 1M | 100 | 0.9716 | 4,833 / 6,304 (0.77×) | 1,083 / 375 (2.89×) | 150 / 51 (2.93×) | 7.27 / 19.27 (0.38×) |
+
+Recall equals the eval's (0.9671, 0.9716). The 100K batched rounds disagree by 1.9x; the other cells agree within 3%.
