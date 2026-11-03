@@ -119,9 +119,10 @@ auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*p
   for 0.001–0.003 recall at 2 and 4 bits/dim. Confidence 4 or less loses clearly more recall.
   Pruning needs the exact FP32 scan, so it does nothing on default fast models with tiers above 4 bits, which score
   through nibble tables instead. To combine them, train with `TieredQConfig::target_mode = TieredQIndexMode::full`
-  (Python `exact_fast_scores=True`). At 4 bits/dim on OpenAI 100k, exact with confidence 8 was 4–11% faster than
-  nibble scoring at equal or slightly higher recall; on OpenAI 1M it was 17–21% faster but lost 0.4 pt R@10.
-  At 2 bits/dim nibble scoring was faster (#13).
+  (Python `exact_fast_scores=True`). Measured at 4 bits/dim: on OpenAI-1536 100k exact with confidence 8 was 4–11%
+  faster than nibble scoring at equal or slightly higher recall, and on OpenAI 1M 17–21% faster but 0.4 pt R@10 lower;
+  on Gemini-768 nibble scoring was 20–38% faster, at 0.2 pt R@10 lower. At 2 bits/dim nibble scoring was faster on
+  both (#13).
 - **Bit cap.** At about 2 bits/dim or less, training with `TieredQConfig::max_bits = 4` keeps every tier on the
   nibble lookup kernel. That gave 1.7× RaBitQ's IVF QPS at equal recall and memory (OpenAI 100k), for about
   0.006 recall at full probe. Don't use it at 4 bits/dim, where it loses recall.
