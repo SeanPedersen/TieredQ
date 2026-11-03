@@ -79,6 +79,32 @@ need rebuilding to recover that precision. Their fast storage keeps codes at tie
 width; files saved with the earlier one-byte-per-coordinate layout still load and are
 repacked. See the [high-bit investigation](docs/high-bit-recall.md).
 
+### IVF and nested search (Python)
+
+```python
+from tieredq import TieredQIVFIndex, TieredQNestedIVFIndex
+
+ivf = TieredQIVFIndex(dimensions=d, code_bits=2 * d, lists=1024)  # lists=0: one list per codec centroid
+ivf.build(vectors)  # trains the codec (seeded 32,768-row sample) and the lists, then indexes
+scores, ids = ivf.search(queries, k=10, nprobe=32)
+
+# Prefix codes in an in-RAM IVF; candidates rescored with a 4 bits/dim refinement tier on SSD.
+index = TieredQNestedIVFIndex.build(vectors, prefix_bits=768, total_bits=4 * d, lists=256)
+index.write_tier("tier.rows", vectors)  # or index.attach_tier(index.encode_tier(vectors)) to keep it in RAM
+index.attach_tier("tier.rows", reads="direct", queue_depth=32)
+scores, ids = index.search(queries, k=10, nprobe=64, candidates=50)
+index.save("nested.tq")  # IVF, refinement and tier layout; attach the tier again after load()
+```
+
+- One `build` trains the prefix, the lists and the refinement from the same seeded sample, so they cannot be
+  mismatched. Pass `sample=` to train on earlier data instead; its rows also fix the lists for later builds (as
+  `TieredQIVFIndex.train_lists` does).
+- `tier_rows="suffix"` stores a smaller tier and decodes each candidate's prefix from the lists (see the C++ notes).
+- Tier rows kept in another store (a database, an object store): `ids = index.candidates(queries, 50, nprobe=64)`,
+  fetch the `encode_tier` rows of those ids (shape `ids.shape + (index.tier_bytes_per_vector,)`; ids of
+  `2**32 - 1` are padding), then `scores, ids = index.rescore(queries, ids, rows, k=10)`.
+- `pruning=TieredQPruning(confidence=8)` opts IVF and nested scans into approximate pruning (see below).
+
 ## C++
 
 ```sh
@@ -169,7 +195,9 @@ auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*p
   auto hits = index.search(query, /*k=*/10, /*candidates=*/100);
   ```
 
-  `serialize()` stores the IVF, the refinement and the tier layout; after loading, attach the tier again.
+  `serialize()` stores the IVF, the refinement and the tier layout; after loading, attach the tier again. For a
+  tier in an external store, run `index().search_batch` for the candidates and `rescore_batch` with their fetched
+  tier rows; it needs no attached tier.
 
   At 1M, 512 / 768 bit prefixes + a 4-bit refinement (about 700 B/vector) beat RaBitQ's own 5/6-bit codes by 1.2-2.4x
   QPS at R@10 0.95-0.98 with 28-43% fewer rerank bytes. Refinement recall tops out near 0.984; above that use INT8.

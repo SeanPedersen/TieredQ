@@ -106,16 +106,29 @@ class TieredQNestedIVFIndex {
   // score -inf. Queries are split across OpenMP workers.
   void search_batch(const float* queries, size_t rows, size_t k, size_t nprobe, size_t candidates, float* scores,
                     uint32_t* ids, TieredQPruning pruning = {}) const;
+  // Second step of a search over a tier stored elsewhere (e.g. a database); the first is index().search_batch with
+  // depth candidates. Rescores each query's candidate ids (rows x depth, ended early by UINT32_MAX) using their tier
+  // rows (rows x depth x tier_bytes_per_vector(), as encode_tier() writes them; slots past a query's last id are
+  // ignored). Results as search_batch; no tier needs to be attached.
+  void rescore_batch(const float* queries, size_t rows, const uint32_t* candidates, size_t depth,
+                     const uint8_t* tier_rows, size_t k, float* scores, uint32_t* ids) const;
   // Index, refinement and tier layout; the tier rows are stored by the row source and attached after loading.
   std::vector<uint8_t> serialize() const;
   static TieredQNestedIVFIndex deserialize(const std::vector<uint8_t>& bytes);
 
  private:
-  // Candidates' prefix and suffix rows, each row-major, from the tier (and the lists for suffix-only tiers).
-  void candidate_rows(const uint32_t* candidates, size_t found, uint8_t* prefix_rows, uint8_t* suffix_rows) const;
-  // Rescores one query's found candidates (best first) in place to its top k; returns how many it kept.
+  // The attached tier's rows of the candidates, in a per-thread buffer valid until the next call.
+  const uint8_t* read_tier(const uint32_t* candidates, size_t found) const;
+  // Writes the candidates' row-major prefix rows (from the lists for suffix-only tiers) and returns their suffix
+  // rows: the tier rows themselves for suffix-only tiers, else split into suffix_rows.
+  const uint8_t* candidate_rows(const uint32_t* candidates, size_t found, const uint8_t* tier_rows,
+                                uint8_t* prefix_rows, uint8_t* suffix_rows) const;
+  // Rescores one query's found candidates (best first, with their tier rows) to its top k; returns how many it kept.
   size_t rescore(const float* query, const TieredQRefinementQuery& refined_query, const uint32_t* candidates, size_t found,
-                 size_t k, float* scores, uint32_t* ids) const;
+                 const uint8_t* tier_rows, size_t k, float* scores, uint32_t* ids) const;
+  // Rescores row-major candidate lists (depth per query, UINT32_MAX-terminated) into rows x min(k, size()) results.
+  void rescore_rows(const float* queries, size_t rows, std::vector<TieredQQuery> weights, const uint32_t* candidates,
+                    size_t depth, const uint8_t* tier_rows, size_t k, float* scores, uint32_t* ids) const;
   TieredQIVFIndex index_;
   TieredQRefinement refinement_;
   TieredQTierRows tier_rows_;

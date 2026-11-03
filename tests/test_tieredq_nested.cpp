@@ -177,6 +177,33 @@ void batch_file_and_serialization_test(TieredQTierRows tier_rows) {
   std::filesystem::remove(path);
 }
 
+// Two-step search over an external tier: prefix candidates, then rescoring with caller-gathered tier rows (zeros in
+// padded slots) answers as search_batch does; out-of-range ids are rejected.
+void external_tier_test(TieredQTierRows tier_rows) {
+  const auto data=clustered_rows(rows,seed),probes=clustered_rows(queries,seed+1);
+  const auto index=nested(data,TieredQMetric::inner_product,tier_rows);
+  std::vector<float> scores(queries*k); std::vector<uint32_t> ids(queries*k);
+  index.search_batch(probes.data(),queries,k,nprobe,candidates,scores.data(),ids.data());
+
+  const size_t stride=index.tier_bytes_per_vector();
+  std::vector<uint8_t> tier(rows*stride);
+  index.encode_tier(data.data(),0,rows,tier.data());
+  std::vector<float> found_scores(queries*candidates); std::vector<uint32_t> found(queries*candidates);
+  index.index().search_batch(probes.data(),queries,candidates,nprobe,found_scores.data(),found.data());
+  std::vector<uint8_t> gathered(found.size()*stride,0);
+  for (size_t i=0;i<found.size();++i)
+    if (found[i]!=UINT32_MAX) std::copy_n(tier.data()+size_t(found[i])*stride,stride,gathered.data()+i*stride);
+  std::vector<float> rescored(queries*k); std::vector<uint32_t> rescored_ids(queries*k);
+  index.rescore_batch(probes.data(),queries,found.data(),candidates,gathered.data(),k,rescored.data(),rescored_ids.data());
+  require(rescored==scores && rescored_ids==ids,"external tier rescoring differs from search_batch");
+
+  found[0]=uint32_t(rows);
+  bool rejected=false;
+  try { index.rescore_batch(probes.data(),1,found.data(),candidates,gathered.data(),k,rescored.data(),rescored_ids.data()); }
+  catch (const std::runtime_error&) { rejected=true; }
+  require(rejected,"out-of-range candidate id accepted");
+}
+
 void mismatched_prefix_test() {
   const auto data=clustered_rows(rows,seed);
   const auto prefix=train(data,prefix_bits,TieredQMetric::inner_product);
@@ -197,6 +224,7 @@ void tieredq_nested_tests() {
   for (auto tier_rows:{TieredQTierRows::prefix_and_suffix,TieredQTierRows::suffix}) {
     for (auto metric:{TieredQMetric::inner_product,TieredQMetric::cosine,TieredQMetric::l2}) search_test(metric,tier_rows);
     batch_file_and_serialization_test(tier_rows);
+    external_tier_test(tier_rows);
   }
   mismatched_prefix_test();
   std::cout<<"nested IVF tests passed\n";

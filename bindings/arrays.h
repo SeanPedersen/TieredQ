@@ -30,5 +30,33 @@ inline size_t array_elements(size_t rows, size_t columns) {
     throw std::invalid_argument("array size overflow");
   return rows * columns;
 }
+// Search outputs, shaped rows x width, or width for a single 1-D query.
+struct SearchResult {
+  std::vector<float> scores;
+  std::vector<uint32_t> ids;
+  std::vector<size_t> shape;
+};
+struct QueryRows {
+  size_t rows;
+  bool single;  // a 1-D query, answered with 1-D outputs
+};
+inline QueryRows query_rows(const FloatArray& queries, size_t dimensions) {
+  const size_t rank = queries.ndim();
+  if (rank != 1 && rank != 2) throw std::invalid_argument("queries must be a 1-D or 2-D float32 array");
+  require_width(queries.shape(rank - 1), dimensions);
+  return {rank == 1 ? 1 : queries.shape(0), rank == 1};
+}
+inline SearchResult empty_result(QueryRows queries, size_t width) {
+  const size_t elements = array_elements(queries.rows, width);
+  return {std::vector<float>(elements, 0.0f), std::vector<uint32_t>(elements, 0),
+          queries.single ? std::vector<size_t>{width} : std::vector<size_t>{queries.rows, width}};
+}
+// Needs the GIL.
+inline nb::tuple result_tuple(SearchResult result) {
+  return nb::make_tuple(owned_array(std::move(result.scores), result.shape),
+                        owned_array(std::move(result.ids), result.shape));
+}
 void bind_index(nb::module_& module);
+void bind_ivf(nb::module_& module);
+void bind_nested(nb::module_& module);
 }  // namespace tieredq_python

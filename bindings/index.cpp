@@ -5,49 +5,24 @@
 // released for every native call.
 #include "arrays.h"
 #include "search.h"
+#include "training.h"
 #include <nanobind/stl/optional.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/unique_ptr.h>
 #include <algorithm>
 #include <memory>
 #include <mutex>
-#include <numeric>
 #include <optional>
-#include <random>
 #include <shared_mutex>
 
 namespace tieredq_python {
 using namespace nb::literals;
 namespace {
-// A training sample smaller than twice the cap cannot seed that many
-// centroids, so the default shrinks to fit instead of failing at train time.
-constexpr uint32_t maximum_auto_centroids = 256;
-constexpr uint64_t training_seed = 0;
-// Recall saturates at 8-16K training rows on 1M-row sets (#19.2), so larger
-// first batches train on this many rows.
-constexpr size_t training_sample_rows = 32768;
-uint32_t auto_centroids(size_t sample_rows) {
-  return std::min(maximum_auto_centroids, static_cast<uint32_t>(sample_rows / 2));
-}
 dv::TieredQIndexMode parse_index_mode(const std::string& mode) {
   if (mode=="fast") return dv::TieredQIndexMode::fast;
   if (mode=="full") return dv::TieredQIndexMode::full;
   throw std::invalid_argument("mode must be 'fast' or 'full'");
 }
-dv::TieredQMetric parse_metric(const std::string& metric) {
-  if (metric=="ip") return dv::TieredQMetric::inner_product;
-  if (metric=="cosine") return dv::TieredQMetric::cosine;
-  if (metric=="l2") return dv::TieredQMetric::l2;
-  throw std::invalid_argument("metric must be 'ip', 'cosine' or 'l2'");
-}
-const char* metric_name(dv::TieredQMetric metric) {
-  return metric==dv::TieredQMetric::l2 ? "l2" : metric==dv::TieredQMetric::cosine ? "cosine" : "ip";
-}
-struct SearchResult {
-  std::vector<float> scores;
-  std::vector<uint32_t> ids;
-  std::vector<size_t> shape;
-};
 }  // namespace
 
 class PythonIndex {
@@ -93,12 +68,7 @@ class PythonIndex {
       if (!rows.shape(0)) return;
       if (rows.shape(0) < 2)
         throw std::runtime_error("the first add() needs at least 2 rows to train");
-      const size_t count = rows.shape(0), sample = std::min(count, training_sample_rows);
-      std::vector<uint32_t> ids(count);
-      std::iota(ids.begin(), ids.end(), 0);
-      if (sample < count) std::shuffle(ids.begin(), ids.end(), std::mt19937_64(training_seed));
-      config_.num_centroids = auto_centroids(sample);
-      index_.emplace(dv::TieredQ::train_sampled(config_, rows.data(), count, ids.data(), sample, training_seed), mode_);
+      index_.emplace(train_codec(config_, rows.data(), rows.shape(0)), mode_);
     }
     index_->add(rows.data(), rows.shape(0));
   }
