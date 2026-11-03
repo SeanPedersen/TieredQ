@@ -39,3 +39,17 @@ describe c0910d6. `final/tables.md` is authoritative for the equal-recall rows; 
 The SIFT1M recall figures above compare with cells from an older tree and overstate the loss. `diag-sift/out.tsv`, same
 tree, three seeds, nibble vs Lloyd-Max exact: -0.72 / -0.24 / -0.52 pt at 253 / 354 / 573 bits.
 The SIFT1M p50 rise on the unchanged exact path is unexplained. One timing pass per cell, as the reference cells.
+
+## Same-budget A/B: daf7184 vs current code (`ab-daf7184/`)
+Interleaved, 3 rounds, alone on CPUs 0-7, median. Supersedes the same-budget notes above, whose baselines come from older
+trees. SIFT1M p50 is unchanged here: the 11.33 -> 14.56 ms rise above was a stale old cell.
+
+Models with 7-8 bit tiers (QPS ratio, new / old):
+| Cell | 8t.b32 | 1t.b32 | 8t.b1 | 1t.b1 | R@10, seed 0 |
+|---|---:|---:|---:|---:|---:|
+| Gemini 2972 bits | 0.96x | 0.83x | 1.86x | 1.73x | 0.9794 -> 0.9801 |
+| OpenAI-100K 5689 bits | 0.97x | 0.89x | 1.67x | 1.96x | 0.9850 -> 0.9841 |
+| OpenAI-1M 6173 bits | 0.96x | 0.88x | 1.61x | 1.36x | 0.9897 -> 0.9859 |
+
+Other cells (SIFT1M L2, GloVe 165 bits, OpenAI-100K 1257 bits) show no slowdown beyond their round-to-round spread.
+Walking query groups over 64-document chunks instead of 256-document blocks is about 30-40% slower: rejected.
