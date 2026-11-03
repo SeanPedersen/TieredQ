@@ -53,3 +53,12 @@ Models with 7-8 bit tiers (QPS ratio, new / old):
 
 Other cells (SIFT1M L2, GloVe 165 bits, OpenAI-100K 1257 bits) show no slowdown beyond their round-to-round spread.
 Walking query groups over 64-document chunks instead of 256-document blocks is about 30-40% slower: rejected.
+
+## Forced backends (`backend/`)
+OpenAI-100K IVF, 64 lists, nprobe 16, seed 0, forced with a workspace-only hook on the AVX-512 host, so not a real AVX2 machine.
+QPS 1 thread / 8 threads, exact -> nibble. Recall is identical across backends within an arm.
+| Backend | 2 bits/dim | 4 bits/dim |
+|---|---:|---:|
+| AVX-512 | 590 / 4,657 -> 923 / 7,739 | 277 / 2,011 -> 397 / 3,069 |
+| AVX2 | 32 / 248 -> 535 / 4,543 | 24 / 184 -> 168 / 1,285 |
+| Scalar | 12 / 89 -> 29 / 219 | 9 / 68 -> 11 / 81 |

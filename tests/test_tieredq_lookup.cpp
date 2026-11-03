@@ -1,6 +1,7 @@
 // Independent scalar checks of byte-table packing, signed accumulation, projection and tail stores.
 #include "tieredq/tieredq.h"
 #include <algorithm>
+#include <climits>
 #include <cmath>
 #include <stdexcept>
 #include <vector>
@@ -196,10 +197,85 @@ void lookup_kernel_test(size_t count,bool avx512,const LookupLayout& layout_spec
   scan(zero_query,0,count,scores.data());
   require(std::all_of(scores.begin(),scores.begin()+count,[](float x){return x==0;}),"zero byte-table query differs");
 }
+// Wide additive models: range-sorted groups and fine sections score alike on every backend and query grouping (#13).
+void wide_additive_backend_test(bool fine) {
+  constexpr size_t dimensions=48,count=1031,centroids=3,query_count=19;
+  constexpr float tolerance=2e-5f;
+  std::vector<std::vector<float>> levels(gaussian_codebooks().begin(),gaussian_codebooks().end());
+  levels[split_code_bits]=additive_three_codebook();
+  for (uint32_t b=lookup_code_bits+1;b<=widest_code_bits;++b) levels[b]=additive_wide_codebook(b);
+  std::vector<TieredQTier> tiers;
+  uint32_t start=0,offset=0;
+  for (uint32_t bits:{8u,7u,6u,5u,4u,3u,2u,1u}) {
+    if (!fine && bits>=fine_section_min_bits) continue;
+    constexpr uint32_t tier_dimensions=5;
+    tiers.push_back({start,tier_dimensions,bits,0,offset}); start+=tier_dimensions; offset+=tier_dimensions*bits;
+  }
+  const size_t weights=start,code_bytes=(offset+CHAR_BIT-1)/CHAR_BIT,stride=code_bytes+TieredQ::metadata_bytes;
+  std::vector<float> basis(dimensions*weights),sigma(weights),mean(weights),centers(dimensions*centroids),norms(centroids,1);
+  for (size_t i=0;i<basis.size();++i) basis[i]=std::sin(float(i));
+  for (size_t i=0;i<weights;++i) { sigma[i]=1/float(i+1); mean[i]=std::cos(float(i)); }
+  for (size_t i=0;i<centers.size();++i) centers[i]=float(i)/centers.size();
+  const std::vector<uint16_t> fp32_basis_only;
+  const FastQueryBasis source{basis,fp32_basis_only,sigma,centers,norms,dimensions};
+  const auto map=build_fast_query_projection(dimensions,source,mean);
+  std::vector<uint8_t> rows(count*stride);
+  const Layout layout{code_bytes};
+  for (size_t d=0;d<count;++d) {
+    auto* row=rows.data()+d*stride;
+    for (const auto& tier:tiers) for (uint32_t j=0;j<tier.dimensions;++j)
+      write_code(row,tier.bit_offset+j*tier.bits,tier.bits,unsigned((d*7+j*3)%(1u<<tier.bits)));
+    row[code_bytes]=uint8_t(d%centroids);
+    layout.store_half(row,layout.factor_offset(),1);
+    layout.store_half(row,layout.correction_offset(),.25);
+  }
+  const auto cache=build_fast_lookup_cache(levels,tiers,map,count,stride,code_bytes,centroids,rows.data(),sigma);
+  const auto& lookup=*cache->lookup;
+  require(lookup.section_ends.back()==lookup.groups.size(),"sections do not cover the groups");
+  require(fine==(lookup.section_ends.front()==lookup_fine_scale_groups),"wrong section size");
+  std::vector<FastScanQueryX86> x86(query_count);
+  std::vector<FastScanScalarQuery> scalar(query_count);
+  std::vector<std::vector<float>> outputs(query_count);
+  for (size_t q=0;q<query_count;++q) {
+    std::vector<float> input(dimensions);
+    for (size_t i=0;i<dimensions;++i) input[i]=std::cos(float(q*dimensions+i));
+    x86[q].lookup=prepare_fast_lookup_query(lookup,input.data(),source);
+    scalar[q].lookup=x86[q].lookup;
+    outputs[q]=project_fast_query(map,input.data(),source);
+    FastScanLookupQuery portable; portable.tables.assign(x86[q].lookup.tables.size(),0);
+    fast_lookup_tables_scalar(lookup,outputs[q].data(),portable);
+    require(portable.tables==x86[q].lookup.tables && portable.scales==x86[q].lookup.scales,"wide tables differ from portable build");
+  }
+  std::vector<float> reference(query_count*count);
+  for (size_t q=0;q<query_count;++q) scan_fast_scalar_tile(*cache,&scalar[q],1,0,count,reference.data()+q*count,count);
+  auto same=[&](const std::vector<float>& scores,const char* message) {
+    for (size_t i=0;i<reference.size();++i) require(std::fabs(scores[i]-reference[i])<=tolerance*(1+std::fabs(reference[i])),message);
+  };
+  // Grouped calls span full and partial query groups, as the batch drivers issue them.
+  auto grouped=[&](auto scan,size_t group) {
+    std::vector<float> scores(query_count*count);
+    for (size_t q=0;q<query_count;q+=group) scan(*cache,x86.data()+q,std::min(group,query_count-q),0,count,scores.data()+q*count,count);
+    return scores;
+  };
+  if (__builtin_cpu_supports("avx2")) same(grouped(scan_fast_avx2_tile,fast_scan_query_tile_avx2),"wide AVX2 scores differ from scalar");
+  if (__builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512bw"))
+    same(grouped(scan_fast_avx512_tile,fast_scan_query_tile_x86),"wide AVX-512 scores differ from scalar");
+  // Independent score from whole levels: table rounding bounds the error by half a scale per group.
+  for (size_t q=0;q<query_count;++q) for (size_t d=0;d<count;++d) {
+    const size_t cid=d%centroids;
+    double exact=x86[q].lookup.centroid_scores[cid]+x86[q].lookup.correction_weights[cid]*.25,bound=1e-3;
+    for (const auto& tier:tiers) for (uint32_t j=0;j<tier.dimensions;++j)
+      exact+=outputs[q][tier.start+j]*levels[tier.bits][read_code(rows.data()+d*stride,tier.bit_offset+j*tier.bits,tier.bits)];
+    for (size_t section=0,first=0;section<lookup.section_ends.size();first=lookup.section_ends[section++])
+      bound+=(lookup.section_ends[section]-first)*x86[q].lookup.scales[section]/2;
+    require(std::fabs(reference[q*count+d]-exact)<=bound,"wide nibble score differs from whole-code levels");
+  }
+}
 } // namespace
 #endif
 void tieredq_lookup_tests() {
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+  for (bool fine:{false,true}) wide_additive_backend_test(fine);
   for (bool avx512:{false,true}) {
     const bool available=avx512 ? (__builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512bw"))
         : bool(__builtin_cpu_supports("avx2"));
