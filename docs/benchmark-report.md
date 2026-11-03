@@ -284,6 +284,24 @@ For each reference cell, the smallest TieredQ budget whose seed-0 R@10 reaches t
 | OpenAI-1536 1M | Qdrant TQ+ | 2 | 0.9104 | 1814 | 0.9122 | 1,889 / 3,136 (0.60×) | 412 / 92 (4.45×) | 52 / 12 (4.41×) | 19.18 / 84.63 (0.23×) |
 | OpenAI-1536 1M | Qdrant TQ+ | 4 | 0.9723 | 4190 | 0.9735 | 4,280 / 6,208 (0.69×) | 172 / 81 (2.13×) | 25 / 10 (2.46×) | 75.39 / 98.52 (0.77×) |
 
+**Update, #13 (2026-11-03): OpenAI-1536 against RaBitQ on current main.** Nibble scoring for wide tiers (c0910d6),
+flat range pruning (08173a5) and the default 6-bit cap for fast IP/cosine tiers (178ef93) change the OpenAI rows
+below. 2 bits/dim: one pass per cell on 9e7bb30
+([issue13-refs-20261102/final](../benchmark/results/issue13-refs-20261102/README.md)), unchanged by the cap. 4 bits/dim:
+median of 3 interleaved rounds on 05ee4d3 with the cap
+([issue13-gap4-20261103](../benchmark/results/issue13-gap4-20261103/README.md)). TieredQ R@10 is the mean over seeds 0-2.
+The other rows of the table above predate #13.
+
+| Dataset | bits/dim | Reference R@10 | TieredQ code bits | TieredQ R@10 | Stored bits TQ / ref | QPS 8t·b32 TQ / ref | QPS 1t·b32 TQ / ref | p50 1t·b1 ms TQ / ref |
+|---|---:|---:|---:|---:|---|---|---|---|
+| OpenAI-1536 100k | 2 | 0.9013 | 1538 | 0.9007 | 1,895 / 3,233 (0.59×) | 7,351 / 4,589 (1.60×) | 999 / 598 (1.67×) | 1.48 / 1.66 (0.89×) |
+| OpenAI-1536 100k | 4 | 0.9674 | 3752 | 0.9664 | 4,264 / 6,305 (0.68×) | 3,453 / 3,917 (0.88×) | 487 / 539 (0.90×) | 3.40 / 1.83 (1.86×) |
+| OpenAI-1536 1M | 2 | 0.9101 | 1820 | 0.9112 | 1,898 / 3,232 (0.59×) | 730 / 378 (1.93×) | 97 / 51 (1.89×) | 19.76 / 19.49 (1.01×) |
+| OpenAI-1536 1M | 4 | 0.9701 | 4082 | 0.9694 | 4,169 / 6,304 (0.66×) | 362 / 375 (0.97×) | 48 / 51 (0.93×) | 34.51 / 19.27 (1.79×) |
+
+- On OpenAI at RaBitQ's 4-bit recall, TieredQ is now at 0.88–0.97× RaBitQ's batched QPS (was 0.41–0.47×) with 32–34%
+  less stored memory. Single-query p50 is still 1.8–1.9× RaBitQ's.
+
 - At equal recall TieredQ stores 0.49–0.95× the reference's bits (0.58–0.73× on OpenAI and Gemini).
 - **Against RaBitQ:** faster batched at every 1- and 2-bit level (1.05–2.15×); at the 4-bit levels it is
   faster on SIFT (1.17×), equal on GloVe (0.96×) and slower on OpenAI and Gemini (0.41–0.47× batched, p50
