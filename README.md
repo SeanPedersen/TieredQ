@@ -134,27 +134,29 @@ auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*p
   weights; nesting costs about no recall against a flat code of the full width:
 
   `dv::TieredQNestedIVFIndex` (`<tieredq/tieredq_nested.h>`) serves this end to end. The prefix codes stay in the
-  in-RAM IVF lists, and the candidates' prefix rows are read back from those lists exactly
-  (`TieredQIVFIndex::document_rows`). The suffix rows are read by id from a `TieredQRowSource`: `TieredQMemoryRows` in
-  RAM, `TieredQFileRows` with one `pread` per candidate on SSD, or your own store:
+  in-RAM IVF lists. Each candidate's tier row is read by id from a `TieredQRowSource`: `TieredQMemoryRows` in RAM,
+  `TieredQFileRows` with one `pread` per candidate on SSD, or your own store. By default a tier row holds the prefix
+  row and the suffix (`TieredQTierRows::prefix_and_suffix`, one contiguous read). `TieredQTierRows::suffix` stores
+  only the suffix and decodes each candidate's prefix from the IVF lists (`TieredQIVFIndex::document_rows`). That tier
+  is smaller (651 vs 784 B/vector at a 1024-bit prefix, d = 1536) but costs about 3.4 us of decoding per candidate and
+  a 4-byte id-to-document map in RAM.
 
   ```cpp
   auto refinement = dv::TieredQRefinement::train(codec, /*total_code_bits=*/4 * d, sample, rows, seed);
   dv::TieredQIVFIndex ivf(codec);
   ivf.build(data, n);
   dv::TieredQNestedIVFIndex index(std::move(ivf), std::move(refinement));
-  dv::TieredQRowFileWriter writer("suffix.rows", index.suffix_bytes_per_vector());
-  for (size_t first = 0; first < n; first += chunk) {          // ids in build order
-    index.encode_suffix(data + first * d, first, count, buffer);  // count = min(chunk, n - first)
+  dv::TieredQRowFileWriter writer("tier.rows", index.tier_bytes_per_vector());
+  for (size_t first = 0; first < n; first += chunk) {        // ids in build order
+    index.encode_tier(data + first * d, first, count, buffer);  // count = min(chunk, n - first)
     writer.append(buffer, count);
   }
   writer.finish();
-  index.attach_suffix(std::make_shared<dv::TieredQFileRows>("suffix.rows"));
+  index.attach_tier(std::make_shared<dv::TieredQFileRows>("tier.rows"));
   auto hits = index.search(query, /*k=*/10, /*nprobe=*/32, /*candidates=*/50);
   ```
 
-  `serialize()` stores the IVF and the refinement; after loading, attach the suffix again. The only per-vector RAM
-  beyond the IVF is a 4-byte id-to-document map.
+  `serialize()` stores the IVF, the refinement and the tier layout; after loading, attach the tier again.
 
   At 1M, 512 / 768 bit prefixes + a 4-bit refinement (about 700 B/vector) beat RaBitQ's own 5/6-bit codes by 1.2-2.4x
   QPS at R@10 0.95-0.98 with 28-43% fewer rerank bytes. Refinement recall tops out near 0.984; above that use INT8.

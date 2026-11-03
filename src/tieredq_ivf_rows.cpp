@@ -5,6 +5,7 @@
 #include "tieredq/tieredq.h"
 #include "tieredq_fast_storage.h"
 #include <array>
+#include <numeric>
 
 namespace dv {
 using tieredq_detail::bad;
@@ -28,41 +29,78 @@ void read_code_words(const tieredq_detail::FastScanCache& cache,size_t doc,size_
     row[byte]=std::bit_cast<uint8_t>(cache.levels[fast_code_word_position(words,doc,byte/fast_code_word_bytes)+byte%fast_code_word_bytes]);
 }
 
-// Split codes per width: packed part codes -> the whole code they were split from.
-using SplitInverse=std::array<std::vector<uint8_t>,tieredq_detail::widest_code_bits+1>;
-SplitInverse split_inverse(const tieredq_detail::AdditiveSplits& splits) {
-  SplitInverse inverse;
-  for (size_t bits=0;bits<splits.size();++bits) {
-    if (!splits[bits]) continue;
-    const auto& code=splits[bits]->code;
-    inverse[bits].resize(code.size());
-    for (size_t whole=0;whole<code.size();++whole) inverse[bits][code[whole]]=uint8_t(whole);
-  }
-  return inverse;
-}
+// Nibble-lookup decoding flattened once per call: each group's slots as (rank, nibble shift, mask, part shift), then
+// per rank the bit offset, width and the table mapping its gathered part codes to the stored code (the identity for
+// whole codes, the inverse of the additive split otherwise).
+struct LookupProgram {
+  struct Slot { uint32_t rank, shift, mask, part_shift; };
+  std::vector<Slot> slots;
+  std::vector<uint32_t> group_end;  // exclusive end of each group's slots
+  std::vector<uint32_t> bit, width;
+  std::vector<const uint8_t*> code_of;
+  std::array<std::vector<uint8_t>,tieredq_detail::widest_code_bits+1> split_inverse, identity;
+  bool contiguous = false;  // ranks' codes fill the row from bit 0 in rank order
+};
 
-// Nibble groups hold whole codes or parts of split codes; parts of one coordinate are gathered before inverting.
-void read_lookup_codes(const tieredq_detail::FastScanLookupCache& lookup,const SplitInverse& inverse,size_t doc,
-                       std::vector<uint32_t>& packed,std::vector<const tieredq_detail::LookupSlot*>& split_slot,uint8_t* row) {
+void build_lookup_program(const tieredq_detail::FastScanLookupCache& lookup,size_t ranks,LookupProgram& program) {
   using namespace tieredq_detail;
-  std::fill(packed.begin(),packed.end(),0); std::fill(split_slot.begin(),split_slot.end(),nullptr);
-  for (size_t g=0;g<lookup.groups.size();++g) {
-    const auto& group=lookup.groups[g];
-    const uint32_t nibble=uint32_t(lookup.codes[fast_lookup_position(lookup,doc,g)]>>(g%lookup_pair_groups*lookup_code_bits))&
-        uint32_t(lookup_table_entries-1);
-    const uint32_t mask=(1u<<group.bits)-1;
+  program.slots.clear(); program.group_end.clear();
+  program.bit.assign(ranks,0); program.width.assign(ranks,0); program.code_of.assign(ranks,nullptr);
+  for (size_t bits=0;bits<=widest_code_bits;++bits) {
+    program.identity[bits].resize(size_t(1)<<bits);
+    std::iota(program.identity[bits].begin(),program.identity[bits].end(),uint8_t(0));
+    program.split_inverse[bits].clear();
+    if (bits>=lookup.splits.size() || !lookup.splits[bits]) continue;
+    const auto& code=lookup.splits[bits]->code;
+    program.split_inverse[bits].resize(code.size());
+    for (size_t whole=0;whole<code.size();++whole) program.split_inverse[bits][code[whole]]=uint8_t(whole);
+  }
+  for (const auto& group:lookup.groups) {
     for (uint32_t j=0;j<group.count;++j) {
       const auto& slot=group.slots[j];
-      const uint32_t part=nibble>>(j*group.bits)&mask;
-      if (slot.part==whole_code_part) { write_code(row,slot.bit,slot.code_bits,part); continue; }
-      packed[slot.rank]|=part<<slot.part_shift;
-      split_slot[slot.rank]=&slot;
+      const bool whole=slot.part==whole_code_part;
+      program.slots.push_back({slot.rank,j*group.bits,(1u<<group.bits)-1,whole ? 0 : slot.part_shift});
+      program.bit[slot.rank]=slot.bit; program.width[slot.rank]=slot.code_bits;
+      program.code_of[slot.rank]=whole ? program.identity[slot.code_bits].data() : program.split_inverse[slot.code_bits].data();
     }
+    program.group_end.push_back(uint32_t(program.slots.size()));
   }
-  for (size_t rank=0;rank<split_slot.size();++rank) {
-    const auto* slot=split_slot[rank];
-    if (slot) write_code(row,slot->bit,slot->code_bits,inverse[slot->code_bits].at(packed[rank]));
+  program.contiguous=true;
+  for (size_t rank=0,next=0;rank<ranks;next+=program.width[rank],++rank) {
+    if (!program.code_of[rank]) bad("lookup layout leaves a coded rank unstored");
+    program.contiguous&=program.bit[rank]==next;
   }
+}
+
+// Byte stores alias everything, so the tables are read through local restrict pointers; contiguous codes stream
+// through a 64-bit accumulator instead of read-modify-writes of shared bytes.
+void read_lookup_codes(const tieredq_detail::FastScanLookupCache& lookup,const LookupProgram& program,size_t doc,
+                       std::vector<uint32_t>& packed,uint8_t* row) {
+  using namespace tieredq_detail;
+  uint32_t* __restrict parts=packed.data();
+  const size_t ranks=packed.size(),groups=program.group_end.size();
+  std::fill_n(parts,ranks,0);
+  const uint8_t* block=lookup.codes.data()+doc/lookup_block_docs*lookup.pairs()*lookup_block_docs+doc%lookup_block_docs;
+  const LookupProgram::Slot* __restrict slots=program.slots.data();
+  const uint32_t* __restrict group_end=program.group_end.data();
+  for (size_t g=0,slot=0;g<groups;++g) {
+    const uint32_t nibble=uint32_t(block[g/lookup_pair_groups*lookup_block_docs])>>(g%lookup_pair_groups*lookup_code_bits);
+    for (const size_t end=group_end[g];slot<end;++slot) parts[slots[slot].rank]|=(nibble>>slots[slot].shift&slots[slot].mask)<<slots[slot].part_shift;
+  }
+  const uint32_t* __restrict bit=program.bit.data();
+  const uint32_t* __restrict width=program.width.data();
+  const uint8_t* const* __restrict code_of=program.code_of.data();
+  if (!program.contiguous) {
+    for (size_t rank=0;rank<ranks;++rank) write_code(row,bit[rank],width[rank],code_of[rank][parts[rank]]);
+    return;
+  }
+  uint64_t pending=0; uint32_t filled=0;
+  for (size_t rank=0;rank<ranks;++rank) {
+    pending|=uint64_t(code_of[rank][parts[rank]])<<filled;
+    filled+=width[rank];
+    for (;filled>=CHAR_BIT;filled-=CHAR_BIT,pending>>=CHAR_BIT) *row++=uint8_t(pending);
+  }
+  if (filled) *row=uint8_t(pending);
 }
 
 // Int8 level -> code per tier, as the cache builders quantized each tier's codebook.
@@ -111,10 +149,11 @@ void TieredQIVFIndex::document_rows(const uint32_t* documents,size_t count,uint8
   std::fill_n(rows,count*stride,uint8_t(0));
   const auto& cache=*documents_.fast_;
   if (cache.lookup) {
-    const auto inverse=split_inverse(cache.lookup->splits);
-    std::vector<uint32_t> packed(model.coded_dimensions());
-    std::vector<const tieredq_detail::LookupSlot*> split_slot(model.coded_dimensions());
-    for (size_t i=0;i<count;++i) read_lookup_codes(*cache.lookup,inverse,documents[i],packed,split_slot,rows+i*stride);
+    thread_local LookupProgram program;
+    thread_local std::vector<uint32_t> packed;
+    build_lookup_program(*cache.lookup,model.coded_dimensions(),program);
+    packed.resize(model.coded_dimensions());
+    for (size_t i=0;i<count;++i) read_lookup_codes(*cache.lookup,program,documents[i],packed,rows+i*stride);
   } else if (cache.code_lookup()) {
     for (size_t i=0;i<count;++i) read_code_words(cache,documents[i],code_bytes,rows+i*stride);
   } else {

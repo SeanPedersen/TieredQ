@@ -1,6 +1,6 @@
 // Nested IVF serving (#23): IVF lists give back exactly the payload rows the codec encodes, in every fast layout;
 // prefix scan plus suffix rescoring returns the refinement's own ranking of the scanned candidates and beats the
-// prefix scan alone; batch, file-backed and deserialized indexes answer identically; mismatches are rejected.
+// prefix scan alone; batch, file-backed and deserialized indexes answer identically with either tier layout; mismatches are rejected.
 #include "tieredq/tieredq_nested.h"
 #include <algorithm>
 #include <cmath>
@@ -53,13 +53,13 @@ void document_rows_test(uint32_t code_bits,TieredQIndexMode mode) {
   require(recovered==expected,"IVF document rows differ from the encoded payload");
 }
 
-TieredQNestedIVFIndex nested(const std::vector<float>& data,TieredQMetric metric) {
+TieredQNestedIVFIndex nested(const std::vector<float>& data,TieredQMetric metric,TieredQTierRows tier_rows) {
   const auto prefix=train(data,prefix_bits,metric);
   auto refinement=TieredQRefinement::train(prefix,total_bits,data.data(),rows,seed);
-  TieredQNestedIVFIndex index(built(prefix,data),std::move(refinement));
-  std::vector<uint8_t> suffix(rows*index.suffix_bytes_per_vector());
-  index.encode_suffix(data.data(),0,rows,suffix.data());
-  index.attach_suffix(std::make_shared<TieredQMemoryRows>(std::move(suffix),index.suffix_bytes_per_vector()));
+  TieredQNestedIVFIndex index(built(prefix,data),std::move(refinement),tier_rows);
+  std::vector<uint8_t> tier(rows*index.tier_bytes_per_vector());
+  index.encode_tier(data.data(),0,rows,tier.data());
+  index.attach_tier(std::make_shared<TieredQMemoryRows>(std::move(tier),index.tier_bytes_per_vector()));
   return index;
 }
 float exact(TieredQMetric metric,const float* q,const float* x) {
@@ -81,9 +81,9 @@ size_t true_hits(TieredQMetric metric,const std::vector<float>& data,const float
 }
 
 // The nested hits are the refinement's top k of the prefix scan's candidates, scored on the codec's own payload.
-void search_test(TieredQMetric metric) {
+void search_test(TieredQMetric metric,TieredQTierRows tier_rows) {
   const auto data=clustered_rows(rows,seed),probes=clustered_rows(queries,seed+1);
-  const auto index=nested(data,metric);
+  const auto index=nested(data,metric,tier_rows);
   const auto& refinement=index.refinement();
   const auto payload=index.index().codec().encode(data.data(),rows);
   std::vector<uint8_t> suffix(rows*refinement.bytes_per_vector());
@@ -125,9 +125,9 @@ bool same(const std::vector<std::vector<TieredQHit>>& a,const std::vector<std::v
   return true;
 }
 
-void batch_file_and_serialization_test() {
+void batch_file_and_serialization_test(TieredQTierRows tier_rows) {
   const auto data=clustered_rows(rows,seed),probes=clustered_rows(queries,seed+1);
-  auto index=nested(data,TieredQMetric::l2);
+  auto index=nested(data,TieredQMetric::l2,tier_rows);
   const auto expected=answers(index,probes);
 
   std::vector<float> scores(queries*k); std::vector<uint32_t> ids(queries*k);
@@ -138,29 +138,30 @@ void batch_file_and_serialization_test() {
   const auto path=(std::filesystem::temp_directory_path()/("tieredq_nested_"+std::to_string(::getpid())+".rows")).string();
   constexpr size_t chunk=500;
   {
-    TieredQRowFileWriter writer(path,index.suffix_bytes_per_vector());
-    std::vector<uint8_t> suffix(chunk*index.suffix_bytes_per_vector());
+    TieredQRowFileWriter writer(path,index.tier_bytes_per_vector());
+    std::vector<uint8_t> tier(chunk*index.tier_bytes_per_vector());
     for (size_t first=0;first<rows;first+=chunk) {
       const size_t n=std::min(chunk,rows-first);
-      index.encode_suffix(data.data()+first*dimensions,first,n,suffix.data());
-      writer.append(suffix.data(),n);
+      index.encode_tier(data.data()+first*dimensions,first,n,tier.data());
+      writer.append(tier.data(),n);
     }
     writer.finish();
   }
   auto loaded=TieredQNestedIVFIndex::deserialize(index.serialize());
-  loaded.attach_suffix(std::make_shared<TieredQFileRows>(path));
+  loaded.attach_tier(std::make_shared<TieredQFileRows>(path));
+  require(loaded.tier_rows()==tier_rows,"deserialized tier layout differs");
   require(same(answers(loaded,probes),expected),"file-backed deserialized index differs");
 
   bool rejected=false;
   try { index.search(probes.data(),k,nprobe,k-1); } catch (const std::runtime_error&) { rejected=true; }
   require(rejected,"fewer candidates than k accepted");
   rejected=false;
-  try { index.attach_suffix(std::make_shared<TieredQMemoryRows>(std::vector<uint8_t>(rows),1)); }
+  try { index.attach_tier(std::make_shared<TieredQMemoryRows>(std::vector<uint8_t>(rows),1)); }
   catch (const std::runtime_error&) { rejected=true; }
-  require(rejected,"mismatched suffix rows accepted");
+  require(rejected,"mismatched tier rows accepted");
   {
-    TieredQRowFileWriter unfinished(path,index.suffix_bytes_per_vector());
-    std::vector<uint8_t> row(index.suffix_bytes_per_vector());
+    TieredQRowFileWriter unfinished(path,index.tier_bytes_per_vector());
+    std::vector<uint8_t> row(index.tier_bytes_per_vector());
     unfinished.append(row.data(),1);
   }
   rejected=false;
@@ -186,8 +187,10 @@ void tieredq_nested_tests() {
   document_rows_test(additive_bits,TieredQIndexMode::fast);
   document_rows_test(wide_bits,TieredQIndexMode::fast);
   document_rows_test(wide_bits,TieredQIndexMode::full);
-  for (auto metric:{TieredQMetric::inner_product,TieredQMetric::cosine,TieredQMetric::l2}) search_test(metric);
-  batch_file_and_serialization_test();
+  for (auto tier_rows:{TieredQTierRows::prefix_and_suffix,TieredQTierRows::suffix}) {
+    for (auto metric:{TieredQMetric::inner_product,TieredQMetric::cosine,TieredQMetric::l2}) search_test(metric,tier_rows);
+    batch_file_and_serialization_test(tier_rows);
+  }
   mismatched_prefix_test();
   std::cout<<"nested IVF tests passed\n";
 }

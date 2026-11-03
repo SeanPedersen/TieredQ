@@ -1,5 +1,5 @@
 // Nested IVF serving (#23): prefix scan, then prefix plus suffix rescoring of the k' candidates, plus the RAM and
-// file row sources the suffix tier is read from.
+// file row sources the tier is read from.
 #include "tieredq/tieredq_nested.h"
 #include "tieredq_io.h"
 #include <algorithm>
@@ -19,7 +19,7 @@ using tieredq_detail::product;
 namespace {
 constexpr uint32_t padding_id=UINT32_MAX;
 constexpr uint32_t row_file_magic=0x57525154;  // "TQRW"
-constexpr uint32_t nested_payload_version=1;
+constexpr uint32_t nested_payload_version=2;
 constexpr size_t encode_chunk_rows=16384;
 constexpr size_t row_file_header_bytes=2*sizeof(uint32_t)+2*sizeof(uint64_t);
 
@@ -110,43 +110,79 @@ void TieredQRowFileWriter::finish() {
   if (closed) bad(std::string("row file close failed: ")+std::strerror(errno));
 }
 
-TieredQNestedIVFIndex::TieredQNestedIVFIndex(TieredQIVFIndex index,TieredQRefinement refinement)
-    : index_(std::move(index)),refinement_(std::move(refinement)),documents_(index_.id_documents()) {
+TieredQNestedIVFIndex::TieredQNestedIVFIndex(TieredQIVFIndex index,TieredQRefinement refinement,TieredQTierRows tier_rows)
+    : index_(std::move(index)),refinement_(std::move(refinement)),tier_rows_(tier_rows) {
   if (refinement_.prefix().model_id()!=index_.codec().model_id()) bad("refinement was trained on another prefix model");
+  if (tier_rows_!=TieredQTierRows::prefix_and_suffix && tier_rows_!=TieredQTierRows::suffix) bad("invalid tier rows");
+  if (tier_rows_==TieredQTierRows::suffix) documents_=index_.id_documents();
 }
 
-void TieredQNestedIVFIndex::encode_suffix(const float* rows,size_t first,size_t count,uint8_t* out) const {
-  if (first>size() || count>size()-first) bad("suffix rows out of range");
-  if (count && (!rows || !out)) bad("null suffix buffer");
+size_t TieredQNestedIVFIndex::tier_bytes_per_vector() const {
+  const size_t prefix=tier_rows_==TieredQTierRows::prefix_and_suffix ? index_.codec().bytes_per_vector() : 0;
+  return prefix+refinement_.bytes_per_vector();
+}
+
+void TieredQNestedIVFIndex::encode_tier(const float* rows,size_t first,size_t count,uint8_t* out) const {
+  if (first>size() || count>size()-first) bad("tier rows out of range");
+  if (!count) return;
+  if (!rows || !out) bad("null tier buffer");
   const size_t d=index_.codec().config().dimensions,prefix_stride=index_.codec().bytes_per_vector();
-  const size_t suffix_stride=refinement_.bytes_per_vector();
-  std::vector<uint8_t> prefix_rows;
+  const size_t suffix_stride=refinement_.bytes_per_vector(),tier_stride=tier_bytes_per_vector();
+  const bool inline_prefix=tier_rows_==TieredQTierRows::prefix_and_suffix;
+  // Prefix rows come from the lists, so the suffix refines exactly the codes the index scans.
+  const auto all_documents=inline_prefix ? index_.id_documents() : std::vector<uint32_t>();
+  const uint32_t* documents=(inline_prefix ? all_documents : documents_).data()+first;
+  std::vector<uint8_t> prefix_rows,suffix_rows;
   for (size_t done=0;done<count;done+=encode_chunk_rows) {
     const size_t n=std::min(encode_chunk_rows,count-done);
-    prefix_rows.resize(n*prefix_stride);
-    index_.document_rows(documents_.data()+first+done,n,prefix_rows.data());
-    refinement_.encode(rows+done*d,n,prefix_rows.data(),out+done*suffix_stride);
+    prefix_rows.resize(n*prefix_stride); suffix_rows.resize(n*suffix_stride);
+    index_.document_rows(documents+done,n,prefix_rows.data());
+    refinement_.encode(rows+done*d,n,prefix_rows.data(),suffix_rows.data());
+    for (size_t i=0;i<n;++i) {
+      uint8_t* row=out+(done+i)*tier_stride;
+      if (inline_prefix) { std::memcpy(row,prefix_rows.data()+i*prefix_stride,prefix_stride); row+=prefix_stride; }
+      std::memcpy(row,suffix_rows.data()+i*suffix_stride,suffix_stride);
+    }
   }
 }
 
-void TieredQNestedIVFIndex::attach_suffix(std::shared_ptr<const TieredQRowSource> suffix) {
-  if (!suffix) bad("null suffix source");
-  if (suffix->row_bytes()!=refinement_.bytes_per_vector()) bad("suffix row size does not match the refinement");
-  if (suffix->rows()!=size()) bad("suffix row count does not match the index");
-  suffix_=std::move(suffix);
+void TieredQNestedIVFIndex::attach_tier(std::shared_ptr<const TieredQRowSource> tier) {
+  if (!tier) bad("null tier source");
+  if (tier->row_bytes()!=tier_bytes_per_vector()) bad("tier row size does not match the index");
+  if (tier->rows()!=size()) bad("tier row count does not match the index");
+  tier_=std::move(tier);
+}
+
+void TieredQNestedIVFIndex::candidate_rows(const uint32_t* candidates,size_t found,uint8_t* prefix_rows,
+                                           uint8_t* suffix_rows) const {
+  const size_t prefix_stride=index_.codec().bytes_per_vector(),suffix_stride=refinement_.bytes_per_vector();
+  if (tier_rows_==TieredQTierRows::suffix) {
+    thread_local std::vector<uint32_t> documents;
+    documents.resize(found);
+    for (size_t i=0;i<found;++i) documents[i]=documents_[candidates[i]];
+    index_.document_rows(documents.data(),found,prefix_rows);
+    tier_->read(candidates,found,suffix_rows);
+    return;
+  }
+  thread_local std::vector<uint8_t> tier_rows;
+  const size_t tier_stride=tier_bytes_per_vector();
+  tier_rows.resize(found*tier_stride);
+  tier_->read(candidates,found,tier_rows.data());
+  for (size_t i=0;i<found;++i) {
+    std::memcpy(prefix_rows+i*prefix_stride,tier_rows.data()+i*tier_stride,prefix_stride);
+    std::memcpy(suffix_rows+i*suffix_stride,tier_rows.data()+i*tier_stride+prefix_stride,suffix_stride);
+  }
 }
 
 size_t TieredQNestedIVFIndex::rescore(const float* query,TieredQQuery weights,const uint32_t* candidates,size_t found,
                                       size_t k,float* scores,uint32_t* ids) const {
   if (!found) return 0;
-  thread_local std::vector<uint32_t> documents,order;
+  thread_local std::vector<uint32_t> order;
   thread_local std::vector<uint8_t> prefix_rows,suffix_rows;
   thread_local std::vector<float> refined;
-  documents.resize(found); order.resize(found); refined.resize(found);
+  order.resize(found); refined.resize(found);
   prefix_rows.resize(found*index_.codec().bytes_per_vector()); suffix_rows.resize(found*refinement_.bytes_per_vector());
-  for (size_t i=0;i<found;++i) documents[i]=documents_[candidates[i]];
-  index_.document_rows(documents.data(),found,prefix_rows.data());
-  suffix_->read(candidates,found,suffix_rows.data());
+  candidate_rows(candidates,found,prefix_rows.data(),suffix_rows.data());
   refinement_.score(prefix_rows.data(),suffix_rows.data(),found,refinement_.query(query,std::move(weights)),refined.data());
   const size_t kept=std::min(k,found);
   std::iota(order.begin(),order.end(),uint32_t(0));
@@ -160,7 +196,7 @@ size_t TieredQNestedIVFIndex::rescore(const float* query,TieredQQuery weights,co
 
 std::vector<TieredQHit> TieredQNestedIVFIndex::search(const float* query,size_t k,size_t nprobe,size_t candidates,
                                                       TieredQPruning pruning) const {
-  if (!suffix_) bad("no suffix rows attached");
+  if (!tier_) bad("no tier rows attached");
   if (candidates<k) bad("rescoring needs at least k candidates");
   if (!k || !size()) return {};
   if (!query) bad("null query");
@@ -178,7 +214,7 @@ std::vector<TieredQHit> TieredQNestedIVFIndex::search(const float* query,size_t 
 
 void TieredQNestedIVFIndex::search_batch(const float* queries,size_t rows,size_t k,size_t nprobe,size_t candidates,
                                          float* scores,uint32_t* ids,TieredQPruning pruning) const {
-  if (!suffix_) bad("no suffix rows attached");
+  if (!tier_) bad("no tier rows attached");
   if (candidates<k) bad("rescoring needs at least k candidates");
   if (!rows || !k || !size()) return;
   if (!queries || !scores || !ids) bad("null search buffer");
@@ -202,6 +238,7 @@ void TieredQNestedIVFIndex::search_batch(const float* queries,size_t rows,size_t
 std::vector<uint8_t> TieredQNestedIVFIndex::serialize() const {
   tieredq_detail::Writer writer;
   writer.u32(nested_payload_version);
+  writer.u32(uint32_t(tier_rows_));
   const auto index=index_.serialize(),refinement=refinement_.serialize();
   writer.u64(index.size()); writer.data.insert(writer.data.end(),index.begin(),index.end());
   writer.u64(refinement.size()); writer.data.insert(writer.data.end(),refinement.begin(),refinement.end());
@@ -211,6 +248,7 @@ std::vector<uint8_t> TieredQNestedIVFIndex::serialize() const {
 TieredQNestedIVFIndex TieredQNestedIVFIndex::deserialize(const std::vector<uint8_t>& bytes) {
   tieredq_detail::Reader reader{bytes};
   if (reader.u32()!=nested_payload_version) bad("unsupported nested index version");
+  const auto tier_rows=TieredQTierRows(reader.u32());
   auto section=[&] {
     const uint64_t length=reader.u64();
     if (length>reader.remaining()) bad("truncated nested index");
@@ -221,6 +259,6 @@ TieredQNestedIVFIndex TieredQNestedIVFIndex::deserialize(const std::vector<uint8
   auto index=TieredQIVFIndex::deserialize(section());
   auto refinement=TieredQRefinement::deserialize(section(),index.codec());
   if (reader.remaining()) bad("trailing nested index bytes");
-  return TieredQNestedIVFIndex(std::move(index),std::move(refinement));
+  return TieredQNestedIVFIndex(std::move(index),std::move(refinement),tier_rows);
 }
 } // namespace dv
