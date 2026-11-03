@@ -32,11 +32,15 @@ class TieredQMemoryRows final : public TieredQRowSource {
   size_t row_bytes_, rows_;
 };
 
+// How TieredQFileRows reads: through the OS page cache, or with direct I/O that bypasses it, so every candidate is a
+// device read of the aligned pages covering its row (one, or two when a row crosses a page boundary).
+enum class TieredQFileReads { cached, direct };
+
 // A row file: a header, then rows from a page-aligned offset. Each candidate is one positioned read (pread), so the
-// tier can sit on SSD; the OS page cache serves repeated reads.
+// tier can sit on SSD.
 class TieredQFileRows final : public TieredQRowSource {
  public:
-  explicit TieredQFileRows(const std::string& path);
+  explicit TieredQFileRows(const std::string& path, TieredQFileReads reads = TieredQFileReads::cached);
   ~TieredQFileRows() override;
   TieredQFileRows(const TieredQFileRows&) = delete;
   TieredQFileRows& operator=(const TieredQFileRows&) = delete;
@@ -44,10 +48,12 @@ class TieredQFileRows final : public TieredQRowSource {
   size_t rows() const override { return rows_; }
   void read(const uint32_t* ids, size_t count, uint8_t* out) const override;
   static constexpr uint32_t format = 1;
+  // Data offset and direct-read granularity; covers the logical block size of common devices.
   static constexpr size_t data_alignment = 4096;
  private:
   int fd_ = -1;
-  size_t row_bytes_ = 0, rows_ = 0;
+  TieredQFileReads reads_;
+  size_t row_bytes_ = 0, rows_ = 0, file_bytes_ = 0;
 };
 
 // Writes a TieredQFileRows file in id order, appended in chunks; finish() completes it.

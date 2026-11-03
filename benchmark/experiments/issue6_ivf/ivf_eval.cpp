@@ -26,7 +26,7 @@
 // NESTED_BITS (default 4) refinement tier, rescoring each RERANK depth k' (required) of candidates. NESTED_ROWS=suffix
 // stores only the suffix (prefix rows decoded from the lists); prefix_and_suffix (default) stores both. NESTED_TIER=file
 // writes the tier to NESTED_FILE (default issue6-nested-PID.rows in the temp directory, removed after) and reads
-// candidates by pread; ram (default) keeps it in memory. Rows: tieredq-nested budget nlist nprobe disk_bits code_bits
+// candidates by pread (direct: with direct I/O, bypassing the page cache); ram (default) keeps it in memory. Rows: tieredq-nested budget nlist nprobe disk_bits code_bits
 // rerank_k recall tier_bytes tier:rows qps_1t_b1 qps_8t_b32 build_s list_hash.
 // Mode tieredq-nesting B1,B2,... (storage only) prints whether each budget's model refines the previous one.
 // Usage: issue6_ivf_eval MODE BUDGET DATA_DIR D NLIST TIMED(0|1) NPROBE...   (RaBitQ needs BENCH_SEED set)
@@ -494,7 +494,7 @@ std::shared_ptr<const dv::TieredQRowSource> nested_tier(const Data& data,const d
     index.encode_tier(data.base.data(),0,data.n,rows.data());
     return std::make_shared<dv::TieredQMemoryRows>(std::move(rows),row_bytes);
   }
-  if (tier!="file") { std::fprintf(stderr,"NESTED_TIER must be ram or file\n"); std::exit(2); }
+  if (tier!="file" && tier!="direct") { std::fprintf(stderr,"NESTED_TIER must be ram, file or direct\n"); std::exit(2); }
   dv::TieredQRowFileWriter writer(path,row_bytes);
   std::vector<uint8_t> rows(chunk_rows*row_bytes);
   for (size_t first=0;first<data.n;first+=chunk_rows) {
@@ -503,7 +503,7 @@ std::shared_ptr<const dv::TieredQRowSource> nested_tier(const Data& data,const d
     writer.append(rows.data(),count);
   }
   writer.finish();
-  return std::make_shared<dv::TieredQFileRows>(path);
+  return std::make_shared<dv::TieredQFileRows>(path,tier=="direct" ? dv::TieredQFileReads::direct : dv::TieredQFileReads::cached);
 }
 
 void run_nested(const Data& data,uint32_t code_bits,size_t nlist,bool timed,const std::vector<size_t>& nprobes) {
@@ -551,7 +551,7 @@ void run_nested(const Data& data,uint32_t code_bits,size_t nlist,bool timed,cons
                 nested.tier_bytes_per_vector(),(tier+":"+layout).c_str(),qps1,qps8,build_s,static_cast<unsigned long long>(list_hash(sizes)));
     std::fflush(stdout);
   }
-  if (tier=="file" && !std::getenv("NESTED_FILE")) std::filesystem::remove(path);
+  if (tier!="ram" && !std::getenv("NESTED_FILE")) std::filesystem::remove(path);
 }
 
 // Repeated single-query loops on the calling thread, nothing else timed: a clean perf target.

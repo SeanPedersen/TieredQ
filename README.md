@@ -135,7 +135,8 @@ auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*p
 
   `dv::TieredQNestedIVFIndex` (`<tieredq/tieredq_nested.h>`) serves this end to end. The prefix codes stay in the
   in-RAM IVF lists. Each candidate's tier row is read by id from a `TieredQRowSource`: `TieredQMemoryRows` in RAM,
-  `TieredQFileRows` with one `pread` per candidate on SSD, or your own store. By default a tier row holds the prefix
+  `TieredQFileRows` with one `pread` per candidate on SSD (`TieredQFileReads::direct` bypasses the page cache), or your
+  own store. By default a tier row holds the prefix
   row and the suffix (`TieredQTierRows::prefix_and_suffix`, one contiguous read). `TieredQTierRows::suffix` stores
   only the suffix and decodes each candidate's prefix from the IVF lists (`TieredQIVFIndex::document_rows`). That tier
   is smaller (651 vs 784 B/vector at a 1024-bit prefix, d = 1536) but costs about 3.4 us of decoding per candidate and

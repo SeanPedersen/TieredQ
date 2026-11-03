@@ -151,6 +151,8 @@ void batch_file_and_serialization_test(TieredQTierRows tier_rows) {
   loaded.attach_tier(std::make_shared<TieredQFileRows>(path));
   require(loaded.tier_rows()==tier_rows,"deserialized tier layout differs");
   require(same(answers(loaded,probes),expected),"file-backed deserialized index differs");
+  loaded.attach_tier(std::make_shared<TieredQFileRows>(path,TieredQFileReads::direct));
+  require(same(answers(loaded,probes),expected),"direct-read file tier differs");
 
   bool rejected=false;
   try { index.search(probes.data(),k,nprobe,k-1); } catch (const std::runtime_error&) { rejected=true; }

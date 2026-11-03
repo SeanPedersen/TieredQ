@@ -6,9 +6,11 @@
 #include <cerrno>
 #include <climits>
 #include <cmath>
+#include <cstdlib>
 #include <cstring>
 #include <fcntl.h>
 #include <limits>
+#include <memory>
 #include <numeric>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -57,9 +59,26 @@ void TieredQMemoryRows::read(const uint32_t* ids,size_t count,uint8_t* out) cons
   }
 }
 
-TieredQFileRows::TieredQFileRows(const std::string& path) {
-  fd_=::open(path.c_str(),O_RDONLY|O_CLOEXEC);
-  if (fd_<0) bad(system_error("cannot open row file",path));
+// Direct I/O: O_DIRECT where the platform has it, F_NOCACHE on macOS.
+static int open_rows(const std::string& path,TieredQFileReads reads) {
+  int flags=O_RDONLY|O_CLOEXEC;
+#ifdef O_DIRECT
+  if (reads==TieredQFileReads::direct) flags|=O_DIRECT;
+#endif
+  const int fd=::open(path.c_str(),flags);
+  if (fd<0) bad(system_error(reads==TieredQFileReads::direct ? "cannot open row file for direct reads" : "cannot open row file",path));
+#if !defined(O_DIRECT) && defined(F_NOCACHE)
+  if (reads==TieredQFileReads::direct && ::fcntl(fd,F_NOCACHE,1)) { ::close(fd); bad(system_error("cannot disable caching of",path)); }
+#elif !defined(O_DIRECT)
+  if (reads==TieredQFileReads::direct) { ::close(fd); bad("direct reads are not supported on this platform"); }
+#endif
+  return fd;
+}
+
+TieredQFileRows::TieredQFileRows(const std::string& path,TieredQFileReads reads) : reads_(reads) {
+  if (reads_!=TieredQFileReads::cached && reads_!=TieredQFileReads::direct) bad("invalid file reads");
+  // The header is read through the cache; direct reads then use their own descriptor.
+  fd_=open_rows(path,TieredQFileReads::cached);
   try {
     std::vector<uint8_t> bytes(row_file_header_bytes);
     read_exact(fd_,bytes.data(),bytes.size(),0);
@@ -69,20 +88,49 @@ TieredQFileRows::TieredQFileRows(const std::string& path) {
     row_bytes_=size_t(header.u64()); rows_=size_t(header.u64());
     struct stat info{};
     if (::fstat(fd_,&info)) bad(system_error("cannot stat row file",path));
-    if (!row_bytes_ || rows_>(size_t(std::numeric_limits<off_t>::max())-data_alignment)/row_bytes_ ||
+    if (!row_bytes_ || rows_>(size_t(std::numeric_limits<off_t>::max())-2*data_alignment)/row_bytes_ ||
         size_t(info.st_size)!=data_alignment+rows_*row_bytes_)
       bad("row file size does not match its header");
+    file_bytes_=size_t(info.st_size);
+    if (reads_==TieredQFileReads::direct) { ::close(fd_); fd_=-1; fd_=open_rows(path,reads_); }
 #ifdef POSIX_FADV_RANDOM
     // Candidates are scattered ids: readahead would only evict useful pages.
-    ::posix_fadvise(fd_,0,0,POSIX_FADV_RANDOM);
+    else ::posix_fadvise(fd_,0,0,POSIX_FADV_RANDOM);
 #endif
-  } catch (...) { ::close(fd_); throw; }
+  } catch (...) { if (fd_>=0) ::close(fd_); throw; }
 }
 TieredQFileRows::~TieredQFileRows() { if (fd_>=0) ::close(fd_); }
 void TieredQFileRows::read(const uint32_t* ids,size_t count,uint8_t* out) const {
+  if (reads_==TieredQFileReads::cached) {
+    for (size_t i=0;i<count;++i) {
+      check_row_id(ids[i],rows_);
+      read_exact(fd_,out+i*row_bytes_,row_bytes_,off_t(data_alignment+size_t(ids[i])*row_bytes_));
+    }
+    return;
+  }
+  // Direct reads need block-aligned offsets, lengths and buffers; the last pages may end past the file.
+  struct Aligned { void operator()(uint8_t* p) const { std::free(p); } };
+  thread_local std::unique_ptr<uint8_t,Aligned> pages;
+  thread_local size_t page_bytes=0;
+  const size_t span=(row_bytes_+2*data_alignment-2)/data_alignment*data_alignment;
+  if (page_bytes<span) {
+    pages.reset(static_cast<uint8_t*>(std::aligned_alloc(data_alignment,span)));
+    if (!pages) bad("cannot allocate direct read buffer");
+    page_bytes=span;
+  }
   for (size_t i=0;i<count;++i) {
     check_row_id(ids[i],rows_);
-    read_exact(fd_,out+i*row_bytes_,row_bytes_,off_t(data_alignment+size_t(ids[i])*row_bytes_));
+    const size_t offset=data_alignment+size_t(ids[i])*row_bytes_,first=offset/data_alignment*data_alignment;
+    const size_t last=std::min((offset+row_bytes_+data_alignment-1)/data_alignment*data_alignment,
+                               (file_bytes_+data_alignment-1)/data_alignment*data_alignment);
+    size_t got=0;
+    while (first+got<offset+row_bytes_) {
+      const ssize_t n=::pread(fd_,pages.get()+got,last-first-got,off_t(first+got));
+      if (n<0 && errno==EINTR) continue;
+      if (n<=0) bad(n<0 ? std::string("direct row read failed: ")+std::strerror(errno) : "truncated row file");
+      got+=size_t(n);
+    }
+    std::memcpy(out+i*row_bytes_,pages.get()+(offset-first),row_bytes_);
   }
 }
 
