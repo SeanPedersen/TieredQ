@@ -1,0 +1,21 @@
+--- /proc/self/fd/11	2026-11-03 18:04:40.393812586 +0100
++++ benchmark/native/module.cpp	2026-11-03 16:39:16.750145911 +0100
+@@ -49,6 +49,7 @@
+       auto config = dv::TieredQConfig::target_code_bits(width_, budget);
+       if (l2 && native_metric) config.metric = dv::TieredQMetric::l2;
+       config.num_centroids = std::min<size_t>(256, count_ / 2);
++      if (const char* cap = std::getenv("TQ_MAX_BITS")) config.max_bits = uint32_t(std::stoul(cap));  // issue #13 workspace hook
+       config.target_mode = fast ? dv::TieredQIndexMode::fast : dv::TieredQIndexMode::full;
+       const size_t train_count = std::min(count_, training_limit);
+       std::vector<uint32_t> order(count_);
+--- src/tieredq_scan_lookup_x86.h	2026-11-03 16:38:13.000000000 +0100
++++ ../source-f8/src/tieredq_scan_lookup_x86.h	2026-11-03 16:39:16.769257443 +0100
+@@ -164,7 +164,7 @@
+ // 7-8 bit tiers appear from about 4 bits/dim, where table rounding limits recall: 32-group sections lost 0.6 pt R@10
+ // and 4-group ones 0.2 pt on OpenAI-100K, at the cost of more float conversions (#13). Clipping scales to RMS loses more.
+ constexpr uint32_t fine_section_min_bits=7;
+-constexpr size_t lookup_fine_scale_groups=4;
++constexpr size_t lookup_fine_scale_groups=8;
+ static_assert(lookup_fine_scale_groups%lookup_pair_groups==0 && lookup_fine_scale_groups<=lookup_scale_groups);
+ inline std::shared_ptr<FastScanCache> build_fast_lookup_cache(
+     const std::vector<std::vector<float>>& levels, const std::vector<TieredQTier>& tiers,

@@ -1,0 +1,2 @@
+dataset,reference_codec,reference_bits,reference_recall10,code_bits,recall10_seed0,recall10_mean,recall10_std,probes
+openai,rabitq,4,0.9673666666666667,3800,0.9675000000000001,0.9683666666666667,0.000776745346515334,11

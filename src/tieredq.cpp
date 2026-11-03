@@ -309,7 +309,7 @@ void TieredQConfig::validate() const {
   if (!dimensions || dimensions>uint32_t(INT32_MAX) || !code_bits || uint64_t(code_bits)>uint64_t(dimensions)*8)
     bad("dimensions must be positive and budget must be in [1, 8*D]");
   if (!num_centroids || num_centroids>256) bad("centroid count must be in [1, 256]");
-  if (!max_bits || max_bits>8) bad("max bits per coordinate must be in [1, 8]");
+  if (max_bits>8) bad("max bits per coordinate must be in [1, 8], or 0 for automatic");
   if (target_mode!=TieredQIndexMode::fast && target_mode!=TieredQIndexMode::full) bad("invalid target index mode");
   if (metric!=TieredQMetric::inner_product && metric!=TieredQMetric::cosine && metric!=TieredQMetric::l2) bad("invalid metric");
   if (!std::isfinite(allocation_power) || allocation_power<0) bad("allocation power must be finite and non-negative");
@@ -470,6 +470,12 @@ TieredQ TieredQ::train_model(TieredQConfig config,const tieredq_detail::Training
   tieredq_detail::DistortionTable gaussian{1};
   for (unsigned b=1;b<=8;++b) { c.levels_[b]=tieredq_detail::gaussian_codebooks()[b]; gaussian[b]=tieredq_detail::distortion(c.levels_[b]); }
   auto additive_gaussian=gaussian; additive_gaussian[tieredq_detail::split_code_bits]=tieredq_detail::distortion(additive);
+  // Automatic max_bits keeps fast IP/cosine models below fine-section widths: RaBitQ's 4-bit recall on OpenAI then took
+  // -0.3/+1.2% code bits and ran 1.4-1.7x faster (#13). Budgets above that per rank still get the width they need.
+  if (!config.max_bits)
+    config.max_bits=config.target_mode==TieredQIndexMode::fast && additive_wide_tiers
+        ? std::max(tieredq_detail::additive_wide_max_bits,(config.code_bits+uint32_t(d)-1)/uint32_t(d))
+        : tieredq_detail::widest_code_bits;
   tieredq_detail::AllocationModel allocation{std::vector<double>(d),std::vector<uint32_t>(d),std::vector(d,gaussian)};
   for (int j=0;j<d;++j) {
     allocation.variance[j]=eigenvalues[d-1-j];

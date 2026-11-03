@@ -20,6 +20,7 @@ constexpr size_t lookup_pair_groups=2;
 constexpr uint32_t split_code_bits=3,split_low_bits=2,split_high_bits=split_code_bits-split_low_bits;
 constexpr size_t split_levels=size_t(1)<<split_code_bits;
 constexpr uint32_t widest_code_bits=8,whole_code_part=UINT32_MAX;
+constexpr uint32_t additive_wide_max_bits=6; // automatic cap of fast IP/cosine training, below fine-section widths (#13)
 struct AdditiveSplit {
   std::vector<uint32_t> part_bits;
   std::vector<uint8_t> code;                 // sorted code -> part codes packed from the low bit, in part order

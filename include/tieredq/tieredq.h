@@ -24,8 +24,9 @@ struct TieredQConfig {
   uint32_t code_bits = 512;
   uint32_t num_centroids = 256;
   bool rotate_tiers = true;
-  // Training-only cap on bits per coordinate; persisted models record only the resulting tiers.
-  uint32_t max_bits = 8;
+  // Training-only cap on bits per coordinate; persisted models record only the resulting tiers. 0 (automatic) is 6 for
+  // fast-target inner product and cosine, or code_bits / dimensions rounded up when larger, and 8 otherwise.
+  uint32_t max_bits = 0;
   // Training-only: only the top-N PCA ranks may exceed 6 bits (UINT32_MAX disables the restriction).
   uint32_t wide_dims = UINT32_MAX;
   // Training-only: the index mode whose storage layout bit allocation optimises for. Fast models with all tiers
