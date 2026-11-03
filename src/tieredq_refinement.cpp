@@ -11,6 +11,7 @@
 #include <cstring>
 #include <mutex>
 #include <numeric>
+#include <omp.h>
 #include <vector>
 #if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
 #include <immintrin.h>
@@ -161,6 +162,12 @@ constexpr double panel_levels=127;
 // Blocks of up to int8_block_panels panels interleave them per input: [block][input][panel in block][rank % 16], so
 // one projection pass reads the panels as a single sequential stream.
 constexpr size_t int8_block_panels=16;
+// Batched queries (#24): tiles of up to int8_query_tile queries share each decoded panel, int8_tile_panels panels per
+// pass (registers: tile x panels accumulators). Work splits into groups of int8_group_panels panels of one block per
+// query tile, small enough to balance a batch of 32 over 8 workers; a group (about 100 KB at d = 1536) stays in L2
+// while successive query tiles pass over it.
+constexpr size_t int8_query_tile=8,int8_tile_panels=2,int8_group_panels=4;
+static_assert(int8_block_panels%int8_group_panels==0,"panel groups must not straddle blocks");
 size_t int8_panel_position(size_t inputs,size_t ranks,size_t input,size_t rank) {
   using tieredq_detail::basis_panel_ranks;
   const size_t panel=rank/basis_panel_ranks,first=panel/int8_block_panels*int8_block_panels;
@@ -177,43 +184,62 @@ void project_int8_panels_scalar(const int8_t* panels,const float* scale,size_t i
       out[panel*basis_panel_ranks+l]=scale[panel*basis_panel_ranks+l]*sums[l];
   }
 }
+// The panels a projection pass covers: panels [first + offset, first + offset + count) of the block starting at panel
+// `first` of `width` panels.
+struct PanelRun { size_t first,width,offset; };
 #ifdef DV_TIEREDQ_REFINEMENT_X86
-// Blocks of Panels panels keep their accumulators in registers over all inputs.
-template<size_t Panels>
+// Queries x Panels accumulators stay in registers over all inputs. Each output keeps one FMA chain over ascending
+// inputs, so any tiling gives every query the same weights.
+template<size_t Panels,size_t Queries>
 __attribute__((target("avx512f")))
-void project_int8_block_avx512(const int8_t* panels,const float* scale,size_t inputs,size_t ranks,const float* x,float* out,
-                               size_t panel) {
+void project_int8_tile_avx512(const int8_t* panels,const float* scale,size_t inputs,size_t ranks,PanelRun run,
+                              const float* x,size_t x_stride,float* out,size_t out_stride) {
   using tieredq_detail::basis_panel_ranks;
-  __m512 acc[Panels];
-  for (auto& value:acc) value=_mm512_setzero_ps();
-  const int8_t* base=panels+panel*inputs*basis_panel_ranks;
+  __m512 acc[Queries][Panels];
+  for (auto& row:acc) for (auto& value:row) value=_mm512_setzero_ps();
+  const int8_t* base=panels+(run.first*inputs+run.offset)*basis_panel_ranks;
   for (size_t i=0;i<inputs;++i) {
-    const __m512 value=_mm512_set1_ps(x[i]);
-    for (size_t b=0;b<Panels;++b) {
-      const __m128i codes=_mm_loadu_si128(reinterpret_cast<const __m128i*>(base+(i*Panels+b)*basis_panel_ranks));
-      acc[b]=_mm512_fmadd_ps(value,_mm512_cvtepi32_ps(_mm512_cvtepi8_epi32(codes)),acc[b]);
+    __m512 coefficient[Panels];
+    for (size_t b=0;b<Panels;++b)
+      coefficient[b]=_mm512_cvtepi32_ps(_mm512_cvtepi8_epi32(
+          _mm_loadu_si128(reinterpret_cast<const __m128i*>(base+(i*run.width+b)*basis_panel_ranks))));
+    for (size_t q=0;q<Queries;++q) {
+      const __m512 value=_mm512_set1_ps(x[q*x_stride+i]);
+      for (size_t b=0;b<Panels;++b) acc[q][b]=_mm512_fmadd_ps(value,coefficient[b],acc[q][b]);
     }
   }
   for (size_t b=0;b<Panels;++b) {
-    const size_t rank=(panel+b)*basis_panel_ranks;
+    const size_t rank=(run.first+run.offset+b)*basis_panel_ranks;
     const __mmask16 live=__mmask16((1u<<std::min(basis_panel_ranks,ranks-rank))-1);
-    _mm512_mask_storeu_ps(out+rank,live,_mm512_mul_ps(_mm512_maskz_loadu_ps(live,scale+rank),acc[b]));
+    const __m512 factor=_mm512_maskz_loadu_ps(live,scale+rank);
+    for (size_t q=0;q<Queries;++q) _mm512_mask_storeu_ps(out+q*out_stride+rank,live,_mm512_mul_ps(factor,acc[q][b]));
   }
 }
-template<size_t Panels>
+// Dispatches a run of `count` <= Panels panels.
+template<size_t Panels,size_t Queries>
 __attribute__((target("avx512f")))
-void project_int8_tail_avx512(const int8_t* panels,const float* scale,size_t inputs,size_t ranks,const float* x,float* out,
-                              size_t panel,size_t live) {
-  if constexpr (Panels>1) if (live<Panels) return project_int8_tail_avx512<Panels-1>(panels,scale,inputs,ranks,x,out,panel,live);
-  project_int8_block_avx512<Panels>(panels,scale,inputs,ranks,x,out,panel);
+void project_int8_run_avx512(const int8_t* panels,const float* scale,size_t inputs,size_t ranks,PanelRun run,size_t count,
+                             const float* x,size_t x_stride,float* out,size_t out_stride) {
+  if constexpr (Panels>1)
+    if (count<Panels) return project_int8_run_avx512<Panels-1,Queries>(panels,scale,inputs,ranks,run,count,x,x_stride,out,out_stride);
+  project_int8_tile_avx512<Panels,Queries>(panels,scale,inputs,ranks,run,x,x_stride,out,out_stride);
 }
 __attribute__((target("avx512f")))
 void project_int8_panels_avx512(const int8_t* panels,const float* scale,size_t inputs,size_t ranks,const float* x,float* out) {
   const size_t count=tieredq_detail::basis_panel_count(ranks);
-  size_t panel=0;
-  for (;panel+int8_block_panels<=count;panel+=int8_block_panels)
-    project_int8_block_avx512<int8_block_panels>(panels,scale,inputs,ranks,x,out,panel);
-  if (panel<count) project_int8_tail_avx512<int8_block_panels>(panels,scale,inputs,ranks,x,out,panel,count-panel);
+  for (size_t first=0;first<count;first+=int8_block_panels) {
+    const size_t width=std::min(int8_block_panels,count-first);
+    project_int8_run_avx512<int8_block_panels,1>(panels,scale,inputs,ranks,{first,width,0},width,x,0,out,0);
+  }
+}
+// Panels [offset, end) of one block for a tile of Queries rows of x, int8_tile_panels panels per pass.
+template<size_t Queries>
+__attribute__((target("avx512f")))
+void project_int8_group_tile_avx512(const int8_t* panels,const float* scale,size_t inputs,size_t ranks,PanelRun run,
+                                    size_t end,const float* x,float* out) {
+  for (;run.offset<end;run.offset+=int8_tile_panels)
+    project_int8_run_avx512<int8_tile_panels,Queries>(panels,scale,inputs,ranks,run,std::min(int8_tile_panels,end-run.offset),
+                                                      x,inputs,out,ranks);
 }
 #endif
 void project_int8_panels(const int8_t* panels,const float* scale,size_t inputs,size_t ranks,const float* x,float* out) {
@@ -222,6 +248,50 @@ void project_int8_panels(const int8_t* panels,const float* scale,size_t inputs,s
   if (avx512) return project_int8_panels_avx512(panels,scale,inputs,ranks,x,out);
 #endif
   project_int8_panels_scalar(panels,scale,inputs,ranks,x,out);
+}
+bool int8_tiles_available() {
+#ifdef DV_TIEREDQ_REFINEMENT_X86
+  static const bool available=__builtin_cpu_supports("avx512f");
+  return available;
+#else
+  return false;
+#endif
+}
+// project_int8_panels of up to int8_query_tile rows x[row * inputs] into out[row * ranks], restricted to panel group
+// `group` (panels [group * int8_group_panels, +int8_group_panels)), with the same weights as per-row calls. Needs
+// int8_tiles_available().
+void project_int8_group_rows(const int8_t* panels,const float* scale,size_t inputs,size_t ranks,size_t group,
+                             const float* x,size_t rows,float* out) {
+#ifdef DV_TIEREDQ_REFINEMENT_X86
+  const size_t count=tieredq_detail::basis_panel_count(ranks),panel=group*int8_group_panels;
+  const size_t first=panel/int8_block_panels*int8_block_panels,width=std::min(int8_block_panels,count-first);
+  const PanelRun run{first,width,panel-first};
+  const size_t end=std::min(width,run.offset+int8_group_panels);
+  static_assert(int8_query_tile==8,"tile dispatch below");
+  while (rows) {
+    const size_t tile=rows>=8 ? 8 : rows>=4 ? 4 : rows>=2 ? 2 : 1;
+    if (tile==8) project_int8_group_tile_avx512<8>(panels,scale,inputs,ranks,run,end,x,out);
+    else if (tile==4) project_int8_group_tile_avx512<4>(panels,scale,inputs,ranks,run,end,x,out);
+    else if (tile==2) project_int8_group_tile_avx512<2>(panels,scale,inputs,ranks,run,end,x,out);
+    else project_int8_group_tile_avx512<1>(panels,scale,inputs,ranks,run,end,x,out);
+    x+=tile*inputs; out+=tile*ranks; rows-=tile;
+  }
+#else
+  (void)panels; (void)scale; (void)inputs; (void)ranks; (void)group; (void)x; (void)rows; (void)out;
+  bad("tiled refinement projection unavailable");
+#endif
+}
+// sum_e weights[e] * ratio[e] in mean_chains interleaved partial sums: a fixed order for every query path, without
+// one long dependent chain of adds.
+constexpr size_t mean_chains=16;
+float projected_mean(const float* weights,const float* ratio,size_t count) {
+  float partial[mean_chains]={};
+  size_t e=0;
+  for (;e+mean_chains<=count;e+=mean_chains) for (size_t c=0;c<mean_chains;++c) partial[c]+=weights[e+c]*ratio[e+c];
+  for (size_t c=0;e<count;++e,++c) partial[c]+=weights[e]*ratio[e];
+  float sum=0;
+  for (float value:partial) sum+=value;
+  return sum;
 }
 bool avx512_kernel_available() {
 #ifdef DV_TIEREDQ_REFINEMENT_X86
@@ -475,19 +545,59 @@ TieredQRefinementQuery TieredQRefinement::query(const float* vector) const {
 }
 
 TieredQRefinementQuery TieredQRefinement::query(const float* vector,TieredQQuery prefix_query) const {
-  const size_t d=prefix_.model_dimensions(),m1=prefix_.coded_dimensions(),extra=extra_mean_.size();
-  if (prefix_query.weights.size()!=m1 || prefix_query.centroid_scores.size()!=prefix_.config().num_centroids)
-    bad("refinement prefix query shape mismatch");
+  const size_t d=prefix_.model_dimensions(),extra=extra_mean_.size();
+  check_prefix_query(prefix_query);
   std::vector<float> lifted(d);
   prefix_.lift(vector,1,true,lifted.data());
-  TieredQRefinementQuery q;
-  q.prefix=std::move(prefix_query);
   // Weights of the suffix-only ranks (sigma folded into the panels).
   std::vector<float> weights(extra);
   project_int8_panels(extra_panels_.data(),extra_panel_scale_.data(),d,extra,lifted.data(),weights.data());
-  q.weights=q.prefix.weights;
-  q.weights.insert(q.weights.end(),weights.begin(),weights.end());
-  for (size_t e=0;e<extra;++e) q.extra_mean+=weights[e]*extra_mean_ratio_[e];
+  return assemble_query(std::move(prefix_query),weights.data());
+}
+
+std::vector<TieredQRefinementQuery> TieredQRefinement::query(const float* vectors,size_t rows,
+                                                             std::vector<TieredQQuery> prefix_queries) const {
+  const size_t d=prefix_.model_dimensions(),extra=extra_mean_.size();
+  if (prefix_queries.size()!=rows) bad("refinement batch needs one prefix query per row");
+  if (rows && !vectors) bad("null refinement query");
+  for (const auto& prefix_query:prefix_queries) check_prefix_query(prefix_query);
+  std::vector<float> lifted(product(rows,d)),weights(product(rows,extra));
+  prefix_.lift(vectors,rows,true,lifted.data());
+  const size_t chunks=(rows+int8_query_tile-1)/int8_query_tile;
+  const size_t groups=(tieredq_detail::basis_panel_count(extra)+int8_group_panels-1)/int8_group_panels;
+  if (int8_tiles_available()) {
+    // Group-major tasks: a worker's consecutive tasks reuse one panel group from L2 across query chunks.
+    const size_t tasks=chunks*groups;
+#pragma omp parallel for schedule(static) if(tasks>1 && !omp_in_parallel())
+    for (size_t task=0;task<tasks;++task) {
+      const size_t group=task/chunks,first_row=task%chunks*int8_query_tile;
+      project_int8_group_rows(extra_panels_.data(),extra_panel_scale_.data(),d,extra,group,lifted.data()+first_row*d,
+                              std::min(int8_query_tile,rows-first_row),weights.data()+first_row*extra);
+    }
+  } else {
+    for (size_t row=0;row<rows;++row)
+      project_int8_panels(extra_panels_.data(),extra_panel_scale_.data(),d,extra,lifted.data()+row*d,weights.data()+row*extra);
+  }
+  std::vector<TieredQRefinementQuery> out(rows);
+#pragma omp parallel for schedule(static) if(rows>1 && !omp_in_parallel())
+  for (size_t row=0;row<rows;++row) out[row]=assemble_query(std::move(prefix_queries[row]),weights.data()+row*extra);
+  return out;
+}
+
+void TieredQRefinement::check_prefix_query(const TieredQQuery& prefix_query) const {
+  if (prefix_query.weights.size()!=prefix_.coded_dimensions() ||
+      prefix_query.centroid_scores.size()!=prefix_.config().num_centroids)
+    bad("refinement prefix query shape mismatch");
+}
+
+TieredQRefinementQuery TieredQRefinement::assemble_query(TieredQQuery prefix_query,const float* extra_weights) const {
+  const size_t extra=extra_mean_.size();
+  TieredQRefinementQuery q;
+  q.prefix=std::move(prefix_query);
+  q.weights.reserve(q.prefix.weights.size()+extra);
+  q.weights.assign(q.prefix.weights.begin(),q.prefix.weights.end());
+  q.weights.insert(q.weights.end(),extra_weights,extra_weights+extra);
+  q.extra_mean=projected_mean(extra_weights,extra_mean_ratio_.data(),extra);
   return q;
 }
 

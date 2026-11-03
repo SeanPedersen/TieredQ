@@ -1,0 +1,8 @@
+block 0 70 3 gain 5
+block 70 152 2 gain 4
+block 222 254 1 gain 4
+run 476 59 5
+run 535 367 4
+run 902 347 3
+run 1249 246 2
+run 1495 35 1

@@ -114,8 +114,8 @@ class TieredQNestedIVFIndex {
   // Candidates' prefix and suffix rows, each row-major, from the tier (and the lists for suffix-only tiers).
   void candidate_rows(const uint32_t* candidates, size_t found, uint8_t* prefix_rows, uint8_t* suffix_rows) const;
   // Rescores one query's found candidates (best first) in place to its top k; returns how many it kept.
-  size_t rescore(const float* query, TieredQQuery weights, const uint32_t* candidates, size_t found, size_t k,
-                 float* scores, uint32_t* ids) const;
+  size_t rescore(const float* query, const TieredQRefinementQuery& refined_query, const uint32_t* candidates, size_t found,
+                 size_t k, float* scores, uint32_t* ids) const;
   TieredQIVFIndex index_;
   TieredQRefinement refinement_;
   TieredQTierRows tier_rows_;

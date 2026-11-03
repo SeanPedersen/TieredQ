@@ -88,6 +88,41 @@ void kernel_parity(const TieredQRefinement& refinement,const std::vector<uint8_t
   refinement.score(prefix_codes.data(),suffix_codes.data(),rows,shared,a.data());
   refinement.score(prefix_codes.data(),suffix_codes.data(),rows,own,b.data());
   require(a==b,"refinement scores differently from shared prefix query weights");
+  // Batched queries (full and partial tiles) equal per-row ones exactly.
+  constexpr size_t ragged_rows=13;
+  for (size_t count:{queries,ragged_rows}) {
+    const auto batch=refinement.query(probes.data(),count,refinement.prefix().query_weights(probes.data(),count));
+    require(batch.size()==count,"refinement batch size");
+    for (size_t q=0;q<count;++q) {
+      const auto row=refinement.query(probes.data()+q*dimensions);
+      require(batch[q].weights==row.weights && batch[q].extra_mean==row.extra_mean &&
+              batch[q].prefix.centroid_scores==row.prefix.centroid_scores,"batched refinement query differs from per-row");
+    }
+  }
+}
+// Batched queries across several suffix basis blocks (16 panels of 16 ranks each) equal per-row ones exactly.
+void wide_batch_test() {
+  constexpr uint32_t wide=640,wide_seed=17;
+  constexpr size_t wide_rows=2000,batch_rows=21,block_ranks=256;
+  constexpr float decay=1;
+  std::mt19937 random(wide_seed); std::normal_distribution<float> normal;
+  std::vector<float> data(wide_rows*wide);
+  for (size_t i=0;i<wide_rows;++i) for (uint32_t j=0;j<wide;++j) data[i*wide+j]=normal(random)*std::exp(-decay*float(j)/wide);
+  auto config=TieredQConfig::target_code_bits(wide,wide/4);
+  config.num_centroids=centroids;
+  const auto prefix=TieredQ::train(config,data.data(),wide_rows,seed);
+  const auto refinement=TieredQRefinement::train(prefix,4*wide,data.data(),wide_rows,seed);
+  require(refinement.positions()-prefix.coded_dimensions()>block_ranks,"wide refinement fits one basis block");
+  const auto batch=refinement.query(data.data(),batch_rows,prefix.query_weights(data.data(),batch_rows));
+  for (size_t q=0;q<batch_rows;++q) {
+    const auto row=refinement.query(data.data()+q*wide);
+    require(batch[q].weights==row.weights && batch[q].extra_mean==row.extra_mean,"wide batched refinement query differs");
+  }
+  // A batch needs one prefix query per row.
+  bool rejected=false;
+  try { refinement.query(data.data(),batch_rows,prefix.query_weights(data.data(),batch_rows-1)); }
+  catch (const std::exception&) { rejected=true; }
+  require(rejected,"refinement batch accepted a missing prefix query");
 }
 void quality_test(TieredQMetric metric,uint32_t prefix_bits,uint32_t total_bits) {
   const auto sample=clustered_rows(rows,3),data=clustered_rows(rows,11),probes=clustered_rows(queries,13);
@@ -141,5 +176,6 @@ void tieredq_refinement_tests() {
     quality_test(metric,dimensions/2,3*dimensions);
   }
   persistence_test();
+  wide_batch_test();
   std::cout<<"PASS refinement\n";
 }

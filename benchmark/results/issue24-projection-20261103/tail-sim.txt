@@ -1,0 +1,15 @@
+cap 1054: runs [(313, 4), (597, 3), (144, 2)]
+cap 768: runs [(259, 5), (509, 4)]
+cap 512: runs [(259, 7), (253, 6)]
+cap 384: runs [(384, 8)]
+cap 256: runs [(256, 8)]
+tail signal <q,t>^2 mean 4.552e-04
+pca     mse 6.484e-07  x1.00 of pca
+exact   mse 1.059e-06  x1.63 of pca
+leaky   mse 1.306e-05  x20.14 of pca
+hybrid  mse 1.143e-05  x17.62 of pca
+cap1054 mse 6.896e-07  x1.06 of pca
+cap768  mse 3.360e-06  x5.18 of pca
+cap512  mse 2.068e-05  x31.90 of pca
+cap384  mse 4.606e-05  x71.04 of pca
+cap256  mse 1.001e-04  x154.37 of pca

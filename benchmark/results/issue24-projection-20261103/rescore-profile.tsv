@@ -1,0 +1,15 @@
+head	1	rescore_profile	768	32	50	int8	23.6	0.9880
+head	1	rescore_profile	768	32	50	tieredq-refinement:4	124.6	0.9765
+eval	1	rescore_profile	768	32	50	int8	23.1	0.9880
+eval	1	rescore_profile	768	32	50	tieredq-refinement:4/b32	74.0	0.9765
+eval	1	rescore_profile	768	32	50	tieredq-refinement:4	114.8	0.9765
+head	2	rescore_profile	768	32	50	int8	23.2	0.9880
+head	2	rescore_profile	768	32	50	tieredq-refinement:4	117.3	0.9765
+eval	2	rescore_profile	768	32	50	int8	23.4	0.9880
+eval	2	rescore_profile	768	32	50	tieredq-refinement:4/b32	73.4	0.9765
+eval	2	rescore_profile	768	32	50	tieredq-refinement:4	103.8	0.9765
+head	3	rescore_profile	768	32	50	int8	23.0	0.9880
+head	3	rescore_profile	768	32	50	tieredq-refinement:4	118.6	0.9765
+eval	3	rescore_profile	768	32	50	int8	22.6	0.9880
+eval	3	rescore_profile	768	32	50	tieredq-refinement:4/b32	73.3	0.9765
+eval	3	rescore_profile	768	32	50	tieredq-refinement:4	116.2	0.9765

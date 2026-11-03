@@ -22,6 +22,8 @@
 // B-1 ex-bits). tieredq-residual:B refines a flat TieredQ prefix with a residual TieredQ at B*d total bits;
 // tieredq-refinement:B nests a TieredQRefinement suffix on the flat prefix (B*d total code bits). PREFIX_BITS sets
 // the prefix budget of both (default 1416). Rerank rows end with rescore and rescore_bytes (the tier per vector; fp32_bits stays the FP32 size).
+// RESCORE_BATCH=B (rescore-profile) also times tiers that prepare query terms in batches (tieredq-refinement: batched
+// TieredQRefinement::query, #24), B queries per batch on one thread, as rows named <tier>/bB.
 // Mode tieredq-nested CODE_BITS runs the engine flow (#23), TieredQNestedIVFIndex: the CODE_BITS prefix IVF and a
 // NESTED_BITS (default 4) refinement tier, rescoring each RERANK depth k' (required) of candidates. NESTED_ROWS=suffix
 // stores only the suffix (prefix rows decoded from the lists); prefix_and_suffix (default) stores both. NESTED_TIER=file
@@ -101,27 +103,36 @@ struct Rescorer {
   double bytes;  // per vector
   std::function<void(const float*,const dv::TieredQQuery*,const uint32_t*,size_t,float*)> score;
   uint32_t prefix_model=0;
+  // Optional (#24): reranks `rows` queries (prefix queries required) whose query terms are prepared together, each
+  // row's `depth` candidates into top_k ids as rerank() does.
+  std::function<void(const float*,const dv::TieredQQuery*,size_t,const uint32_t*,size_t,uint32_t*)> rerank_batch;
 };
 Rescorer fp32_rescorer(const Data& data) {
   return {"fp32",4.0*double(data.d),[&data](const float* query,const dv::TieredQQuery*,const uint32_t* ids,size_t count,float* scores) {
     for (size_t i=0;i<count;++i) scores[i]=inner_product(query,data.base.data()+size_t(ids[i])*data.d,data.d);
   }};
 }
-// Rescoring shared by every codec: top_k of `count` candidates (UINT32_MAX = empty slot) into out; returns reads.
-size_t rerank(const Rescorer& tier,const float* query,const dv::TieredQQuery* prefix_query,const uint32_t* candidates,
-              size_t count,uint32_t* out) {
+// Top_k of `count` candidates (UINT32_MAX = empty slot) into out by score(ids, count, scores); returns reads.
+template<class Score>
+size_t rerank_by(Score&& score,const uint32_t* candidates,size_t count,uint32_t* out) {
   thread_local std::vector<uint32_t> ids;
   thread_local std::vector<float> scores;
   thread_local std::vector<std::pair<float,uint32_t>> scored;
   ids.clear(); scored.clear();
   for (size_t i=0;i<count;++i) if (candidates[i]!=UINT32_MAX) ids.push_back(candidates[i]);
   scores.resize(ids.size());
-  tier.score(query,prefix_query,ids.data(),ids.size(),scores.data());
+  score(ids.data(),ids.size(),scores.data());
   for (size_t i=0;i<ids.size();++i) scored.emplace_back(scores[i],ids[i]);
   const size_t kept=std::min(top_k,scored.size());
   std::partial_sort(scored.begin(),scored.begin()+kept,scored.end(),[](const auto& a,const auto& b) { return a.first>b.first; });
   for (size_t i=0;i<top_k;++i) out[i]=i<kept ? scored[i].second : UINT32_MAX;
   return scored.size();
+}
+// Rescoring shared by every codec: top_k of `count` candidates (UINT32_MAX = empty slot) into out; returns reads.
+size_t rerank(const Rescorer& tier,const float* query,const dv::TieredQQuery* prefix_query,const uint32_t* candidates,
+              size_t count,uint32_t* out) {
+  return rerank_by([&](const uint32_t* ids,size_t n,float* scores) { tier.score(query,prefix_query,ids,n,scores); },
+                   candidates,count,out);
 }
 // The first TRAIN_ROWS (default training_limit) rows of a seeded shuffle, skipping the TRAIN_EXCLUDE_ROWS ids.
 std::vector<size_t> training_rows(const Data& data) {
@@ -251,18 +262,28 @@ Rescorer tieredq_refinement_rescorer(const Data& data,uint32_t bits,size_t nlist
   refinement->encode(data.base.data(),data.n,prefix_codes->data(),suffix_codes->data());
   std::fprintf(stderr,"refinement tier %u: prefix %u code bits (%zu ranks), suffix %zu bits, %zu bytes, %zu positions\n",bits,
                prefix->config().code_bits,prefix->coded_dimensions(),refinement->suffix_bits(),suffix_bytes,refinement->positions());
-  return {"tieredq-refinement:"+std::to_string(bits),double(suffix_bytes),
-          [refinement,prefix_codes,suffix_codes,prefix_bytes,suffix_bytes](const float* query,const dv::TieredQQuery* prefix_query,
-                                                                            const uint32_t* ids,size_t count,float* scores) {
+  auto score_rows=[refinement,prefix_codes,suffix_codes,prefix_bytes,suffix_bytes](const uint32_t* ids,size_t count,
+                                                                                   const dv::TieredQRefinementQuery& query,float* scores) {
     thread_local std::vector<uint8_t> prefix_rows,suffix_rows;
     prefix_rows.resize(count*prefix_bytes); suffix_rows.resize(count*suffix_bytes);
     for (size_t i=0;i<count;++i) {
       std::copy_n(prefix_codes->data()+size_t(ids[i])*prefix_bytes,prefix_bytes,prefix_rows.data()+i*prefix_bytes);
       std::copy_n(suffix_codes->data()+size_t(ids[i])*suffix_bytes,suffix_bytes,suffix_rows.data()+i*suffix_bytes);
     }
-    refinement->score(prefix_rows.data(),suffix_rows.data(),count,
-                      prefix_query ? refinement->query(query,*prefix_query) : refinement->query(query),scores);
+    refinement->score(prefix_rows.data(),suffix_rows.data(),count,query,scores);
+  };
+  Rescorer tier{"tieredq-refinement:"+std::to_string(bits),double(suffix_bytes),
+                [refinement,score_rows](const float* query,const dv::TieredQQuery* prefix_query,const uint32_t* ids,size_t count,float* scores) {
+    score_rows(ids,count,prefix_query ? refinement->query(query,*prefix_query) : refinement->query(query),scores);
   },prefix->model_id()};
+  tier.rerank_batch=[refinement,score_rows](const float* queries,const dv::TieredQQuery* prefix_queries,size_t rows,
+                                           const uint32_t* candidates,size_t depth,uint32_t* out) {
+    const auto refined=refinement->query(queries,rows,std::vector<dv::TieredQQuery>(prefix_queries,prefix_queries+rows));
+    for (size_t q=0;q<rows;++q)
+      rerank_by([&](const uint32_t* ids,size_t n,float* scores) { score_rows(ids,n,refined[q],scores); },
+                candidates+q*depth,depth,out+q*top_k);
+  };
+  return tier;
 }
 // Mean row of every list (over the training rows with PARTITION_FROM=subset): RaBitQ's centroids on a shared
 // partition.
@@ -592,8 +613,22 @@ void profile_rescore(const Data& data,uint32_t code_bits,size_t nlist,size_t npr
   index.search_batch(data.queries.data(),weights.data(),data.nq,depth,nprobe,scores.data(),candidates.data(),pruning());
   omp_set_num_threads(1);
   std::fprintf(stderr,"profile ready\n");
+  // RESCORE_BATCH=B also times tiers with batched query terms, B queries per batch (still one thread).
+  const size_t batch=std::getenv("RESCORE_BATCH") ? std::stoul(std::getenv("RESCORE_BATCH")) : 0;
   for (const auto& tier:tiers) {
     const bool shared=tier.prefix_model==index.codec().model_id();
+    if (batch && shared && tier.rerank_batch) {
+      const auto start=std::chrono::steady_clock::now();
+      for (size_t round=0;round<profile_rounds;++round)
+        for (size_t first=0;first<data.nq;first+=batch) {
+          const size_t rows=std::min(batch,data.nq-first);
+          tier.rerank_batch(data.queries.data()+first*data.d,&weights[first],rows,candidates.data()+first*depth,depth,
+                            ids.data()+first*top_k);
+        }
+      std::printf("rescore_profile\t%u\t%zu\t%zu\t%s/b%zu\t%.1f\t%.4f\n",code_bits,nprobe,depth,tier.name.c_str(),batch,
+                  1e6*seconds_since(start)/double(profile_rounds*data.nq),recall(data,ids));
+      std::fflush(stdout);
+    }
     const auto start=std::chrono::steady_clock::now();
     for (size_t round=0;round<profile_rounds;++round)
       for (size_t q=0;q<data.nq;++q)

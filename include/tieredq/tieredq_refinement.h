@@ -39,6 +39,11 @@ class TieredQRefinement {
   TieredQRefinementQuery query(const float* vector) const;
   // Reuses the prefix's query_weights() for the same vector (e.g. from the scan that found the candidates).
   TieredQRefinementQuery query(const float* vector, TieredQQuery prefix_query) const;
+  // Batched query() over contiguous rows and their prefix queries (e.g. prefix().query_weights(vectors, rows)); results
+  // equal per-row calls exactly. Up to 8 queries share each pass over the suffix basis, which the per-row projection
+  // streams from memory once per query; blocks of queries and basis panels run on OpenMP workers.
+  std::vector<TieredQRefinementQuery> query(const float* vectors, size_t rows,
+                                            std::vector<TieredQQuery> prefix_queries) const;
   // Row-major prefix and suffix rows (their bytes_per_vector() strides) of the same count vectors; scores estimate
   // model-space inner products, as TieredQ::score does.
   // kernel: automatic, scalar or avx512 (AVX-512F/BW); others are rejected.
@@ -76,6 +81,8 @@ class TieredQRefinement {
   // Encoder-only state (every position's basis as FP32 panels, centroid projections), built on first use.
   std::shared_ptr<tieredq_detail::RefinementEncoder> encoder_;
   void prepare();
+  void check_prefix_query(const TieredQQuery& prefix_query) const;
+  TieredQRefinementQuery assemble_query(TieredQQuery prefix_query, const float* extra_weights) const;
   const tieredq_detail::RefinementEncoder& encoder() const;
   void fit_levels(const float* model_rows, size_t rows, const std::vector<uint8_t>& prefix_rows);
   // Centered projections of rows' centroid residuals: prefix ranks then extra ranks, positions() per row.

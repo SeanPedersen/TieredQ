@@ -1,0 +1,12 @@
+head	1	tieredq-nested	768	64	16	1029.8	768	50	0.9606	769	ram:prefix_and_suffix	2140	17796	9.49	9cfc87a96caf9c8f
+head	1	tieredq-nested	768	64	32	1029.8	768	50	0.9765	769	ram:prefix_and_suffix	1763	12873	9.49	9cfc87a96caf9c8f
+eval	1	tieredq-nested	768	64	16	1029.8	768	50	0.9606	769	ram:prefix_and_suffix	2574	19395	9.61	9cfc87a96caf9c8f
+eval	1	tieredq-nested	768	64	32	1029.8	768	50	0.9765	769	ram:prefix_and_suffix	1758	13595	9.61	9cfc87a96caf9c8f
+head	2	tieredq-nested	768	64	16	1029.8	768	50	0.9606	769	ram:prefix_and_suffix	2046	16850	9.70	9cfc87a96caf9c8f
+head	2	tieredq-nested	768	64	32	1029.8	768	50	0.9765	769	ram:prefix_and_suffix	1547	11990	9.70	9cfc87a96caf9c8f
+eval	2	tieredq-nested	768	64	16	1029.8	768	50	0.9606	769	ram:prefix_and_suffix	2565	19006	9.19	9cfc87a96caf9c8f
+eval	2	tieredq-nested	768	64	32	1029.8	768	50	0.9765	769	ram:prefix_and_suffix	1843	13526	9.19	9cfc87a96caf9c8f
+head	3	tieredq-nested	768	64	16	1029.8	768	50	0.9606	769	ram:prefix_and_suffix	2408	17044	9.22	9cfc87a96caf9c8f
+head	3	tieredq-nested	768	64	32	1029.8	768	50	0.9765	769	ram:prefix_and_suffix	1565	12754	9.22	9cfc87a96caf9c8f
+eval	3	tieredq-nested	768	64	16	1029.8	768	50	0.9606	769	ram:prefix_and_suffix	2384	18613	9.35	9cfc87a96caf9c8f
+eval	3	tieredq-nested	768	64	32	1029.8	768	50	0.9765	769	ram:prefix_and_suffix	1747	12962	9.35	9cfc87a96caf9c8f
