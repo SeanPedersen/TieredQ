@@ -26,7 +26,8 @@
 // NESTED_BITS (default 4) refinement tier, rescoring each RERANK depth k' (required) of candidates. NESTED_ROWS=suffix
 // stores only the suffix (prefix rows decoded from the lists); prefix_and_suffix (default) stores both. NESTED_TIER=file
 // writes the tier to NESTED_FILE (default issue6-nested-PID.rows in the temp directory, removed after) and reads
-// candidates by pread (direct: with direct I/O, bypassing the page cache); ram (default) keeps it in memory. Rows: tieredq-nested budget nlist nprobe disk_bits code_bits
+// candidates by pread (direct: with direct I/O, bypassing the page cache), NESTED_QUEUE_DEPTH (default 1) of them in
+// flight per query; ram (default) keeps it in memory. Rows: tieredq-nested budget nlist nprobe disk_bits code_bits
 // rerank_k recall tier_bytes tier:rows qps_1t_b1 qps_8t_b32 build_s list_hash.
 // Mode tieredq-nesting B1,B2,... (storage only) prints whether each budget's model refines the previous one.
 // Usage: issue6_ivf_eval MODE BUDGET DATA_DIR D NLIST TIMED(0|1) NPROBE...   (RaBitQ needs BENCH_SEED set)
@@ -503,7 +504,8 @@ std::shared_ptr<const dv::TieredQRowSource> nested_tier(const Data& data,const d
     writer.append(rows.data(),count);
   }
   writer.finish();
-  return std::make_shared<dv::TieredQFileRows>(path,tier=="direct" ? dv::TieredQFileReads::direct : dv::TieredQFileReads::cached);
+  const size_t depth=std::getenv("NESTED_QUEUE_DEPTH") ? std::stoul(std::getenv("NESTED_QUEUE_DEPTH")) : 1;
+  return std::make_shared<dv::TieredQFileRows>(path,tier=="direct" ? dv::TieredQFileReads::direct : dv::TieredQFileReads::cached,depth);
 }
 
 void run_nested(const Data& data,uint32_t code_bits,size_t nlist,bool timed,const std::vector<size_t>& nprobes) {

@@ -9,6 +9,9 @@
 #include <cstdlib>
 #include <cstring>
 #include <fcntl.h>
+#ifdef DV_TIEREDQ_URING
+#include <liburing.h>
+#endif
 #include <limits>
 #include <memory>
 #include <numeric>
@@ -46,6 +49,64 @@ void write_exact(int fd,const uint8_t* data,size_t bytes,off_t offset) {
     data+=put; bytes-=size_t(put); offset+=put;
   }
 }
+// One planned positioned read: `bytes` from `offset` into `into`, of which the first `needed` must arrive (direct
+// reads may stop short at the end of the file).
+struct RowRead { size_t offset, bytes, needed; uint8_t* into; };
+constexpr size_t max_queue_depth=4096;
+
+// Completes a planned read from `got` bytes on, one pread at a time.
+void read_planned(int fd,const RowRead& row,size_t got) {
+  while (got<row.needed) {
+    const ssize_t n=::pread(fd,row.into+got,row.bytes-got,off_t(row.offset+got));
+    if (n<0 && errno==EINTR) continue;
+    if (n<=0) bad(n<0 ? std::string("row read failed: ")+std::strerror(errno) : "truncated row file");
+    got+=size_t(n);
+  }
+}
+
+#ifdef DV_TIEREDQ_URING
+// One ring per thread: read() runs concurrently on search workers, and a ring is not thread-safe.
+struct ThreadRing {
+  io_uring ring{};
+  unsigned entries=0;
+  ~ThreadRing() { if (entries) io_uring_queue_exit(&ring); }
+  io_uring& at_least(unsigned depth) {
+    if (entries>=depth) return ring;
+    if (entries) { io_uring_queue_exit(&ring); entries=0; }
+    if (const int error=io_uring_queue_init(depth,&ring,0)) bad(std::string("io_uring setup failed: ")+std::strerror(-error));
+    entries=depth;
+    return ring;
+  }
+};
+// Keeps up to depth reads in flight, refilling as each completes; short reads finish with pread.
+void read_concurrent(int fd,const std::vector<RowRead>& plan,size_t depth) {
+  thread_local ThreadRing thread_ring;
+  const unsigned window=unsigned(std::min(depth,plan.size()));
+  io_uring& ring=thread_ring.at_least(window);
+  size_t queued=0,done=0;
+  while (done<plan.size()) {
+    unsigned prepared=0;
+    for (;queued<plan.size() && queued-done<window;++queued,++prepared) {
+      io_uring_sqe* sqe=io_uring_get_sqe(&ring);
+      if (!sqe) break;
+      const auto& row=plan[queued];
+      io_uring_prep_read(sqe,fd,row.into,unsigned(row.bytes),row.offset);
+      io_uring_sqe_set_data64(sqe,queued);
+    }
+    if (prepared && io_uring_submit(&ring)<0) bad("io_uring submit failed");
+    io_uring_cqe* cqe=nullptr;
+    int error=io_uring_wait_cqe(&ring,&cqe);
+    while (error==-EINTR) error=io_uring_wait_cqe(&ring,&cqe);
+    if (error) bad(std::string("io_uring wait failed: ")+std::strerror(-error));
+    const auto& row=plan[size_t(io_uring_cqe_get_data64(cqe))];
+    const int result=cqe->res;
+    io_uring_cqe_seen(&ring,cqe);
+    if (result<0 && result!=-EINTR && result!=-EAGAIN) bad(std::string("row read failed: ")+std::strerror(-result));
+    read_planned(fd,row,result>0 ? size_t(result) : 0);
+    ++done;
+  }
+}
+#endif
 } // namespace
 
 TieredQMemoryRows::TieredQMemoryRows(std::vector<uint8_t> data,size_t row_bytes)
@@ -75,7 +136,9 @@ static int open_rows(const std::string& path,TieredQFileReads reads) {
   return fd;
 }
 
-TieredQFileRows::TieredQFileRows(const std::string& path,TieredQFileReads reads) : reads_(reads) {
+TieredQFileRows::TieredQFileRows(const std::string& path,TieredQFileReads reads,size_t queue_depth)
+    : reads_(reads),queue_depth_(queue_depth) {
+  if (!queue_depth_ || queue_depth_>max_queue_depth) bad("queue depth must be 1 to "+std::to_string(max_queue_depth));
   if (reads_!=TieredQFileReads::cached && reads_!=TieredQFileReads::direct) bad("invalid file reads");
   // The header is read through the cache; direct reads then use their own descriptor.
   fd_=open_rows(path,TieredQFileReads::cached);
@@ -100,38 +163,45 @@ TieredQFileRows::TieredQFileRows(const std::string& path,TieredQFileReads reads)
   } catch (...) { if (fd_>=0) ::close(fd_); throw; }
 }
 TieredQFileRows::~TieredQFileRows() { if (fd_>=0) ::close(fd_); }
+bool TieredQFileRows::concurrent_reads_available() {
+#ifdef DV_TIEREDQ_URING
+  return true;
+#else
+  return false;
+#endif
+}
+
+// Cached rows read straight into out. Direct reads need block-aligned offsets, lengths and buffers: each candidate
+// reads the pages covering its row (the last may end past the file) into its own slot, then copies the row out.
 void TieredQFileRows::read(const uint32_t* ids,size_t count,uint8_t* out) const {
-  if (reads_==TieredQFileReads::cached) {
-    for (size_t i=0;i<count;++i) {
-      check_row_id(ids[i],rows_);
-      read_exact(fd_,out+i*row_bytes_,row_bytes_,off_t(data_alignment+size_t(ids[i])*row_bytes_));
-    }
-    return;
-  }
-  // Direct reads need block-aligned offsets, lengths and buffers; the last pages may end past the file.
+  if (!count) return;
+  const bool direct=reads_==TieredQFileReads::direct;
+  const size_t span=direct ? (row_bytes_+2*data_alignment-2)/data_alignment*data_alignment : 0;
+  const size_t file_end=(file_bytes_+data_alignment-1)/data_alignment*data_alignment;
   struct Aligned { void operator()(uint8_t* p) const { std::free(p); } };
   thread_local std::unique_ptr<uint8_t,Aligned> pages;
   thread_local size_t page_bytes=0;
-  const size_t span=(row_bytes_+2*data_alignment-2)/data_alignment*data_alignment;
-  if (page_bytes<span) {
-    pages.reset(static_cast<uint8_t*>(std::aligned_alloc(data_alignment,span)));
-    if (!pages) bad("cannot allocate direct read buffer");
-    page_bytes=span;
+  if (direct && page_bytes<count*span) {
+    pages.reset(static_cast<uint8_t*>(std::aligned_alloc(data_alignment,count*span)));
+    if (!pages) { page_bytes=0; bad("cannot allocate direct read buffer"); }
+    page_bytes=count*span;
   }
+  thread_local std::vector<RowRead> plan;
+  plan.resize(count);
   for (size_t i=0;i<count;++i) {
     check_row_id(ids[i],rows_);
-    const size_t offset=data_alignment+size_t(ids[i])*row_bytes_,first=offset/data_alignment*data_alignment;
-    const size_t last=std::min((offset+row_bytes_+data_alignment-1)/data_alignment*data_alignment,
-                               (file_bytes_+data_alignment-1)/data_alignment*data_alignment);
-    size_t got=0;
-    while (first+got<offset+row_bytes_) {
-      const ssize_t n=::pread(fd_,pages.get()+got,last-first-got,off_t(first+got));
-      if (n<0 && errno==EINTR) continue;
-      if (n<=0) bad(n<0 ? std::string("direct row read failed: ")+std::strerror(errno) : "truncated row file");
-      got+=size_t(n);
-    }
-    std::memcpy(out+i*row_bytes_,pages.get()+(offset-first),row_bytes_);
+    const size_t offset=data_alignment+size_t(ids[i])*row_bytes_;
+    if (!direct) { plan[i]={offset,row_bytes_,row_bytes_,out+i*row_bytes_}; continue; }
+    const size_t first=offset/data_alignment*data_alignment;
+    const size_t last=std::min((offset+row_bytes_+data_alignment-1)/data_alignment*data_alignment,file_end);
+    plan[i]={first,last-first,offset+row_bytes_-first,pages.get()+i*span};
   }
+#ifdef DV_TIEREDQ_URING
+  if (queue_depth_>1) read_concurrent(fd_,plan,queue_depth_); else
+#endif
+  for (const auto& row:plan) read_planned(fd_,row,0);
+  if (direct) for (size_t i=0;i<count;++i)
+    std::memcpy(out+i*row_bytes_,plan[i].into+(data_alignment+size_t(ids[i])*row_bytes_-plan[i].offset),row_bytes_);
 }
 
 TieredQRowFileWriter::TieredQRowFileWriter(const std::string& path,size_t row_bytes) : row_bytes_(row_bytes) {

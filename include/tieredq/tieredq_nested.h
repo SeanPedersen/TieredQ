@@ -36,23 +36,29 @@ class TieredQMemoryRows final : public TieredQRowSource {
 // device read of the aligned pages covering its row (one, or two when a row crosses a page boundary).
 enum class TieredQFileReads { cached, direct };
 
-// A row file: a header, then rows from a page-aligned offset. Each candidate is one positioned read (pread), so the
-// tier can sit on SSD.
+// A row file: a header, then rows from a page-aligned offset, so the tier can sit on SSD. Each candidate is one
+// positioned read. With queue_depth > 1 a read() keeps up to that many in flight on a per-thread io_uring, which
+// SSDs need for throughput (one read at a time waits about 100 us each); builds without liburing read one at a time.
 class TieredQFileRows final : public TieredQRowSource {
  public:
-  explicit TieredQFileRows(const std::string& path, TieredQFileReads reads = TieredQFileReads::cached);
+  explicit TieredQFileRows(const std::string& path, TieredQFileReads reads = TieredQFileReads::cached,
+                           size_t queue_depth = 1);
   ~TieredQFileRows() override;
   TieredQFileRows(const TieredQFileRows&) = delete;
   TieredQFileRows& operator=(const TieredQFileRows&) = delete;
   size_t row_bytes() const override { return row_bytes_; }
   size_t rows() const override { return rows_; }
   void read(const uint32_t* ids, size_t count, uint8_t* out) const override;
+  size_t queue_depth() const { return queue_depth_; }
+  // Whether this build issues concurrent reads (io_uring); otherwise any queue depth reads one row at a time.
+  static bool concurrent_reads_available();
   static constexpr uint32_t format = 1;
   // Data offset and direct-read granularity; covers the logical block size of common devices.
   static constexpr size_t data_alignment = 4096;
  private:
   int fd_ = -1;
   TieredQFileReads reads_;
+  size_t queue_depth_;
   size_t row_bytes_ = 0, rows_ = 0, file_bytes_ = 0;
 };
 

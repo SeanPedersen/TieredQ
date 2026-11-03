@@ -153,6 +153,11 @@ void batch_file_and_serialization_test(TieredQTierRows tier_rows) {
   require(same(answers(loaded,probes),expected),"file-backed deserialized index differs");
   loaded.attach_tier(std::make_shared<TieredQFileRows>(path,TieredQFileReads::direct));
   require(same(answers(loaded,probes),expected),"direct-read file tier differs");
+  constexpr size_t queue_depth=16;
+  for (auto reads:{TieredQFileReads::cached,TieredQFileReads::direct}) {
+    loaded.attach_tier(std::make_shared<TieredQFileRows>(path,reads,queue_depth));
+    require(same(answers(loaded,probes),expected),"concurrent file tier reads differ");
+  }
 
   bool rejected=false;
   try { index.search(probes.data(),k,nprobe,k-1); } catch (const std::runtime_error&) { rejected=true; }
