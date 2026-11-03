@@ -1,0 +1,7 @@
+    81.78%  python   codec_native.cpython-312-x86_64-linux-gnu.so       [.] void dv::tieredq_detail::scan_range_lookup_chunks_avx512<4ul>(dv::tieredq_detail::Fa
+     6.59%  python   codec_native.cpython-312-x86_64-linux-gnu.so       [.] void dv::tieredq_detail::project_panel_block_avx512<1ul, 12ul>(dv::tieredq_detail::B
+     4.97%  python   codec_native.cpython-312-x86_64-linux-gnu.so       [.] dv::tieredq_detail::lookup_vector_survives(dv::tieredq_detail::FastScanCache const&,
+     1.47%  python   codec_native.cpython-312-x86_64-linux-gnu.so       [.] 0x00000000000facf0
+     1.00%  python   codec_native.cpython-312-x86_64-linux-gnu.so       [.] void dv::tieredq_detail::project_panel_block_avx512<1ul, 11ul>(dv::tieredq_detail::B
+     1.00%  python   codec_native.cpython-312-x86_64-linux-gnu.so       [.] 0x00000000000face0
+     0.69%  python   codec_native.cpython-312-x86_64-linux-gnu.so       [.] dv::tieredq_detail::lookup_epilogue(dv::tieredq_detail::FastScanCache const&, dv::ti

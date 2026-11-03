@@ -35,3 +35,42 @@ RaBitQ's mean R@10 is 0.9674 (100K) and 0.9701 (1M).
   (RaBitQ 2 bits/dim and Gemini 4 bits/dim budgets) give identical R@10 capped and uncapped.
 - Base timings here run 3-5% below the earlier one-pass cells (0.54x vs 0.57x on 100K): run-to-run spread, as the
   references are not re-timed.
+
+## Single-query profile at 4 bits/dim (`single-query/`)
+OpenAI-100K, 3752 code bits (the new default at RaBitQ's 4-bit recall), flat, 1 thread, batch 1, alone on CPUs 0-7.
+`prof.sh` runs perf on a build whose table build, query preparation, survivor test, epilogue and per-block scan are
+marked noinline (`hooks.diff`). The section loop stays inlined; `perf annotate` splits it.
+
+| Part | Share of query time |
+|---|---:|
+| Nibble scan (`scan_range_lookup_chunks_avx512`) | 82% |
+| of which code loads / shuffle-add loop / section conversion / other | 47 / 43 / 4 / 6% of the scan |
+| Query projection (`project_panel_block_avx512`) | ~8% |
+| Exact range survivor test (`lookup_vector_survives`) | 5% |
+| Table build, epilogue | ~1% |
+
+- The scan reads every document's 469 code bytes. After the per-query fixed cost (~0.29 ms) it takes 31.8 ns/doc over
+  100K documents (47 MB, from DRAM) and 22.6 ns/doc over 16K documents (in L3): memory costs ~29%, the shuffle work
+  the rest. RaBitQ's whole query is ~18 ns/doc.
+- Section conversion is 4% of the scan: with the 6-bit cap there is nothing left to gain there.
+- The exact bound rejects almost nothing at 4 bits/dim, so its survivor test is a 5% loss.
+
+Statistical pruning in flat search (`flatz.py`; workspace hook `TQ_FLAT_Z` / `TQ_FLAT_PREFIX`, `hooks.diff`). One
+index, arms interleaved over 3 rounds, median ms/query, R@10 of the single-query results (seed 0, default 0.9683):
+
+| Confidence, prefix tiers | ms/query | R@10 |
+|---|---:|---:|
+| 0, 4 (default) | 3.42-3.45 | 0.9683 |
+| 8, 4 | 3.26 | 0.9683 |
+| 4, 4 | 3.18 | 0.9683 |
+| 8, 3 | 2.73-2.77 | 0.9683 |
+| 4, 3 | 2.54 | 0.9652 |
+| 2, 3 | 2.56 | 0.9548 |
+| 8, 2 | 3.91 | 0.9679 |
+| 4, 2 | 2.52 | 0.9511 |
+| 2, 2 | 1.84 | 0.8410 |
+
+- At no recall loss the best is confidence 8 with prefix 3: -20%, 1.5x RaBitQ's 1.83 ms. Below that, recall falls
+  faster than time: the bound prunes per 64-document chunk, and a 3-tier prefix already holds the widest tiers.
+- Closing the single-query gap needs fewer bytes per document in the first pass, as RaBitQ's 1-bit pass: a narrow
+  prefix model scanned for all documents and a suffix read only for candidates (`TieredQRefinement`, #23).
