@@ -231,9 +231,11 @@ void TieredQIVFIndex::search_rows(const float* queries,const TieredQQuery* weigh
         }
         TopK top(found);
         std::vector<float> chunk(ivf_scan_chunk);
+        // Rebound inside the OpenMP region: Clang rejects the nested generic lambda naming the enclosing local.
+        const size_t probed_lists=probes;
         // Lists in probe order, nearest first, so the running top-k threshold tightens early for pruned scans.
         auto scan_lists=[&](auto score) {
-          for (const uint32_t list:probe_order(closeness,list_rows_,probes)) {
+          for (const uint32_t list:probe_order(closeness,list_rows_,probed_lists)) {
             const size_t first=list_begin_[list],live=list_rows_[list];
             // Chunks end on absolute chunk boundaries, so block kernels never rescan a block across calls.
             for (size_t doc=first,end=first+live;doc<end;) {

@@ -2,6 +2,7 @@
 #pragma once
 #include "tieredq/tieredq.h"
 #include <algorithm>
+#include <bit>
 #include <cmath>
 #include <stdexcept>
 #if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
@@ -28,11 +29,17 @@ inline uint16_t half_encode(double value) {
   const uint32_t encoded=uint32_t(shift+24)*1024+rounded;
   return sign|uint16_t(encoded);
 }
+// Exact bit-level conversion without libm: scans decode per-document metadata and basis halves through it, and an
+// out-of-line std::ldexp there cost about half of an ARM fast single-query search.
 inline float half_decode(uint16_t value) {
-  const unsigned exponent=(value>>10)&31,mantissa=value&1023;
-  const float magnitude=exponent==31 ? (mantissa ? NAN : INFINITY) :
-      exponent ? std::ldexp(float(1024+mantissa),int(exponent)-25) : std::ldexp(float(mantissa),-24);
-  return value&0x8000 ? -magnitude : magnitude;
+  constexpr unsigned mantissa_bits=10,float_mantissa_shift=23-mantissa_bits,sign_shift=31-15;
+  constexpr uint32_t rebias=uint32_t(127-15)<<23,float_infinity=0x7f800000,float_quiet_nan=0x7fc00000;
+  constexpr float subnormal_unit=0x1p-24f;
+  const unsigned exponent=(value>>mantissa_bits)&31,mantissa=value&1023;
+  const uint32_t sign=uint32_t(value&0x8000)<<sign_shift;
+  if (exponent==31) return std::bit_cast<float>(sign|(mantissa ? float_quiet_nan : float_infinity));
+  if (!exponent) return std::bit_cast<float>(sign|std::bit_cast<uint32_t>(float(mantissa)*subnormal_unit));
+  return std::bit_cast<float>(sign|((uint32_t(value&0x7fff)<<float_mantissa_shift)+rebias));
 }
 // Binary16 to FP32 is exact, so the F16C and portable paths produce identical values.
 #if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))

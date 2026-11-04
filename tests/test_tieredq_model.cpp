@@ -268,6 +268,12 @@ void half_tests() {
     require(half_encode(std::nextafter(midpoint,0.))==bits,"binary16 below midpoint");
     require(half_encode(std::nextafter(midpoint,INFINITY))==bits+1,"binary16 above midpoint");
   }
+  for (const uint16_t sign:{uint16_t(0),uint16_t(0x8000)}) {
+    require(half_decode(sign|0x7c00)==(sign ? -INFINITY : INFINITY),"binary16 infinity");
+    for (unsigned mantissa=1;mantissa<1024;++mantissa) require(std::isnan(half_decode(uint16_t(sign|0x7c00|mantissa))),"binary16 nan");
+  }
+  require(half_decode(1)==std::ldexp(1.f,-24) && half_decode(0x8001)==-std::ldexp(1.f,-24),"binary16 smallest subnormal");
+  require(std::signbit(half_decode(0x8000)) && half_decode(0x8000)==0,"binary16 negative zero");
   require(half_encode(1+std::ldexp(1.,-11))==0x3c00,"half tie even down");
   require(half_encode(1+3*std::ldexp(1.,-11))==0x3c02,"half tie even up");
   require(half_encode(std::ldexp(1.,-25))==0,"half subnormal tie");

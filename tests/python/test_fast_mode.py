@@ -201,9 +201,10 @@ def foreign_fast_file(tmp_path):
     if arm:
         # One one-bit coordinate forms one lookup group/pair, padded to 256 rows.
         block_rows = 256
-        encoded = struct.pack("<III", 1, 1, 0)
-        encoded += struct.pack("<Q", block_rows) + struct.pack("<f", 1) * block_rows
-        encoded += struct.pack("<Q", block_rows) + bytes(block_rows * 4)
+        # Payload version 2, lookup kind: float16 factors and corrections, then centroid and code bytes.
+        encoded = struct.pack("<III", 2, 1, 0)
+        encoded += struct.pack("<Q", block_rows) + struct.pack("<e", 1) * block_rows
+        encoded += struct.pack("<Q", block_rows) + bytes(block_rows * 2)
         encoded += struct.pack("<Q", block_rows) + bytes(block_rows)
         encoded += struct.pack("<Q", block_rows) + bytes(block_rows)
         data[payload:] = encoded

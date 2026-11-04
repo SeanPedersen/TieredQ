@@ -103,8 +103,9 @@ void exercise(unsigned d,unsigned bits,bool rotate,const std::string& prefix) {
   // Wide targets trim instead, so their padded nibble storage stays within the budget (#13).
   check(widest<=4 ? budget<=(bits+rule_padding+7)/8*8 : budget<=bits,"allocation exceeds budget");
   check(budget==codec.config().code_bits && codec.code_bytes()==(budget+7)/8,"code size mismatch");
-  // 520 realised bits fill the padded storage of the 2/4-bit rule (#9): 65 code bytes plus metadata.
-  if(d==512 && bits==512) check(codec.bytes_per_vector()==70,"payload size regression");
+  // At most 520 realised bits fill the padded storage of the 2/4-bit rule (#9): 65 code bytes plus metadata. A bound,
+  // not equality: std::normal_distribution differs between libstdc++ and libc++, so the sample lands 512 or 520 bits.
+  if(d==512 && bits==512) check(codec.bytes_per_vector()<=70,"payload size regression");
   const auto codes=codec.encode(docs.data(),n); const auto lut=codec.query(q.data()); std::vector<float> scalar(n),simd(n);
   codec.score(codes.data(),n,lut,scalar.data(),TieredQKernel::scalar);
   codec.save(prefix+".codec"); auto loaded=TieredQ::load(prefix+".codec");

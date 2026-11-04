@@ -47,31 +47,31 @@ inline FastScanQuery fast_scan_query(const FastScanCache& cache, const TieredQQu
 }
 
 constexpr size_t fast_scan_query_tile_neon = 4;
-inline void scan_fast_neon_tile(const FastScanCache& cache,const FastScanQuery* queries,
-    size_t query_count,size_t first,size_t count,float* scores,size_t stride) {
-  if (cache.code_lookup()) {
-    scan_codes_neon_tile(cache,query_count,first,count,scores,stride,
-        [&](size_t row)->const TieredQQuery& {return queries[row].codes;});
-    return;
-  }
+// A compile-time query count keeps every accumulator in registers; with a runtime count Clang spills them around
+// each vdotq_s32, which made single-query scans 3.6x slower.
+template<size_t Queries>
+inline void scan_fast_neon_levels(const FastScanCache& cache,const FastScanQuery* queries,
+    size_t first,size_t count,float* scores,size_t stride) {
+  const int8x16_t* qvecs[Queries];
+  for (size_t t=0;t<Queries;++t) qvecs[t]=queries[t].qvecs.data();
   for (size_t block=first/fast_scan_block_docs; block<(first+count+fast_scan_block_docs-1)/fast_scan_block_docs; ++block) {
-    int32x4_t sums[fast_scan_query_tile_neon][4];
-    for (size_t t=0;t<query_count;++t) for (auto& sum:sums[t]) sum=vdupq_n_s32(0);
+    int32x4_t sums[Queries][4];
+    for (auto& query_sums:sums) for (auto& sum:query_sums) sum=vdupq_n_s32(0);
     const int8_t* base=cache.levels.data()+block*cache.groups*64;
 #pragma clang loop unroll_count(4)
     for (size_t g=0;g<cache.groups;++g) {
       const int8_t* p=base+g*64;
       const int8x16_t levels[4]={vld1q_s8(p),vld1q_s8(p+16),vld1q_s8(p+32),vld1q_s8(p+48)};
-      for (size_t t=0;t<query_count;++t) for (size_t v=0;v<4;++v)
-        sums[t][v]=vdotq_s32(sums[t][v],levels[v],queries[t].qvecs[g]);
+      for (size_t t=0;t<Queries;++t) for (size_t v=0;v<4;++v)
+        sums[t][v]=vdotq_s32(sums[t][v],levels[v],qvecs[t][g]);
     }
-    alignas(16) int32_t values[fast_scan_query_tile_neon][4][4];
-    for (size_t t=0;t<query_count;++t) for (size_t v=0;v<4;++v) vst1q_s32(values[t][v],sums[t][v]);
+    alignas(16) int32_t values[Queries][4][4];
+    for (size_t t=0;t<Queries;++t) for (size_t v=0;v<4;++v) vst1q_s32(values[t][v],sums[t][v]);
     for (size_t v=0;v<4;++v) for (size_t c=0;c<4;++c) {
       const size_t doc=block*fast_scan_block_docs+v*4+c;
       if (doc>=first+count) continue;
       const uint8_t cid=cache.centroid[doc];
-      for (size_t t=0;t<query_count;++t) {
+      for (size_t t=0;t<Queries;++t) {
         const auto& q=queries[t];
         if (cid>=q.centroid_scores.size() || q.centroid_scores.size()!=q.correction_weights.size())
           throw std::runtime_error("TieredQ: invalid centroid shape or id");
@@ -79,6 +79,23 @@ inline void scan_fast_neon_tile(const FastScanCache& cache,const FastScanQuery* 
             cache.factor_at(doc)*(float(values[t][v][c])*q.scale);
       }
     }
+  }
+}
+inline void scan_fast_neon_tile(const FastScanCache& cache,const FastScanQuery* queries,
+    size_t query_count,size_t first,size_t count,float* scores,size_t stride) {
+  if (cache.code_lookup()) {
+    scan_codes_neon_tile(cache,query_count,first,count,scores,stride,
+        [&](size_t row)->const TieredQQuery& {return queries[row].codes;});
+    return;
+  }
+  static_assert(fast_scan_query_tile_neon==4,"dispatch covers query tiles of one to four");
+  switch (query_count) {
+    case 0: return;
+    case 1: return scan_fast_neon_levels<1>(cache,queries,first,count,scores,stride);
+    case 2: return scan_fast_neon_levels<2>(cache,queries,first,count,scores,stride);
+    case 3: return scan_fast_neon_levels<3>(cache,queries,first,count,scores,stride);
+    case 4: return scan_fast_neon_levels<4>(cache,queries,first,count,scores,stride);
+    default: throw std::invalid_argument("TieredQ: NEON query tile exceeds four queries");
   }
 }
 inline void scan_fast_neon(const FastScanCache& cache,const FastScanQuery& query,float* scores) {
