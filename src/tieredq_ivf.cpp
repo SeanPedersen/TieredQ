@@ -255,12 +255,14 @@ void TieredQIVFIndex::search_rows(const float* queries,const TieredQQuery* weigh
         // and score -inf; every other score is exact, so with the exact bound hits equal the unpruned scan.
         if constexpr (requires { prepared[row].codes.weights; }) if (range) {
           const auto& query=prepared[row].codes;
+          // Bind inside the OpenMP region so Clang can capture this in the nested scan lambda.
+          const auto& query_segments=segments;
           const tieredq_detail::CentroidTiles centroids(1,[&](size_t)->const TieredQQuery& { return query; });
           tieredq_detail::FastRangeCheckpoint checkpoint{prefix_rank,tieredq_detail::prepare_fast_range_bounds(cache,model.tiers(),
               query,code_prefix_tiers,pruning.confidence),0};
           scan_lists([&](size_t first,size_t documents,float* out,float threshold) {
             checkpoint.threshold=threshold;
-            tieredq_detail::scan_range_code_blocks_avx512(cache,segments,query.weights.data(),centroids.scores(0),
+            tieredq_detail::scan_range_code_blocks_avx512(cache,query_segments,query.weights.data(),centroids.scores(0),
                 centroids.corrections(0),first,documents,out,checkpoint);
           });
           scanned=true;
