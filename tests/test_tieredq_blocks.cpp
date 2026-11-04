@@ -1,5 +1,6 @@
 // TieredQFastBlocks: exact pack/unpack round trips and in-place scores equal to the fast index over the same rows,
-// for every format a model admits, at counts that end on short tails.
+// for every format a model admits, at counts that end on short tails; rows() of selected documents and scanners built
+// from caller-prepared query weights.
 #include "tieredq/tieredq.h"
 #include "tieredq/tieredq_blocks.h"
 #include <algorithm>
@@ -46,9 +47,22 @@ void check_format(const dv::TieredQ& codec, const dv::TieredQFastBlocks& blocks,
     std::vector<uint8_t> unpacked(count * stride);
     blocks.unpack(block, count, unpacked.data());
     require(unpacked == rows, "fast block unpack differs from the packed rows");
+    // Selected documents, out of order and repeated: each is its packed row.
+    std::vector<uint32_t> picked;
+    for (size_t doc = count; doc-- > 0;) if (doc % 3 == 0) picked.push_back(uint32_t(doc));
+    picked.push_back(0);
+    std::vector<uint8_t> selected(picked.size() * stride);
+    blocks.rows(block, count, picked.data(), picked.size(), selected.data());
+    for (size_t i = 0; i < picked.size(); ++i)
+      require(std::equal(rows.begin() + picked[i] * stride, rows.begin() + (picked[i] + 1) * stride, selected.begin() + i * stride),
+              "fast block rows differ from the packed rows");
     auto scanner = blocks.scanner(query.data());
-    std::vector<float> scores(count);
+    std::vector<float> scores(count), weighted(count);
     scanner.score(block, count, scores.data());
+    // Caller-prepared weights scan as the query itself does.
+    blocks.scanner(codec.query_weights(query.data())).score(block, count, weighted.data());
+    for (size_t doc = 0; doc < count; ++doc)
+      require(std::fabs(weighted[doc] - scores[doc]) <= 1e-4f * (1 + std::fabs(scores[doc])), "weight-built scanner differs");
     if (native) {
       const auto expected = index_scores(codec, data.data(), count, query.data());
       for (size_t doc = 0; doc < count; ++doc)
@@ -84,4 +98,17 @@ void tieredq_blocks_tests() {
   try { dv::TieredQFastBlocks(dv::TieredQ::train({dimensions, dimensions, centroids}, training.data(), training_rows), 0); }
   catch (const std::runtime_error&) { rejected = true; }
   require(rejected, "unknown fast block format accepted");
+  {
+    auto config = dv::TieredQConfig::target_code_bits(dimensions, dimensions * 2);
+    config.num_centroids = centroids;
+    const auto codec = dv::TieredQ::train(config, training.data(), training_rows);
+    const dv::TieredQFastBlocks blocks(codec);
+    const auto rows = codec.encode(data.data(), 17);
+    std::vector<uint8_t> block(blocks.block_bytes(17)), out(codec.bytes_per_vector());
+    blocks.pack(rows.data(), 17, block.data());
+    const uint32_t outside = 17;
+    bool out_of_range = false;
+    try { blocks.rows(block.data(), 17, &outside, 1, out.data()); } catch (const std::runtime_error&) { out_of_range = true; }
+    require(out_of_range, "block document out of range accepted");
+  }
 }

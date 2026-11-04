@@ -85,7 +85,10 @@ configured search. `has_fast_scan` reports whether fast data is present.
 into one caller-owned byte block (`block_bytes(count)`, `pack`) that an engine stores, e.g. per inverted list on
 disk, and scans in place: `scanner(query)` prepares one query, `Scanner::score(block, count, scores)` writes
 model-space inner-product estimates for the block's documents without copying it. `unpack` recovers the exact
-`encode()` rows. `format()` names the representation chosen for the model and CPU (nibble lookup, packed code
+`encode()` rows, and `rows(block, count, documents, n, out)` only those of selected documents (e.g. the prefix rows
+a `TieredQRefinement` suffix tier rescores, without storing them twice). `scanner(weights)` takes the query's
+`codec().query_weights()` instead, so a caller that also builds `TieredQRefinement::query(vector, weights)` projects
+the query once. `format()` names the representation chosen for the model and CPU (nibble lookup, packed code
 words or int8 levels); persist it and reopen stored blocks with `TieredQFastBlocks(codec, format)`. Other CPUs scan
 a persisted format with the portable scorer. Blocks need no alignment (64-byte starts keep loads within cache
 lines). A scanner is single-threaded; use one per thread and query. Nibble-lookup blocks end on a short tail block,

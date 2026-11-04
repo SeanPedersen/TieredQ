@@ -14,7 +14,7 @@
 #include <vector>
 
 namespace dv {
-namespace tieredq_detail { struct FastScanCache; }
+namespace tieredq_detail { struct FastScanCache; class FastRowReader; }
 class TieredQFastBlocks {
  public:
   static constexpr size_t alignment = 64;
@@ -31,6 +31,9 @@ class TieredQFastBlocks {
   // Exact inverse of pack: count encode() rows. Throws when int8 levels cannot identify a code (never for formats
   // this model was packed with by pack, which checks it).
   void unpack(const uint8_t* block, size_t count, uint8_t* rows) const;
+  // unpack of selected documents only: rows of documents[0..n) (each < count) of a block packed with count documents,
+  // e.g. a scan's candidates whose codes a refinement tier rescores.
+  void rows(const uint8_t* block, size_t count, const uint32_t* documents, size_t n, uint8_t* rows) const;
 
   // One query's prepared tables plus a scan view; not thread-safe, reusable across blocks of this format.
   class Scanner {
@@ -48,10 +51,16 @@ class TieredQFastBlocks {
   };
   // query: config().dimensions floats in input space (lifted to model space as TieredQ::query does).
   Scanner scanner(const float* query) const;
+  // From the query's codec().query_weights() prepared by the caller, who reuses them (e.g. TieredQRefinement::query).
+  Scanner scanner(const TieredQQuery& weights) const;
 
  private:
+  Scanner make_scanner(const float* model_query, const TieredQQuery* weights) const;
+  static std::shared_ptr<const tieredq_detail::FastRowReader> make_reader(const TieredQ& codec,
+                                                                          const tieredq_detail::FastScanCache& geometry);
   TieredQ codec_;
   uint32_t format_ = 0;
   std::shared_ptr<const tieredq_detail::FastScanCache> empty_;  // the format's geometry with no documents
+  std::shared_ptr<const tieredq_detail::FastRowReader> reader_;  // unpack / rows decoding tables of that geometry
 };
 } // namespace dv

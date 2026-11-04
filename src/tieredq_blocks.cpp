@@ -96,10 +96,16 @@ TieredQFastBlocks::Scanner::Scanner(Scanner&&) noexcept = default;
 TieredQFastBlocks::Scanner& TieredQFastBlocks::Scanner::operator=(Scanner&&) noexcept = default;
 void TieredQFastBlocks::Scanner::score(const uint8_t* block, size_t count, float* scores) { impl_->score(block, count, scores); }
 
+std::shared_ptr<const tieredq_detail::FastRowReader> TieredQFastBlocks::make_reader(const TieredQ& codec, const FastScanCache& geometry) {
+  return std::make_shared<const tieredq_detail::FastRowReader>(geometry, codec.levels_, codec.tiers_, codec.coded_dimensions(),
+                                                               codec.code_bytes(), codec.bytes_per_vector());
+}
+
 TieredQFastBlocks::TieredQFastBlocks(const TieredQ& codec) : codec_(codec) {
   const TieredQIndex index(codec_, TieredQIndexMode::full);
   empty_ = index.make_fast_storage(nullptr, 0);
   format_ = format_of(*empty_);
+  reader_ = make_reader(codec_, *empty_);
 }
 
 TieredQFastBlocks::TieredQFastBlocks(const TieredQ& codec, uint32_t format) : codec_(codec), format_(format) {
@@ -116,6 +122,7 @@ TieredQFastBlocks::TieredQFastBlocks(const TieredQ& codec, uint32_t format) : co
   if (!empty_->lookup && !empty_->code_lookup())
     for (const auto& codes : fast_rows::level_inverse(*empty_, codec_.levels_, codec_.tiers_))
       for (int16_t code : codes) if (code == fast_rows::ambiguous_code) bad("fast block levels cannot identify this model's codes");
+  reader_ = make_reader(codec_, *empty_);
 }
 
 size_t TieredQFastBlocks::block_bytes(size_t count) const { return shape_of(*empty_, count).total; }
@@ -146,13 +153,37 @@ void TieredQFastBlocks::pack(const uint8_t* rows, size_t count, uint8_t* block) 
 }
 
 void TieredQFastBlocks::unpack(const uint8_t* block, size_t count, uint8_t* rows) const {
-  if (!count) return;
-  if (!block || !rows) bad("null block buffer");
-  const auto view = tieredq_detail::copy_fast_storage(*empty_);
-  borrow(*view, block, count);
   std::vector<uint32_t> docs(count); std::iota(docs.begin(), docs.end(), 0u);
-  tieredq_detail::read_fast_rows(*view, codec_.levels_, codec_.tiers_, codec_.coded_dimensions(), codec_.code_bytes(),
-                                 codec_.bytes_per_vector(), docs.data(), count, rows);
+  this->rows(block, count, docs.data(), count, rows);
+}
+
+void TieredQFastBlocks::rows(const uint8_t* block, size_t count, const uint32_t* documents, size_t n, uint8_t* rows) const {
+  if (!n) return;
+  if (!block || !documents || !rows) bad("null block buffer");
+  for (size_t i = 0; i < n; ++i) if (documents[i] >= count) bad("block document out of range");
+  // A per-thread copy of the geometry borrows the block's arrays; held geometry keeps its address from being reused.
+  thread_local std::shared_ptr<FastScanCache> view;
+  thread_local std::shared_ptr<const FastScanCache> view_of;
+  if (view_of != empty_) { view = tieredq_detail::copy_fast_storage(*empty_); view_of = empty_; }
+  borrow(*view, block, count);
+  reader_->read(*view, documents, n, rows);
+}
+
+TieredQFastBlocks::Scanner TieredQFastBlocks::make_scanner(const float* model_query, const TieredQQuery* weights) const {
+  auto view = std::unique_ptr<FastScanCache>(new FastScanCache(*tieredq_detail::copy_fast_storage(*empty_)));
+  std::unique_ptr<Scanner::Impl> impl;
+  FastScanCache& geometry = *view;
+  tieredq_detail::with_fast_scan(geometry, codec_, model_query, 1, [&](auto&& prepared, size_t, auto scan) {
+    using Typed = TypedScanner<std::decay_t<decltype(prepared)>, decltype(scan)>;
+    impl = std::make_unique<Typed>(std::move(view), std::move(prepared), std::move(scan));
+  }, weights);
+  return Scanner(std::move(impl));
+}
+
+TieredQFastBlocks::Scanner TieredQFastBlocks::scanner(const TieredQQuery& weights) const {
+  if (weights.weights.size() != codec_.coded_dimensions() || weights.centroid_scores.size() != codec_.config().num_centroids)
+    bad("fast block query weights shape mismatch");
+  return make_scanner(nullptr, &weights);
 }
 
 TieredQFastBlocks::Scanner TieredQFastBlocks::scanner(const float* query) const {
@@ -164,13 +195,6 @@ TieredQFastBlocks::Scanner TieredQFastBlocks::scanner(const float* query) const 
     codec_.lift_queries(query, 1, lifted.data());
     model_query = lifted.data();
   }
-  auto view = std::unique_ptr<FastScanCache>(new FastScanCache(*tieredq_detail::copy_fast_storage(*empty_)));
-  std::unique_ptr<Scanner::Impl> impl;
-  FastScanCache& geometry = *view;
-  tieredq_detail::with_fast_scan(geometry, codec_, model_query, 1, [&](auto&& prepared, size_t, auto scan) {
-    using Typed = TypedScanner<std::decay_t<decltype(prepared)>, decltype(scan)>;
-    impl = std::make_unique<Typed>(std::move(view), std::move(prepared), std::move(scan));
-  });
-  return Scanner(std::move(impl));
+  return make_scanner(model_query, nullptr);
 }
 }  // namespace dv

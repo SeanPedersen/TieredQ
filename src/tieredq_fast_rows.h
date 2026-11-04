@@ -128,24 +128,45 @@ inline void read_level_codes(const FastScanCache& cache,const std::vector<Tiered
 }
 } // namespace fast_rows
 
+// Decoding tables of one fast storage geometry (lookup groups or level ranges; independent of the stored documents),
+// built once and reused for any number of reads from storage of that geometry.
+class FastRowReader {
+ public:
+  FastRowReader(const FastScanCache& geometry,const std::vector<std::vector<float>>& levels,
+                const std::vector<TieredQTier>& tiers,size_t ranks,size_t code_bytes,size_t stride)
+      : tiers_(tiers),ranks_(ranks),code_bytes_(code_bytes),stride_(stride) {
+    if (geometry.lookup) fast_rows::build_lookup_program(*geometry.lookup,ranks,program_);
+    else if (!geometry.code_lookup()) inverse_=fast_rows::level_inverse(geometry,levels,tiers);
+  }
+  FastRowReader(const FastRowReader&)=delete;
+  FastRowReader& operator=(const FastRowReader&)=delete;
+  // Writes count rows (stride bytes each) of the documents docs[0..count) stored in cache.
+  void read(const FastScanCache& cache,const uint32_t* docs,size_t count,uint8_t* rows) const {
+    using namespace fast_rows;
+    std::fill_n(rows,count*stride_,uint8_t(0));
+    if (cache.lookup) {
+      thread_local std::vector<uint32_t> packed;
+      packed.resize(ranks_);
+      for (size_t i=0;i<count;++i) read_lookup_codes(*cache.lookup,program_,docs[i],packed,rows+i*stride_);
+    } else if (cache.code_lookup()) {
+      for (size_t i=0;i<count;++i) read_code_words(cache,docs[i],code_bytes_,rows+i*stride_);
+    } else {
+      for (size_t i=0;i<count;++i) read_level_codes(cache,tiers_,inverse_,docs[i],rows+i*stride_);
+    }
+    for (size_t i=0;i<count;++i) write_metadata(cache,docs[i],code_bytes_,rows+i*stride_);
+  }
+
+ private:
+  std::vector<TieredQTier> tiers_;
+  size_t ranks_,code_bytes_,stride_;
+  fast_rows::LookupProgram program_;  // lookup geometries; its code_of points into its own tables
+  std::vector<std::array<int16_t,fast_rows::int8_values>> inverse_;  // level geometries
+};
+
 // Writes count rows (bytes_per_vector() each) of the documents docs[0..count) stored in cache, a model's fast storage.
 inline void read_fast_rows(const FastScanCache& cache,const std::vector<std::vector<float>>& levels,
                            const std::vector<TieredQTier>& tiers,size_t ranks,size_t code_bytes,size_t stride,
                            const uint32_t* docs,size_t count,uint8_t* rows) {
-  using namespace fast_rows;
-  std::fill_n(rows,count*stride,uint8_t(0));
-  if (cache.lookup) {
-    thread_local LookupProgram program;
-    thread_local std::vector<uint32_t> packed;
-    build_lookup_program(*cache.lookup,ranks,program);
-    packed.resize(ranks);
-    for (size_t i=0;i<count;++i) read_lookup_codes(*cache.lookup,program,docs[i],packed,rows+i*stride);
-  } else if (cache.code_lookup()) {
-    for (size_t i=0;i<count;++i) read_code_words(cache,docs[i],code_bytes,rows+i*stride);
-  } else {
-    const auto inverse=level_inverse(cache,levels,tiers);
-    for (size_t i=0;i<count;++i) read_level_codes(cache,tiers,inverse,docs[i],rows+i*stride);
-  }
-  for (size_t i=0;i<count;++i) write_metadata(cache,docs[i],code_bytes,rows+i*stride);
+  FastRowReader(cache,levels,tiers,ranks,code_bytes,stride).read(cache,docs,count,rows);
 }
 } // namespace dv::tieredq_detail
