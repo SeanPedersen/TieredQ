@@ -189,34 +189,23 @@ def foreign_fast_file(tmp_path):
     import platform
     import struct
 
+    if platform.machine().lower() in ("arm64", "aarch64"):
+        pytest.skip("NEON consumes every persisted fast representation natively")
     dimensions, rows = 8, 32
-    arm = platform.machine().lower() in ("arm64", "aarch64")
     vectors = np.random.default_rng(59).normal(size=(rows, dimensions)).astype(np.float32)
-    index = TieredQIndex(dimensions=dimensions, code_bits=1 if arm else dimensions * 8, mode="fast", exact_fast_scores=True)
+    index = TieredQIndex(dimensions=dimensions, code_bits=dimensions * 8, mode="fast", exact_fast_scores=True)
     index.add(vectors)
     path = tmp_path / "foreign.tq"
     index.save(str(path))
     data = bytearray(path.read_bytes())
     payload = struct.unpack_from("<Q", data, 32)[0]
-    if arm:
-        # One one-bit coordinate forms one lookup group/pair, padded to 256 rows.
-        block_rows = 256
-        # Payload version 2, lookup kind: float16 factors and corrections, then centroid and code bytes.
-        encoded = struct.pack("<III", 2, 1, 0)
-        encoded += struct.pack("<Q", block_rows) + struct.pack("<e", 1) * block_rows
-        encoded += struct.pack("<Q", block_rows) + bytes(block_rows * 2)
-        encoded += struct.pack("<Q", block_rows) + bytes(block_rows)
-        encoded += struct.pack("<Q", block_rows) + bytes(block_rows)
-        data[payload:] = encoded
-        struct.pack_into("<Q", data, 40, len(encoded))
-    else:
-        # 8-bit packed code words have the signed-level payload's length; zero levels are valid
-        # inside the wider ARM quantization range, which the x86 kernels cannot consume.
-        struct.pack_into("<I", data, payload + 4, 2)
-        struct.pack_into("<I", data, payload + 8, 127)
-        padded = struct.unpack_from("<Q", data, payload + 12)[0]
-        codes = fast_codes_offset(payload, padded)
-        data[codes:] = bytes(len(data) - codes)
+    # 8-bit packed code words have the signed-level payload's length; zero levels are valid
+    # inside the wider ARM quantization range, which the x86 kernels cannot consume.
+    struct.pack_into("<I", data, payload + 4, 2)
+    struct.pack_into("<I", data, payload + 8, 127)
+    padded = struct.unpack_from("<Q", data, payload + 12)[0]
+    codes = fast_codes_offset(payload, padded)
+    data[codes:] = bytes(len(data) - codes)
     rewrite_payload_checksum(data)
     path.write_bytes(data)
     return path, vectors

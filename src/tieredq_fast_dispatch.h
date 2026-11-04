@@ -15,7 +15,8 @@ inline bool native_fast_scan_available() {
 }
 inline FastScanBackend fast_scan_backend(const FastScanCache& cache) {
 #if defined(__aarch64__) || defined(_M_ARM64)
-  if (!cache.lookup) return FastScanBackend::neon;
+  static_cast<void>(cache);
+  return FastScanBackend::neon;
 #elif (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
   if (cache.lookup || cache.level_max<=x86_fast_level_max) {
     if (__builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512bw"))

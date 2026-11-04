@@ -28,11 +28,9 @@ std::shared_ptr<tieredq_detail::FastScanCache> TieredQIndex::make_fast_storage(
       count,codec_.bytes_per_vector(),codec_.code_bytes(),codec_.config().num_centroids,level_max,rows);
 }
 std::shared_ptr<tieredq_detail::FastScanCache> TieredQIndex::make_fast_storage(const uint8_t* rows,size_t count) const {
-#ifndef DV_TIEREDQ_NEON
-  // Additive wide tiers leave the FP32 code lookup for nibble tables (#13); NEON has no nibble kernel.
+  // Additive wide tiers leave the FP32 code lookup for nibble tables (#13) on x86 and NEON alike.
   const bool lookup=tieredq_detail::fast_lookup_supported(codec_.tiers_,codec_.levels_);
   if (lookup) return make_fast_storage(rows,count,true,tieredq_detail::x86_fast_level_max);
-#endif
   if (tieredq_detail::fast_code_lookup_supported(codec_.tiers_))
     return make_fast_storage(rows,count,false,tieredq_detail::fast_code_lookup_levels);
 #ifdef DV_TIEREDQ_NEON

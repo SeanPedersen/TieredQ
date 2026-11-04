@@ -7,15 +7,24 @@
 #include <stdexcept>
 #include <vector>
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+#define DV_TIEREDQ_TEST_X86_LOOKUP 1
 #include "tieredq_scan_int8_avx512.h"
 #include "tieredq_lookup_range_avx512.h"
 #include "tieredq_scan_int8_avx2.h"
+#elif defined(__aarch64__)
+#define DV_TIEREDQ_TEST_NEON_LOOKUP 1
+#include "tieredq_scan_int8_neon.h"
+#endif
+#if defined(DV_TIEREDQ_TEST_X86_LOOKUP) || defined(DV_TIEREDQ_TEST_NEON_LOOKUP)
 #include "tieredq_scan_fast_scalar.h"
 #include "tieredq_train_codebook_data.h"
 namespace {
 using namespace dv;
 using namespace dv::tieredq_detail;
 void require(bool condition,const char* message) { if (!condition) throw std::runtime_error(message); }
+// A byte-table range kernel: scores [first, first + count) of one query.
+using LookupRangeKernel=void(*)(const FastScanCache&,const FastScanLookupQuery&,size_t,size_t,float*);
+#ifdef DV_TIEREDQ_TEST_X86_LOOKUP
 void wide_kernel_range_test(bool avx512) {
   constexpr size_t dimensions=5,count=4097,code_bytes=4,stride=9;
   constexpr int level_max=63;
@@ -69,10 +78,11 @@ void wide_kernel_range_test(bool avx512) {
   }
 }
 // Tier layouts of 40 coded weights; the second scores additive 3-bit codes as split 2- and 1-bit groups.
+#endif
 struct LookupLayout { std::vector<TieredQTier> tiers; size_t code_bytes; };
 const LookupLayout narrow_layout{{{0,35,4,0,0},{35,5,1,0,140}},19};
 const LookupLayout split_layout{{{0,7,4,0,0},{7,13,3,0,28},{20,11,2,0,67},{31,9,1,0,89}},13};
-void lookup_kernel_test(size_t count,bool avx512,const LookupLayout& layout_spec) {
+void lookup_kernel_test(size_t count,LookupRangeKernel kernel,const LookupLayout& layout_spec) {
   constexpr size_t dimensions=4, weights=40, centroids=2;
   const auto& tiers=layout_spec.tiers;
   const size_t code_bytes=layout_spec.code_bytes, stride=code_bytes+TieredQ::metadata_bytes;
@@ -137,10 +147,7 @@ void lookup_kernel_test(size_t count,bool avx512,const LookupLayout& layout_spec
     require(std::fabs(output[weights+cid]-dot-mean_correction)<1e-5f,"projected centroid score differs");
     require(std::fabs(output[weights+centroids+cid]-dot/(2*norms[cid]))<1e-5f,"projected centroid correction differs");
   }
-  auto scan=[&](const FastScanLookupQuery& q,size_t first,size_t n,float* out) {
-    if (avx512) scan_fast_lookup_avx512_range(*cache,q,first,n,out);
-    else scan_fast_lookup_avx2_range(*cache,q,first,n,out);
-  };
+  auto scan=[&](const FastScanLookupQuery& q,size_t first,size_t n,float* out) { kernel(*cache,q,first,n,out); };
   constexpr float sentinel=12345;
   std::vector<float> scores(count+16,sentinel);
   scan(query,0,count,scores.data());
@@ -199,6 +206,7 @@ void lookup_kernel_test(size_t count,bool avx512,const LookupLayout& layout_spec
   scan(zero_query,0,count,scores.data());
   require(std::all_of(scores.begin(),scores.begin()+count,[](float x){return x==0;}),"zero byte-table query differs");
 }
+#ifdef DV_TIEREDQ_TEST_X86_LOOKUP
 // Wide additive models: range-sorted groups and fine sections score alike on every backend and query grouping (#13).
 void wide_additive_backend_test(bool fine) {
   constexpr size_t dimensions=48,count=1031,centroids=3,query_count=19;
@@ -297,19 +305,26 @@ void wide_additive_backend_test(bool fine) {
   }
   require(rejected>0,"lookup range checkpoint rejected nothing");
 }
+#endif
+constexpr size_t lookup_test_counts[]={1,7,8,9,15,16,17,31,32,33,63,64,65,255,256,257,511,512,4097};
+void lookup_kernel_tests(LookupRangeKernel kernel) {
+  for (const auto* layout:{&narrow_layout,&split_layout})
+    for (size_t count:lookup_test_counts) lookup_kernel_test(count,kernel,*layout);
+}
 } // namespace
 #endif
 void tieredq_lookup_tests() {
-#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+#ifdef DV_TIEREDQ_TEST_NEON_LOOKUP
+  lookup_kernel_tests(scan_fast_lookup_neon_range);
+#endif
+#ifdef DV_TIEREDQ_TEST_X86_LOOKUP
   for (bool fine:{false,true}) wide_additive_backend_test(fine);
   for (bool avx512:{false,true}) {
     const bool available=avx512 ? (__builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512bw"))
         : bool(__builtin_cpu_supports("avx2"));
     if (!available) continue;
     wide_kernel_range_test(avx512);
-    for (const auto* layout:{&narrow_layout,&split_layout})
-      for (size_t count:{1u,7u,8u,9u,15u,16u,17u,31u,32u,33u,63u,64u,65u,255u,256u,257u,511u,512u,4097u})
-        lookup_kernel_test(count,avx512,*layout);
+    lookup_kernel_tests(avx512 ? scan_fast_lookup_avx512_range : scan_fast_lookup_avx2_range);
   }
 #endif
 }

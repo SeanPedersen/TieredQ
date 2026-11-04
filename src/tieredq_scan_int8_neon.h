@@ -4,12 +4,15 @@
 #include "tieredq_scan_int8.h"
 #include "tieredq_fast_dispatch.h"
 #include "tieredq_scan_codes_neon.h"
+#include "tieredq_scan_lookup_neon.h"
 #include <arm_neon.h>
+#include <omp.h>
 
 namespace dv::tieredq_detail {
 inline bool fast_scan_available() { return native_fast_scan_available(); }
 struct FastScanQuery {
   TieredQQuery codes;
+  FastScanLookupQuery lookup;
   std::vector<int8x16_t> qvecs;
   std::vector<float> centroid_scores, correction_weights;
   float scale = 1;
@@ -86,6 +89,12 @@ inline void scan_fast_neon_tile(const FastScanCache& cache,const FastScanQuery* 
   if (cache.code_lookup()) {
     scan_codes_neon_tile(cache,query_count,first,count,scores,stride,
         [&](size_t row)->const TieredQQuery& {return queries[row].codes;});
+    return;
+  }
+  if (cache.lookup) {
+    scan_lookup_query_group(query_count,first,count,scores,stride,[&](size_t row,size_t begin,size_t documents,float* out) {
+      scan_fast_lookup_neon_range(cache,queries[row].lookup,begin,documents,out);
+    });
     return;
   }
   static_assert(fast_scan_query_tile_neon==4,"dispatch covers query tiles of one to four");
