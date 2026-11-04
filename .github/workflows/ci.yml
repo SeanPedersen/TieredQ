@@ -1,10 +1,12 @@
+# Build and test the C++ library and Python bindings on Linux and macOS.
 name: C++ and Python
 on: [push, pull_request]
 jobs:
   test:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        # macos-latest uses ARM runners, which repeatedly fail allocation under capacity constraints.
+        os: [ubuntu-latest, macos-15-intel]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
