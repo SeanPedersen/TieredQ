@@ -6,8 +6,6 @@
 #include "tieredq_scan_lookup_avx512.h"
 
 namespace dv::tieredq_detail {
-struct LookupRangeCheckpoint { LookupRangeBounds bounds; float threshold; };
-
 // Whether any of the vector's valid documents can still reach the threshold after the prefix dot product.
 __attribute__((target("avx512f,avx512bw"),always_inline))
 inline bool lookup_vector_survives(const FastScanCache& c,const FastScanLookupQuery& q,const LookupRangeCheckpoint& checkpoint,

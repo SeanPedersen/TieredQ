@@ -212,9 +212,8 @@ void TieredQIVFIndex::search_rows(const float* queries,const TieredQQuery* weigh
       tieredq_detail::fast_range_checkpoint_supported(cache,model.tiers(),pruning.prefix_tiers);
   const size_t prefix_rank=range ? model.tiers()[pruning.prefix_tiers].start : 0;
   const auto segments=range ? tieredq_detail::code_table_segments(cache) : std::vector<tieredq_detail::CodeTableSegment>();
-  const bool lookup_range=tieredq_detail::fast_scan_backend(cache)==tieredq_detail::FastScanBackend::avx512 &&
-      tieredq_detail::lookup_range_checkpoint_supported(cache,model.tiers(),pruning.prefix_tiers);
 #endif
+  const bool lookup_range=tieredq_detail::lookup_range_scan_supported(cache,model.tiers(),pruning.prefix_tiers);
   tieredq_detail::with_fast_scan(cache,model,model_queries,rows,[&](const auto& prepared,size_t,auto scan) {
     const size_t workers=std::max<size_t>(1,std::min(rows,size_t(omp_get_max_threads())));
     std::exception_ptr failure; std::mutex failure_mutex;
@@ -263,18 +262,17 @@ void TieredQIVFIndex::search_rows(const float* queries,const TieredQQuery* weigh
           });
           scanned=true;
         }
+#endif
         // The same checkpoint on nibble byte tables: rejected chunks score -inf, the rest equal the unpruned scan.
         if constexpr (requires { prepared[row].lookup.tables; }) if (lookup_range) {
           const auto& query=prepared[row].lookup;
-          tieredq_detail::LookupRangeCheckpoint checkpoint{tieredq_detail::prepare_lookup_range_bounds(cache,model.tiers(),
-              query,pruning.prefix_tiers,pruning.confidence),0};
+          const auto bounds=tieredq_detail::prepare_lookup_range_bounds(cache,model.tiers(),query,pruning.prefix_tiers,
+              pruning.confidence);
           scan_lists([&](size_t first,size_t documents,float* out,float threshold) {
-            checkpoint.threshold=threshold;
-            tieredq_detail::scan_range_lookup_avx512(cache,query,first,documents,out,checkpoint);
+            tieredq_detail::scan_range_lookup(cache,query,first,documents,out,{bounds,threshold});
           });
           scanned=true;
         }
-#endif
         if (!scanned) scan_lists([&](size_t first,size_t documents,float* out,float) {
           scan(&prepared[row],1,first,documents,out,documents);
         });

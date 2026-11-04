@@ -143,10 +143,19 @@ auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*p
   bounds the remaining tiers statistically instead, which is faster and approximate. On OpenAI 100k, confidence 8
   kept recall unchanged (±0.0001) at 1.7× the QPS at 4 bits/dim. With `prefix_tiers = 3` it gave 1.6–2.4× the QPS
   for 0.001–0.003 recall at 2 and 4 bits/dim. Confidence 4 or less loses clearly more recall.
-  Pruning needs the exact FP32 scan, so it does nothing on default fast models with tiers above 4 bits, which score
-  through nibble tables instead. To combine them, train with `TieredQConfig::target_mode = TieredQIndexMode::full`
-  (Python `exact_fast_scores=True`). Measured at 4 bits/dim: on OpenAI-1536 100k exact with confidence 8 was 4–11%
-  faster than nibble scoring at equal or slightly higher recall, and on OpenAI 1M 17–21% faster but 0.4 pt R@10 lower;
+  Platforms: the exact FP32 code scan prunes on AVX-512 only. The nibble byte-table scan (default fast models with
+  tiers above 4 bits) prunes on AVX-512, AVX2 and NEON. The scalar fallback validates the setting and scans unpruned.
+  Nibble pruning needs sections left after the prefix tiers. On 384-d models at 4 bits/dim, the default
+  `prefix_tiers = 4` leaves none, so only `prefix_tiers` 3 or less prunes there. Measured on 100k × 384 at 4 bits/dim,
+  256 lists, single core, with hits identical to the unpruned scan: `prefix_tiers = 2` at nprobe 256 was 1.35×
+  (Apple M1, NEON) and 1.24× (EPYC Milan, AVX2) faster exact, and 1.54× / 1.46× with confidence 8. At nprobe 64 only
+  confidence 8 helped (1.19× / 1.16×). At nprobe 16 pruning gained nothing, and exact pruning was up to 9% slower.
+  On 1024-d Instagram embeddings (100k, 256 lists, again with identical hits), the default `prefix_tiers = 4` prunes but
+  saves little: about 1.05× for IVF and 1.12× for flat single-query search at 4 bits/dim. With `prefix_tiers = 2` at
+  4 bits/dim and nprobe 64–256, IVF ran 1.25–1.37× faster on NEON and 1.45–1.6× faster on AVX2.
+  To prune through the exact FP32 scan instead, train with `TieredQConfig::target_mode = TieredQIndexMode::full`
+  (Python `exact_fast_scores=True`). Measured at 4 bits/dim, before nibble scans were pruned: on OpenAI-1536 100k
+  exact with confidence 8 was 4–11% faster than nibble scoring at equal or slightly higher recall, and on OpenAI 1M 17–21% faster but 0.4 pt R@10 lower;
   on Gemini-768 nibble scoring was 20–38% faster, at 0.2 pt R@10 lower. At 2 bits/dim nibble scoring was faster on
   both (#13).
 - **Bit cap.** At about 2 bits/dim or less, training with `TieredQConfig::max_bits = 4` keeps every tier on the

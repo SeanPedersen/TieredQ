@@ -269,7 +269,8 @@ class TieredQIndex {
 // boundary (padded with copies of its last row, which are never returned). Search ranks lists by model-space
 // distance to the query and scans the nearest nprobe nonempty lists. Ids are input row order. Build replaces the
 // content.
-// Range-checkpoint pruning of list scans for models with more than prefix_tiers tiers (AVX-512): after its prefix
+// Range-checkpoint pruning of list scans for models with more than prefix_tiers tiers (exact FP32 code scans on
+// AVX-512; nibble byte-table scans on AVX-512, AVX2 and NEON; other scans ignore it): after its prefix
 // tiers a document skips the rest when its score bound cannot reach the running top k. With confidence 0 (default)
 // the bound covers every suffix code, so hits equal the unpruned scan. A positive confidence bounds the suffix at that
 // many standard deviations of its score for unit-Gaussian coordinates: approximate and faster. On OpenAI 100k at

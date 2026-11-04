@@ -10,6 +10,12 @@
 
 namespace dv::tieredq_detail {
 struct LookupRangeBounds { size_t prefix_sections; FastRangeBounds bounds; };
+struct LookupRangeCheckpoint { LookupRangeBounds bounds; float threshold; };
+// Kernels without per-instruction directed rounding (NEON, AVX2) evaluate the bound in the default round-to-nearest
+// mode and add this multiple of the sum of the bound's absolute terms. Each term passes through at most five roundings
+// of relative error epsilon/2, and the slack's own product and the final sum round once more; four epsilons (eight
+// half-ulps) cover that with margin, so the bound still rounds outward without touching the FP control register.
+constexpr float range_nearest_slack=4*std::numeric_limits<float>::epsilon();
 
 // Sections that cover as many groups as the first prefix_tiers tiers' slots occupy; 0 when no suffix is left.
 inline size_t lookup_prefix_sections(const FastScanLookupCache& cache,const std::vector<TieredQTier>& tiers,size_t prefix_tiers) {

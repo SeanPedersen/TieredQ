@@ -7,16 +7,19 @@
 #include "tieredq_scan_int8.h"
 #include "tieredq_fast_dispatch.h"
 #include "tieredq_scan_fast_scalar.h"
+#include "tieredq_lookup_range.h"
 #if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
 #define DV_TIEREDQ_X86 1
 #include "tieredq_scan_int8_avx512.h"
 #include "tieredq_scan_int8_avx2.h"
 #include "tieredq_range_checkpoint_avx512.h"
 #include "tieredq_lookup_range_avx512.h"
+#include "tieredq_lookup_range_avx2.h"
 #endif
 #if defined(__aarch64__) || defined(_M_ARM64)
 #define DV_TIEREDQ_NEON 1
 #include "tieredq_scan_int8_neon.h"
+#include "tieredq_lookup_range_neon.h"
 #endif
 
 namespace dv::tieredq_detail {
@@ -68,6 +71,28 @@ const std::vector<float>& prepared_centroid_scores(const Prepared& query) {
     if (!query.lookup.centroid_scores.empty()) return query.lookup.centroid_scores;
   if (!query.centroid_scores.empty()) return query.centroid_scores;
   return query.codes.centroid_scores;
+}
+
+// Whether this backend has a pruned nibble-table scan and the model leaves a suffix after prefix_tiers.
+inline bool lookup_range_scan_supported(const FastScanCache& cache,const std::vector<TieredQTier>& tiers,
+    size_t prefix_tiers=fast_range_prefix_tiers) {
+  const auto backend=fast_scan_backend(cache);
+  const bool kernel=backend==FastScanBackend::avx512 || backend==FastScanBackend::avx2 || backend==FastScanBackend::neon;
+  return kernel && lookup_range_checkpoint_supported(cache,tiers,prefix_tiers);
+}
+// The backend's pruned nibble-table scan of [first, first + count) (start aligned to fast_list_alignment):
+// rejected documents score -inf, every other score equals the unpruned scan of that backend.
+inline void scan_range_lookup([[maybe_unused]] const FastScanCache& cache,[[maybe_unused]] const FastScanLookupQuery& q,
+    [[maybe_unused]] size_t first,[[maybe_unused]] size_t count,[[maybe_unused]] float* scores,
+    [[maybe_unused]] const LookupRangeCheckpoint& checkpoint) {
+#ifdef DV_TIEREDQ_NEON
+  scan_range_lookup_neon(cache,q,first,count,scores,checkpoint);
+#elif defined(DV_TIEREDQ_X86)
+  if (fast_scan_backend(cache)==FastScanBackend::avx512) scan_range_lookup_avx512(cache,q,first,count,scores,checkpoint);
+  else scan_range_lookup_avx2(cache,q,first,count,scores,checkpoint);
+#else
+  throw std::logic_error("TieredQ: no pruned lookup scan on this platform");
+#endif
 }
 
 // Calls run(prepared, query_tile, scan) for model-space queries, where

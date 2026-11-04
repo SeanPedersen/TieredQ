@@ -10,13 +10,16 @@
 #define DV_TIEREDQ_TEST_X86_LOOKUP 1
 #include "tieredq_scan_int8_avx512.h"
 #include "tieredq_lookup_range_avx512.h"
+#include "tieredq_lookup_range_avx2.h"
 #include "tieredq_scan_int8_avx2.h"
 #elif defined(__aarch64__)
 #define DV_TIEREDQ_TEST_NEON_LOOKUP 1
 #include "tieredq_scan_int8_neon.h"
+#include "tieredq_lookup_range_neon.h"
 #endif
 #if defined(DV_TIEREDQ_TEST_X86_LOOKUP) || defined(DV_TIEREDQ_TEST_NEON_LOOKUP)
 #include "tieredq_scan_fast_scalar.h"
+#include "tieredq_fast_scan.h"
 #include "tieredq_train_codebook_data.h"
 namespace {
 using namespace dv;
@@ -24,6 +27,8 @@ using namespace dv::tieredq_detail;
 void require(bool condition,const char* message) { if (!condition) throw std::runtime_error(message); }
 // A byte-table range kernel: scores [first, first + count) of one query.
 using LookupRangeKernel=void(*)(const FastScanCache&,const FastScanLookupQuery&,size_t,size_t,float*);
+// Its pruned counterpart: rejected documents score -inf.
+using LookupPrunedKernel=void(*)(const FastScanCache&,const FastScanLookupQuery&,size_t,size_t,float*,const LookupRangeCheckpoint&);
 #ifdef DV_TIEREDQ_TEST_X86_LOOKUP
 void wide_kernel_range_test(bool avx512) {
   constexpr size_t dimensions=5,count=4097,code_bytes=4,stride=9;
@@ -206,7 +211,36 @@ void lookup_kernel_test(size_t count,LookupRangeKernel kernel,const LookupLayout
   scan(zero_query,0,count,scores.data());
   require(std::all_of(scores.begin(),scores.begin()+count,[](float x){return x==0;}),"zero byte-table query differs");
 }
-#ifdef DV_TIEREDQ_TEST_X86_LOOKUP
+// Range checkpoint: survivors keep the unpruned kernel's score bits; with the exact bound only scores below the
+// threshold drop. Range starts at first_offset exercise chunks that begin inside a block.
+void lookup_range_checkpoint_test(const FastScanCache& cache,const std::vector<TieredQTier>& tiers,
+    const std::vector<FastScanLookupQuery>& queries,LookupRangeKernel full,LookupPrunedKernel pruned_kernel) {
+  require(lookup_range_checkpoint_supported(cache,tiers),"wide test model has no lookup suffix");
+  constexpr size_t first_offset=3*fast_list_alignment,offset_count=700;
+  const size_t count=cache.count;
+  size_t rejected=0;
+  for (const auto& query:queries) {
+    std::vector<float> reference(count);
+    full(cache,query,0,count,reference.data());
+    std::vector<float> sorted(reference);
+    std::sort(sorted.begin(),sorted.end());
+    for (double confidence:{0.0,8.0}) for (float threshold:{-std::numeric_limits<float>::infinity(),sorted[count/2],sorted[count*9/10],
+        sorted[count-1],std::numeric_limits<float>::infinity()}) for (size_t first:{size_t(0),first_offset}) {
+      const size_t n=first ? offset_count : count;
+      const LookupRangeCheckpoint checkpoint{prepare_lookup_range_bounds(cache,tiers,query,fast_range_prefix_tiers,confidence),threshold};
+      std::vector<float> pruned(n);
+      pruned_kernel(cache,query,first,n,pruned.data(),checkpoint);
+      for (size_t i=0;i<n;++i) {
+        const float unpruned=reference[first+i];
+        const bool dropped=pruned[i]==-std::numeric_limits<float>::infinity();
+        require(dropped || std::bit_cast<uint32_t>(pruned[i])==std::bit_cast<uint32_t>(unpruned),"pruned lookup changed a surviving score");
+        require(!dropped || confidence>0 || unpruned<threshold,"exact lookup bound rejected a competitive document");
+        rejected+=dropped;
+      }
+    }
+  }
+  require(rejected>0,"lookup range checkpoint rejected nothing");
+}
 // Wide additive models: range-sorted groups and fine sections score alike on every backend and query grouping (#13).
 void wide_additive_backend_test(bool fine) {
   constexpr size_t dimensions=48,count=1031,centroids=3,query_count=19;
@@ -243,24 +277,27 @@ void wide_additive_backend_test(bool fine) {
   const auto& lookup=*cache->lookup;
   require(lookup.section_ends.back()==lookup.groups.size(),"sections do not cover the groups");
   require(fine==(lookup.section_ends.front()==lookup_fine_scale_groups),"wrong section size");
-  std::vector<FastScanQueryX86> x86(query_count);
+  std::vector<FastScanLookupQuery> queries(query_count);
   std::vector<FastScanScalarQuery> scalar(query_count);
   std::vector<std::vector<float>> outputs(query_count);
   for (size_t q=0;q<query_count;++q) {
     std::vector<float> input(dimensions);
     for (size_t i=0;i<dimensions;++i) input[i]=std::cos(float(q*dimensions+i));
-    x86[q].lookup=prepare_fast_lookup_query(lookup,input.data(),source);
-    scalar[q].lookup=x86[q].lookup;
+    queries[q]=prepare_fast_lookup_query(lookup,input.data(),source);
+    scalar[q].lookup=queries[q];
     outputs[q]=project_fast_query(map,input.data(),source);
-    FastScanLookupQuery portable; portable.tables.assign(x86[q].lookup.tables.size(),0);
+    FastScanLookupQuery portable; portable.tables.assign(queries[q].tables.size(),0);
     fast_lookup_tables_scalar(lookup,outputs[q].data(),portable);
-    require(portable.tables==x86[q].lookup.tables && portable.scales==x86[q].lookup.scales,"wide tables differ from portable build");
+    require(portable.tables==queries[q].tables && portable.scales==queries[q].scales,"wide tables differ from portable build");
   }
   std::vector<float> reference(query_count*count);
   for (size_t q=0;q<query_count;++q) scan_fast_scalar_tile(*cache,&scalar[q],1,0,count,reference.data()+q*count,count);
   auto same=[&](const std::vector<float>& scores,const char* message) {
     for (size_t i=0;i<reference.size();++i) require(std::fabs(scores[i]-reference[i])<=tolerance*(1+std::fabs(reference[i])),message);
   };
+#ifdef DV_TIEREDQ_TEST_X86_LOOKUP
+  std::vector<FastScanQueryX86> x86(query_count);
+  for (size_t q=0;q<query_count;++q) x86[q].lookup=queries[q];
   // Grouped calls span full and partial query groups, as the batch drivers issue them.
   auto grouped=[&](auto scan,size_t group) {
     std::vector<float> scores(query_count*count);
@@ -270,42 +307,27 @@ void wide_additive_backend_test(bool fine) {
   if (__builtin_cpu_supports("avx2")) same(grouped(scan_fast_avx2_tile,fast_scan_query_tile_avx2),"wide AVX2 scores differ from scalar");
   if (__builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512bw"))
     same(grouped(scan_fast_avx512_tile,fast_scan_query_tile_x86),"wide AVX-512 scores differ from scalar");
+#endif
   // Independent score from whole levels: table rounding bounds the error by half a scale per group.
   for (size_t q=0;q<query_count;++q) for (size_t d=0;d<count;++d) {
     const size_t cid=d%centroids;
-    double exact=x86[q].lookup.centroid_scores[cid]+x86[q].lookup.correction_weights[cid]*.25,bound=1e-3;
+    double exact=queries[q].centroid_scores[cid]+queries[q].correction_weights[cid]*.25,bound=1e-3;
     for (const auto& tier:tiers) for (uint32_t j=0;j<tier.dimensions;++j)
       exact+=outputs[q][tier.start+j]*levels[tier.bits][read_code(rows.data()+d*stride,tier.bit_offset+j*tier.bits,tier.bits)];
     for (size_t section=0,first=0;section<lookup.section_ends.size();first=lookup.section_ends[section++])
-      bound+=(lookup.section_ends[section]-first)*x86[q].lookup.scales[section]/2;
+      bound+=(lookup.section_ends[section]-first)*queries[q].scales[section]/2;
     require(std::fabs(reference[q*count+d]-exact)<=bound,"wide nibble score differs from whole-code levels");
   }
-  if (!fine || !(__builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512bw"))) return;
-  // Range checkpoint: survivors keep the unpruned score bits; with the exact bound only scores below the threshold drop.
-  require(lookup_range_checkpoint_supported(*cache,tiers),"wide test model has no lookup suffix");
-  constexpr size_t range_first=3*lookup_vector_docs,range_count=700;
-  size_t rejected=0;
-  for (size_t q=0;q<query_count;++q) {
-    std::vector<float> sorted(reference.begin()+q*count,reference.begin()+(q+1)*count);
-    std::sort(sorted.begin(),sorted.end());
-    for (double confidence:{0.0,8.0}) for (float threshold:{-std::numeric_limits<float>::infinity(),sorted[count/2],sorted[count*9/10],
-        sorted[count-1],std::numeric_limits<float>::infinity()}) for (size_t first:{size_t(0),range_first}) {
-      const size_t n=first ? range_count : count;
-      const LookupRangeCheckpoint checkpoint{prepare_lookup_range_bounds(*cache,tiers,x86[q].lookup,fast_range_prefix_tiers,confidence),threshold};
-      std::vector<float> pruned(n);
-      scan_range_lookup_avx512(*cache,x86[q].lookup,first,n,pruned.data(),checkpoint);
-      for (size_t i=0;i<n;++i) {
-        const float full=reference[q*count+first+i];
-        const bool dropped=pruned[i]==-std::numeric_limits<float>::infinity();
-        require(dropped || std::bit_cast<uint32_t>(pruned[i])==std::bit_cast<uint32_t>(full),"pruned lookup changed a surviving score");
-        require(!dropped || confidence>0 || full<threshold,"exact lookup bound rejected a competitive document");
-        rejected+=dropped;
-      }
-    }
-  }
-  require(rejected>0,"lookup range checkpoint rejected nothing");
-}
+  if (!fine) return;
+#ifdef DV_TIEREDQ_TEST_NEON_LOOKUP
+  lookup_range_checkpoint_test(*cache,tiers,queries,scan_fast_lookup_neon_range,scan_range_lookup_neon);
+#else
+  if (__builtin_cpu_supports("avx2"))
+    lookup_range_checkpoint_test(*cache,tiers,queries,scan_fast_lookup_avx2_range,scan_range_lookup_avx2);
+  if (__builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512bw"))
+    lookup_range_checkpoint_test(*cache,tiers,queries,scan_fast_lookup_avx512_range,scan_range_lookup_avx512);
 #endif
+}
 constexpr size_t lookup_test_counts[]={1,7,8,9,15,16,17,31,32,33,63,64,65,255,256,257,511,512,4097};
 void lookup_kernel_tests(LookupRangeKernel kernel) {
   for (const auto* layout:{&narrow_layout,&split_layout})
@@ -314,11 +336,13 @@ void lookup_kernel_tests(LookupRangeKernel kernel) {
 } // namespace
 #endif
 void tieredq_lookup_tests() {
+#if defined(DV_TIEREDQ_TEST_X86_LOOKUP) || defined(DV_TIEREDQ_TEST_NEON_LOOKUP)
+  for (bool fine:{false,true}) wide_additive_backend_test(fine);
+#endif
 #ifdef DV_TIEREDQ_TEST_NEON_LOOKUP
   lookup_kernel_tests(scan_fast_lookup_neon_range);
 #endif
 #ifdef DV_TIEREDQ_TEST_X86_LOOKUP
-  for (bool fine:{false,true}) wide_additive_backend_test(fine);
   for (bool avx512:{false,true}) {
     const bool available=avx512 ? (__builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512bw"))
         : bool(__builtin_cpu_supports("avx2"));

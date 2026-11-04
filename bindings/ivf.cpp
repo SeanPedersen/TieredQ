@@ -96,8 +96,9 @@ class PythonIVFIndex {
 
 void bind_ivf(nb::module_& module) {
   nb::class_<dv::TieredQPruning>(module, "TieredQPruning",
-      "Range-checkpoint pruning of IVF list scans (AVX-512). confidence 0 is exact; a positive confidence bounds\n"
-      "the suffix score at that many standard deviations: approximate and faster.")
+      "Range-checkpoint pruning of IVF list scans (nibble scans: AVX-512, AVX2, NEON; FP32 code scans: AVX-512).\n"
+      "confidence 0 is exact; a positive confidence bounds the suffix score at that many standard deviations:\n"
+      "approximate and faster.")
       .def("__init__", [](dv::TieredQPruning* pruning, double confidence, uint32_t prefix_tiers) {
         new (pruning) dv::TieredQPruning{confidence, prefix_tiers};
       }, "confidence"_a = dv::TieredQPruning{}.confidence, "prefix_tiers"_a = dv::TieredQPruning{}.prefix_tiers)

@@ -171,19 +171,20 @@ void fast_range_search(const tieredq_detail::FastScanCache& cache,const TieredQ&
   };
   tieredq_detail::search_fast_tiles(prepared,cache.count,k,1,scan,finish);
 }
+#endif
+// The nibble-table range checkpoint on any backend with a pruned lookup scan; hits equal the unpruned scan.
 template<class Finish>
 void lookup_range_search(const tieredq_detail::FastScanCache& cache,const TieredQ& codec,
     const float* query,size_t k,Finish finish) {
-  const std::vector<tieredq_detail::FastScanQueryX86> prepared{tieredq_detail::fast_scan_query_x86(cache,codec,query)};
-  tieredq_detail::LookupRangeCheckpoint checkpoint{tieredq_detail::prepare_lookup_range_bounds(cache,codec.tiers(),prepared[0].lookup),0};
-  auto scan=[&](const tieredq_detail::FastScanQueryX86* queries,size_t,size_t first,size_t documents,
-      float* scores,size_t,TopK* top) {
-    checkpoint.threshold=top->threshold();
-    tieredq_detail::scan_range_lookup_avx512(cache,queries->lookup,first,documents,scores,checkpoint);
-  };
-  tieredq_detail::search_fast_tiles(prepared,cache.count,k,1,scan,finish);
+  tieredq_detail::with_fast_scan(cache,codec,query,1,[&](const auto& prepared,size_t,auto) {
+    const auto bounds=tieredq_detail::prepare_lookup_range_bounds(cache,codec.tiers(),prepared[0].lookup);
+    // Document tiles may run in parallel, each with its own top k, so every call carries its own threshold.
+    auto scan=[&](const auto* queries,size_t,size_t first,size_t documents,float* scores,size_t,TopK* top) {
+      tieredq_detail::scan_range_lookup(cache,queries->lookup,first,documents,scores,{bounds,top->threshold()});
+    };
+    tieredq_detail::search_fast_tiles(prepared,cache.count,k,1,scan,finish);
+  });
 }
-#endif
 template<class Finish>
 void fast_search(const tieredq_detail::FastScanCache& cache,const TieredQ& codec,
     const float* queries,size_t rows,size_t k,Finish finish) {
@@ -193,12 +194,11 @@ void fast_search(const tieredq_detail::FastScanCache& cache,const TieredQ& codec
     fast_range_search(cache,codec,queries,k,finish);
     return;
   }
-  if (rows==1 && tieredq_detail::fast_scan_backend(cache)==tieredq_detail::FastScanBackend::avx512 &&
-      tieredq_detail::lookup_range_checkpoint_supported(cache,codec.tiers())) {
+#endif
+  if (rows==1 && tieredq_detail::lookup_range_scan_supported(cache,codec.tiers())) {
     lookup_range_search(cache,codec,queries,k,finish);
     return;
   }
-#endif
   tieredq_detail::with_fast_scan(cache,codec,queries,rows,[&](const auto& prepared,size_t query_tile,auto scan) {
     tieredq_detail::search_fast_tiles(prepared,cache.count,k,query_tile,scan,finish);
   });
