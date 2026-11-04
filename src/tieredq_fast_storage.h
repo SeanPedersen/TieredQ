@@ -83,13 +83,14 @@ inline void append_fast_rows(FastScanCache& cache,const std::vector<std::vector<
   }
   cache.count=total;cache.blocks=blocks;
 }
-template<class T> void write_fast_bytes(Writer& writer,const std::vector<T>& bytes) {
+template<class C> void write_fast_bytes(Writer& writer,const C& bytes) {
+  using T=typename C::value_type;
   static_assert(sizeof(T)==1);
   writer.u64(bytes.size());
   for (T value:bytes) writer.data.push_back(uint8_t(value));
 }
-template<class R,class T> void read_fast_bytes(R& reader,std::vector<T>& bytes,size_t expected) {
-  static_assert(sizeof(T)==1);
+template<class R,class C> void read_fast_bytes(R& reader,C& bytes,size_t expected) {
+  static_assert(sizeof(typename C::value_type)==1);
   if (reader.u64()!=expected || expected>reader.remaining()) bad("invalid fast byte length");
   bytes.resize(expected);
   reader.bytes(bytes.data(),expected);
@@ -98,7 +99,7 @@ inline std::vector<uint8_t> serialize_fast_storage(const FastScanCache& cache) {
   Writer writer;writer.u32(fast_payload_version);
   writer.u32(cache.lookup ? fast_lookup_kind : cache.code_lookup() ? fast_packed_code_kind : fast_levels_kind);
   writer.u32(cache.lookup ? 0 : uint32_t(cache.level_max));
-  writer.halves(cache.factor);writer.halves(cache.correction);write_fast_bytes(writer,cache.centroid);
+  writer.halves(cache.factor.owned());writer.halves(cache.correction.owned());write_fast_bytes(writer,cache.centroid);
   if (cache.lookup) write_fast_bytes(writer,cache.lookup->codes); else write_fast_bytes(writer,cache.levels);
   return std::move(writer.data);
 }
@@ -129,7 +130,7 @@ template<class R> void read_fast_storage(R& reader,FastScanCache& cache,size_t c
   const size_t block_docs=cache.lookup ? lookup_block_docs : fast_scan_block_docs;
   cache.count=count;cache.blocks=(count+block_docs-1)/block_docs;
   const size_t padded=product(cache.blocks,block_docs);
-  auto halves=[&](std::vector<uint16_t>& values) {
+  auto halves=[&](BlockArray<uint16_t>& values) {
     if (reader.u64()!=padded || padded>reader.remaining()/sizeof(uint16_t)) bad("invalid fast metadata length");
     std::vector<uint8_t> bytes(product(padded,sizeof(uint16_t)));reader.bytes(bytes.data(),bytes.size());
     values.resize(padded);

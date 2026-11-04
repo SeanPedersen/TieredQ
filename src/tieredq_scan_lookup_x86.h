@@ -24,11 +24,15 @@ struct FastLookupGroup { uint32_t count, bits; std::array<LookupSlot,lookup_code
 struct FastScanLookupCache {
   FastQueryProjection projection;
   std::vector<FastLookupGroup> groups;
-  std::vector<uint8_t> codes;
+  BlockArray<uint8_t> codes;
   std::vector<std::vector<float>> levels;
   AdditiveSplits splits; // per code width, present when that codebook is additive
   std::vector<uint32_t> section_ends; // exclusive last group of each section of groups sharing a table scale
   std::vector<float> code_probability; // per group and nibble code, for unit-Gaussian coordinates (pruning bounds)
+  // A view of one caller block (TieredQFastBlocks) may end on a shorter block: tail_block's pair rows are tail_docs
+  // apart (a multiple of lookup_vector_docs, with read slack after it); every other block keeps lookup_block_docs.
+  size_t tail_block = SIZE_MAX, tail_docs = lookup_block_docs;
+  size_t stride(size_t block) const { return block==tail_block ? tail_docs : lookup_block_docs; }
   size_t pairs() const { return lookup_group_bytes(groups.size()); }
   size_t allocated_bytes() const {
     size_t bytes=sizeof(*this)+projection.allocated_bytes()+groups.capacity()*sizeof(FastLookupGroup)+codes.capacity();
@@ -96,7 +100,8 @@ inline uint32_t lookup_group_code(const FastScanLookupCache& cache,const FastLoo
   return code;
 }
 inline size_t fast_lookup_position(const FastScanLookupCache& cache,size_t doc,size_t group) {
-  return (doc/lookup_block_docs*cache.pairs()+group/lookup_pair_groups)*lookup_block_docs+doc%lookup_block_docs;
+  const size_t block=doc/lookup_block_docs;
+  return block*cache.pairs()*lookup_block_docs+group/lookup_pair_groups*cache.stride(block)+doc%lookup_block_docs;
 }
 struct FastScanLookupQuery {
   std::vector<int8_t> tables;

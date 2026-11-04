@@ -52,7 +52,8 @@ inline size_t lookup_prefix_sections(const FastScanLookupCache& cache,const std:
 }
 inline bool lookup_range_checkpoint_supported(const FastScanCache& cache,const std::vector<TieredQTier>& tiers,
     size_t prefix_tiers=TieredQPruning::automatic_prefix,double confidence=0) {
-  return cache.lookup && lookup_prefix_sections(*cache.lookup,tiers,prefix_tiers,confidence)>0;
+  // Pruned scans assume whole lookup blocks; caller block views with a short tail use the unpruned kernels.
+  return cache.lookup && cache.lookup->tail_block==SIZE_MAX && lookup_prefix_sections(*cache.lookup,tiers,prefix_tiers,confidence)>0;
 }
 inline LookupRangeBounds prepare_lookup_range_bounds(const FastScanCache& cache,const std::vector<TieredQTier>& tiers,
     const FastScanLookupQuery& query,size_t prefix_tiers=TieredQPruning::automatic_prefix,double confidence=0) {

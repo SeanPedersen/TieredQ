@@ -2,6 +2,7 @@
 // Narrow x86 models attach a packed lookup cache; models with any tier wider than 4 bits preserve FP32 codebook
 // precision by keeping each document's packed code row as 32-bit words interleaved across 16-document blocks.
 #pragma once
+#include "tieredq_block_array.h"
 #include "tieredq_layout.h"
 #include "tieredq_lookup_layout.h"
 #include "tieredq/tieredq.h"
@@ -36,14 +37,14 @@ struct FastScanCache {
   size_t count = 0, dimensions = 0, groups = 0, blocks = 0;
   std::shared_ptr<FastScanLookupCache> lookup; // x86 query-specific byte tables for narrow tiers
   int level_max = 127;
-  std::vector<int8_t> levels;          // signed numerical levels or interleaved packed code words
+  BlockArray<int8_t> levels;           // signed numerical levels or interleaved packed code words
   size_t code_bits = 0;                // code lookup: packed code bits per document
   std::vector<uint32_t> code_offset;   // code lookup: bit offset of each coded rank in its document's codes
   // Per-document scale and correction as binary16 bits: the payload's exact values at half the FP32 size.
-  std::vector<uint16_t> factor, correction;
+  BlockArray<uint16_t> factor, correction;
   float factor_at(size_t doc) const { return half_decode(factor[doc]); }
   float correction_at(size_t doc) const { return half_decode(correction[doc]); }
-  std::vector<uint8_t> centroid;
+  BlockArray<uint8_t> centroid;
   std::vector<float> level_scale;      // per tier
   std::vector<uint8_t> tier_of;        // per coded rank; 0xFF for group padding
   std::vector<std::vector<float>> codebooks; // per tier, only for FP32 code-ID scans

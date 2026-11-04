@@ -106,7 +106,7 @@ void with_fast_scan(const FastScanCache& cache,const TieredQ& codec,const float*
   if (backend==FastScanBackend::neon) {
     auto from_weights=[&](const TieredQQuery& q) { return fast_scan_query(cache,q); };
     auto prepare=[&](const float* vector) { return from_weights(codec.model_query_weights(vector)); };
-    auto scan=[&](const auto* prepared,size_t count,size_t first,size_t documents,float* scores,size_t stride) {
+    auto scan=[&cache](const auto* prepared,size_t count,size_t first,size_t documents,float* scores,size_t stride) {
       scan_fast_neon_tile(cache,prepared,count,first,documents,scores,stride);
     };
     run(fast_search_queries(cache,codec,queries,rows,prepare,from_weights,weights),
@@ -118,7 +118,8 @@ void with_fast_scan(const FastScanCache& cache,const TieredQ& codec,const float*
   if (backend==FastScanBackend::avx512 || backend==FastScanBackend::avx2) {
     auto prepare=[&](const float* vector) { return fast_scan_query_x86(cache,codec,vector); };
     auto from_weights=[&](const TieredQQuery& q) { return fast_scan_query_x86(cache,q); };
-    auto scan=[&](const auto* prepared,size_t count,size_t first,size_t documents,float* scores,size_t stride) {
+    // Captures by value except the cache, so callers may keep the scanner while the cache lives (TieredQFastBlocks).
+    auto scan=[&cache,backend](const auto* prepared,size_t count,size_t first,size_t documents,float* scores,size_t stride) {
       if (backend==FastScanBackend::avx512) scan_fast_avx512_tile(cache,prepared,count,first,documents,scores,stride);
       else scan_fast_avx2_tile(cache,prepared,count,first,documents,scores,stride);
     };
@@ -130,7 +131,7 @@ void with_fast_scan(const FastScanCache& cache,const TieredQ& codec,const float*
 #endif
   auto prepare=[&](const float* vector) { return fast_scan_query_scalar(cache,codec,vector); };
   auto from_weights=[&](const TieredQQuery& q) { return fast_scan_query_scalar(cache,q); };
-  auto scan=[&](const auto* prepared,size_t count,size_t first,size_t documents,float* scores,size_t stride) {
+  auto scan=[&cache](const auto* prepared,size_t count,size_t first,size_t documents,float* scores,size_t stride) {
     scan_fast_scalar_tile(cache,prepared,count,first,documents,scores,stride);
   };
   run(fast_search_queries(cache,codec,queries,rows,prepare,from_weights,weights),size_t(1),scan);

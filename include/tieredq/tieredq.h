@@ -80,6 +80,7 @@ struct TieredQPanels {
 class TieredQIndex;
 class TieredQRefinement;
 class TieredQNestedIVFIndex;
+class TieredQFastBlocks;
 class TieredQ {
  public:
   static TieredQ train(TieredQConfig config, const float* sample, size_t rows, uint64_t seed = 0);
@@ -151,6 +152,7 @@ class TieredQ {
   friend class TieredQIndex;
   friend class TieredQIVFIndex;
   friend struct tieredq_detail::FastQueryBasis;
+  friend class TieredQFastBlocks;
   friend class TieredQRefinement;
   friend class TieredQNestedIVFIndex;
   TieredQ() = default;
@@ -252,6 +254,7 @@ class TieredQIndex {
   // Fills an empty fast-mode index from a serialized fast payload (tieredq_index_read.h).
   template<class Reader> void read_fast_payload(Reader& reader, size_t rows);
   friend class TieredQIVFIndex;
+  friend class TieredQFastBlocks;
   std::shared_ptr<tieredq_detail::FastScanCache> make_fast_storage(
       const uint8_t* rows, size_t count, bool lookup, int level_max) const;
   std::shared_ptr<tieredq_detail::FastScanCache> make_fast_storage(const uint8_t* rows, size_t count) const;

@@ -224,7 +224,7 @@ void legacy_byte_payload_test() {
   bytes[fast_level_position(cache->groups,documents,0)]=1; // valid legacy code in a padding document
   auto legacy=[&](const std::vector<uint8_t>& codes) {
     Writer writer;writer.u32(fast_payload_version);writer.u32(fast_byte_code_kind);writer.u32(fast_code_lookup_levels);
-    writer.halves(cache->factor);writer.halves(cache->correction);write_fast_bytes(writer,cache->centroid);write_fast_bytes(writer,codes);
+    writer.halves(cache->factor.owned());writer.halves(cache->correction.owned());write_fast_bytes(writer,cache->centroid);write_fast_bytes(writer,codes);
     save_file(legacy_path.string(),codec.serialize(),writer.data,documents,fast_index_file_kind);
   };
   legacy(bytes);

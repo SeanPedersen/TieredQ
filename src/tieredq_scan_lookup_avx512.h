@@ -18,7 +18,8 @@ inline void lookup_epilogue(const FastScanCache& c, const FastScanLookupQuery& q
 template<size_t Chunks>
 __attribute__((target("avx512f,avx512bw"),always_inline))
 inline void lookup_sections_avx512(const FastScanLookupCache& lookup, const FastScanLookupQuery& q, const uint8_t* base,
-    size_t first_chunk, size_t section_begin, size_t section_end, __m512 (&dots)[Chunks][4]) {
+    size_t first_chunk, size_t section_begin, size_t section_end, __m512 (&dots)[Chunks][4],
+    size_t stride = lookup_block_docs) {
   const auto mask = _mm512_set1_epi8(lookup_table_entries-1), ones = _mm512_set1_epi8(1);
   const auto order0 = _mm512_setr_epi64(0,1,8,9,2,3,10,11);
   const auto order1 = _mm512_setr_epi64(4,5,12,13,6,7,14,15);
@@ -33,7 +34,7 @@ inline void lookup_sections_avx512(const FastScanLookupCache& lookup, const Fast
       const auto t1 = _mm512_broadcast_i32x4(_mm_loadu_si128(reinterpret_cast<const __m128i*>(q.tables.data()+(g+1)*lookup_table_entries)));
 #pragma GCC unroll 4
       for(size_t chunk=0;chunk<Chunks;++chunk){
-        const auto packed = _mm512_loadu_si512(base+g/lookup_pair_groups*lookup_block_docs+chunk*lookup_chunk_docs);
+        const auto packed = _mm512_loadu_si512(base+g/lookup_pair_groups*stride+chunk*lookup_chunk_docs);
         const auto v0 = _mm512_shuffle_epi8(t0,_mm512_and_si512(packed,mask));
         const auto v1 = _mm512_shuffle_epi8(t1,_mm512_and_si512(_mm512_srli_epi16(packed,lookup_code_bits),mask));
         sum[chunk][0] = _mm512_add_epi16(sum[chunk][0],_mm512_maddubs_epi16(ones,_mm512_unpacklo_epi8(v0,v1)));
@@ -56,9 +57,9 @@ inline void lookup_sections_avx512(const FastScanLookupCache& lookup, const Fast
 template<size_t Chunks>
 __attribute__((target("avx512f,avx512bw"),always_inline))
 inline void lookup_chunks_avx512(const FastScanLookupCache& lookup, const FastScanLookupQuery& q, const uint8_t* base,
-    size_t first_chunk, __m512 (&dots)[Chunks][4]) {
+    size_t first_chunk, __m512 (&dots)[Chunks][4], size_t stride = lookup_block_docs) {
   for(size_t chunk=0;chunk<Chunks;++chunk)for(auto& dot:dots[chunk])dot=_mm512_setzero_ps();
-  lookup_sections_avx512<Chunks>(lookup,q,base,first_chunk,0,lookup.section_ends.size(),dots);
+  lookup_sections_avx512<Chunks>(lookup,q,base,first_chunk,0,lookup.section_ends.size(),dots,stride);
 }
 template<size_t Chunks>
 __attribute__((target("avx512f,avx512bw")))
@@ -66,7 +67,8 @@ inline void scan_lookup_chunks_avx512(const FastScanCache& c, const FastScanLook
     size_t first_chunk, size_t first, size_t count, float* out) {
   const auto& lookup=*c.lookup;
   __m512 dots[Chunks][4];
-  lookup_chunks_avx512<Chunks>(lookup,q,lookup.codes.data()+block*lookup.pairs()*lookup_block_docs,first_chunk,dots);
+  lookup_chunks_avx512<Chunks>(lookup,q,lookup.codes.data()+block*lookup.pairs()*lookup_block_docs,first_chunk,dots,
+                               lookup.stride(block));
   for(size_t chunk=0;chunk<Chunks;++chunk)for(size_t t=0;t<4;++t){
     const size_t doc=block*lookup_block_docs+(first_chunk+chunk)*lookup_chunk_docs+t*lookup_vector_docs;
     if(doc>=first && doc<first+count)lookup_epilogue(c,q,doc,dots[chunk][t],out,first,first+count);

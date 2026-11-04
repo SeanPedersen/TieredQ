@@ -40,7 +40,8 @@ inline void lookup_epilogue_neon(const FastScanCache& cache,const FastScanLookup
 template<size_t Vectors>
 __attribute__((always_inline))
 inline void lookup_sections_neon(const FastScanLookupCache& lookup,const FastScanLookupQuery& q,const uint8_t* base,
-    size_t section_begin,size_t section_end,float32x4_t (&dots)[Vectors][lookup_neon_quarters]) {
+    size_t section_begin,size_t section_end,float32x4_t (&dots)[Vectors][lookup_neon_quarters],
+    size_t stride=lookup_block_docs) {
   const auto mask=vdupq_n_u8(lookup_table_entries-1);
   for (size_t section=section_begin,start=section ? lookup.section_ends[section-1] : 0;section<section_end;
        start=lookup.section_ends[section++]) {
@@ -50,7 +51,7 @@ inline void lookup_sections_neon(const FastScanLookupCache& lookup,const FastSca
     for (size_t g=start;g<end;g+=lookup_pair_groups) {
       const auto low_table=vld1q_s8(q.tables.data()+g*lookup_table_entries);
       const auto high_table=vld1q_s8(q.tables.data()+(g+1)*lookup_table_entries);
-      const uint8_t* pair=base+g/lookup_pair_groups*lookup_block_docs;
+      const uint8_t* pair=base+g/lookup_pair_groups*stride;
       for (size_t v=0;v<Vectors;++v) {
         const auto packed=vld1q_u8(pair+v*lookup_vector_docs);
         const auto low=vqtbl1q_s8(low_table,vandq_u8(packed,mask));
@@ -72,7 +73,8 @@ inline void scan_lookup_vectors_neon(const FastScanCache& cache,const FastScanLo
     size_t doc,size_t end,float* out) {
   float32x4_t dots[Vectors][lookup_neon_quarters];
   for (auto& vector:dots) for (auto& dot:vector) dot=vdupq_n_f32(0);
-  lookup_sections_neon<Vectors>(*cache.lookup,q,base,0,cache.lookup->section_ends.size(),dots);
+  lookup_sections_neon<Vectors>(*cache.lookup,q,base,0,cache.lookup->section_ends.size(),dots,
+                                cache.lookup->stride(doc/lookup_block_docs));
   for (size_t v=0;v<Vectors && doc+v*lookup_vector_docs<end;++v) {
     const size_t at=doc+v*lookup_vector_docs;
     lookup_epilogue_neon(cache,q,at,dots[v],out+v*lookup_vector_docs,std::min(lookup_vector_docs,end-at));

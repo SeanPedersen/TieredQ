@@ -79,6 +79,18 @@ nonempty append or load. Empty and failed appends preserve the optional cache.
 On fast-only indexes, `build_fast_scan()` is a no-op and `search_fast` matches
 configured search. `has_fast_scan` reports whether fast data is present.
 
+## Fast blocks in engine storage
+
+`TieredQFastBlocks` (`<tieredq/tieredq_blocks.h>`) serializes the fast representation of a run of encoded rows
+into one caller-owned byte block (`block_bytes(count)`, `pack`) that an engine stores, e.g. per inverted list on
+disk, and scans in place: `scanner(query)` prepares one query, `Scanner::score(block, count, scores)` writes
+model-space inner-product estimates for the block's documents without copying it. `unpack` recovers the exact
+`encode()` rows. `format()` names the representation chosen for the model and CPU (nibble lookup, packed code
+words or int8 levels); persist it and reopen stored blocks with `TieredQFastBlocks(codec, format)`. Other CPUs scan
+a persisted format with the portable scorer. Blocks need no alignment (64-byte starts keep loads within cache
+lines). A scanner is single-threaded; use one per thread and query. Nibble-lookup blocks end on a short tail block,
+so small lists are not padded to 256 documents; pruned (range-checkpoint) scans do not apply to such views.
+
 ## Ownership and concurrency
 
 Models and queries own their buffers. Const codec operations and index searches

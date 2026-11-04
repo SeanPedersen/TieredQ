@@ -27,7 +27,7 @@ constexpr size_t fast_lookup_avx2_vectors=fast_lookup_avx2_docs/fast_scan_avx2_l
 // dots[v] holds documents 8v to 8v+7.
 __attribute__((target("avx2,f16c"),always_inline))
 inline void lookup_sections_avx2(const FastScanLookupCache& lookup,const FastScanLookupQuery& q,const uint8_t* base,
-    size_t section_begin,size_t section_end,__m256 (&dots)[fast_lookup_avx2_vectors]) {
+    size_t section_begin,size_t section_end,__m256 (&dots)[fast_lookup_avx2_vectors],size_t stride=lookup_block_docs) {
   const auto mask=_mm256_set1_epi8(lookup_table_entries-1),ones=_mm256_set1_epi8(1);
   for (size_t section=section_begin,start=section ? lookup.section_ends[section-1] : 0;section<section_end;
        start=lookup.section_ends[section++]) {
@@ -36,7 +36,7 @@ inline void lookup_sections_avx2(const FastScanLookupCache& lookup,const FastSca
     for (size_t g=start;g<end;g+=lookup_pair_groups) {
       const auto t0=_mm256_broadcastsi128_si256(_mm_loadu_si128(reinterpret_cast<const __m128i*>(q.tables.data()+g*lookup_table_entries)));
       const auto t1=_mm256_broadcastsi128_si256(_mm_loadu_si128(reinterpret_cast<const __m128i*>(q.tables.data()+(g+1)*lookup_table_entries)));
-      const auto packed=_mm256_loadu_si256(reinterpret_cast<const __m256i*>(base+g/lookup_pair_groups*lookup_block_docs));
+      const auto packed=_mm256_loadu_si256(reinterpret_cast<const __m256i*>(base+g/lookup_pair_groups*stride));
       const auto v0=_mm256_shuffle_epi8(t0,_mm256_and_si256(packed,mask));
       const auto v1=_mm256_shuffle_epi8(t1,_mm256_and_si256(_mm256_srli_epi16(packed,lookup_code_bits),mask));
       low=_mm256_add_epi16(low,_mm256_maddubs_epi16(ones,_mm256_unpacklo_epi8(v0,v1)));
@@ -72,7 +72,8 @@ inline void scan_fast_lookup_avx2_range(const FastScanCache& cache,const FastSca
   for (size_t doc=first;doc<first+count;doc+=fast_lookup_avx2_docs) {
     __m256 dots[fast_lookup_avx2_vectors];
     for (auto& dot:dots) dot=_mm256_setzero_ps();
-    lookup_sections_avx2(lookup,q,lookup_codes_avx2(lookup,doc),0,lookup.section_ends.size(),dots);
+    lookup_sections_avx2(lookup,q,lookup_codes_avx2(lookup,doc),0,lookup.section_ends.size(),dots,
+                         lookup.stride(doc/lookup_block_docs));
     lookup_chunk_epilogue_avx2(cache,q,doc,first,first+count,dots,scores);
   }
 }
