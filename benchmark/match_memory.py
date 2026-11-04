@@ -8,6 +8,8 @@ targets (and across references sharing an output directory) and logged in calibr
 exceeds the target, the search steps down to the next smaller calibrated budget that fits, then below the smallest
 in RESOLUTION steps (seed-to-seed RSS noise can push every cached budget over a peak target). Cells are measured
 by measure_memory.run_cell, so methodology and columns match memory.csv, and cells.csv makes the run resumable.
+A dataset with a companion query set (measure_memory.COMPANION_QUERIES) also reports that set's recall on the same
+cells; the win stays on the primary set.
 """
 import argparse
 import csv
@@ -50,7 +52,8 @@ class Cells:
         spec = dict(dataset=dataset, codec=codec, bits=bits, seed=seed, data=str(self.data), quick=self.quick)
         if code_bits:
             spec["code_bits"] = code_bits
-        row = {name: str(value) for name, value in run_cell(spec, self.output, self.env).items()}
+        # Empty for missing values, as a reloaded cells.csv row has them.
+        row = {name: "" if value is None else str(value) for name, value in run_cell(spec, self.output, self.env).items()}
         # The requested budget is the key; the realised one stays in the row for auditing.
         row["requested_code_bits"] = str(code_bits)
         self.rows[key] = row
@@ -137,6 +140,14 @@ def summary(rows, column):
                 max=max(values), min=min(values))
 
 
+def recall_summaries(rows):
+    """Primary recall, plus the companion query set's when the cells carry it."""
+    recalls = {"recall10": summary(rows, "recall10")}
+    if all(row.get("companion_recall10") for row in rows):
+        recalls["companion_recall10"] = summary(rows, "companion_recall10")
+    return recalls
+
+
 def match(cells, dataset, codec, bits, metric, seeds, log):
     measured = [cells.measure(dataset, codec, bits, seed) for seed in seeds]
     dimensions = int(measured[0]["d"])
@@ -147,13 +158,19 @@ def match(cells, dataset, codec, bits, metric, seeds, log):
     result = reference | dict(dataset=dataset, metric=metric, target_bits_per_vector=target,
                               calibrated_code_bits=best, code_bits=chosen,
                               reference={name: summary(measured, column) for name, column in METRICS.items()}
-                              | {"recall10": summary(measured, "recall10")})
+                              | recall_summaries(measured))
     if chosen is None:
         return result | dict(tieredq=None, win=False)
-    stats = {name: summary(tieredq, column) for name, column in METRICS.items()} | {
-        "recall10": summary(tieredq, "recall10"), "realised_code_bits": int(tieredq[0]["code_bits"])}
+    stats = {name: summary(tieredq, column) for name, column in METRICS.items()} | recall_summaries(tieredq) | {
+        "realised_code_bits": int(tieredq[0]["code_bits"])}
     win = stats[metric]["max"] <= target and stats["recall10"]["mean"] > result["reference"]["recall10"]["mean"]
     return result | dict(tieredq=stats, win=win)
+
+
+def companion_delta(reference, tieredq):
+    if "companion_recall10" not in reference:
+        return "–"
+    return f"{tieredq['companion_recall10']['mean'] - reference['companion_recall10']['mean']:+.4f}"
 
 
 REFERENCE_NAMES = {"rabitq": "RaBitQ", "qdrant": "Qdrant TQ+"}
@@ -164,8 +181,9 @@ def markdown(results):
     lines = [f"Bits/vector; recall@10 is mean ± std over seeds. Target = min of {name}'s metric over seeds; "
              "TieredQ memory is the max over seeds.", "",
              f"| Dataset | Matched on | {name} bits/dim | Target | TieredQ code bits | TieredQ disk | TieredQ RAM "
-             f"| TieredQ peak | TieredQ R@10 | {name} disk | {name} RAM | {name} peak | {name} R@10 | Δ R@10 | Win |",
-             "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|"]
+             f"| TieredQ peak | TieredQ R@10 | {name} disk | {name} RAM | {name} peak | {name} R@10 | Δ R@10 | Win "
+             "| Δ R@10 companion queries |",
+             "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|"]
     recall = lambda stats: f"{stats['mean']:.4f} ± {stats['std']:.4f}"
     for result in results:
         reference, tieredq = result["reference"], result["tieredq"]
@@ -174,12 +192,12 @@ def markdown(results):
         reference_cells = (f"{reference['disk']['max']:,.1f} | {reference['ram']['max']:,.1f} | "
                            f"{reference['peak']['max']:,.1f} | {recall(reference['recall10'])}")
         if tieredq is None:
-            lines.append(head + "none fits | – | – | – | – | " + reference_cells + " | – | no |")
+            lines.append(head + "none fits | – | – | – | – | " + reference_cells + " | – | no | – |")
             continue
         delta = tieredq["recall10"]["mean"] - reference["recall10"]["mean"]
         lines.append(head + f"{result['code_bits']:,} | {tieredq['disk']['max']:,.1f} | {tieredq['ram']['max']:,.1f} | "
                      f"{tieredq['peak']['max']:,.1f} | {recall(tieredq['recall10'])} | {reference_cells} | "
-                     f"{delta:+.4f} | {'yes' if result['win'] else 'no'} |")
+                     f"{delta:+.4f} | {'yes' if result['win'] else 'no'} | {companion_delta(reference, tieredq)} |")
     return "\n".join(lines) + "\n"
 
 

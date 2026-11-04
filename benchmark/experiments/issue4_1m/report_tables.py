@@ -19,8 +19,9 @@ SHIP = RESULTS / "issue9-ship-20261030"
 FINAL = RESULTS / "issue4-final-20261029"
 REFERENCES = {"rabitq": "RaBitQ", "qdrant": "Qdrant TQ+"}
 NAMES = {"sift": "SIFT1M (L2)", "glove": "GloVe-200 100k", "openai": "OpenAI-1536 100k", "gemini": "Gemini-768 99k",
-         "openai1m": "OpenAI-1536 1M"}
-DIMENSIONS = {"sift": 128, "glove": 200, "openai": 1536, "gemini": 768, "openai1m": 1536}
+         "openai1m": "OpenAI-1536 1M", "msmarco1m": "MS MARCO-1M real queries", "msmarco1m-doc": "MS MARCO-1M doc queries"}
+DIMENSIONS = {"sift": 128, "glove": 200, "openai": 1536, "gemini": 768, "openai1m": 1536, "msmarco1m": 1024,
+              "msmarco1m-doc": 1024}
 BITS = (1, 2, 4)
 TARGET_RECALL = 0.95
 FLOAT_BITS = 32

@@ -1,0 +1,15 @@
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- TieredQ LAPACK: OpenBLAS /usr/lib/libopenblas.so;/usr/lib/libopenblas.so
+-- TieredQ io_uring tier reads: 1
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue22-flat-20261103/source/benchmark/build-native
+[  4%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 40%] Built target dv_tieredq
+[ 88%] Built target nanobind-static
+[ 92%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 96%] Linking CXX executable codec_reference
+[ 96%] Built target codec_reference
+[100%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[100%] Built target codec_native

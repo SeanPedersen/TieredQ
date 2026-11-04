@@ -1,6 +1,6 @@
 import unittest
 
-from match_memory import MAX_STEP_DOWNS, METRICS, RESOLUTION, confirm
+from match_memory import MAX_STEP_DOWNS, METRICS, RESOLUTION, companion_delta, confirm, recall_summaries
 
 PEAK = METRICS["peak"]
 DIMENSIONS = 200
@@ -43,6 +43,24 @@ class ConfirmTest(unittest.TestCase):
         cells = FakeCells()
         self.assertEqual(run_confirm(cells, []), (None, []))
         self.assertEqual(cells.measured, [])
+
+
+class CompanionRecallTest(unittest.TestCase):
+    def test_summarises_companion_recall_when_every_cell_has_it(self):
+        rows = [{"recall10": "0.9", "companion_recall10": "0.8"}, {"recall10": "0.7", "companion_recall10": "0.6"}]
+        recalls = recall_summaries(rows)
+        self.assertAlmostEqual(recalls["recall10"]["mean"], 0.8)
+        self.assertAlmostEqual(recalls["companion_recall10"]["mean"], 0.7)
+
+    def test_omits_companion_recall_for_cells_without_it(self):
+        recalls = recall_summaries([{"recall10": "0.9", "companion_recall10": ""}])
+        self.assertNotIn("companion_recall10", recalls)
+        self.assertEqual(companion_delta(recalls, recalls), "–")
+
+    def test_companion_delta_is_tieredq_minus_reference(self):
+        reference = recall_summaries([{"recall10": "0.9", "companion_recall10": "0.80"}])
+        tieredq = recall_summaries([{"recall10": "0.9", "companion_recall10": "0.85"}])
+        self.assertEqual(companion_delta(reference, tieredq), "+0.0500")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,68 @@
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- TieredQ LAPACK: OpenBLAS /usr/lib/libopenblas.so;/usr/lib/libopenblas.so
+-- TieredQ io_uring tier reads: 1
+-- Configuring done (0.1s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue22-flat-20261103/source/benchmark/build-native
+[  4%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 40%] Built target dv_tieredq
+[ 88%] Built target nanobind-static
+[ 92%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 96%] Linking CXX executable codec_reference
+[ 96%] Built target codec_reference
+[100%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[100%] Built target codec_native
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-msmarco1m-rabitq-4-0: disk 4256.0, peak RAM 4262.2 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-msmarco1m-rabitq-4-1: disk 4256.0, peak RAM 4262.2 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-msmarco1m-rabitq-4-2: disk 4256.0, peak RAM 4262.0 bits/vector
+cell-msmarco1m-tieredq-c4256-0: disk 4321.4, peak RAM 4277.1 bits/vector
+cell-msmarco1m-tieredq-c4187-0: disk 4249.3, peak RAM 4205.0 bits/vector
+cell-msmarco1m-tieredq-c4204-0: disk 4265.3, peak RAM 4222.2 bits/vector
+cell-msmarco1m-tieredq-c4194-0: disk 4257.3, peak RAM 4213.3 bits/vector
+cell-msmarco1m-tieredq-c4187-1: disk 4249.3, peak RAM 4204.9 bits/vector
+cell-msmarco1m-tieredq-c4187-2: disk 4249.3, peak RAM 4205.2 bits/vector
+cell-msmarco1m-tieredq-c4243-0: disk 4305.4, peak RAM 4261.9 bits/vector
+cell-msmarco1m-tieredq-c4252-0: disk 4313.4, peak RAM 4269.2 bits/vector
+cell-msmarco1m-tieredq-c4252-1: disk 4313.4, peak RAM 4269.1 bits/vector
+cell-msmarco1m-tieredq-c4252-2: disk 4313.4, peak RAM 4269.3 bits/vector
+cell-msmarco1m-tieredq-c4245-0: disk 4305.4, peak RAM 4262.0 bits/vector
+cell-msmarco1m-tieredq-c4245-1: disk 4305.4, peak RAM 4261.0 bits/vector
+cell-msmarco1m-tieredq-c4245-2: disk 4305.4, peak RAM 4261.2 bits/vector
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- TieredQ LAPACK: OpenBLAS /usr/lib/libopenblas.so;/usr/lib/libopenblas.so
+-- TieredQ io_uring tier reads: 1
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue22-flat-20261103/source/benchmark/build-native
+[  4%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 40%] Built target dv_tieredq
+[ 88%] Built target nanobind-static
+[ 92%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 96%] Linking CXX executable codec_reference
+[ 96%] Built target codec_reference
+[100%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[100%] Built target codec_native
+cell-msmarco1m-qdrant-4-0: disk 4160.2, peak RAM 4167.4 bits/vector
+cell-msmarco1m-qdrant-4-1: disk 4160.2, peak RAM 4167.5 bits/vector
+cell-msmarco1m-qdrant-4-2: disk 4160.2, peak RAM 4167.4 bits/vector
+cell-msmarco1m-tieredq-c4093-0: disk 4153.0, peak RAM 4110.0 bits/vector
+cell-msmarco1m-tieredq-c4116-0: disk 4177.1, peak RAM 4133.1 bits/vector
+cell-msmarco1m-tieredq-c4100-0: disk 4161.0, peak RAM 4116.9 bits/vector
+cell-msmarco1m-tieredq-c4093-1: disk 4153.0, peak RAM 4109.1 bits/vector
+cell-msmarco1m-tieredq-c4093-2: disk 4153.0, peak RAM 4110.1 bits/vector
+cell-msmarco1m-tieredq-c4159-0: disk 4217.2, peak RAM 4173.3 bits/vector
+cell-msmarco1m-tieredq-c4166-0: disk 4225.2, peak RAM 4181.8 bits/vector
+cell-msmarco1m-tieredq-c4159-1: disk 4217.2, peak RAM 4173.1 bits/vector
+cell-msmarco1m-tieredq-c4159-2: disk 4217.2, peak RAM 4174.0 bits/vector
+cell-msmarco1m-tieredq-c4149-0: disk 4209.2, peak RAM 4166.7 bits/vector
+cell-msmarco1m-tieredq-c4151-0: disk 4209.2, peak RAM 4165.8 bits/vector
+cell-msmarco1m-tieredq-c4151-1: disk 4209.1, peak RAM 4165.4 bits/vector
+cell-msmarco1m-tieredq-c4151-2: disk 4209.1, peak RAM 4164.9 bits/vector

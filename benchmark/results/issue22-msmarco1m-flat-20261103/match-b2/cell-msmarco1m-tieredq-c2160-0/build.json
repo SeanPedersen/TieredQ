@@ -1,0 +1,9 @@
+{
+  "d": 1024,
+  "base_n": 1000000,
+  "code_bits": 2160,
+  "build_s": 13.229960098862648,
+  "build_peak_rss_bytes": 333639680,
+  "disk_bytes": 277468984,
+  "index_sha256": "f0dea3a163a22f65edde5f93961df8ab5ad509979b686b12c7386a4721ccade3"
+}

@@ -8,6 +8,8 @@ their maximum. Recall is a reload check against the
 FP32 corpus through training, encoding and packing. RSS deltas start from a reset high-water mark.
 A cell spec may carry an exact TieredQ `code_bits` budget in place of bits × dimensions (see match_memory.py).
 With `quick`, the query workload is one untimed pass per schedule: same allocations and peak, no timing.
+A dataset with a companion query set on the same base (MS MARCO's doc queries) also scores that set at the primary
+schedule after all memory reads, so one match yields both recalls (`companion_recall10`).
 """
 import argparse
 import csv
@@ -24,7 +26,9 @@ import time
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
-DATASETS = ["sift", "glove", "openai", "gemini", "openai1m"]
+DATASETS = ["sift", "glove", "openai", "gemini", "openai1m", "msmarco1m", "msmarco1m-doc"]
+# Second query set scored on the same base and index (#22: real vs doc queries); storage does not depend on it.
+COMPANION_QUERIES = {"msmarco1m": "msmarco1m-doc"}
 CODECS = ["tieredq", "rabitq"]
 # Qdrant TQ+ needs the Rust shim (turboquant/native), so it is opt-in via --codecs.
 OPTIONAL_CODECS = ["qdrant"]
@@ -32,7 +36,8 @@ BIT_BUDGETS = [1, 2, 4]
 SUPPORTED_BITS = range(1, 9)
 # Same scheduling grid as the timed matrix; the workload sets the serving high-water mark.
 SERVING_SCHEDULES = [(1, 1), (1, 32), (8, 1), (8, 32)]
-PRIMARY_SCHEDULE = "t8-b32"
+PRIMARY_THREADS, PRIMARY_BATCH = 8, 32
+PRIMARY_SCHEDULE = f"t{PRIMARY_THREADS}-b{PRIMARY_BATCH}"
 BUILD_THREADS = 8
 RESET_ATTEMPTS = 5
 RESET_PAUSE_S = 0.02
@@ -40,7 +45,7 @@ FIELDS = ("dataset,d,base_n,codec,target_bits,code_bits,seed,disk_bytes,disk_bit
           "ram_accounted_bytes,ram_accounted_bits_per_vector,ram_loaded_rss_bytes,ram_loaded_bits_per_vector,"
           "ram_load_peak_rss_bytes,ram_load_peak_bits_per_vector,ram_query_peak_rss_bytes,ram_query_peak_bits_per_vector,"
           "ram_peak_rss_bytes,ram_peak_bits_per_vector,build_peak_rss_bytes,build_peak_bits_per_vector,"
-          "build_s,recall10").split(",")
+          "build_s,recall10,companion_recall10").split(",")
 
 
 def memory_status():
@@ -153,6 +158,10 @@ def serve_worker(spec, cell):
     with threadpool_limits(limits=1):
         base, queries, truth = prepare(Path(spec["data"]), spec["dataset"])
         del base
+        companion = spec["dataset"] in COMPANION_QUERIES
+        if companion:
+            base, companion_queries, companion_truth = prepare(Path(spec["data"]), COMPANION_QUERIES[spec["dataset"]])
+            del base
         preload_codec(spec)
         baseline = reset_peak()
         index = load_index(spec, cell)
@@ -171,17 +180,21 @@ def serve_worker(spec, cell):
         load_peak, query_peak = load_hwm - baseline, memory_status()[1] - baseline
         ids = np.empty((len(queries), 10), dtype=np.uint32)
         index.search(queries, ids, BUILD_THREADS)
+        companion_recall = (single_pass(index, companion_queries, companion_truth, PRIMARY_THREADS, PRIMARY_BATCH,
+                                        recall)["recall10"]
+                            if companion else None)
         return dict(ram_accounted_bytes=accounted, ram_loaded_rss_bytes=loaded_rss - baseline,
                     ram_load_peak_rss_bytes=load_peak, ram_query_peak_rss_bytes=query_peak,
                     ram_peak_rss_bytes=max(load_peak, query_peak), recall10=metrics[PRIMARY_SCHEDULE]["recall10"],
-                    ids_sha256=hashlib.sha256(ids.tobytes()).hexdigest(),
+                    ids_sha256=hashlib.sha256(ids.tobytes()).hexdigest(), companion_recall10=companion_recall,
                     # Diagnostic only: memory runs are not the headline timing runs.
                     schedule_metrics=metrics)
 
 
 def to_row(spec, built, served):
     row = dict(dataset=spec["dataset"], d=built["d"], base_n=built["base_n"], codec=spec["codec"],
-               target_bits=spec["bits"], code_bits=built["code_bits"], seed=spec["seed"], build_s=built["build_s"], recall10=served["recall10"])
+               target_bits=spec["bits"], code_bits=built["code_bits"], seed=spec["seed"], build_s=built["build_s"], recall10=served["recall10"],
+               companion_recall10=served["companion_recall10"])
     measured = built | served
     for key in ("disk", "ram_accounted", "ram_loaded_rss", "ram_load_peak_rss", "ram_query_peak_rss",
                 "ram_peak_rss", "build_peak_rss"):

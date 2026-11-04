@@ -1,0 +1,67 @@
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- TieredQ LAPACK: OpenBLAS /usr/lib/libopenblas.so;/usr/lib/libopenblas.so
+-- TieredQ io_uring tier reads: 1
+-- Configuring done (0.1s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue22-flat-20261103/source/benchmark/build-native
+[  4%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 52%] Built target nanobind-static
+[ 88%] Built target dv_tieredq
+[ 92%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 96%] Linking CXX executable codec_reference
+[ 96%] Built target codec_reference
+[100%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[100%] Built target codec_native
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-msmarco1m-rabitq-1-0: disk 1120.0, peak RAM 1126.2 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-msmarco1m-rabitq-1-1: disk 1120.0, peak RAM 1126.2 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-msmarco1m-rabitq-1-2: disk 1120.0, peak RAM 1126.0 bits/vector
+cell-msmarco1m-tieredq-c1120-0: disk 1185.0, peak RAM 1146.2 bits/vector
+cell-msmarco1m-tieredq-c1052-0: disk 1112.7, peak RAM 1073.3 bits/vector
+cell-msmarco1m-tieredq-c1069-0: disk 1128.8, peak RAM 1089.5 bits/vector
+cell-msmarco1m-tieredq-c1060-0: disk 1120.8, peak RAM 1081.3 bits/vector
+cell-msmarco1m-tieredq-c1052-1: disk 1112.7, peak RAM 1073.6 bits/vector
+cell-msmarco1m-tieredq-c1052-2: disk 1112.7, peak RAM 1073.8 bits/vector
+cell-msmarco1m-tieredq-c1108-0: disk 1169.0, peak RAM 1130.3 bits/vector
+cell-msmarco1m-tieredq-c1111-0: disk 1177.0, peak RAM 1137.3 bits/vector
+cell-msmarco1m-tieredq-c1108-1: disk 1169.0, peak RAM 1129.7 bits/vector
+cell-msmarco1m-tieredq-c1108-2: disk 1169.0, peak RAM 1129.5 bits/vector
+cell-msmarco1m-tieredq-c1099-0: disk 1160.9, peak RAM 1122.4 bits/vector
+cell-msmarco1m-tieredq-c1103-0: disk 1169.0, peak RAM 1129.7 bits/vector
+cell-msmarco1m-tieredq-c1099-1: disk 1160.9, peak RAM 1121.9 bits/vector
+cell-msmarco1m-tieredq-c1099-2: disk 1160.9, peak RAM 1121.1 bits/vector
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- TieredQ LAPACK: OpenBLAS /usr/lib/libopenblas.so;/usr/lib/libopenblas.so
+-- TieredQ io_uring tier reads: 1
+-- Configuring done (0.1s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue22-flat-20261103/source/benchmark/build-native
+[  4%] Building CXX object CMakeFiles/codec_reference.dir/reference.cpp.o
+[ 40%] Built target dv_tieredq
+[ 88%] Built target nanobind-static
+[ 92%] Building CXX object CMakeFiles/codec_native.dir/module.cpp.o
+[ 96%] Linking CXX executable codec_reference
+[ 96%] Built target codec_reference
+[100%] Linking CXX shared module codec_native.cpython-312-x86_64-linux-gnu.so
+[100%] Built target codec_native
+cell-msmarco1m-qdrant-1-0: disk 1088.2, peak RAM 1095.4 bits/vector
+cell-msmarco1m-qdrant-1-1: disk 1088.2, peak RAM 1096.0 bits/vector
+cell-msmarco1m-qdrant-1-2: disk 1088.2, peak RAM 1095.5 bits/vector
+cell-msmarco1m-tieredq-c1026-0: disk 1088.6, peak RAM 1049.9 bits/vector
+cell-msmarco1m-tieredq-c1018-0: disk 1080.6, peak RAM 1042.2 bits/vector
+cell-msmarco1m-tieredq-c1018-1: disk 1080.6, peak RAM 1041.0 bits/vector
+cell-msmarco1m-tieredq-c1018-2: disk 1080.6, peak RAM 1041.6 bits/vector
+cell-msmarco1m-tieredq-c1080-0: disk 1136.8, peak RAM 1097.4 bits/vector
+cell-msmarco1m-tieredq-c1084-0: disk 1144.8, peak RAM 1105.8 bits/vector
+cell-msmarco1m-tieredq-c1080-1: disk 1136.8, peak RAM 1097.4 bits/vector
+cell-msmarco1m-tieredq-c1080-2: disk 1136.8, peak RAM 1097.4 bits/vector
+cell-msmarco1m-tieredq-c1077-0: disk 1136.8, peak RAM 1097.2 bits/vector
+cell-msmarco1m-tieredq-c1069-1: disk 1128.8, peak RAM 1089.3 bits/vector
+cell-msmarco1m-tieredq-c1069-2: disk 1128.8, peak RAM 1089.7 bits/vector

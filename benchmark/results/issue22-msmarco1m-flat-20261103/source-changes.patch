@@ -1,0 +1,299 @@
+diff --git a/benchmark/experiments/issue4_1m/equal_recall.py b/benchmark/experiments/issue4_1m/equal_recall.py
+index e6e49a5..7895988 100644
+--- a/benchmark/experiments/issue4_1m/equal_recall.py
++++ b/benchmark/experiments/issue4_1m/equal_recall.py
+@@ -3,7 +3,8 @@
+ For every reference cell (RaBitQ, Qdrant TQ+ at 1/2/4 bits/dim) of a match_memory result, bisects TieredQ's
+ `code_bits` on seed-0 recall@10 (8 threads, batch 32, same build path as run.py) down to RESOLUTION code bits, then
+ records the found budget's recall over seeds 0-2. Reference recall is the mean over its seeds. Rows append to
+-OUTPUT/equal-recall-DATASET.csv (resumable); run.py then times TieredQ at these budgets.
++OUTPUT/equal-recall-DATASET.csv (resumable); run.py then times TieredQ at these budgets. A companion query set
++(measure_memory.COMPANION_QUERIES, e.g. msmarco1m-doc) takes its reference recall from the primary dataset's match.
+ Usage: python equal_recall.py DATASET DATA_DIR OUTPUT [--bits B ...] --matches MATCH_JSON...
+ """
+ import argparse
+@@ -52,11 +53,14 @@ def main(dataset, data, output, match_paths, bits_filter):
+     if path.exists():
+         with path.open() as handle:
+             done = {(r["dataset"], r["reference_codec"], r["reference_bits"]) for r in csv.DictReader(handle)}
++    from measure_memory import COMPANION_QUERIES
++    primary = {companion: name for name, companion in COMPANION_QUERIES.items()}.get(dataset)
++    matched, recall_key = (primary, "companion_recall10") if primary else (dataset, "recall10")
+     targets = {}
+     for match in match_paths:
+         for row in json.loads(Path(match).read_text()):
+-            if row["dataset"] == dataset and (not bits_filter or row["reference_bits"] in bits_filter):
+-                targets[row["reference_codec"], row["reference_bits"]] = row["reference"]["recall10"]["mean"]
++            if row["dataset"] == matched and (not bits_filter or row["reference_bits"] in bits_filter):
++                targets[row["reference_codec"], row["reference_bits"]] = row["reference"][recall_key]["mean"]
+     for (codec, bits), target in sorted(targets.items()):
+         if (dataset, codec, str(bits)) in done:
+             continue
+diff --git a/benchmark/experiments/issue4_1m/report_tables.py b/benchmark/experiments/issue4_1m/report_tables.py
+index 0bcfb38..5f5c100 100644
+--- a/benchmark/experiments/issue4_1m/report_tables.py
++++ b/benchmark/experiments/issue4_1m/report_tables.py
+@@ -19,8 +19,9 @@ SHIP = RESULTS / "issue9-ship-20261030"
+ FINAL = RESULTS / "issue4-final-20261029"
+ REFERENCES = {"rabitq": "RaBitQ", "qdrant": "Qdrant TQ+"}
+ NAMES = {"sift": "SIFT1M (L2)", "glove": "GloVe-200 100k", "openai": "OpenAI-1536 100k", "gemini": "Gemini-768 99k",
+-         "openai1m": "OpenAI-1536 1M"}
+-DIMENSIONS = {"sift": 128, "glove": 200, "openai": 1536, "gemini": 768, "openai1m": 1536}
++         "openai1m": "OpenAI-1536 1M", "msmarco1m": "MS MARCO-1M real queries", "msmarco1m-doc": "MS MARCO-1M doc queries"}
++DIMENSIONS = {"sift": 128, "glove": 200, "openai": 1536, "gemini": 768, "openai1m": 1536, "msmarco1m": 1024,
++              "msmarco1m-doc": 1024}
+ BITS = (1, 2, 4)
+ TARGET_RECALL = 0.95
+ FLOAT_BITS = 32
+diff --git a/benchmark/match_memory.py b/benchmark/match_memory.py
+index 5a4f9aa..9ea458c 100644
+--- a/benchmark/match_memory.py
++++ b/benchmark/match_memory.py
+@@ -8,6 +8,8 @@ targets (and across references sharing an output directory) and logged in calibr
+ exceeds the target, the search steps down to the next smaller calibrated budget that fits, then below the smallest
+ in RESOLUTION steps (seed-to-seed RSS noise can push every cached budget over a peak target). Cells are measured
+ by measure_memory.run_cell, so methodology and columns match memory.csv, and cells.csv makes the run resumable.
++A dataset with a companion query set (measure_memory.COMPANION_QUERIES) also reports that set's recall on the same
++cells; the win stays on the primary set.
+ """
+ import argparse
+ import csv
+@@ -50,7 +52,8 @@ class Cells:
+         spec = dict(dataset=dataset, codec=codec, bits=bits, seed=seed, data=str(self.data), quick=self.quick)
+         if code_bits:
+             spec["code_bits"] = code_bits
+-        row = {name: str(value) for name, value in run_cell(spec, self.output, self.env).items()}
++        # Empty for missing values, as a reloaded cells.csv row has them.
++        row = {name: "" if value is None else str(value) for name, value in run_cell(spec, self.output, self.env).items()}
+         # The requested budget is the key; the realised one stays in the row for auditing.
+         row["requested_code_bits"] = str(code_bits)
+         self.rows[key] = row
+@@ -137,6 +140,14 @@ def summary(rows, column):
+                 max=max(values), min=min(values))
+ 
+ 
++def recall_summaries(rows):
++    """Primary recall, plus the companion query set's when the cells carry it."""
++    recalls = {"recall10": summary(rows, "recall10")}
++    if all(row.get("companion_recall10") for row in rows):
++        recalls["companion_recall10"] = summary(rows, "companion_recall10")
++    return recalls
++
++
+ def match(cells, dataset, codec, bits, metric, seeds, log):
+     measured = [cells.measure(dataset, codec, bits, seed) for seed in seeds]
+     dimensions = int(measured[0]["d"])
+@@ -147,15 +158,21 @@ def match(cells, dataset, codec, bits, metric, seeds, log):
+     result = reference | dict(dataset=dataset, metric=metric, target_bits_per_vector=target,
+                               calibrated_code_bits=best, code_bits=chosen,
+                               reference={name: summary(measured, column) for name, column in METRICS.items()}
+-                              | {"recall10": summary(measured, "recall10")})
++                              | recall_summaries(measured))
+     if chosen is None:
+         return result | dict(tieredq=None, win=False)
+-    stats = {name: summary(tieredq, column) for name, column in METRICS.items()} | {
+-        "recall10": summary(tieredq, "recall10"), "realised_code_bits": int(tieredq[0]["code_bits"])}
++    stats = {name: summary(tieredq, column) for name, column in METRICS.items()} | recall_summaries(tieredq) | {
++        "realised_code_bits": int(tieredq[0]["code_bits"])}
+     win = stats[metric]["max"] <= target and stats["recall10"]["mean"] > result["reference"]["recall10"]["mean"]
+     return result | dict(tieredq=stats, win=win)
+ 
+ 
++def companion_delta(reference, tieredq):
++    if "companion_recall10" not in reference:
++        return "–"
++    return f"{tieredq['companion_recall10']['mean'] - reference['companion_recall10']['mean']:+.4f}"
++
++
+ REFERENCE_NAMES = {"rabitq": "RaBitQ", "qdrant": "Qdrant TQ+"}
+ 
+ 
+@@ -164,8 +181,9 @@ def markdown(results):
+     lines = [f"Bits/vector; recall@10 is mean ± std over seeds. Target = min of {name}'s metric over seeds; "
+              "TieredQ memory is the max over seeds.", "",
+              f"| Dataset | Matched on | {name} bits/dim | Target | TieredQ code bits | TieredQ disk | TieredQ RAM "
+-             f"| TieredQ peak | TieredQ R@10 | {name} disk | {name} RAM | {name} peak | {name} R@10 | Δ R@10 | Win |",
+-             "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|"]
++             f"| TieredQ peak | TieredQ R@10 | {name} disk | {name} RAM | {name} peak | {name} R@10 | Δ R@10 | Win "
++             "| Δ R@10 companion queries |",
++             "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|"]
+     recall = lambda stats: f"{stats['mean']:.4f} ± {stats['std']:.4f}"
+     for result in results:
+         reference, tieredq = result["reference"], result["tieredq"]
+@@ -174,12 +192,12 @@ def markdown(results):
+         reference_cells = (f"{reference['disk']['max']:,.1f} | {reference['ram']['max']:,.1f} | "
+                            f"{reference['peak']['max']:,.1f} | {recall(reference['recall10'])}")
+         if tieredq is None:
+-            lines.append(head + "none fits | – | – | – | – | " + reference_cells + " | – | no |")
++            lines.append(head + "none fits | – | – | – | – | " + reference_cells + " | – | no | – |")
+             continue
+         delta = tieredq["recall10"]["mean"] - reference["recall10"]["mean"]
+         lines.append(head + f"{result['code_bits']:,} | {tieredq['disk']['max']:,.1f} | {tieredq['ram']['max']:,.1f} | "
+                      f"{tieredq['peak']['max']:,.1f} | {recall(tieredq['recall10'])} | {reference_cells} | "
+-                     f"{delta:+.4f} | {'yes' if result['win'] else 'no'} |")
++                     f"{delta:+.4f} | {'yes' if result['win'] else 'no'} | {companion_delta(reference, tieredq)} |")
+     return "\n".join(lines) + "\n"
+ 
+ 
+diff --git a/benchmark/measure_memory.py b/benchmark/measure_memory.py
+index 270cb1e..fdd8151 100644
+--- a/benchmark/measure_memory.py
++++ b/benchmark/measure_memory.py
+@@ -8,6 +8,8 @@ their maximum. Recall is a reload check against the
+ FP32 corpus through training, encoding and packing. RSS deltas start from a reset high-water mark.
+ A cell spec may carry an exact TieredQ `code_bits` budget in place of bits × dimensions (see match_memory.py).
+ With `quick`, the query workload is one untimed pass per schedule: same allocations and peak, no timing.
++A dataset with a companion query set on the same base (MS MARCO's doc queries) also scores that set at the primary
++schedule after all memory reads, so one match yields both recalls (`companion_recall10`).
+ """
+ import argparse
+ import csv
+@@ -24,7 +26,9 @@ import time
+ 
+ HERE = Path(__file__).resolve().parent
+ REPO = HERE.parent
+-DATASETS = ["sift", "glove", "openai", "gemini", "openai1m"]
++DATASETS = ["sift", "glove", "openai", "gemini", "openai1m", "msmarco1m", "msmarco1m-doc"]
++# Second query set scored on the same base and index (#22: real vs doc queries); storage does not depend on it.
++COMPANION_QUERIES = {"msmarco1m": "msmarco1m-doc"}
+ CODECS = ["tieredq", "rabitq"]
+ # Qdrant TQ+ needs the Rust shim (turboquant/native), so it is opt-in via --codecs.
+ OPTIONAL_CODECS = ["qdrant"]
+@@ -32,7 +36,8 @@ BIT_BUDGETS = [1, 2, 4]
+ SUPPORTED_BITS = range(1, 9)
+ # Same scheduling grid as the timed matrix; the workload sets the serving high-water mark.
+ SERVING_SCHEDULES = [(1, 1), (1, 32), (8, 1), (8, 32)]
+-PRIMARY_SCHEDULE = "t8-b32"
++PRIMARY_THREADS, PRIMARY_BATCH = 8, 32
++PRIMARY_SCHEDULE = f"t{PRIMARY_THREADS}-b{PRIMARY_BATCH}"
+ BUILD_THREADS = 8
+ RESET_ATTEMPTS = 5
+ RESET_PAUSE_S = 0.02
+@@ -40,7 +45,7 @@ FIELDS = ("dataset,d,base_n,codec,target_bits,code_bits,seed,disk_bytes,disk_bit
+           "ram_accounted_bytes,ram_accounted_bits_per_vector,ram_loaded_rss_bytes,ram_loaded_bits_per_vector,"
+           "ram_load_peak_rss_bytes,ram_load_peak_bits_per_vector,ram_query_peak_rss_bytes,ram_query_peak_bits_per_vector,"
+           "ram_peak_rss_bytes,ram_peak_bits_per_vector,build_peak_rss_bytes,build_peak_bits_per_vector,"
+-          "build_s,recall10").split(",")
++          "build_s,recall10,companion_recall10").split(",")
+ 
+ 
+ def memory_status():
+@@ -153,6 +158,10 @@ def serve_worker(spec, cell):
+     with threadpool_limits(limits=1):
+         base, queries, truth = prepare(Path(spec["data"]), spec["dataset"])
+         del base
++        companion = spec["dataset"] in COMPANION_QUERIES
++        if companion:
++            base, companion_queries, companion_truth = prepare(Path(spec["data"]), COMPANION_QUERIES[spec["dataset"]])
++            del base
+         preload_codec(spec)
+         baseline = reset_peak()
+         index = load_index(spec, cell)
+@@ -171,17 +180,21 @@ def serve_worker(spec, cell):
+         load_peak, query_peak = load_hwm - baseline, memory_status()[1] - baseline
+         ids = np.empty((len(queries), 10), dtype=np.uint32)
+         index.search(queries, ids, BUILD_THREADS)
++        companion_recall = (single_pass(index, companion_queries, companion_truth, PRIMARY_THREADS, PRIMARY_BATCH,
++                                        recall)["recall10"]
++                            if companion else None)
+         return dict(ram_accounted_bytes=accounted, ram_loaded_rss_bytes=loaded_rss - baseline,
+                     ram_load_peak_rss_bytes=load_peak, ram_query_peak_rss_bytes=query_peak,
+                     ram_peak_rss_bytes=max(load_peak, query_peak), recall10=metrics[PRIMARY_SCHEDULE]["recall10"],
+-                    ids_sha256=hashlib.sha256(ids.tobytes()).hexdigest(),
++                    ids_sha256=hashlib.sha256(ids.tobytes()).hexdigest(), companion_recall10=companion_recall,
+                     # Diagnostic only: memory runs are not the headline timing runs.
+                     schedule_metrics=metrics)
+ 
+ 
+ def to_row(spec, built, served):
+     row = dict(dataset=spec["dataset"], d=built["d"], base_n=built["base_n"], codec=spec["codec"],
+-               target_bits=spec["bits"], code_bits=built["code_bits"], seed=spec["seed"], build_s=built["build_s"], recall10=served["recall10"])
++               target_bits=spec["bits"], code_bits=built["code_bits"], seed=spec["seed"], build_s=built["build_s"], recall10=served["recall10"],
++               companion_recall10=served["companion_recall10"])
+     measured = built | served
+     for key in ("disk", "ram_accounted", "ram_loaded_rss", "ram_load_peak_rss", "ram_query_peak_rss",
+                 "ram_peak_rss", "build_peak_rss"):
+diff --git a/benchmark/native_build.py b/benchmark/native_build.py
+index ed7beea..328bdb9 100644
+--- a/benchmark/native_build.py
++++ b/benchmark/native_build.py
+@@ -1,5 +1,10 @@
+-"""Build and audit the native adapters identically for validation and measurement."""
++"""Build and audit the native adapters identically for validation and measurement.
++
++Builds hold an exclusive lock on the deps directory, so parallel lanes calling build_native do not race on patching
++the RaBitQ overlay or on the shared CMake build directory.
++"""
+ from dataclasses import dataclass
++import fcntl
+ import json
+ from pathlib import Path
+ import subprocess
+@@ -21,11 +26,13 @@ class NativeBuild:
+ def build_native(full_score=False):
+     deps = HERE/".deps"
+     deps.mkdir(exist_ok=True)
+-    overlay = prepare(deps, full_score=full_score)
+     directory = HERE/("build-full-score" if full_score else "build-native")
+-    subprocess.run(["cmake", "-S", str(HERE/"native"), "-B", str(directory),
+-                    f"-DRABITQ_SOURCE={overlay}", f"-DBENCH_FULL_SCORE={'ON' if full_score else 'OFF'}",
+-                    f"-DPython_EXECUTABLE={sys.executable}", "-DCMAKE_BUILD_TYPE=Release"], check=True)
+-    subprocess.run(["cmake", "--build", str(directory), "-j", str(BUILD_THREADS)], check=True)
++    with (deps/"build.lock").open("w") as lock:
++        fcntl.flock(lock, fcntl.LOCK_EX)
++        overlay = prepare(deps, full_score=full_score)
++        subprocess.run(["cmake", "-S", str(HERE/"native"), "-B", str(directory),
++                        f"-DRABITQ_SOURCE={overlay}", f"-DBENCH_FULL_SCORE={'ON' if full_score else 'OFF'}",
++                        f"-DPython_EXECUTABLE={sys.executable}", "-DCMAKE_BUILD_TYPE=Release"], check=True)
++        subprocess.run(["cmake", "--build", str(directory), "-j", str(BUILD_THREADS)], check=True)
+     commands = audit_compile_commands(json.loads((directory/"compile_commands.json").read_text()))
+     return NativeBuild(directory,overlay,commands)
+diff --git a/benchmark/run.py b/benchmark/run.py
+index ece75e2..9e9cb4c 100644
+--- a/benchmark/run.py
++++ b/benchmark/run.py
+@@ -101,7 +101,7 @@ def worker(args):
+ 
+ def main():
+     parser = argparse.ArgumentParser(description=__doc__)
+-    parser.add_argument("--datasets", nargs="+", choices=["sift", "glove", "openai", "gemini", "openai1m"], default=["sift", "glove", "openai"])
++    parser.add_argument("--datasets", nargs="+", choices=["sift", "glove", "openai", "gemini", "openai1m", "msmarco1m", "msmarco1m-doc"], default=["sift", "glove", "openai"])
+     parser.add_argument("--bits", nargs="+", type=int, choices=BIT_BUDGETS, default=[1,2,4,8], metavar="{1..8}")
+     parser.add_argument("--threads", nargs="+", type=int, choices=[1,8], default=[1,8])
+     parser.add_argument("--batches", nargs="+", type=int, choices=[1,32], default=[1,32])
+diff --git a/benchmark/test_match_memory.py b/benchmark/test_match_memory.py
+index d759d89..4dad858 100644
+--- a/benchmark/test_match_memory.py
++++ b/benchmark/test_match_memory.py
+@@ -1,6 +1,6 @@
+ import unittest
+ 
+-from match_memory import MAX_STEP_DOWNS, METRICS, RESOLUTION, confirm
++from match_memory import MAX_STEP_DOWNS, METRICS, RESOLUTION, companion_delta, confirm, recall_summaries
+ 
+ PEAK = METRICS["peak"]
+ DIMENSIONS = 200
+@@ -45,5 +45,23 @@ class ConfirmTest(unittest.TestCase):
+         self.assertEqual(cells.measured, [])
+ 
+ 
++class CompanionRecallTest(unittest.TestCase):
++    def test_summarises_companion_recall_when_every_cell_has_it(self):
++        rows = [{"recall10": "0.9", "companion_recall10": "0.8"}, {"recall10": "0.7", "companion_recall10": "0.6"}]
++        recalls = recall_summaries(rows)
++        self.assertAlmostEqual(recalls["recall10"]["mean"], 0.8)
++        self.assertAlmostEqual(recalls["companion_recall10"]["mean"], 0.7)
++
++    def test_omits_companion_recall_for_cells_without_it(self):
++        recalls = recall_summaries([{"recall10": "0.9", "companion_recall10": ""}])
++        self.assertNotIn("companion_recall10", recalls)
++        self.assertEqual(companion_delta(recalls, recalls), "–")
++
++    def test_companion_delta_is_tieredq_minus_reference(self):
++        reference = recall_summaries([{"recall10": "0.9", "companion_recall10": "0.80"}])
++        tieredq = recall_summaries([{"recall10": "0.9", "companion_recall10": "0.85"}])
++        self.assertEqual(companion_delta(reference, tieredq), "+0.0500")
++
++
+ if __name__ == "__main__":
+     unittest.main()

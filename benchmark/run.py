@@ -101,7 +101,7 @@ def worker(args):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--datasets", nargs="+", choices=["sift", "glove", "openai", "gemini", "openai1m"], default=["sift", "glove", "openai"])
+    parser.add_argument("--datasets", nargs="+", choices=["sift", "glove", "openai", "gemini", "openai1m", "msmarco1m", "msmarco1m-doc"], default=["sift", "glove", "openai"])
     parser.add_argument("--bits", nargs="+", type=int, choices=BIT_BUDGETS, default=[1,2,4,8], metavar="{1..8}")
     parser.add_argument("--threads", nargs="+", type=int, choices=[1,8], default=[1,8])
     parser.add_argument("--batches", nargs="+", type=int, choices=[1,32], default=[1,32])

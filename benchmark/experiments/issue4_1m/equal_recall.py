@@ -3,7 +3,8 @@
 For every reference cell (RaBitQ, Qdrant TQ+ at 1/2/4 bits/dim) of a match_memory result, bisects TieredQ's
 `code_bits` on seed-0 recall@10 (8 threads, batch 32, same build path as run.py) down to RESOLUTION code bits, then
 records the found budget's recall over seeds 0-2. Reference recall is the mean over its seeds. Rows append to
-OUTPUT/equal-recall-DATASET.csv (resumable); run.py then times TieredQ at these budgets.
+OUTPUT/equal-recall-DATASET.csv (resumable); run.py then times TieredQ at these budgets. A companion query set
+(measure_memory.COMPANION_QUERIES, e.g. msmarco1m-doc) takes its reference recall from the primary dataset's match.
 Usage: python equal_recall.py DATASET DATA_DIR OUTPUT [--bits B ...] --matches MATCH_JSON...
 """
 import argparse
@@ -52,11 +53,14 @@ def main(dataset, data, output, match_paths, bits_filter):
     if path.exists():
         with path.open() as handle:
             done = {(r["dataset"], r["reference_codec"], r["reference_bits"]) for r in csv.DictReader(handle)}
+    from measure_memory import COMPANION_QUERIES
+    primary = {companion: name for name, companion in COMPANION_QUERIES.items()}.get(dataset)
+    matched, recall_key = (primary, "companion_recall10") if primary else (dataset, "recall10")
     targets = {}
     for match in match_paths:
         for row in json.loads(Path(match).read_text()):
-            if row["dataset"] == dataset and (not bits_filter or row["reference_bits"] in bits_filter):
-                targets[row["reference_codec"], row["reference_bits"]] = row["reference"]["recall10"]["mean"]
+            if row["dataset"] == matched and (not bits_filter or row["reference_bits"] in bits_filter):
+                targets[row["reference_codec"], row["reference_bits"]] = row["reference"][recall_key]["mean"]
     for (codec, bits), target in sorted(targets.items()):
         if (dataset, codec, str(bits)) in done:
             continue
