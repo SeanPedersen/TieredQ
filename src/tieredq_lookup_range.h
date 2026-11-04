@@ -1,11 +1,12 @@
-// Prefix-section range checkpoint for nibble byte-table scans (#13). The prefix is the leading sections holding as many
-// groups as the model's first prefix tiers; the suffix bound comes from the query's own tables, so with confidence 0 it
+// Prefix-section range checkpoint for nibble byte-table scans (#13). The prefix is the leading sections: by default
+// all but a fixed share, else as many as hold the groups of the model's first prefix tiers. The suffix bound comes from the query's own tables, so with confidence 0 it
 // is exact for the nibble score, and a positive confidence clips it to that many standard deviations of the suffix
 // score for unit-Gaussian coordinates (approximate), as for the code-lookup checkpoint.
 #pragma once
 #include "tieredq_range_checkpoint.h"
 #include "tieredq_scan_lookup_x86.h"
 #include <algorithm>
+#include <cmath>
 #include <stdexcept>
 
 namespace dv::tieredq_detail {
@@ -17,25 +18,46 @@ struct LookupRangeCheckpoint { LookupRangeBounds bounds; float threshold; };
 // half-ulps) cover that with margin, so the bound still rounds outward without touching the FP control register.
 constexpr float range_nearest_slack=4*std::numeric_limits<float>::epsilon();
 
-// Sections that cover as many groups as the first prefix_tiers tiers' slots occupy; 0 when no suffix is left.
-inline size_t lookup_prefix_sections(const FastScanLookupCache& cache,const std::vector<TieredQTier>& tiers,size_t prefix_tiers) {
-  if (!prefix_tiers || tiers.size()<=prefix_tiers) return 0;
+// Share of sections the automatic prefix leaves to the suffix. A larger suffix skips more work per rejected document
+// but loosens the bound; the exact bound loosens fastest. Single-query sweeps over 384- to 1536-dimensional sets on
+// NEON, AVX2 and AVX-512 (2026-11-04) favored these: exact gained 1.08-1.12x on average with no cell below 0.95x
+// (0.25 gained more on NEON and AVX2 but lost up to 11% on AVX-512), confidence 8 gained 1.26-1.43x.
+constexpr double lookup_exact_suffix_share=0.125,lookup_confident_suffix_share=0.375;
+
+// Sections before the suffix that cover as many groups as the first prefix_tiers tiers' slots occupy; 0 when no
+// suffix is left.
+inline size_t lookup_tier_prefix_sections(const FastScanLookupCache& cache,const std::vector<TieredQTier>& tiers,
+    size_t prefix_tiers) {
+  if (tiers.size()<=prefix_tiers) return 0;
   const uint32_t prefix_rank=tiers[prefix_tiers].start;
   const size_t groups=size_t(std::count_if(cache.groups.begin(),cache.groups.end(),[&](const FastLookupGroup& group) {
     return std::any_of(group.slots.begin(),group.slots.begin()+group.count,[&](const LookupSlot& slot) { return slot.rank<prefix_rank; });
   }));
   const auto& ends=cache.section_ends;
-  const size_t sections=size_t(std::lower_bound(ends.begin(),ends.end(),uint32_t(groups))-ends.begin())+1;
-  return sections<ends.size() ? sections : 0;
+  const size_t prefix=size_t(std::lower_bound(ends.begin(),ends.end(),uint32_t(groups))-ends.begin())+1;
+  return prefix<ends.size() ? prefix : 0;
+}
+// Sections before the suffix; 0 when no suffix is left. The automatic prefix leaves at least the share for the
+// bound's confidence, and more where the first fast_range_prefix_tiers tiers already do (the earlier default, faster
+// on OpenAI-1536 at 2 bits/dim); explicit prefix_tiers use the tier prefix alone.
+inline size_t lookup_prefix_sections(const FastScanLookupCache& cache,const std::vector<TieredQTier>& tiers,
+    size_t prefix_tiers,double confidence) {
+  if (prefix_tiers!=TieredQPruning::automatic_prefix) return lookup_tier_prefix_sections(cache,tiers,prefix_tiers);
+  const size_t sections=cache.section_ends.size();
+  const double share=confidence>0 ? lookup_confident_suffix_share : lookup_exact_suffix_share;
+  const size_t suffix=std::max<size_t>(1,size_t(std::lround(share*double(sections))));
+  const size_t shared=sections>suffix ? sections-suffix : 0;
+  const size_t tiered=lookup_tier_prefix_sections(cache,tiers,fast_range_prefix_tiers);
+  return tiered && shared ? std::min(tiered,shared) : std::max(tiered,shared);
 }
 inline bool lookup_range_checkpoint_supported(const FastScanCache& cache,const std::vector<TieredQTier>& tiers,
-    size_t prefix_tiers=fast_range_prefix_tiers) {
-  return cache.lookup && lookup_prefix_sections(*cache.lookup,tiers,prefix_tiers)>0;
+    size_t prefix_tiers=TieredQPruning::automatic_prefix,double confidence=0) {
+  return cache.lookup && lookup_prefix_sections(*cache.lookup,tiers,prefix_tiers,confidence)>0;
 }
 inline LookupRangeBounds prepare_lookup_range_bounds(const FastScanCache& cache,const std::vector<TieredQTier>& tiers,
-    const FastScanLookupQuery& query,size_t prefix_tiers=fast_range_prefix_tiers,double confidence=0) {
+    const FastScanLookupQuery& query,size_t prefix_tiers=TieredQPruning::automatic_prefix,double confidence=0) {
   const auto& lookup=*cache.lookup;
-  const size_t prefix=lookup_prefix_sections(lookup,tiers,prefix_tiers);
+  const size_t prefix=lookup_prefix_sections(lookup,tiers,prefix_tiers,confidence);
   if (!prefix || query.scales.size()!=lookup.section_ends.size() || !(confidence>=0) || !std::isfinite(confidence))
     throw std::invalid_argument("TieredQ: incompatible lookup range checkpoint");
   double high=0,low=0,magnitude=0,variance=0;

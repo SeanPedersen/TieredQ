@@ -73,12 +73,12 @@ const std::vector<float>& prepared_centroid_scores(const Prepared& query) {
   return query.codes.centroid_scores;
 }
 
-// Whether this backend has a pruned nibble-table scan and the model leaves a suffix after prefix_tiers.
+// Whether this backend has a pruned nibble-table scan and the prefix leaves a suffix (see lookup_prefix_sections).
 inline bool lookup_range_scan_supported(const FastScanCache& cache,const std::vector<TieredQTier>& tiers,
-    size_t prefix_tiers=fast_range_prefix_tiers) {
+    size_t prefix_tiers=TieredQPruning::automatic_prefix,double confidence=0) {
   const auto backend=fast_scan_backend(cache);
   const bool kernel=backend==FastScanBackend::avx512 || backend==FastScanBackend::avx2 || backend==FastScanBackend::neon;
-  return kernel && lookup_range_checkpoint_supported(cache,tiers,prefix_tiers);
+  return kernel && lookup_range_checkpoint_supported(cache,tiers,prefix_tiers,confidence);
 }
 // The backend's pruned nibble-table scan of [first, first + count) (start aligned to fast_list_alignment):
 // rejected documents score -inf, every other score equals the unpruned scan of that backend.

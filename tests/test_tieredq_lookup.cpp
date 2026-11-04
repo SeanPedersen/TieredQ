@@ -212,34 +212,46 @@ void lookup_kernel_test(size_t count,LookupRangeKernel kernel,const LookupLayout
   require(std::all_of(scores.begin(),scores.begin()+count,[](float x){return x==0;}),"zero byte-table query differs");
 }
 // Range checkpoint: survivors keep the unpruned kernel's score bits; with the exact bound only scores below the
-// threshold drop. Range starts at first_offset exercise chunks that begin inside a block.
+// threshold drop. Range starts at first_offset exercise chunks that begin inside a block. Prefixes are automatic
+// (a share of sections) and explicit (fast_range_prefix_tiers tiers).
 void lookup_range_checkpoint_test(const FastScanCache& cache,const std::vector<TieredQTier>& tiers,
     const std::vector<FastScanLookupQuery>& queries,LookupRangeKernel full,LookupPrunedKernel pruned_kernel) {
-  require(lookup_range_checkpoint_supported(cache,tiers),"wide test model has no lookup suffix");
+  const size_t sections=cache.lookup->section_ends.size();
+  for (double confidence:{0.0,8.0}) {
+    const double share=confidence>0 ? lookup_confident_suffix_share : lookup_exact_suffix_share;
+    const size_t suffix=std::max<size_t>(1,size_t(std::lround(share*double(sections))));
+    const size_t tiered=lookup_tier_prefix_sections(*cache.lookup,tiers,fast_range_prefix_tiers);
+    const size_t expected=tiered ? std::min(tiered,sections-suffix) : sections-suffix;
+    require(lookup_prefix_sections(*cache.lookup,tiers,TieredQPruning::automatic_prefix,confidence)==expected,
+        "automatic prefix leaves the wrong suffix share");
+  }
   constexpr size_t first_offset=3*fast_list_alignment,offset_count=700;
   const size_t count=cache.count;
-  size_t rejected=0;
-  for (const auto& query:queries) {
-    std::vector<float> reference(count);
-    full(cache,query,0,count,reference.data());
-    std::vector<float> sorted(reference);
-    std::sort(sorted.begin(),sorted.end());
-    for (double confidence:{0.0,8.0}) for (float threshold:{-std::numeric_limits<float>::infinity(),sorted[count/2],sorted[count*9/10],
-        sorted[count-1],std::numeric_limits<float>::infinity()}) for (size_t first:{size_t(0),first_offset}) {
-      const size_t n=first ? offset_count : count;
-      const LookupRangeCheckpoint checkpoint{prepare_lookup_range_bounds(cache,tiers,query,fast_range_prefix_tiers,confidence),threshold};
-      std::vector<float> pruned(n);
-      pruned_kernel(cache,query,first,n,pruned.data(),checkpoint);
-      for (size_t i=0;i<n;++i) {
-        const float unpruned=reference[first+i];
-        const bool dropped=pruned[i]==-std::numeric_limits<float>::infinity();
-        require(dropped || std::bit_cast<uint32_t>(pruned[i])==std::bit_cast<uint32_t>(unpruned),"pruned lookup changed a surviving score");
-        require(!dropped || confidence>0 || unpruned<threshold,"exact lookup bound rejected a competitive document");
-        rejected+=dropped;
+  for (size_t prefix_tiers:{size_t(TieredQPruning::automatic_prefix),fast_range_prefix_tiers}) {
+    require(lookup_range_checkpoint_supported(cache,tiers,prefix_tiers),"wide test model has no lookup suffix");
+    size_t rejected=0;
+    for (const auto& query:queries) {
+      std::vector<float> reference(count);
+      full(cache,query,0,count,reference.data());
+      std::vector<float> sorted(reference);
+      std::sort(sorted.begin(),sorted.end());
+      for (double confidence:{0.0,8.0}) for (float threshold:{-std::numeric_limits<float>::infinity(),sorted[count/2],
+          sorted[count*9/10],sorted[count-1],std::numeric_limits<float>::infinity()}) for (size_t first:{size_t(0),first_offset}) {
+        const size_t n=first ? offset_count : count;
+        const LookupRangeCheckpoint checkpoint{prepare_lookup_range_bounds(cache,tiers,query,prefix_tiers,confidence),threshold};
+        std::vector<float> pruned(n);
+        pruned_kernel(cache,query,first,n,pruned.data(),checkpoint);
+        for (size_t i=0;i<n;++i) {
+          const float unpruned=reference[first+i];
+          const bool dropped=pruned[i]==-std::numeric_limits<float>::infinity();
+          require(dropped || std::bit_cast<uint32_t>(pruned[i])==std::bit_cast<uint32_t>(unpruned),"pruned lookup changed a surviving score");
+          require(!dropped || confidence>0 || unpruned<threshold,"exact lookup bound rejected a competitive document");
+          rejected+=dropped;
+        }
       }
     }
+    require(rejected>0,"lookup range checkpoint rejected nothing");
   }
-  require(rejected>0,"lookup range checkpoint rejected nothing");
 }
 // Wide additive models: range-sorted groups and fine sections score alike on every backend and query grouping (#13).
 void wide_additive_backend_test(bool fine) {

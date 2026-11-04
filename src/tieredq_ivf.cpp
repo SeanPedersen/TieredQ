@@ -187,7 +187,7 @@ void TieredQIVFIndex::search_batch(const float* queries,const TieredQQuery* weig
 
 void TieredQIVFIndex::search_rows(const float* queries,const TieredQQuery* weights,size_t rows,size_t k,size_t nprobe,
     float* scores,uint32_t* ids,TieredQPruning pruning) const {
-  if (!(pruning.confidence>=0) || !std::isfinite(pruning.confidence) || !pruning.prefix_tiers) bad("invalid pruning");
+  if (!(pruning.confidence>=0) || !std::isfinite(pruning.confidence)) bad("invalid pruning");
   if (!rows || !k || !size_) return;
   if (!queries || !scores || !ids) bad("null search buffer");
   const TieredQ& model=codec();
@@ -208,12 +208,15 @@ void TieredQIVFIndex::search_rows(const float* queries,const TieredQQuery* weigh
   if (coarse_) { coarse_closeness.resize(product(rows,lists())); coarse_->closeness(model_queries,rows,coarse_closeness.data()); }
   const auto& cache=*documents_.fast_;
 #ifdef DV_TIEREDQ_X86
+  const size_t code_prefix_tiers=pruning.prefix_tiers==TieredQPruning::automatic_prefix ?
+      tieredq_detail::fast_range_prefix_tiers : pruning.prefix_tiers;
   const bool range=tieredq_detail::fast_scan_backend(cache)==tieredq_detail::FastScanBackend::avx512 &&
-      tieredq_detail::fast_range_checkpoint_supported(cache,model.tiers(),pruning.prefix_tiers);
-  const size_t prefix_rank=range ? model.tiers()[pruning.prefix_tiers].start : 0;
+      tieredq_detail::fast_range_checkpoint_supported(cache,model.tiers(),code_prefix_tiers);
+  const size_t prefix_rank=range ? model.tiers()[code_prefix_tiers].start : 0;
   const auto segments=range ? tieredq_detail::code_table_segments(cache) : std::vector<tieredq_detail::CodeTableSegment>();
 #endif
-  const bool lookup_range=tieredq_detail::lookup_range_scan_supported(cache,model.tiers(),pruning.prefix_tiers);
+  const bool lookup_range=tieredq_detail::lookup_range_scan_supported(cache,model.tiers(),pruning.prefix_tiers,
+      pruning.confidence);
   tieredq_detail::with_fast_scan(cache,model,model_queries,rows,[&](const auto& prepared,size_t,auto scan) {
     const size_t workers=std::max<size_t>(1,std::min(rows,size_t(omp_get_max_threads())));
     std::exception_ptr failure; std::mutex failure_mutex;
@@ -254,7 +257,7 @@ void TieredQIVFIndex::search_rows(const float* queries,const TieredQQuery* weigh
           const auto& query=prepared[row].codes;
           const tieredq_detail::CentroidTiles centroids(1,[&](size_t)->const TieredQQuery& { return query; });
           tieredq_detail::FastRangeCheckpoint checkpoint{prefix_rank,tieredq_detail::prepare_fast_range_bounds(cache,model.tiers(),
-              query,pruning.prefix_tiers,pruning.confidence),0};
+              query,code_prefix_tiers,pruning.confidence),0};
           scan_lists([&](size_t first,size_t documents,float* out,float threshold) {
             checkpoint.threshold=threshold;
             tieredq_detail::scan_range_code_blocks_avx512(cache,segments,query.weights.data(),centroids.scores(0),
