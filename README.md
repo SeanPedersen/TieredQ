@@ -23,7 +23,8 @@ import gensim.downloader as api
 from tieredq import TieredQIndex
 
 vectors = api.load("glove-wiki-gigaword-100").vectors  # (400000, 100), float32
-index = TieredQIndex(dimensions=100, code_bits=200) # 2 bits per dim
+d = vectors.shape[1]
+index = TieredQIndex(dimensions=d, code_bits=2 * d)  # 2 code bits per dimension
 index.add(vectors)  # first add trains (a seeded 32,768-row sample of larger batches); later adds only encode
 scores, ids = index.search(vectors[:2], k=10)  # (2, 10) float32, uint32
 
@@ -31,16 +32,32 @@ index.save("index.tq")
 index = TieredQIndex.load("index.tq")
 ```
 
+`gensim` is needed only for this example (`uv add gensim`). Constructor options
+after `code_bits` are keyword-only:
+
+| Parameter | Default | Meaning |
+| --- | --- | --- |
+| `dimensions` | required | Input vector width. |
+| `code_bits` | required | Total code-bit budget per vector, from 1 to `8 * dimensions`; excludes metadata and storage padding. After training, `index.code_bits` reports the realized allocation. |
+| `mode` | `"fast"` | `"fast"` for native search storage; `"full"` for compact packed rows. |
+| `metric` | `"ip"` | `"ip"`, `"cosine"`, or `"l2"`. |
+| `allocation_power` | `None` | Metric- and budget-dependent variance power; a positive finite value overrides it. |
+| `exact_fast_scores` | `False` | Train Lloyd-Max codebooks and use exact FP32 scoring of quantized codes. |
+| `max_scan_bits` | `0` | Per-coordinate scan cap, 1–8; 0 selects the automatic cap described below. |
+| `fine_tiers` | `True` | Enable fine tiers for fast ip/cosine indexes; ignored in full mode and for L2. |
+| `max_tier_bits` | `12` | Per-coordinate total width cap for fine tiers, 1–12; does not increase the total `code_bits` budget. |
+
 - `metric="ip"` (inner product) is the default; `metric="cosine"` normalizes rows and
   queries, and `metric="l2"` serves Euclidean search with scores of `-|q - x|^2`.
   L2 lifts vectors into one extra dimension with a lift whitened for the query
   distribution, stored in the model, so saved indexes stay self-contained.
 - Bit allocation follows the metric: inner-product and cosine models allocate
-  on PCA variance^1.5 (recall-optimal when queries are distributed like the data,
+  on PCA variance^1.5 at budgets of at least 1 bit/dim (recall-optimal when queries are distributed like the data,
   +0.5 to +0.8 R@10 points at equal disk on DBpedia OpenAI/Gemini, GloVe neutral to
   +1.3, issue #9) in both modes; L2 models use variance (MSE), which is optimal for
-  whitened queries.
-  `allocation_power=` overrides it.
+  whitened queries. For ip/cosine budgets below 1 bit/dim, the power falls linearly
+  to 1 at 0.5 bits/dim and stays at 1 below that.
+  `allocation_power=` overrides it on `TieredQIndex`.
 - `mode="fast"` is the default and stores the native fast search representation. Models with tiers above 4 bits score
   through approximate byte tables (L2 models keep exact FP32 scoring); `exact_fast_scores=True` trains Lloyd-Max
   books and scans them in exact FP32 instead. That is the batch-throughput option: at 8 bits/dim on AVX-512 (100k,
@@ -53,6 +70,7 @@ index = TieredQIndex.load("index.tq")
   The former `fast_mode` boolean argument/property has been removed; use `mode`.
 - Fast ip/cosine indexes use fine tiers by default (#26, #31): ranks coded with up to `max_tier_bits=12` bits at the
   same bytes, whose top bits are an ordinary fast code at the automatic cap (6 bits, or ceil(bits/dim) when larger).
+  `max_scan_bits` overrides that cap; fine tiers require a cap of at least 6 bits.
   The scan reads only those prefixes, then rescores max(24, 1.5·k) candidates exactly. Training uses them whenever the
   allocation codes a rank wider than the prefix; `fine_tiers=False` disables them, and `index.fast_prefix_bits` is the
   prefix width (0: none). 100k vectors, mean missed top-10 hits over 3 seeds, fine tiers vs none: Gemini-768 66 → 15,
@@ -63,14 +81,16 @@ index = TieredQIndex.load("index.tq")
   as the scan reads fewer bits); encoding is 11-34% slower (wider codes). With `exact_fast_scores=True` the prefix is the
   8-bit Lloyd-Max code, scanned exactly, and fine bits refine its cells: at 8 bits/dim mean top-10 misses fell from 28 to
   15 (Gemini-768) and 18 to 9 (OpenAI-1536) at the same batch speed. The flat `TieredQIndex` and `TieredQIVFIndex` serve
-  fine-tier models (IVF scans the probed lists to the same candidate depth and rescores those candidates); train nested
+  fine-tier models (opt in with `fine_tiers=True` on Python IVF; it defaults to `False` there). IVF scans the probed
+  lists to the same candidate depth and rescores those candidates. Train nested
   and refinement models with `TieredQConfig::fine_tiers = false` (the Python nested index does).
 - In C++, use `dv::TieredQIndex(codec)` for fast mode or
   `dv::TieredQIndex(codec, dv::TieredQIndexMode::full)` for full mode.
   Inspect the enum with `index.mode()`; the boolean constructor is removed.
 - The first `add()` needs a representative batch of at least two vectors.
   Inputs must be contiguous float32 NumPy arrays.
-- Queries accept one vector or a matrix. Scores estimate inner products.
+- Queries accept one vector or a matrix. Scores estimate the selected metric:
+  inner product, cosine similarity, or negative squared Euclidean distance; larger is better.
 - Fast storage size depends on the model and CPU. Inspect `bytes_per_vector`
   for the representation stride and `storage_bytes` for allocated vector data.
   Fast scans use AVX-512 or AVX2+F16C on x86, and NEON on ARM.
@@ -97,20 +117,37 @@ repacked. See the [high-bit investigation](docs/high-bit-recall.md).
 ### IVF and nested search (Python)
 
 ```python
-from tieredq import TieredQIVFIndex, TieredQNestedIVFIndex
+from tieredq import TieredQIVFIndex, TieredQNestedIVFIndex, TieredQPruning
 
+d = vectors.shape[1]
+queries = vectors[:2]
 ivf = TieredQIVFIndex(dimensions=d, code_bits=2 * d, lists=1024)  # lists=0: one list per codec centroid
 ivf.build(vectors)  # trains the codec (seeded 32,768-row sample) and the lists, then indexes
 scores, ids = ivf.search(queries, k=10, nprobe=32)
 
 # Prefix codes in an in-RAM IVF; candidates rescored with a 4 bits/dim refinement tier on SSD.
-index = TieredQNestedIVFIndex.build(vectors, prefix_bits=768, total_bits=4 * d, lists=256)
+index = TieredQNestedIVFIndex.build(vectors, prefix_bits=d, total_bits=4 * d, lists=256)
 index.write_tier("tier.rows", vectors)  # or index.attach_tier(index.encode_tier(vectors)) to keep it in RAM
 index.attach_tier("tier.rows", reads="direct", queue_depth=32)
 scores, ids = index.search(queries, k=10, nprobe=64, candidates=50)
 index.save("nested.tq")  # IVF, refinement and tier layout; attach the tier again after load()
 ```
 
+- `TieredQIVFIndex(dimensions, code_bits, *, lists=0, metric="ip", fine_tiers=False)`
+  always uses fast storage. `build(rows)` replaces its vectors; only the first
+  `build` or `train_lists(sample)` trains the codec. Call `train_lists` before
+  `build` to fix the partition on a separate sample.
+- `TieredQNestedIVFIndex.build(vectors, *, prefix_bits, total_bits, lists=0,
+  metric="ip", tier_rows="prefix_and_suffix", sample=None)` trains a nested index.
+  `prefix_bits` and `total_bits` are budgets per vector, with the prefix included
+  in `total_bits`. Neither IVF constructor exposes the flat index's `mode`,
+  `allocation_power`, `exact_fast_scores`, or bit-cap options.
+- IVF searches require keyword `nprobe`; nested searches also require
+  `candidates >= k`. Results use `2**32 - 1` ids and `-inf` scores for slots
+  beyond the rows in the probed lists.
+- File tiers default to `reads="cached", queue_depth=1`. Concurrent reads at
+  larger queue depths require a build with liburing; otherwise reads stay serial.
+  PyPI wheels disable liburing.
 - One `build` trains the prefix, the lists and the refinement from the same seeded sample, so they cannot be
   mismatched. Pass `sample=` to train on earlier data instead; its rows also fix the lists for later builds (as
   `TieredQIVFIndex.train_lists` does).
@@ -121,6 +158,9 @@ index.save("nested.tq")  # IVF, refinement and tier layout; attach the tier agai
 - `pruning=TieredQPruning(confidence=8)` opts IVF and nested scans into approximate pruning (see below).
 
 ## C++
+
+Building from source requires CMake 3.18+, a C++20 compiler, OpenMP, and
+BLAS/LAPACK. liburing is optional for concurrent SSD tier reads.
 
 ```sh
 cmake -S . -B build
@@ -169,7 +209,8 @@ auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*p
   Gemini-768 at 2 bits/dim, 5–18% slower. Larger suffix shares lose with the exact bound, which loosens faster than it
   saves work.
   To prune through the exact FP32 scan instead, train with `TieredQConfig::target_mode = TieredQIndexMode::full` and
-  `fine_tiers = false` (Python `exact_fast_scores=True`). Measured at 4 bits/dim, before nibble scans were pruned: on OpenAI-1536 100k
+  `fine_tiers = false` (flat Python `exact_fast_scores=True, fine_tiers=False`; Python IVF does not expose the
+  exact-scoring training option). Measured at 4 bits/dim, before nibble scans were pruned: on OpenAI-1536 100k
   exact with confidence 8 was 4–11% faster than nibble scoring at equal or slightly higher recall, and on OpenAI 1M
   17–21% faster but 0.4 pt R@10 lower; on Gemini-768 nibble scoring was 20–38% faster, at 0.2 pt R@10 lower. At
   2 bits/dim nibble scoring was faster on both (#13).
@@ -193,14 +234,20 @@ auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*p
   a 4-byte id-to-document map in RAM.
 
   ```cpp
+  // Train the prefix on the same sample and seed as the refinement, with fine tiers disabled.
+  auto config = dv::TieredQConfig::target_code_bits(d, d);
+  config.fine_tiers = false;
+  auto codec = dv::TieredQ::train(config, sample, rows, seed);
   auto refinement = dv::TieredQRefinement::train(codec, /*total_code_bits=*/4 * d, sample, rows, seed);
   dv::TieredQIVFIndex ivf(codec);
   ivf.build(data, n);
   dv::TieredQNestedIVFIndex index(std::move(ivf), std::move(refinement));
   dv::TieredQRowFileWriter writer("tier.rows", index.tier_bytes_per_vector());
+  std::vector<uint8_t> buffer(chunk * index.tier_bytes_per_vector());
   for (size_t first = 0; first < n; first += chunk) {        // ids in build order
-    index.encode_tier(data + first * d, first, count, buffer);  // count = min(chunk, n - first)
-    writer.append(buffer, count);
+    const size_t count = std::min(chunk, n - first);
+    index.encode_tier(data + first * d, first, count, buffer.data());
+    writer.append(buffer.data(), count);
   }
   writer.finish();
   index.attach_tier(std::make_shared<dv::TieredQFileRows>("tier.rows"));
@@ -213,7 +260,9 @@ auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*p
   0.76-0.79x its stored bits. The plain flat index is at 0.54x there.
 
   ```cpp
-  auto prefix = dv::TieredQ::train(dv::TieredQConfig::target_code_bits(d, 512), sample, rows, seed);
+  auto config = dv::TieredQConfig::target_code_bits(d, 512);
+  config.fine_tiers = false;
+  auto prefix = dv::TieredQ::train(config, sample, rows, seed);
   auto refinement = dv::TieredQRefinement::train(prefix, /*total_code_bits=*/3 * d, sample, rows, seed);
   dv::TieredQNestedIndex index(std::move(prefix), std::move(refinement), data, n);
   auto hits = index.search(query, /*k=*/10, /*candidates=*/100);
