@@ -6,7 +6,7 @@
 // Modes: tieredq CODE_BITS | rabitq BITS_PER_DIM | tieredq-match TARGET_DISK_BITS (largest code budget whose disk
 // bits/vector fit, storage only) | tieredq-profile CODE_BITS (single-query loops only, for perf; prints qps_1t_b1) | rescore-profile CODE_BITS (RESCORE tiers on fixed candidates, for perf; prints microseconds per query). Rows: codec budget nlist nprobe disk_bits code_bits recall qps_1t_b1 qps_8t_b32
 // build_s list_hash. LISTS gives TieredQ a coarse quantizer with that many lists (the codec keeps NLIST centroids) and
-// RaBitQ the same partition. PRUNE_Z and PRUNE_PREFIX set TieredQPruning. MAX_BITS caps TieredQ bits per coordinate (TieredQConfig::max_bits) and ALLOCATION_POWER sets
+// RaBitQ the same partition. PRUNE_Z and PRUNE_PREFIX set TieredQPruning. MAX_BITS caps TieredQ bits per coordinate (TieredQConfig::max_scan_bits) and ALLOCATION_POWER sets
 // TieredQConfig::allocation_power, for every TieredQ model the run trains. Training (#19.2): every TieredQ model
 // trains on the first TRAIN_ROWS (default 32,768) rows of a seeded shuffle that skips the row ids in
 // TRAIN_EXCLUDE_ROWS (u32 file); PARTITION_FROM=subset also trains the coarse lists and RaBitQ's list means on them
@@ -162,7 +162,7 @@ dv::TieredQ train(const Data& data,uint32_t code_bits,size_t nlist,bool rotate_t
   const size_t count=sample.size()/data.d;
   auto config=dv::TieredQConfig::target_code_bits(uint32_t(data.d),code_bits);
   config.num_centroids=uint32_t(nlist);
-  if (const char* max_bits=std::getenv("MAX_BITS")) config.max_bits=uint32_t(std::stoul(max_bits));
+  if (const char* max_bits=std::getenv("MAX_BITS")) config.max_scan_bits=uint32_t(std::stoul(max_bits));
   if (const char* power=std::getenv("ALLOCATION_POWER")) config.allocation_power=std::stod(power);
   config.rotate_tiers=rotate_tiers;
   return dv::TieredQ::train(config,sample.data(),count,seed);

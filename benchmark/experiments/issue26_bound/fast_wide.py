@@ -1,9 +1,11 @@
 """Issue #26: flat fast mode with fine tiers (up to 12 bits over a scan prefix at the automatic cap) at the same B*D
 code budget (real codec and kernels).
 
-Variants: "off" is today's fast mode (automatic cap max(6, ceil(B)) for inner product), "auto" lets training decide
-(policy C: fine tiers when the allocator predicts a clear weighted-error drop), "on:N" forces fine tiers up to N bits; a "/pW" suffix sets the scan cap
-(prefix width) to W instead of the automatic cap.
+Variants: "full" is full mode (exact FP32 scoring of Lloyd-Max codes, no fine tiers), "exact" a fast index over a
+full-target (Lloyd-Max) model with exact_fast_scores, "off" is today's fast mode
+(automatic cap max(6, ceil(B)) for inner product), "auto" lets training decide (policy C: fine tiers when the allocator
+predicts a clear weighted-error drop), "on" / "on:N" forces fine tiers up to 12 / N bits; a "/pW" suffix sets the scan
+cap (prefix width) to W instead of the automatic cap.
 Fine-tier indexes scan each code's prefix with the unchanged nibble scan to depth max(32, 1.5k) and rescore those
 candidates exactly from prefix plus fine bits.
 
@@ -29,6 +31,8 @@ from eigen_bound import load
 from recall_sim import top_ids
 
 WIDEST_FINE_BITS = 12
+FULL_VARIANT = "full"
+EXACT_VARIANT = "exact"
 TIMING_REPEATS = 3
 LATENCY_QUERIES = 200
 
@@ -58,14 +62,23 @@ def single_latency_ms(index, queries, k):
 
 
 def fine_options(variant):
-    """MODE[:MAX_FINE_BITS][/pPREFIX]: fine_tiers mode, fine cap and an explicit scan cap (prefix width)."""
+    """MODE[:MAX_TIER_BITS][/pPREFIX]: fine_tiers mode, fine cap and an explicit scan cap (prefix width)."""
     head, _, prefix = variant.partition("/p")
     mode, _, bits = head.partition(":")
-    return {"fine_tiers": mode, "max_fine_bits": int(bits) if bits else WIDEST_FINE_BITS, "max_bits": int(prefix or 0)}
+    return {"fine_tiers": mode, "max_tier_bits": int(bits) if bits else WIDEST_FINE_BITS, "max_scan_bits": int(prefix or 0)}
+
+
+def index_options(variant):
+    """"full": full mode; "exact": fast index with exact_fast_scores; every other variant is a fast fine-tier setting."""
+    if variant == FULL_VARIANT:
+        return {"mode": "full", "fine_tiers": "off"}
+    if variant == EXACT_VARIANT:
+        return {"mode": "fast", "exact_fast_scores": True, "fine_tiers": "off"}
+    return {"mode": "fast", **fine_options(variant)}
 
 
 def build(base, bits_per_dim, variant):
-    index = tieredq.TieredQIndex(base.shape[1], bits_per_dim * base.shape[1], mode="fast", metric="ip", **fine_options(variant))
+    index = tieredq.TieredQIndex(base.shape[1], bits_per_dim * base.shape[1], metric="ip", **index_options(variant))
     start = time.perf_counter()
     index.add(base)
     return index, time.perf_counter() - start

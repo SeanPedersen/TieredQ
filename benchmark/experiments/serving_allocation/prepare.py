@@ -15,7 +15,7 @@ def prepare(root):
     edit(root, 'src/tieredq.cpp', '  auto gain=[&](int rank) { unsigned b=bits[rank]; return std::max(0.0,eigenvalues[d-1-rank])*(error[b]-error[b+1]); };', '''  const char* allocation_env=std::getenv("TIEREDQ_EXPERIMENT_ALLOCATION");
   const std::string allocation=allocation_env ? allocation_env : "marginal";
   if (allocation!="marginal" && allocation!="log" && allocation!="cap4") bad("unknown experiment allocation");
-  if (allocation=="cap4" && config.code_bits<=4*config.dimensions) config.max_bits=4;
+  if (allocation=="cap4" && config.code_bits<=4*config.dimensions) config.max_scan_bits=4;
   auto gain=[&](int rank) {
     unsigned b=bits[rank];
     const double variance=std::max(0.0,eigenvalues[d-1-rank]);

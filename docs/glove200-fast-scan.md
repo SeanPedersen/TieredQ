@@ -50,14 +50,14 @@ the full base. It does not establish a universal 2x win or sub-ms latency at a
 million documents. These are warm separate-path measurements; competing exact/fast
 cache traffic can change latency. No batched QPS claim follows from these results.
 
-The models used the normal `max_bits=8` training default. Learned tiers were:
+The models used the normal `max_scan_bits=8` training default. Learned tiers were:
 
 - 400 bits: one coordinate at three bits, 198 at two bits, one at one bit.
 - 600 bits: all 200 coordinates at three bits.
 - 800 bits: all 200 coordinates at four bits.
 
 All therefore qualify for the new byte-lookup kernel without a special training
-cap. An additional 800-bit `max_bits=4` run produced the same quality and comparable
+cap. An additional 800-bit `max_scan_bits=4` run produced the same quality and comparable
 timing (0.637 ms fast vs 1.406 ms exact).
 
 ## Wider-tier fallback

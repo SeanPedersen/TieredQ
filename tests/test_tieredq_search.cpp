@@ -297,7 +297,7 @@ void legacy_level_payload_test() {
   require(reader.u32()==fast_levels_kind && file.rows==documents+1,"appended legacy level payload changed kind");
   for (const auto& path:{legacy_path,resaved_path}) std::filesystem::remove(path);
 }
-void streaming_search_test(uint32_t code_bits,uint32_t max_bits,bool fast_mode=false) {
+void streaming_search_test(uint32_t code_bits,uint32_t max_scan_bits,bool fast_mode=false) {
   constexpr uint32_t dimensions=8,centroids=4;
   constexpr size_t training_rows=128,documents=4109,query_count=17;
   std::mt19937 random(17);
@@ -308,7 +308,7 @@ void streaming_search_test(uint32_t code_bits,uint32_t max_bits,bool fast_mode=f
   for (auto& value:queries) value=normal(random);
   std::fill_n(queries.data(),dimensions,0);
   for (size_t row=1;row<documents;row+=2) std::copy_n(rows.data(),dimensions,rows.data()+row*dimensions);
-  auto codec=dv::TieredQ::train({dimensions,code_bits,centroids,false,max_bits},training.data(),training_rows);
+  auto codec=dv::TieredQ::train({dimensions,code_bits,centroids,false,max_scan_bits},training.data(),training_rows);
   dv::TieredQIndex index(std::move(codec),fast_mode ? dv::TieredQIndexMode::fast : dv::TieredQIndexMode::full);
   index.add(rows.data(),documents);
   index.build_fast_scan();

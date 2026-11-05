@@ -309,10 +309,10 @@ void TieredQConfig::validate() const {
   if (!dimensions || dimensions>uint32_t(INT32_MAX) || !code_bits || uint64_t(code_bits)>uint64_t(dimensions)*8)
     bad("dimensions must be positive and budget must be in [1, 8*D]");
   if (!num_centroids || num_centroids>256) bad("centroid count must be in [1, 256]");
-  if (max_bits>tieredq_detail::widest_code_bits) bad("max bits per coordinate must be in [1, 8], or 0 for automatic");
+  if (max_scan_bits>tieredq_detail::widest_code_bits) bad("max scan bits per coordinate must be in [1, 8], or 0 for automatic");
   if (fine_tiers!=TieredQFineTiers::automatic && fine_tiers!=TieredQFineTiers::off && fine_tiers!=TieredQFineTiers::on)
     bad("invalid fine-tier mode");
-  if (!max_fine_bits || max_fine_bits>tieredq_detail::widest_fine_code_bits) bad("max fine bits must be in [1, 12]");
+  if (!max_tier_bits || max_tier_bits>tieredq_detail::widest_fine_code_bits) bad("max tier bits must be in [1, 12]");
   if (target_mode!=TieredQIndexMode::fast && target_mode!=TieredQIndexMode::full) bad("invalid target index mode");
   if (metric!=TieredQMetric::inner_product && metric!=TieredQMetric::cosine && metric!=TieredQMetric::l2) bad("invalid metric");
   if (!std::isfinite(allocation_power) || allocation_power<0) bad("allocation power must be finite and non-negative");
@@ -473,24 +473,24 @@ TieredQ TieredQ::train_model(TieredQConfig config,const tieredq_detail::Training
   tieredq_detail::DistortionTable gaussian{1};
   for (unsigned b=1;b<=tieredq_detail::widest_code_bits;++b) { c.levels_[b]=tieredq_detail::gaussian_codebooks()[b]; gaussian[b]=tieredq_detail::distortion(c.levels_[b]); }
   auto additive_gaussian=gaussian; additive_gaussian[tieredq_detail::split_code_bits]=tieredq_detail::distortion(additive);
-  // Automatic max_bits keeps fast IP/cosine models below fine-section widths: RaBitQ's 4-bit recall on OpenAI then took
+  // Automatic max_scan_bits keeps fast IP/cosine models below fine-section widths: RaBitQ's 4-bit recall on OpenAI then took
   // -0.3/+1.2% code bits and ran 1.4-1.7x faster (#13). Budgets above that per rank still get the width they need.
   const bool fast_additive=config.target_mode==TieredQIndexMode::fast && additive_wide_tiers;
-  if (!config.max_bits)
-    config.max_bits=fast_additive
+  if (!config.max_scan_bits)
+    config.max_scan_bits=fast_additive
         ? std::max(tieredq_detail::additive_wide_max_bits,(config.code_bits+uint32_t(d)-1)/uint32_t(d))
         : tieredq_detail::widest_code_bits;
   // Fine tiers (#26) refine additive prefix books, which exist from the automatic cap's minimum width up.
-  const bool fine_possible=fast_additive && config.max_bits>=tieredq_detail::additive_wide_max_bits;
+  const bool fine_possible=fast_additive && config.max_scan_bits>=tieredq_detail::additive_wide_max_bits;
   if (config.fine_tiers==TieredQFineTiers::on && !fine_possible)
-    bad("fine tiers need fast-target inner-product or cosine training with max_bits of at least 6");
-  if (config.fine_tiers==TieredQFineTiers::on && config.max_fine_bits<=config.max_bits)
-    bad("fine tiers need max_fine_bits above max_bits");
-  const bool fine_tiers=fine_possible && config.fine_tiers!=TieredQFineTiers::off && config.max_fine_bits>config.max_bits;
+    bad("fine tiers need fast-target inner-product or cosine training with max_scan_bits of at least 6");
+  if (config.fine_tiers==TieredQFineTiers::on && config.max_tier_bits<=config.max_scan_bits)
+    bad("fine tiers need max_tier_bits above max_scan_bits");
+  const bool fine_tiers=fine_possible && config.fine_tiers!=TieredQFineTiers::off && config.max_tier_bits>config.max_scan_bits;
   tieredq_detail::AllocationModel allocation{std::vector<double>(d),std::vector<uint32_t>(d),std::vector(d,gaussian)};
   for (int j=0;j<d;++j) {
     allocation.variance[j]=eigenvalues[d-1-j];
-    allocation.cap[j]=uint32_t(j)<config.wide_dims ? config.max_bits : std::min<uint32_t>(config.max_bits,6);
+    allocation.cap[j]=uint32_t(j)<config.wide_dims ? config.max_scan_bits : std::min<uint32_t>(config.max_scan_bits,6);
   }
   auto bits=tieredq_detail::greedy_allocation(allocation,config.code_bits,false);
   // Allocation uses variance^1.5 instead of the MSE-optimal variance by default from 1 bit per dimension up: for
@@ -511,7 +511,7 @@ TieredQ TieredQ::train_model(TieredQConfig config,const tieredq_detail::Training
   if (fast_target && tieredq_detail::widest_tier(bits)<=tieredq_detail::lookup_code_bits) {
     allocation.error.assign(d,additive_gaussian);
     const uint32_t limit=tieredq_detail::lookup_storage_limit(tieredq_detail::lookup_fallback(allocation,config.code_bits,bits),config.code_bits);
-    auto fast=tieredq_detail::exact_lookup_allocation(weighted.variance,additive_gaussian,limit,config.max_bits);
+    auto fast=tieredq_detail::exact_lookup_allocation(weighted.variance,additive_gaussian,limit,config.max_scan_bits);
     if (fast.additive_three) c.levels_[3]=additive;
     bits=std::move(fast.bits);
   } else if (fast_target && additive_wide_tiers) {
@@ -526,13 +526,13 @@ TieredQ TieredQ::train_model(TieredQConfig config,const tieredq_detail::Training
       c.levels_[b]=tieredq_detail::additive_wide_codebook(b);
     bits=tieredq_detail::additive_wide_allocation(weighted,config.code_bits);
     if (fine_tiers) {
-      auto books=tieredq_detail::fine_codebooks(config.max_bits);
-      if (auto fine=tieredq_detail::fine_allocation(weighted,bits,books,config.max_fine_bits,config.wide_dims,config.code_bits,
+      auto books=tieredq_detail::fine_codebooks(config.max_scan_bits);
+      if (auto fine=tieredq_detail::fine_allocation(weighted,bits,books,config.max_tier_bits,config.wide_dims,config.code_bits,
                                                     config.fine_tiers==TieredQFineTiers::on)) {
         bits=std::move(*fine);
-        c.fast_prefix_bits_=config.max_bits;
+        c.fast_prefix_bits_=config.max_scan_bits;
         c.levels_.resize(tieredq_detail::widest_fine_code_bits+1);
-        for (unsigned b=config.max_bits+1;b<=tieredq_detail::widest_fine_code_bits;++b) c.levels_[b]=std::move(books.books[b]);
+        for (unsigned b=config.max_scan_bits+1;b<=tieredq_detail::widest_fine_code_bits;++b) c.levels_[b]=std::move(books.books[b]);
       }
     }
   } else if (power!=1.0) {

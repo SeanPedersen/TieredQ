@@ -25,16 +25,17 @@ struct TieredQConfig {
   uint32_t code_bits = 512;
   uint32_t num_centroids = 256;
   bool rotate_tiers = true;
-  // Training-only cap on bits per coordinate; persisted models record only the resulting tiers. 0 (automatic) is 6 for
-  // fast-target inner product and cosine, or code_bits / dimensions rounded up when larger, and 8 otherwise.
-  uint32_t max_bits = 0;
-  // Training-only fine tiers (#26), for fast-target inner product and cosine with a cap of at least 6 bits: ranks may
-  // take up to max_fine_bits, and the fast scan reads only each code's top max_bits (its prefix) before rescoring its
-  // candidates exactly, at the same stored bytes. automatic adds them when the allocator predicts a clear error drop,
-  // on whenever the allocation uses them. Only the flat TieredQIndex serves fine-tier models; other indexes reject
-  // them. Other targets and metrics ignore automatic and reject on.
+  // Training-only cap on the bits per coordinate the fast scan reads (the full tier width unless fine tiers are on);
+  // persisted models record only the resulting tiers. 0 (automatic) is 6 for fast-target inner product and cosine, or
+  // code_bits / dimensions rounded up when larger, and 8 otherwise.
+  uint32_t max_scan_bits = 0;
+  // Training-only fine tiers (#26), for fast-target inner product and cosine with a scan cap of at least 6 bits: ranks
+  // may take up to max_tier_bits in total, and the fast scan reads only each code's top max_scan_bits (its prefix)
+  // before rescoring its candidates exactly, at the same stored bytes. automatic adds them when the allocator predicts
+  // a clear error drop, on whenever the allocation uses them. Only the flat TieredQIndex serves fine-tier models; other
+  // indexes reject them. Other targets and metrics ignore automatic and reject on.
   TieredQFineTiers fine_tiers = TieredQFineTiers::automatic;
-  uint32_t max_fine_bits = 12;
+  uint32_t max_tier_bits = 12;
   // Training-only: only the top-N PCA ranks may exceed 6 bits (UINT32_MAX disables the restriction).
   uint32_t wide_dims = UINT32_MAX;
   // Training-only: the index mode whose storage layout bit allocation optimises for. Fast models with all tiers

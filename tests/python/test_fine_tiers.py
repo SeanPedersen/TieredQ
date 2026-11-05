@@ -22,7 +22,7 @@ def test_invalid_fine_tier_mode_is_rejected(options):
         TieredQIndex(DIMENSIONS, BITS_PER_DIM * DIMENSIONS, **options)
 
 
-@pytest.mark.parametrize("options", [{"max_bits": 9}, {"max_fine_bits": 13}, {"max_fine_bits": 0}])
+@pytest.mark.parametrize("options", [{"max_scan_bits": 9}, {"max_tier_bits": 13}, {"max_tier_bits": 0}])
 def test_out_of_range_caps_are_rejected(options):
     with pytest.raises(RuntimeError):
         TieredQIndex(DIMENSIONS, BITS_PER_DIM * DIMENSIONS, **options)

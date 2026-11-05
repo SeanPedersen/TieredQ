@@ -232,12 +232,12 @@ void reject_unsupported_format(const std::string& prefix) {
   auto codec=TieredQ::load(fixture.string()); codec.save(prefix+".golden");
   check(read(prefix+".golden")==read(fixture.string()),"golden bytes changed");
 }
-void fast_scan_test(unsigned code_bits=384,unsigned max_bits=8) {
+void fast_scan_test(unsigned code_bits=384,unsigned max_scan_bits=8) {
   constexpr unsigned d=64; constexpr size_t n=257,k=10;
   std::mt19937 rng(7); std::normal_distribution<float> normal;
   std::vector<float> sample(512*d),docs(n*d),query(d);
   for(auto& v:sample) v=normal(rng); for(auto& v:docs) v=normal(rng); for(auto& v:query) v=normal(rng);
-  auto codec=TieredQ::train(TieredQConfig{d,code_bits,16,false,max_bits},sample.data(),512);
+  auto codec=TieredQ::train(TieredQConfig{d,code_bits,16,false,max_scan_bits},sample.data(),512);
   TieredQIndex index(codec,dv::TieredQIndexMode::full); index.add(docs.data(),n);
   check(!index.has_fast_scan(),"fast scan unexpectedly present");
   auto fallback=index.search_fast(query.data(),k),exact=index.search(query.data(),k);

@@ -429,13 +429,13 @@ void wide_dims_cap() {
   constexpr size_t d=16,rows=128;
   std::vector<float> sample(rows*d); std::mt19937 rng(9); std::normal_distribution<float> normal;
   for (auto& value:sample) value=normal(rng);
-  auto capped=TieredQ::train(TieredQConfig{.dimensions=d,.code_bits=d*6+4,.num_centroids=4,.rotate_tiers=true,.max_bits=7,.wide_dims=4},sample.data(),rows,42);
+  auto capped=TieredQ::train(TieredQConfig{.dimensions=d,.code_bits=d*6+4,.num_centroids=4,.rotate_tiers=true,.max_scan_bits=7,.wide_dims=4},sample.data(),rows,42);
   bool boosted=false;
   for (const auto& tier:capped.tiers()) if (tier.bits>6) {
     boosted=true; require(tier.start+tier.dimensions<=4,"wide_dims must cap high-bit tiers to the top ranks");
   }
-  require(boosted,"wide_dims=4 with max_bits=7 must boost some coordinate");
-  auto capped6=TieredQ::train(TieredQConfig{.dimensions=d,.code_bits=d*6,.num_centroids=4,.rotate_tiers=true,.max_bits=7,.wide_dims=0},sample.data(),rows,42);
+  require(boosted,"wide_dims=4 with max_scan_bits=7 must boost some coordinate");
+  auto capped6=TieredQ::train(TieredQConfig{.dimensions=d,.code_bits=d*6,.num_centroids=4,.rotate_tiers=true,.max_scan_bits=7,.wide_dims=0},sample.data(),rows,42);
   for (const auto& tier:capped6.tiers()) require(tier.bits<=6,"wide_dims=0 must cap at 6 bits");
 }
 // Format-3 models store a binary16 basis. Rewriting it as a format-2 FP32 basis holding the same rounded

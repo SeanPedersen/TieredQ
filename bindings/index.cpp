@@ -28,15 +28,15 @@ dv::TieredQIndexMode parse_index_mode(const std::string& mode) {
 class PythonIndex {
  public:
   PythonIndex(uint32_t dimensions, uint32_t code_bits, const std::string& mode, const std::string& metric,
-              std::optional<double> allocation_power, bool exact_fast_scores, uint32_t max_bits,
-              const std::string& fine_tiers, uint32_t max_fine_bits)
+              std::optional<double> allocation_power, bool exact_fast_scores, uint32_t max_scan_bits,
+              const std::string& fine_tiers, uint32_t max_tier_bits)
       : config_(dv::TieredQConfig::target_code_bits(dimensions, code_bits)), mode_(parse_index_mode(mode)) {
     // Full-target training keeps Lloyd-Max books, whose fast scan is bit-exact with the codec but slower (#13).
     config_.target_mode = exact_fast_scores ? dv::TieredQIndexMode::full : mode_;
     config_.metric = parse_metric(metric);
-    config_.max_bits = max_bits;
+    config_.max_scan_bits = max_scan_bits;
     config_.fine_tiers = parse_fine_tiers(fine_tiers);
-    config_.max_fine_bits = max_fine_bits;
+    config_.max_tier_bits = max_tier_bits;
     if (allocation_power) {
       if (!(*allocation_power > 0)) throw std::invalid_argument("allocation_power must be positive");
       config_.allocation_power = *allocation_power;
@@ -162,14 +162,15 @@ void bind_index(nb::module_& module) {
       .def(nb::init<uint32_t, uint32_t, const std::string&, const std::string&, std::optional<double>, bool, uint32_t,
                     const std::string&, uint32_t>(),
            "dimensions"_a, "code_bits"_a, nb::kw_only(), "mode"_a = "fast", "metric"_a = "ip",
-           "allocation_power"_a = nb::none(), "exact_fast_scores"_a = false, "max_bits"_a = 0, "fine_tiers"_a = "auto",
-           "max_fine_bits"_a = 12,
+           "allocation_power"_a = nb::none(), "exact_fast_scores"_a = false, "max_scan_bits"_a = 0, "fine_tiers"_a = "auto",
+           "max_tier_bits"_a = 12,
            "metric is 'ip', 'cosine' or 'l2' (scores are -squared distances); allocation_power overrides the\n"
            "variance power bit allocation uses (default: 1.5 for ip/cosine, 1 for l2); exact_fast_scores keeps\n"
            "bit-exact FP32 fast scoring of tiers above 4 bits instead of the faster approximate byte tables.\n"
-           "max_bits caps bits per coordinate (0: automatic, at most 8). fine_tiers ('auto', 'off' or 'on') lets fast\n"
-           "ip/cosine indexes code ranks with up to max_fine_bits (at most 12) at the same bytes: the scan reads each\n"
-           "code's top max_bits and rescores its candidates exactly; 'auto' uses them when training predicts a clear gain.")
+           "max_scan_bits caps the bits per coordinate the scan reads (0: automatic, at most 8). fine_tiers ('auto',\n"
+           "'off' or 'on') lets fast ip/cosine indexes code ranks with up to max_tier_bits (at most 12) at the same bytes:\n"
+           "the scan reads each code's top max_scan_bits and rescores its candidates exactly; 'auto' uses them\n"
+           "when training predicts a clear gain.")
       .def("__len__", &PythonIndex::size, nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro("dimensions", &PythonIndex::dimensions)
       .def_prop_ro("fast_prefix_bits", &PythonIndex::fast_prefix_bits, nb::call_guard<nb::gil_scoped_release>())
