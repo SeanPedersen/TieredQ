@@ -8,6 +8,7 @@
 #include <vector>
 #include <utility>
 #include "tieredq/detail/tieredq_scan_plan.h"
+#include "tieredq/detail/tieredq_shared_array.h"
 
 namespace dv {
 namespace tieredq_detail { struct FastFine; class FastRowReader; class StageProfile; struct FastScanCache; struct FastQueryBasis; struct EncoderData; class LazyEncoder;
@@ -168,16 +169,21 @@ class TieredQ {
   friend class TieredQNestedIVFIndex;
   TieredQ() = default;
   // The fast-scan view of a fine-tier model: the same model serving prefix tiers (none wider than its prefix width,
-  // code_bits = their bits) without fine tiers; derived state is rebuilt as on load.
+  // code_bits = their bits) without fine tiers; it shares the model's large arrays, and derived state is rebuilt as
+  // on load.
   TieredQ prefix_view(std::vector<TieredQTier> tiers) const;
   static TieredQ train_model(TieredQConfig config, const tieredq_detail::TrainingRows& sample, size_t rows, bool additive_wide_tiers, uint64_t seed);
   TieredQConfig config_;
   std::vector<TieredQTier> tiers_;
   uint32_t fast_prefix_bits_ = 0;
-  std::vector<float> centroids_, basis_, mean_, sigma_;
+  // The large arrays are shared by copies of the model (e.g. a fine-tier prefix view).
+  tieredq_detail::SharedArray<float> centroids_, basis_;
+  std::vector<float> mean_, sigma_;
   // Binary16 basis of format-3 models in 16-rank panels (tieredq_basis_panels.h; files keep d x m row order);
   // exactly one of basis_ (row-major) and basis_half_ holds the d x m basis.
-  std::vector<uint16_t> basis_half_;
+  tieredq_detail::SharedArray<uint16_t> basis_half_;
+  // memory_bytes() less the arrays this model shares with `owner` (counted there).
+  size_t memory_bytes_beyond(const TieredQ& owner) const;
   // Basis entry at row-major index input * m + rank, in either encoding.
   float basis_value(size_t index) const;
   std::vector<std::vector<float>> levels_;
@@ -233,8 +239,9 @@ class TieredQIndex {
   bool uses_scalar_fast_scan() const;
   static bool native_fast_scan_available();
   size_t payload_bytes() const;
-  // Allocated vector data and fast-cache state, including its derived query projection/codebooks.
-  // Excludes codec memory, allocator bookkeeping, query state and top-k scratch.
+  // Allocated vector data and fast-cache state, including its derived query projection/codebooks and a fine-tier
+  // model's prefix view (beyond the arrays it shares with codec()). Excludes codec memory, allocator bookkeeping,
+  // query state and top-k scratch.
   size_t storage_bytes() const;
   size_t bytes_per_vector() const;
   void add(const float* rows, size_t count);

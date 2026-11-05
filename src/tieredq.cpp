@@ -395,33 +395,33 @@ TieredQ TieredQ::train_model(TieredQConfig config,const tieredq_detail::Training
   const auto& linalg=tieredq_detail::TrainingLinalg::get();
   TieredQ c; c.config_=config;
   tieredq_detail::TrainingRng rng(seed); auto initial=rng.choice(rows,k);
-  c.centroids_.resize(product(k,d));
+  std::vector<float> centroids(product(k,d));
   std::vector<float> buffer;
-  for (unsigned j=0;j<k;++j) std::copy_n(sample.block(initial[j],1,buffer),d,c.centroids_.data()+size_t(j)*d);
+  for (unsigned j=0;j<k;++j) std::copy_n(sample.block(initial[j],1,buffer),d,centroids.data()+size_t(j)*d);
   std::vector<uint32_t> ids(rows);
   profile.mark("init");
   constexpr int kmeans_iterations=20;
   const int iterations=k==1 ? 1 : kmeans_iterations;
   for (int it=0;it<iterations;++it) {
-    if (k>1) nearest_centroids(sample,rows,d,c.centroids_,k,ids.data());
+    if (k>1) nearest_centroids(sample,rows,d,centroids,k,ids.data());
     profile.mark("kmeans_assign");
-    sample.visit([&](auto value) { tieredq_detail::update_centroids_with(value,rows,d,ids.data(),c.centroids_); });
+    sample.visit([&](auto value) { tieredq_detail::update_centroids_with(value,rows,d,ids.data(),centroids); });
     profile.mark("kmeans_update");
   }
   const bool spectral_stats=!std::getenv("DV_TIEREDQ_REFERENCE_STATS");
   std::vector<double> residual,mean,cov;
-  if (k>1) nearest_centroids(sample,rows,d,c.centroids_,k,ids.data());
+  if (k>1) nearest_centroids(sample,rows,d,centroids,k,ids.data());
   profile.mark("kmeans_assign");
   if (spectral_stats && linalg.syrk && linalg.small_covariance(d)) {
     auto centered=sample.visit([&](auto value) {
-      return tieredq_detail::centered_residuals_with(value,rows,d,ids.data(),c.centroids_);
+      return tieredq_detail::centered_residuals_with(value,rows,d,ids.data(),centroids);
     });
     mean=std::move(centered.mean);
     profile.mark("residual");
     cov=linalg.covariance_centered(centered.values,d,n);
   } else if (spectral_stats && linalg.syrk) {
     sample.visit([&](auto value) {
-      auto difference=[&](size_t i,size_t j) { return double(value(i,j))-c.centroids_[size_t(ids[i])*d+j]; };
+      auto difference=[&](size_t i,size_t j) { return double(value(i,j))-centroids[size_t(ids[i])*d+j]; };
       mean.assign(d,0);
       for (size_t i=0;i<rows;++i) for (int j=0;j<d;++j) mean[j]+=difference(i,size_t(j));
       for (int j=0;j<d;++j) mean[j]/=rows;
@@ -435,7 +435,7 @@ TieredQ TieredQ::train_model(TieredQConfig config,const tieredq_detail::Training
     // Spectral stats only need centered rows; recomputing differences per chunk avoids any rows x d copy.
     const bool keep_residual=!spectral_stats;
     sample.visit([&](auto value) {
-      auto difference=[&](size_t i,int j) { return double(value(i,size_t(j)))-c.centroids_[size_t(ids[i])*d+j]; };
+      auto difference=[&](size_t i,int j) { return double(value(i,size_t(j)))-centroids[size_t(ids[i])*d+j]; };
       if (keep_residual) residual.resize(product(rows,d));
       mean.assign(d,0);
       for (size_t i=0;i<rows;++i) for (int j=0;j<d;++j) {
@@ -558,7 +558,7 @@ TieredQ TieredQ::train_model(TieredQConfig config,const tieredq_detail::Training
   std::vector<float> pca_basis(product(d,m));
   std::vector<std::vector<float>> rotations;
   for (int j=0;j<d;++j) for (int r=0;r<m;++r) pca_basis[size_t(j)*m+r]=float(cov[size_t(d-1-ranks[r])*d+j]);
-  c.basis_=pca_basis;
+  std::vector<float> basis=pca_basis;
   profile.mark("basis");
   for (const auto& t:c.tiers_) {
     const int width=int(t.dimensions); std::vector<float> q(product(width,width),0);
@@ -569,29 +569,30 @@ TieredQ TieredQ::train_model(TieredQConfig config,const tieredq_detail::Training
     std::vector<float> in(product(d,width)),out(in.size());
     for (int j=0;j<d;++j) std::copy_n(pca_basis.data()+size_t(j)*m+t.start,width,in.data()+size_t(j)*width);
     multiply(in.data(),d,width,q.data(),width,out.data());
-    for (int j=0;j<d;++j) std::copy_n(out.data()+size_t(j)*width,width,c.basis_.data()+size_t(j)*m+t.start);
+    for (int j=0;j<d;++j) std::copy_n(out.data()+size_t(j)*width,width,basis.data()+size_t(j)*m+t.start);
     profile.mark("tier_rotation_apply");
   }
   // Serving reads the binary16 basis, so the projection stats are fitted to exactly those values.
-  c.basis_half_.resize(c.basis_.size());
-  for (size_t i=0;i<c.basis_.size();++i) {
-    c.basis_half_[i]=tieredq_detail::half_encode(c.basis_[i]);
-    c.basis_[i]=tieredq_detail::half_decode(c.basis_half_[i]);
+  std::vector<uint16_t> basis_half(basis.size());
+  for (size_t i=0;i<basis.size();++i) {
+    basis_half[i]=tieredq_detail::half_encode(basis[i]);
+    basis[i]=tieredq_detail::half_decode(basis_half[i]);
   }
   if (spectral_stats) {
     if (tieredq_detail::needs_empirical_projection_stats(eigenvalues,ranks))
-      tieredq_detail::empirical_projection_stats(sample,rows,ids,c.centroids_,c.basis_,size_t(m),c.mean_,c.sigma_);
+      tieredq_detail::empirical_projection_stats(sample,rows,ids,centroids,basis,size_t(m),c.mean_,c.sigma_);
     else
-      tieredq_detail::spectral_projection_stats(eigenvalues,ranks,c.tiers_,rotations,mean,c.basis_,rows,c.mean_,c.sigma_);
+      tieredq_detail::spectral_projection_stats(eigenvalues,ranks,c.tiers_,rotations,mean,basis,rows,c.mean_,c.sigma_);
   } else {
     // Residual covariance was centered; restore the mean before fitting the projected mean.
     std::vector<float> rfloat(residual.size());
     for (size_t i=0;i<rows;++i) for (int j=0;j<d;++j) rfloat[i*d+j]=float(residual[i*d+j]);
-    std::vector<float> projected(product(rows,m)); multiply(rfloat.data(),n,d,c.basis_.data(),m,projected.data());
+    std::vector<float> projected(product(rows,m)); multiply(rfloat.data(),n,d,basis.data(),m,projected.data());
     tieredq_detail::projection_stats(projected,rows,m,c.mean_,c.sigma_);
   }
-  std::vector<float>().swap(c.basis_);
-  c.basis_half_=tieredq_detail::basis_panels_from_rows(c.basis_half_,size_t(d),size_t(m));
+  std::vector<float>().swap(basis);
+  c.centroids_=std::move(centroids);
+  c.basis_half_=tieredq_detail::basis_panels_from_rows(basis_half,size_t(d),size_t(m));
   profile.mark("projection_stats");
   c.prepare_serving();
   profile.mark("prepare_serving");
@@ -887,7 +888,7 @@ void TieredQ::validate_model() const {
   if (!levels_[0].empty()) bad("invalid zero-bit table");
   for (unsigned b=1;b<levels_.size();++b) if (levels_[b].size()!=(size_t(1)<<b) || !std::is_sorted(levels_[b].begin(),levels_[b].end())) bad("invalid Lloyd-Max table");
   for (float s:sigma_) if (!(s>0) || !std::isfinite(s)) bad("invalid sigma");
-  for (const auto* a:{&centroids_,&basis_,&mean_}) finite_rows(a->data(),a->size());
+  for (const std::vector<float>* a:{&centroids_.get(),&basis_.get(),&mean_}) finite_rows(a->data(),a->size());
   for (uint16_t v:basis_half_) if (!std::isfinite(tieredq_detail::half_decode(v))) bad("nonfinite model");
   for (const auto& a:levels_) finite_rows(a.data(),a.size());
 }
@@ -920,12 +921,17 @@ std::vector<uint8_t> TieredQ::serialize() const {
 }
 TieredQ TieredQ::prefix_view(std::vector<TieredQTier> tiers) const {
   TieredQ view=*this;
+  // A loaded model keeps only the persisted configuration; the training-only fields take their defaults.
+  view.config_=TieredQConfig{};
+  view.config_.dimensions=config_.dimensions; view.config_.num_centroids=config_.num_centroids;
+  view.config_.rotate_tiers=config_.rotate_tiers; view.config_.metric=config_.metric;
   view.config_.code_bits=0;
   for (const auto& t:tiers) view.config_.code_bits+=t.dimensions*t.bits;
   view.tiers_=std::move(tiers);
   view.fast_prefix_bits_=0;
   view.levels_.resize(tieredq_detail::widest_code_bits+1);
-  return deserialize(view.serialize());
+  view.validate_model(); view.prepare_serving();
+  return view;
 }
 TieredQ TieredQ::deserialize(const std::vector<uint8_t>& data) {
   Reader r{data}; TieredQ c;
@@ -1101,13 +1107,20 @@ float TieredQ::basis_value(size_t index) const {
 }
 size_t TieredQ::memory_bytes() const {
   size_t n=sizeof(*this)+tiers_.capacity()*sizeof(TieredQTier);
-  for (const auto* v:{&centroids_,&basis_,&mean_,&sigma_}) n+=v->capacity()*sizeof(float);
-  n+=basis_half_.capacity()*sizeof(uint16_t);
+  n+=centroids_.bytes()+basis_.bytes()+basis_half_.bytes();
+  for (const auto* v:{&mean_,&sigma_}) n+=v->capacity()*sizeof(float);
   n+=levels_.capacity()*sizeof(std::vector<float>);
   for (const auto& v:levels_) n+=v.capacity()*sizeof(float);
   n+=centroid_half_norms_.capacity()*sizeof(float)+scan_plan_.capacity()*sizeof(tieredq_detail::ScanGroupPlan);
   for (const auto* v:{&lift_base_map_,&lift_query_map_,&lift_base_panels_.data,&lift_query_panels_.data}) n+=v->capacity()*sizeof(float);
   return n+encoder_->bytes();
+}
+size_t TieredQ::memory_bytes_beyond(const TieredQ& owner) const {
+  size_t shared=0;
+  if (centroids_.shares(owner.centroids_)) shared+=centroids_.bytes();
+  if (basis_.shares(owner.basis_)) shared+=basis_.bytes();
+  if (basis_half_.shares(owner.basis_half_)) shared+=basis_half_.bytes();
+  return memory_bytes()-shared;
 }
 uint32_t TieredQ::model_id() const {
   const auto data=serialize(); uint32_t h=2166136261u;

@@ -54,7 +54,9 @@ size_t TieredQIndex::payload_bytes() const {
   return count_*codec_.bytes_per_vector();
 }
 size_t TieredQIndex::storage_bytes() const {
-  return payload_.capacity()+fine_.capacity()+(fast_ ? tieredq_detail::fast_storage_bytes(*fast_) : 0);
+  // A fine-tier scan's prefix view of the model is fast-cache state; it shares the model's large arrays.
+  const size_t view=fine_tiers_ ? fine_tiers_->prefix.memory_bytes_beyond(codec_) : 0;
+  return payload_.capacity()+fine_.capacity()+(fast_ ? tieredq_detail::fast_storage_bytes(*fast_) : 0)+view;
 }
 size_t TieredQIndex::bytes_per_vector() const {
   if (!fast_mode_) return codec_.bytes_per_vector();

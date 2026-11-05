@@ -22,6 +22,8 @@ template<class Reader> void TieredQIndex::read_fast_payload(Reader& reader,size_
   auto storage=make_fast_storage(nullptr,0,lookup,int(level_max));
   read_fast_storage(reader,*storage,rows,codec.config().num_centroids,byte_codes);
   if (fine_tiers_) {
+    // Room for the read slack up front, so appending it does not reallocate (a transient copy of every fine row).
+    fine_.reserve(product(rows,fine_tiers_->fine_bytes)+fine_read_slack);
     read_fast_bytes(reader,fine_,product(rows,fine_tiers_->fine_bytes));
     fine_tiers_->validate_fine_rows(fine_.data(),rows);
     fine_.resize(fine_.size()+fine_read_slack);

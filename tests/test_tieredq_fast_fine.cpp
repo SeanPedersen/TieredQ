@@ -171,6 +171,12 @@ void rescoring_test(uint32_t bits_per_dim,dv::TieredQIndexMode target) {
   std::vector<float> loaded_scores(queries*k); std::vector<uint32_t> loaded_ids(queries*k);
   loaded.search_batch(probe.data(),queries,k,loaded_scores.data(),loaded_ids.data());
   require(loaded_ids==batch_ids && loaded_scores==batch_scores,"fine-tier index changed hits on reload");
+  // Reloaded fine rows are allocated once, without growth slack, and the scan's prefix view of the model shares its
+  // basis and centroids, so neither index holds a second copy of them.
+  require(loaded.storage_bytes()<=fast.storage_bytes(),"reloaded fine-tier index allocates more than the built one");
+  // An empty index stores no rows, so its storage is the view's own state alone.
+  const size_t basis_bytes=size_t(codec.coded_dimensions())*dimensions*sizeof(uint16_t);
+  require(dv::TieredQIndex(codec).storage_bytes()<basis_bytes,"fine-tier prefix view copies the model");
   if (target==dv::TieredQIndexMode::fast) ivf_test(codec,data,probe,batch_scores,batch_ids);
 }
 } // namespace
