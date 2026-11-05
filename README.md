@@ -9,14 +9,27 @@ TieredQ core algorithm:
 
 ## Install
 
-Requires C++20, CMake, LAPACK/BLAS and OpenMP. On macOS, install `libomp` with
-Homebrew; Accelerate provides LAPACK. On Ubuntu, install `liblapack-dev`,
-`libblas-dev` and OpenMP support. Repository access is required; there is no
-PyPI release.
+The local PyPI release pipeline builds wheels for CPython 3.10–3.14 on Linux
+x86-64 (glibc 2.28+) and the release Mac's architecture. Wheels bundle their
+non-system native dependencies; the macOS minimum version depends on the bundled
+OpenMP library (see [the release guide](docs/releasing.md)). Once the first
+release is published, install with:
+
+```sh
+uv add tieredq
+# or: pip install tieredq
+```
+
+Until then, install from the repository below. Source builds require C++20,
+CMake, LAPACK/BLAS and OpenMP. On macOS, install `libomp` with Homebrew;
+Accelerate provides LAPACK. On Ubuntu, install `liblapack-dev`, `libblas-dev`
+and OpenMP support.
 
 ```sh
 uv add "tieredq @ git+ssh://git@github.com/SeanPedersen/TieredQ.git"
 ```
+
+See [the release guide](docs/releasing.md) for local builds, validation and publishing.
 
 ## Python
 

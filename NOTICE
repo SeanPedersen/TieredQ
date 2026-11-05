@@ -4,7 +4,11 @@ Training randomness uses the C++ standard library. No copied RNG code or
 random-distribution tables are included.
 
 LAPACK, BLAS and OpenMP implementations are supplied by the build environment
-under their respective licenses.
+under their respective licenses. Release wheels bundle non-system dependencies:
+Linux wheels use OpenBLAS and GCC runtime libraries; macOS wheels use LLVM
+OpenMP and the system Accelerate framework. Their license texts are included in
+licenses/ (OpenBLAS BSD, LLVM Apache-2.0 with LLVM exceptions, GCC GPL-3.0 with
+the GCC Runtime Library Exception, and LGPL-2.1 for libquadmath if bundled).
 
 Python bindings use nanobind (BSD-3-Clause) and its robin-map dependency (MIT).
 Their notices are in licenses/ and included in Python installations.

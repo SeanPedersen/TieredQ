@@ -1,4 +1,6 @@
 build/
+dist/
+wheelhouse/
 example.tq
 .venv/
 __pycache__/
