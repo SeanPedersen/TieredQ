@@ -1,6 +1,7 @@
 // encoding: fused FP32 assignment/projection, ordered quantization, projected FP64 correction.
 #pragma once
 #include "tieredq_layout.h"
+#include "tieredq_lookup_layout.h"
 #include "tieredq_profile.h"
 #include "tieredq_encode_grid.h"
 #include "tieredq_encode_float.h"
@@ -51,7 +52,7 @@ class LazyEncoder {
 struct EncodingWorkspace {
   std::vector<double> v, z, chosen;
   std::vector<uint32_t> chosen_codes;
-  std::array<std::vector<double>,9> thresholds;
+  std::array<std::vector<double>,widest_fine_code_bits+1> thresholds;
   std::array<std::array<double,16>,5> small_levels{};
   explicit EncodingWorkspace(const EncodingModel& model)
       : v(model.sigma.size()), z(v.size()), chosen(v.size()), chosen_codes(v.size()) {

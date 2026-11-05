@@ -176,6 +176,7 @@ void bind_nested(nb::module_& module) {
                               const std::string& metric, const std::string& tier_rows, OptionalMatrix sample) {
         auto config = dv::TieredQConfig::target_code_bits(uint32_t(vectors.shape(1)), prefix_bits);
         config.metric = parse_metric(metric);
+        config.fine_tiers = dv::TieredQFineTiers::off;  // only the flat index serves fine tiers
         config.validate();
         if (sample) require_width(sample->shape(1), config.dimensions);
         const auto layout = parse_tier_rows(tier_rows);

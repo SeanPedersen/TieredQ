@@ -70,13 +70,12 @@ inline void build_lookup_program(const FastScanLookupCache& lookup,size_t ranks,
 
 // Byte stores alias everything, so the tables are read through local restrict pointers; contiguous codes stream
 // through a 64-bit accumulator instead of read-modify-writes of shared bytes.
-inline void read_lookup_codes(const FastScanLookupCache& lookup,const LookupProgram& program,size_t doc,
+// One document's pair bytes, the pair p at codes[p * stride].
+inline void read_lookup_codes(const LookupProgram& program,const uint8_t* block,size_t stride,
                        std::vector<uint32_t>& packed,uint8_t* row) {
   uint32_t* __restrict parts=packed.data();
   const size_t ranks=packed.size(),groups=program.group_end.size();
   std::fill_n(parts,ranks,0);
-  const size_t stride=lookup.stride(doc/lookup_block_docs);
-  const uint8_t* block=lookup.codes.data()+doc/lookup_block_docs*lookup.pairs()*lookup_block_docs+doc%lookup_block_docs;
   const LookupProgram::Slot* __restrict slots=program.slots.data();
   const uint32_t* __restrict group_end=program.group_end.data();
   for (size_t g=0,slot=0;g<groups;++g) {
@@ -145,9 +144,29 @@ class FastRowReader {
     using namespace fast_rows;
     std::fill_n(rows,count*stride_,uint8_t(0));
     if (cache.lookup) {
-      thread_local std::vector<uint32_t> packed;
-      packed.resize(ranks_);
-      for (size_t i=0;i<count;++i) read_lookup_codes(*cache.lookup,program_,docs[i],packed,rows+i*stride_);
+      // Documents' pair bytes lie a block stride (lookup_block_docs) apart, one cache line each. Gathering pair by
+      // pair across all documents keeps many independent misses in flight (#26: one document at a time cost ~45 us
+      // per 1536-dimension row); each row then decodes from its compact copy.
+      const auto& lookup=*cache.lookup;
+      const size_t pairs=lookup.pairs();
+      thread_local std::vector<uint32_t> packed; thread_local std::vector<uint8_t> gathered;
+      thread_local std::vector<const uint8_t*> first; thread_local std::vector<size_t> strides;
+      packed.resize(ranks_); gathered.resize(count*pairs); first.resize(count); strides.resize(count);
+      for (size_t i=0;i<count;++i) {
+        const size_t block=docs[i]/lookup_block_docs;
+        first[i]=lookup.codes.data()+block*pairs*lookup_block_docs+docs[i]%lookup_block_docs;
+        strides[i]=lookup.stride(block);
+      }
+      // Pair-major copy: contiguous stores here, and each document decodes at stride count.
+      constexpr size_t prefetch_pairs=16;
+      for (size_t p=0;p<pairs;++p) {
+        uint8_t* out=gathered.data()+p*count;
+        for (size_t i=0;i<count;++i) {
+          if (p+prefetch_pairs<pairs) __builtin_prefetch(first[i]+(p+prefetch_pairs)*strides[i]);
+          out[i]=first[i][p*strides[i]];
+        }
+      }
+      for (size_t i=0;i<count;++i) read_lookup_codes(program_,gathered.data()+i,count,packed,rows+i*stride_);
     } else if (cache.code_lookup()) {
       for (size_t i=0;i<count;++i) read_code_words(cache,docs[i],code_bytes_,rows+i*stride_);
     } else {

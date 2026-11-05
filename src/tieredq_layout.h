@@ -10,9 +10,15 @@
 #endif
 
 namespace dv::tieredq_detail {
+// Any code up to 12 bits (#26), which may span three bytes; the scan kernels' read_code covers at most two.
+inline uint32_t read_wide_code(const uint8_t* data, uint32_t offset, unsigned bits) {
+  uint32_t window=0;
+  for (uint32_t byte=0;byte*8<offset%8+bits;++byte) window|=uint32_t(data[offset/8+byte])<<(8*byte);
+  return (window>>(offset%8)) & ((1u<<bits)-1);
+}
 inline void write_code(uint8_t* data, uint32_t offset, unsigned bits, unsigned value) {
-  data[offset/8] |= uint8_t(value << (offset%8));
-  if (offset%8+bits>8) data[offset/8+1] |= uint8_t(value >> (8-offset%8));
+  const uint32_t window=uint32_t(value)<<(offset%8);
+  for (uint32_t byte=0;byte*8<offset%8+bits;++byte) data[offset/8+byte] |= uint8_t(window>>(8*byte));
 }
 constexpr double half_max = 65504;
 inline uint16_t half_encode(double value) {

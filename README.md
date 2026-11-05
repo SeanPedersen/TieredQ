@@ -50,6 +50,15 @@ index = TieredQIndex.load("index.tq")
   with slower search. Both modes scan every vector; saving and loading preserve
   the selected representation. Read the selection from `index.mode`.
   The former `fast_mode` boolean argument/property has been removed; use `mode`.
+- Fast ip/cosine indexes may add fine tiers (#26): ranks coded with up to `max_fine_bits=12` bits at the same bytes,
+  whose top bits are an ordinary fast code at the automatic cap (6 bits, or ceil(bits/dim) when larger). The scan reads
+  only those prefixes, then rescores max(32, 1.5·k) candidates exactly. `fine_tiers="auto"` (default) uses them when
+  training predicts at least 1 dB lower weighted error; `"on"` forces and `"off"` disables them; `index.fast_prefix_bits`
+  is the prefix width (0: none). 100k vectors, 6-8 bits/dim: missed top-10 hits fell 58-76% on Gemini-768 and
+  OpenAI-1536 at +3-18% batch time per query (top-100: +11-34%); GloVe-200 predicted no gain and is unchanged. On 1M sets
+  (OpenAI-1536, MS MARCO Cohere-1024) top-10 misses fell 46-79% and search got 3-24% faster (likely as the scan reads
+  fewer bits); encoding is 11-34% slower (wider codes). Only the flat `TieredQIndex` serves fine-tier models; IVF and
+  nested indexes train without them.
 - In C++, use `dv::TieredQIndex(codec)` for fast mode or
   `dv::TieredQIndex(codec, dv::TieredQIndexMode::full)` for full mode.
   Inspect the enum with `index.mode()`; the boolean constructor is removed.

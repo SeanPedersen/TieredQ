@@ -224,15 +224,16 @@ void encoder_reductions() {
 }
 void grid_kernels() {
   using namespace tieredq_detail;
-  constexpr size_t d=67,m=65,rows=7,centroids=3;
+  // Every width up to the fine tiers' (#26): 9 ranks at 1 bit, 8 at each wider width.
+  constexpr size_t m=9+8*(widest_fine_code_bits-1),d=m+2,rows=7,centroids=3;
   std::mt19937 rng(123); std::normal_distribution<float> normal;
   std::vector<float> basis(d*m),centers(centroids*d),mean(m),sigma(m),input(rows*d);
   for (auto* values:{&basis,&centers,&mean,&input}) for (auto& value:*values) value=normal(rng);
   for (size_t r=0;r<m;++r) sigma[r]=float(r%7+1);
-  std::vector<std::vector<float>> levels(9);
+  std::vector<std::vector<float>> levels(widest_fine_code_bits+1);
   std::vector<TieredQTier> tiers;
   uint32_t rank=0,offset=0;
-  for (unsigned bits=1;bits<=8;++bits) {
+  for (unsigned bits=1;bits<=widest_fine_code_bits;++bits) {
     for (unsigned code=0;code<(1u<<bits);++code) levels[bits].push_back(float(code)*.1f-float(1u<<bits)*.05f);
     const unsigned dimensions=bits==1 ? 9 : 8;
     tiers.push_back({rank,dimensions,bits,0,offset}); rank+=dimensions; offset+=dimensions*bits;
@@ -247,7 +248,7 @@ void grid_kernels() {
   }
   std::array<double,scale_grid_storage> reference_dots{},reference_norms{},dots{},norms{};
   scale_grid_terms(model,work,reference_dots.data(),reference_norms.data(),TieredQKernel::scalar);
-  for (auto kernel:{TieredQKernel::scalar,TieredQKernel::avx2,TieredQKernel::avx512}) {
+  for (auto kernel:{TieredQKernel::scalar,TieredQKernel::avx2,TieredQKernel::avx512,TieredQKernel::neon}) {
     if (!TieredQ::kernel_available(kernel)) continue;
     scale_grid_terms(model,work,dots.data(),norms.data(),kernel);
     for (size_t point=0;point<scale_grid_points;++point) {

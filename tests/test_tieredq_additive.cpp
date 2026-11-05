@@ -142,7 +142,8 @@ void wide_index_test() {
   std::vector<float> training(training_rows*dimensions),rows(documents*dimensions),query(dimensions);
   for (auto* values:{&training,&rows,&query}) for (size_t i=0;i<values->size();++i)
     (*values)[i]=normal(random)*std::exp(-float(i%dimensions)/8);
-  const auto codec=TieredQ::train({dimensions,wide_bits,centroids,true},training.data(),training_rows);
+  TieredQConfig config{dimensions,wide_bits,centroids,true}; config.fine_tiers=TieredQFineTiers::off;
+  const auto codec=TieredQ::train(config,training.data(),training_rows);
   require(codec.tiers().front().bits>lookup_code_bits,"wide test needs a wide tier");
   require(persisted_levels(codec,codec.tiers().front().bits)==additive_wide_codebook(codec.tiers().front().bits),"fast wide tier is not additive");
   TieredQIndex fast(codec,TieredQIndexMode::fast),full(codec,TieredQIndexMode::full);
@@ -170,9 +171,9 @@ void wide_index_test() {
 void padded_allocation_test() {
   constexpr int ranks=200;
   DistortionTable error{1};
-  for (unsigned b=1;b<=max_code_bits;++b) error[b]=distortion(gaussian_codebooks()[b]);
+  for (unsigned b=1;b<=widest_code_bits;++b) error[b]=distortion(gaussian_codebooks()[b]);
   error[split_code_bits]=distortion(additive_three_codebook());
-  AllocationModel model{std::vector<double>(ranks),std::vector<uint32_t>(ranks,max_code_bits),std::vector(ranks,error)};
+  AllocationModel model{std::vector<double>(ranks),std::vector<uint32_t>(ranks,widest_code_bits),std::vector(ranks,error)};
   for (int rank=0;rank<ranks;++rank) model.variance[rank]=std::exp(-rank/double(ranks));
   size_t additive=0;
   for (uint32_t code_bits=ranks;code_bits<=4*ranks;code_bits+=ranks/8) for (uint32_t odd:{0u,1u,3u}) {
@@ -220,7 +221,7 @@ double enumerated_distortion(const std::vector<double>& variance,const Distortio
 // The exact allocator matches the enumerator on random spectra (with ties and zero variances) at every padded limit.
 void exact_allocation_test() {
   DistortionTable error{1};
-  for (unsigned b=1;b<=max_code_bits;++b) error[b]=distortion(gaussian_codebooks()[b]);
+  for (unsigned b=1;b<=widest_code_bits;++b) error[b]=distortion(gaussian_codebooks()[b]);
   error[split_code_bits]=distortion(additive_three_codebook());
   std::mt19937_64 rng(21);
   size_t cases=0;
@@ -229,7 +230,7 @@ void exact_allocation_test() {
     std::vector<double> variance(d);
     std::exponential_distribution<double> exponential(1.0/(1+trial%4));
     for (auto& v:variance) v=trial%5==0 ? double(rng()%3) : std::exp(-exponential(rng));
-    AllocationModel model{variance,std::vector<uint32_t>(d,max_code_bits),std::vector(d,error)};
+    AllocationModel model{variance,std::vector<uint32_t>(d,widest_code_bits),std::vector(d,error)};
     for (uint32_t limit=CHAR_BIT;limit<=4*d+CHAR_BIT;limit+=1+uint32_t(rng()%3)) {
       const auto exact=exact_lookup_allocation(variance,error,limit);
       require(exact.bits.size()==d && widest_tier(exact.bits)<=lookup_code_bits,"exact allocation left the nibble layout");

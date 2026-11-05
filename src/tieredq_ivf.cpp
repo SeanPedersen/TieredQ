@@ -5,6 +5,7 @@
 #include "tieredq_fast_scan.h"
 #include "tieredq_index_read.h"
 #include "tieredq_ivf_coarse.h"
+#include "tieredq_fast_fine.h"
 #include <numeric>
 namespace dv {
 using tieredq_detail::bad;
@@ -45,7 +46,8 @@ std::vector<uint32_t> probe_order(const float* closeness,const std::vector<uint3
 } // namespace
 
 TieredQIVFIndex::TieredQIVFIndex(TieredQ codec,uint32_t lists,uint64_t seed)
-    : documents_(std::move(codec),TieredQIndexMode::fast),coarse_lists_(lists),seed_(seed) {
+    : documents_(tieredq_detail::without_fine_tiers(std::move(codec),"TieredQIVFIndex"),TieredQIndexMode::fast),
+      coarse_lists_(lists),seed_(seed) {
   list_begin_.assign(lists ? lists : documents_.codec().config().num_centroids,0);
   list_rows_.assign(list_begin_.size(),0);
 }

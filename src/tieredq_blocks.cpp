@@ -5,6 +5,7 @@
 #include "tieredq/tieredq_blocks.h"
 #include "tieredq_fast_scan.h"
 #include "tieredq_fast_rows.h"
+#include "tieredq_fast_fine.h"
 #include <cstring>
 #include <numeric>
 
@@ -101,14 +102,16 @@ std::shared_ptr<const tieredq_detail::FastRowReader> TieredQFastBlocks::make_rea
                                                                codec.code_bytes(), codec.bytes_per_vector());
 }
 
-TieredQFastBlocks::TieredQFastBlocks(const TieredQ& codec) : codec_(codec) {
+TieredQFastBlocks::TieredQFastBlocks(const TieredQ& codec)
+    : codec_(tieredq_detail::without_fine_tiers(codec, "TieredQFastBlocks")) {
   const TieredQIndex index(codec_, TieredQIndexMode::full);
   empty_ = index.make_fast_storage(nullptr, 0);
   format_ = format_of(*empty_);
   reader_ = make_reader(codec_, *empty_);
 }
 
-TieredQFastBlocks::TieredQFastBlocks(const TieredQ& codec, uint32_t format) : codec_(codec), format_(format) {
+TieredQFastBlocks::TieredQFastBlocks(const TieredQ& codec, uint32_t format)
+    : codec_(tieredq_detail::without_fine_tiers(codec, "TieredQFastBlocks")), format_(format) {
   using namespace tieredq_detail;
   const bool lookup = (format & format_flags) == lookup_format_flag;
   const int level_max = int(format >> format_level_shift);

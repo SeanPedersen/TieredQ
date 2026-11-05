@@ -11,7 +11,7 @@
 #include <vector>
 
 namespace dv::tieredq_detail {
-constexpr unsigned max_code_bits=8;
+constexpr unsigned max_code_bits=widest_fine_code_bits;
 using DistortionTable=std::array<double,max_code_bits+1>;
 // Per-rank variance (descending PCA order), bit cap, and distortion of each code width in units of that variance.
 struct AllocationModel {
@@ -72,21 +72,26 @@ inline uint32_t lookup_storage_limit(const Allocation& fallback,uint32_t code_bi
   return widest_tier(fallback)<=lookup_code_bits ? std::max(code_bits,lookup_stored_bits(fallback,false)) : code_bits;
 }
 struct FastLookupAllocation { Allocation bits; bool additive_three; };
-// Bits per vector stored by a nibble layout whose codes all split into 1-, 2- and 4-bit parts.
-inline uint32_t additive_stored_bits(const Allocation& bits) {
+// Bits per vector stored by a nibble layout whose codes all split into 1-, 2- and 4-bit parts. Codes wider than
+// prefix_bits (fine tiers, #26) store their top prefix_bits in that layout and the remaining bits unpadded beside it.
+inline uint32_t additive_stored_bits(const Allocation& bits,unsigned prefix_bits=widest_code_bits) {
   LookupWidthCounts parts{};
+  uint32_t fine=0;
   for (unsigned b:bits) {
-    if (b==split_code_bits) { ++parts[split_low_bits]; ++parts[split_high_bits]; }
-    else if (b<=lookup_code_bits) ++parts[b];
-    else for (unsigned part:additive_book_parts()[b].bits) ++parts[part];
+    const unsigned scanned=std::min(b,prefix_bits);
+    fine+=b-scanned;
+    if (scanned==split_code_bits) { ++parts[split_low_bits]; ++parts[split_high_bits]; }
+    else if (scanned<=lookup_code_bits) ++parts[scanned];
+    else for (unsigned part:additive_book_parts()[scanned].bits) ++parts[part];
   }
-  return uint32_t(lookup_group_bytes(lookup_group_count(parts,false))*CHAR_BIT);
+  return uint32_t(lookup_group_bytes(lookup_group_count(parts,false))*CHAR_BIT)+fine;
 }
 // Greedy allocation under the additive tables, trimmed until its padded nibble storage fits code_bits.
-inline Allocation additive_wide_allocation(const AllocationModel& model,uint32_t code_bits) {
+inline Allocation additive_wide_allocation(const AllocationModel& model,uint32_t code_bits,
+                                           unsigned prefix_bits=widest_code_bits) {
   for (uint32_t budget=code_bits;;--budget) {
     auto bits=greedy_allocation(model,budget,false);
-    if (additive_stored_bits(bits)<=code_bits || !budget) return bits;
+    if (additive_stored_bits(bits,prefix_bits)<=code_bits || !budget) return bits;
   }
 }
 // Default power of the variance weights (see TieredQ::train) at code_bits over dimensions model ranks: 1.5 from

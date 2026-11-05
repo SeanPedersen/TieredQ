@@ -1,6 +1,7 @@
 // Exact/fast index persistence: legacy packed rows or a self-contained fast representation.
 #include "tieredq/tieredq.h"
 #include "tieredq_index_read.h"
+#include <span>
 namespace dv {
 using tieredq_detail::Layout;
 using tieredq_detail::bad;
@@ -9,7 +10,15 @@ using tieredq_detail::save_file;
 void TieredQIndex::save(const std::string& path) const {
   if (fast_mode_) {
     auto storage=fast_ ? fast_ : make_fast_storage(nullptr,0);
-    save_file(path,codec_.serialize(),tieredq_detail::serialize_fast_storage(*storage),size(),tieredq_detail::fast_index_file_kind);
+    auto payload=tieredq_detail::serialize_fast_storage(*storage,
+        fine_tiers_ ? tieredq_detail::fine_payload_version : tieredq_detail::fast_payload_version);
+    if (fine_tiers_) {
+      tieredq_detail::Writer fine{std::move(payload)};
+      const auto rows=std::span(fine_).first(product(size(),fine_tiers_->fine_bytes));
+      tieredq_detail::write_fast_bytes(fine,rows);
+      payload=std::move(fine.data);
+    }
+    save_file(path,codec_.serialize(),payload,size(),tieredq_detail::fast_index_file_kind);
     return;
   }
   const size_t stride=codec_.bytes_per_vector();

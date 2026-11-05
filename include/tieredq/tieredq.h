@@ -10,7 +10,7 @@
 #include "tieredq/detail/tieredq_scan_plan.h"
 
 namespace dv {
-namespace tieredq_detail { class StageProfile; struct FastScanCache; struct FastQueryBasis; struct EncoderData; class LazyEncoder;
+namespace tieredq_detail { struct FastFine; class FastRowReader; class StageProfile; struct FastScanCache; struct FastQueryBasis; struct EncoderData; class LazyEncoder;
                            struct TrainingRows;
                            struct CoarseQuantizer; struct Writer; }
 enum class TieredQIndexMode { fast, full };
@@ -19,6 +19,7 @@ enum class TieredQKernel { automatic, scalar, avx2, avx512, neon };
 // and queries into one more dimension (whitened for the query distribution, as calibrated on the training sample),
 // where inner products rank by distance; index scores are estimates of -|q - x|^2.
 enum class TieredQMetric { inner_product, cosine, l2 };
+enum class TieredQFineTiers { automatic, off, on };
 struct TieredQConfig {
   uint32_t dimensions = 512;
   uint32_t code_bits = 512;
@@ -27,6 +28,13 @@ struct TieredQConfig {
   // Training-only cap on bits per coordinate; persisted models record only the resulting tiers. 0 (automatic) is 6 for
   // fast-target inner product and cosine, or code_bits / dimensions rounded up when larger, and 8 otherwise.
   uint32_t max_bits = 0;
+  // Training-only fine tiers (#26), for fast-target inner product and cosine with a cap of at least 6 bits: ranks may
+  // take up to max_fine_bits, and the fast scan reads only each code's top max_bits (its prefix) before rescoring its
+  // candidates exactly, at the same stored bytes. automatic adds them when the allocator predicts a clear error drop,
+  // on whenever the allocation uses them. Only the flat TieredQIndex serves fine-tier models; other indexes reject
+  // them. Other targets and metrics ignore automatic and reject on.
+  TieredQFineTiers fine_tiers = TieredQFineTiers::automatic;
+  uint32_t max_fine_bits = 12;
   // Training-only: only the top-N PCA ranks may exceed 6 bits (UINT32_MAX disables the restriction).
   uint32_t wide_dims = UINT32_MAX;
   // Training-only: the index mode whose storage layout bit allocation optimises for. Fast models with all tiers
@@ -90,6 +98,9 @@ class TieredQ {
                                size_t sample_rows, uint64_t seed = 0);
   const TieredQConfig& config() const { return config_; }
   const std::vector<TieredQTier>& tiers() const { return tiers_; }
+  // Width of the fast-scan prefix of fine-tier models (#26): tiers wider than it refine a prefix code of this width.
+  // 0 for models without fine tiers.
+  uint32_t fast_prefix_bits() const { return fast_prefix_bits_; }
   size_t coded_dimensions() const { return sigma_.size(); }
   size_t code_bytes() const { return (size_t(config_.code_bits) + 7) / 8; }
   size_t metadata_bytes_per_vector() const;
@@ -156,9 +167,13 @@ class TieredQ {
   friend class TieredQRefinement;
   friend class TieredQNestedIVFIndex;
   TieredQ() = default;
+  // The fast-scan view of a fine-tier model: the same model serving prefix tiers (none wider than its prefix width,
+  // code_bits = their bits) without fine tiers; derived state is rebuilt as on load.
+  TieredQ prefix_view(std::vector<TieredQTier> tiers) const;
   static TieredQ train_model(TieredQConfig config, const tieredq_detail::TrainingRows& sample, size_t rows, bool additive_wide_tiers, uint64_t seed);
   TieredQConfig config_;
   std::vector<TieredQTier> tiers_;
+  uint32_t fast_prefix_bits_ = 0;
   std::vector<float> centroids_, basis_, mean_, sigma_;
   // Binary16 basis of format-3 models in 16-rank panels (tieredq_basis_panels.h; files keep d x m row order);
   // exactly one of basis_ (row-major) and basis_half_ holds the d x m basis.
@@ -201,11 +216,13 @@ class TieredQIndex {
   TieredQIndex& operator=(const TieredQIndex&) = default;
   TieredQIndex(TieredQIndex&& other) noexcept
       : codec_(std::move(other.codec_)), fast_mode_(other.fast_mode_), payload_(std::move(other.payload_)),
-        fast_(std::move(other.fast_)), count_(std::exchange(other.count_,0)) {}
+        fast_(std::move(other.fast_)), fine_tiers_(std::move(other.fine_tiers_)), fine_(std::move(other.fine_)),
+        count_(std::exchange(other.count_,0)) {}
   TieredQIndex& operator=(TieredQIndex&& other) noexcept {
     if (this!=&other) {
       codec_=std::move(other.codec_); fast_mode_=other.fast_mode_; payload_=std::move(other.payload_);
-      fast_=std::move(other.fast_); count_=std::exchange(other.count_,0);
+      fast_=std::move(other.fast_); fine_tiers_=std::move(other.fine_tiers_); fine_=std::move(other.fine_);
+      count_=std::exchange(other.count_,0);
     }
     return *this;
   }
@@ -263,7 +280,16 @@ class TieredQIndex {
   // Exact-mode planes across 16 documents; empty for fast-only indexes.
   std::vector<uint8_t> payload_;
   std::shared_ptr<tieredq_detail::FastScanCache> fast_;
+  // Fine-tier fast models (#26): the prefix view the scan uses, and every document's fine bits.
+  std::shared_ptr<const tieredq_detail::FastFine> fine_tiers_;
+  std::vector<uint8_t> fine_;
   size_t count_ = 0;
+  const TieredQ& scan_codec() const;
+  // Exact scores of scanned candidates; rows[i] is hits[i]'s prefix row (fine_read_slack readable bytes past each).
+  void score_fine(const TieredQQuery& weights, TieredQHit* hits, size_t count, const uint8_t* const* rows) const;
+  static void keep_best(std::vector<TieredQHit>& hits, size_t k);
+  // Query weights for fine-tier scans and rescoring, from the scan's own projection where it has one.
+  std::vector<TieredQQuery> fine_query_weights(const float* queries, size_t rows) const;
 };
 // Fast-mode inverted-file index. With lists == 0 each of the codec's k-means centroids (at most 256) forms one list
 // at no extra storage; otherwise build trains a separate model-space k-means coarse quantizer with that many lists

@@ -22,6 +22,7 @@ class PythonIVFIndex {
   PythonIVFIndex(uint32_t dimensions, uint32_t code_bits, uint32_t lists, const std::string& metric)
       : config_(dv::TieredQConfig::target_code_bits(dimensions, code_bits)), lists_(lists) {
     config_.metric = parse_metric(metric);
+    config_.fine_tiers = dv::TieredQFineTiers::off;  // only the flat index serves fine tiers
     config_.validate();
   }
   size_t size() const {

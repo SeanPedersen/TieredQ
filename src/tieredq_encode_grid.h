@@ -197,6 +197,11 @@ __attribute__((target("avx512f"))) void scale_grid_avx512(const Model& model,con
         case 6: scale_grid_wide_avx512<6>(model,work,tier,grid,dot,norm); continue;
         case 7: scale_grid_wide_avx512<7>(model,work,tier,grid,dot,norm); continue;
         case 8: scale_grid_wide_avx512<8>(model,work,tier,grid,dot,norm); continue;
+        // Fine tiers (#26).
+        case 9: scale_grid_wide_avx512<9>(model,work,tier,grid,dot,norm); continue;
+        case 10: scale_grid_wide_avx512<10>(model,work,tier,grid,dot,norm); continue;
+        case 11: scale_grid_wide_avx512<11>(model,work,tier,grid,dot,norm); continue;
+        case 12: scale_grid_wide_avx512<12>(model,work,tier,grid,dot,norm); continue;
       }
 
     }

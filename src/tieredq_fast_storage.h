@@ -6,6 +6,8 @@
 #include <climits>
 
 namespace dv::tieredq_detail {
+// Version 3 payloads (#26) hold fine-tier indexes: version 2's prefix storage, then every document's fine bits.
+constexpr uint32_t fine_payload_version=3;
 constexpr uint32_t fast_payload_version=2,fast_lookup_kind=1,fast_levels_kind=2,fast_byte_code_kind=3,fast_packed_code_kind=4;
 constexpr size_t fast_metadata_bytes=sizeof(uint16_t)*2+sizeof(uint8_t);
 inline size_t fast_storage_bytes(const FastScanCache& cache) {
@@ -95,8 +97,8 @@ template<class R,class C> void read_fast_bytes(R& reader,C& bytes,size_t expecte
   bytes.resize(expected);
   reader.bytes(bytes.data(),expected);
 }
-inline std::vector<uint8_t> serialize_fast_storage(const FastScanCache& cache) {
-  Writer writer;writer.u32(fast_payload_version);
+inline std::vector<uint8_t> serialize_fast_storage(const FastScanCache& cache,uint32_t version=fast_payload_version) {
+  Writer writer;writer.u32(version);
   writer.u32(cache.lookup ? fast_lookup_kind : cache.code_lookup() ? fast_packed_code_kind : fast_levels_kind);
   writer.u32(cache.lookup ? 0 : uint32_t(cache.level_max));
   writer.halves(cache.factor.owned());writer.halves(cache.correction.owned());write_fast_bytes(writer,cache.centroid);
@@ -151,6 +153,5 @@ template<class R> void read_fast_storage(R& reader,FastScanCache& cache,size_t c
     if (cache.code_lookup()) validate_packed_codes(cache);
     else if (std::any_of(cache.levels.begin(),cache.levels.end(),[&](int value){return value<-cache.level_max || value>cache.level_max;})) bad("invalid fast level");
   }
-  if (reader.remaining()) bad("trailing fast payload bytes");
 }
 } // namespace dv::tieredq_detail

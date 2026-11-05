@@ -16,6 +16,7 @@
 #include "tieredq_train_codebook.h"
 #include "tieredq_train_codebook_data.h"
 #include "tieredq_train_allocation.h"
+#include "tieredq_train_fine.h"
 #include "tieredq_metric.h"
 #include "training_rng.h"
 #include <algorithm>
@@ -154,10 +155,9 @@ std::vector<float> rotation(int n, uint64_t seed, const tieredq_detail::Training
   profile.mark("tier_rotation_store");
   return out;
 }
-uint32_t read_code(const uint8_t* data, uint32_t offset, unsigned bits) {
-  uint32_t value=data[offset/8]>> (offset%8);
-  if (offset%8+bits>8) value |= uint32_t(data[offset/8+1]) << (8-offset%8);
-  return value & ((1u<<bits)-1);
+// Fine-tier codes wider than 8 bits (#26) span three bytes, which only the scalar scorer reads.
+bool has_three_byte_codes(const std::vector<TieredQTier>& tiers) {
+  return std::any_of(tiers.begin(),tiers.end(),[](const TieredQTier& t) { return t.bits>tieredq_detail::widest_code_bits; });
 }
 #ifdef DV_TIEREDQ_X86
 // Decode one metadata field for an entire epilogue batch; plane bytes are interleaved into half words.
@@ -309,7 +309,10 @@ void TieredQConfig::validate() const {
   if (!dimensions || dimensions>uint32_t(INT32_MAX) || !code_bits || uint64_t(code_bits)>uint64_t(dimensions)*8)
     bad("dimensions must be positive and budget must be in [1, 8*D]");
   if (!num_centroids || num_centroids>256) bad("centroid count must be in [1, 256]");
-  if (max_bits>8) bad("max bits per coordinate must be in [1, 8], or 0 for automatic");
+  if (max_bits>tieredq_detail::widest_code_bits) bad("max bits per coordinate must be in [1, 8], or 0 for automatic");
+  if (fine_tiers!=TieredQFineTiers::automatic && fine_tiers!=TieredQFineTiers::off && fine_tiers!=TieredQFineTiers::on)
+    bad("invalid fine-tier mode");
+  if (!max_fine_bits || max_fine_bits>tieredq_detail::widest_fine_code_bits) bad("max fine bits must be in [1, 12]");
   if (target_mode!=TieredQIndexMode::fast && target_mode!=TieredQIndexMode::full) bad("invalid target index mode");
   if (metric!=TieredQMetric::inner_product && metric!=TieredQMetric::cosine && metric!=TieredQMetric::l2) bad("invalid metric");
   if (!std::isfinite(allocation_power) || allocation_power<0) bad("allocation power must be finite and non-negative");
@@ -465,17 +468,25 @@ TieredQ TieredQ::train_model(TieredQConfig config,const tieredq_detail::Training
   profile.mark("eigen");
   tieredq_detail::dump_training_stage("eigenvectors.f64",cov);
   tieredq_detail::dump_training_stage("eigenvalues.f64",eigenvalues);
-  c.levels_.resize(9);
+  c.levels_.resize(tieredq_detail::widest_code_bits+1);
   const auto& additive=tieredq_detail::additive_three_codebook();
   tieredq_detail::DistortionTable gaussian{1};
-  for (unsigned b=1;b<=8;++b) { c.levels_[b]=tieredq_detail::gaussian_codebooks()[b]; gaussian[b]=tieredq_detail::distortion(c.levels_[b]); }
+  for (unsigned b=1;b<=tieredq_detail::widest_code_bits;++b) { c.levels_[b]=tieredq_detail::gaussian_codebooks()[b]; gaussian[b]=tieredq_detail::distortion(c.levels_[b]); }
   auto additive_gaussian=gaussian; additive_gaussian[tieredq_detail::split_code_bits]=tieredq_detail::distortion(additive);
   // Automatic max_bits keeps fast IP/cosine models below fine-section widths: RaBitQ's 4-bit recall on OpenAI then took
   // -0.3/+1.2% code bits and ran 1.4-1.7x faster (#13). Budgets above that per rank still get the width they need.
+  const bool fast_additive=config.target_mode==TieredQIndexMode::fast && additive_wide_tiers;
   if (!config.max_bits)
-    config.max_bits=config.target_mode==TieredQIndexMode::fast && additive_wide_tiers
+    config.max_bits=fast_additive
         ? std::max(tieredq_detail::additive_wide_max_bits,(config.code_bits+uint32_t(d)-1)/uint32_t(d))
         : tieredq_detail::widest_code_bits;
+  // Fine tiers (#26) refine additive prefix books, which exist from the automatic cap's minimum width up.
+  const bool fine_possible=fast_additive && config.max_bits>=tieredq_detail::additive_wide_max_bits;
+  if (config.fine_tiers==TieredQFineTiers::on && !fine_possible)
+    bad("fine tiers need fast-target inner-product or cosine training with max_bits of at least 6");
+  if (config.fine_tiers==TieredQFineTiers::on && config.max_fine_bits<=config.max_bits)
+    bad("fine tiers need max_fine_bits above max_bits");
+  const bool fine_tiers=fine_possible && config.fine_tiers!=TieredQFineTiers::off && config.max_fine_bits>config.max_bits;
   tieredq_detail::AllocationModel allocation{std::vector<double>(d),std::vector<uint32_t>(d),std::vector(d,gaussian)};
   for (int j=0;j<d;++j) {
     allocation.variance[j]=eigenvalues[d-1-j];
@@ -514,13 +525,23 @@ TieredQ TieredQ::train_model(TieredQConfig config,const tieredq_detail::Training
     for (unsigned b=tieredq_detail::lookup_code_bits+1;b<=tieredq_detail::widest_code_bits;++b)
       c.levels_[b]=tieredq_detail::additive_wide_codebook(b);
     bits=tieredq_detail::additive_wide_allocation(weighted,config.code_bits);
+    if (fine_tiers) {
+      auto books=tieredq_detail::fine_codebooks(config.max_bits);
+      if (auto fine=tieredq_detail::fine_allocation(weighted,bits,books,config.max_fine_bits,config.wide_dims,config.code_bits,
+                                                    config.fine_tiers==TieredQFineTiers::on)) {
+        bits=std::move(*fine);
+        c.fast_prefix_bits_=config.max_bits;
+        c.levels_.resize(tieredq_detail::widest_fine_code_bits+1);
+        for (unsigned b=config.max_bits+1;b<=tieredq_detail::widest_fine_code_bits;++b) c.levels_[b]=std::move(books.books[b]);
+      }
+    }
   } else if (power!=1.0) {
     bits=tieredq_detail::greedy_allocation(weighted,config.code_bits,false);
   }
   profile.mark("bit_allocation");
   // Group equal precisions; retain source PCA ranks explicitly in the unrotated basis.
   std::vector<int> ranks; uint32_t offset=0;
-  for (int b=8;b>=1;--b) {
+  for (int b=int(tieredq_detail::widest_fine_code_bits);b>=1;--b) {
     const auto start=ranks.size(); for (int j=0;j<d;++j) if (bits[j]==unsigned(b)) ranks.push_back(j);
     if (ranks.size()!=start) {
       const uint32_t count=uint32_t(ranks.size()-start);
@@ -805,6 +826,7 @@ void TieredQ::score(const uint8_t* payload,size_t count,const TieredQQuery& q,fl
     bad("query scan group mismatch");
   if (kernel==TieredQKernel::automatic) kernel=kernel_available(TieredQKernel::avx512) ? TieredQKernel::avx512 : kernel_available(TieredQKernel::avx2) ? TieredQKernel::avx2 : TieredQKernel::scalar;
   if (!kernel_available(kernel)) bad("requested scoring kernel is unavailable");
+  if (has_three_byte_codes(tiers_)) kernel=TieredQKernel::scalar;
   if (!count) return;
   const size_t stride=bytes_per_vector();
   size_t begin=0;
@@ -818,7 +840,7 @@ void TieredQ::score(const uint8_t* payload,size_t count,const TieredQQuery& q,fl
   for (;begin<count;++begin) {
     const uint8_t* doc=payload+begin*stride; float sum=0;
     for (const auto& t:tiers_) for (uint32_t j=0;j<t.dimensions;++j)
-      sum+=q.lut[q.offsets[t.start+j]+read_code(doc,t.bit_offset+j*t.bits,t.bits)];
+      sum+=q.lut[q.offsets[t.start+j]+tieredq_detail::read_wide_code(doc,t.bit_offset+j*t.bits,t.bits)];
     const uint8_t cid=doc[code_bytes()];
     if (cid>=config_.num_centroids) bad("invalid centroid id");
     float score=q.centroid_scores[cid];
@@ -839,8 +861,12 @@ void TieredQ::validate_model() const {
       for (size_t j=i+1;j<d;++j) if (lift_base_map_[i*d+j]!=0) bad("L2 lift is not lower triangular");
     }
   } else if (!lift_base_map_.empty() || lift_scale_!=1) bad("lift on a non-L2 model");
-  if (!m || m>d || tiers_.empty() || tiers_.size()>8 || levels_.size()!=9)
+  const size_t tables=(fast_prefix_bits_ ? tieredq_detail::widest_fine_code_bits : tieredq_detail::widest_code_bits)+1;
+  if (!m || m>d || tiers_.empty() || tiers_.size()>tieredq_detail::widest_fine_code_bits || levels_.size()!=tables)
     bad("invalid model layout");
+  if (fast_prefix_bits_ && (fast_prefix_bits_<tieredq_detail::additive_wide_max_bits || fast_prefix_bits_>tieredq_detail::widest_code_bits ||
+      tiers_.front().bits<=fast_prefix_bits_))
+    bad("invalid fine-tier prefix");
   if (!basis_.empty() && !basis_half_.empty()) bad("model holds two basis encodings");
   const bool basis_shape=basis_half_.empty() ? basis_.size()==product(d,m) :
       basis_half_.size()==tieredq_detail::basis_panel_size(d,m) && tieredq_detail::basis_panel_padding_zero(basis_half_,d,m);
@@ -848,12 +874,12 @@ void TieredQ::validate_model() const {
   uint32_t rank=0; uint64_t offset=0;
   for (size_t i=0;i<tiers_.size();++i) {
     const auto& t=tiers_[i];
-    if (t.start!=rank || !t.dimensions || t.dimensions>m-rank || !t.bits || t.bits>8 || t.scale_group!=0 || t.bit_offset!=offset) bad("invalid tier descriptor");
+    if (t.start!=rank || !t.dimensions || t.dimensions>m-rank || !t.bits || t.bits>=levels_.size() || t.scale_group!=0 || t.bit_offset!=offset) bad("invalid tier descriptor");
     rank+=t.dimensions; offset+=uint64_t(t.dimensions)*t.bits;
   }
   if (rank!=m || offset!=config_.code_bits) bad("tier budget mismatch");
   if (!levels_[0].empty()) bad("invalid zero-bit table");
-  for (unsigned b=1;b<=8;++b) if (levels_[b].size()!=(size_t(1)<<b) || !std::is_sorted(levels_[b].begin(),levels_[b].end())) bad("invalid Lloyd-Max table");
+  for (unsigned b=1;b<levels_.size();++b) if (levels_[b].size()!=(size_t(1)<<b) || !std::is_sorted(levels_[b].begin(),levels_[b].end())) bad("invalid Lloyd-Max table");
   for (float s:sigma_) if (!(s>0) || !std::isfinite(s)) bad("invalid sigma");
   for (const auto* a:{&centroids_,&basis_,&mean_}) finite_rows(a->data(),a->size());
   for (uint16_t v:basis_half_) if (!std::isfinite(tieredq_detail::half_decode(v))) bad("nonfinite model");
@@ -873,6 +899,8 @@ std::vector<uint8_t> TieredQ::serialize() const {
   if (half_basis) w.halves(tieredq_detail::basis_rows_from_panels(basis_half_,model_dimensions(),coded_dimensions())); else w.floats(basis_);
   w.floats(mean_); w.floats(sigma_);
   w.u32(uint32_t(levels_.size())); for (const auto& l:levels_) w.floats(l);
+  // Fine-tier models (#26) alone hold the wider tables, followed by their prefix width.
+  if (fast_prefix_bits_) w.u32(fast_prefix_bits_);
   if (metric) {
     w.u32(uint32_t(config_.metric));
     if (config_.metric==TieredQMetric::l2) {
@@ -884,6 +912,15 @@ std::vector<uint8_t> TieredQ::serialize() const {
   }
   return w.data;
 }
+TieredQ TieredQ::prefix_view(std::vector<TieredQTier> tiers) const {
+  TieredQ view=*this;
+  view.config_.code_bits=0;
+  for (const auto& t:tiers) view.config_.code_bits+=t.dimensions*t.bits;
+  view.tiers_=std::move(tiers);
+  view.fast_prefix_bits_=0;
+  view.levels_.resize(tieredq_detail::widest_code_bits+1);
+  return deserialize(view.serialize());
+}
 TieredQ TieredQ::deserialize(const std::vector<uint8_t>& data) {
   Reader r{data}; TieredQ c;
   c.config_.dimensions=r.u32(); c.config_.code_bits=r.u32(); c.config_.num_centroids=r.u32();
@@ -891,12 +928,16 @@ TieredQ TieredQ::deserialize(const std::vector<uint8_t>& data) {
   const auto format=r.u32();
   if (format!=metric_model_format && format!=model_format && format!=fp32_basis_model_format) bad("unsupported codec format");
   c.config_.validate();
-  auto cb=r.u32(),pb=r.u32(),nt=r.u32(); if (cb!=c.code_bytes() || nt==0 || nt>8) bad("invalid layout header");
+  auto cb=r.u32(),pb=r.u32(),nt=r.u32(); if (cb!=c.code_bytes() || nt==0 || nt>tieredq_detail::widest_fine_code_bits) bad("invalid layout header");
   for (uint32_t i=0;i<nt;++i) c.tiers_.push_back({r.u32(),r.u32(),r.u32(),r.u32(),r.u32()});
   c.centroids_=r.floats();
   if (format==fp32_basis_model_format) c.basis_=r.floats(); else c.basis_half_=r.halves();
   c.mean_=r.floats(); c.sigma_=r.floats();
-  if (r.u32()!=9) bad("table count mismatch"); for (int i=0;i<9;++i) c.levels_.push_back(r.floats());
+  const uint32_t table_count=r.u32();
+  if (table_count!=tieredq_detail::widest_code_bits+1 && table_count!=tieredq_detail::widest_fine_code_bits+1)
+    bad("table count mismatch");
+  for (uint32_t i=0;i<table_count;++i) c.levels_.push_back(r.floats());
+  if (table_count==tieredq_detail::widest_fine_code_bits+1) c.fast_prefix_bits_=r.u32();
   if (format==metric_model_format) {
     const uint32_t metric=r.u32();
     if (metric!=uint32_t(TieredQMetric::cosine) && metric!=uint32_t(TieredQMetric::l2)) bad("invalid metric");
@@ -930,6 +971,7 @@ void TieredQ::score_planes(const uint8_t* block,size_t n,const TieredQQuery& q,f
   if (q.weights.size()!=coded_dimensions()) bad("query weight shape mismatch");
   if (kernel==TieredQKernel::automatic) kernel=kernel_available(TieredQKernel::avx512) ? TieredQKernel::avx512 : kernel_available(TieredQKernel::avx2) ? TieredQKernel::avx2 : kernel_available(TieredQKernel::neon) ? TieredQKernel::neon : TieredQKernel::scalar;
   if (!kernel_available(kernel)) bad("requested scoring kernel is unavailable");
+  if (has_three_byte_codes(tiers_)) kernel=TieredQKernel::scalar;
   const size_t stride=bytes_per_vector(); size_t done=0;
   std::vector<uint8_t> tail;
 #ifdef DV_TIEREDQ_NEON
@@ -1029,7 +1071,7 @@ void TieredQ::decode(const uint8_t* payload,size_t count,float* rows) const {
     if (cid>=config_.num_centroids) bad("invalid centroid id");
     const double factor=layout.factor(code);
     for (const auto& t:tiers_) for (uint32_t j=0;j<t.dimensions;++j) {
-      const size_t r=t.start+j; const float level=levels_[t.bits][read_code(code,t.bit_offset+j*t.bits,t.bits)];
+      const size_t r=t.start+j; const float level=levels_[t.bits][tieredq_detail::read_wide_code(code,t.bit_offset+j*t.bits,t.bits)];
       precise[r]=mean_[r]+factor*(double(sigma_[r])*level);
     }
     float* row=lifted ? model_row.data() : rows+i*d;

@@ -319,6 +319,7 @@ void tieredq_refinement_tests();
 void tieredq_nested_tests();
 void tieredq_nested_flat_tests();
 void tieredq_blocks_tests();
+void tieredq_fast_fine_tests();
 int main() {
   auto dir=std::filesystem::temp_directory_path()/("tieredq_test_"+std::to_string(getpid())); std::filesystem::create_directory(dir);
   try {
@@ -338,6 +339,7 @@ int main() {
     tieredq_refinement_tests();
     tieredq_nested_tests();
     tieredq_nested_flat_tests();
+    tieredq_fast_fine_tests();
     tieredq_blocks_tests();
     fast_scan_test();
     fast_scan_test(128,4);

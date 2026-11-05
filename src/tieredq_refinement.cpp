@@ -315,8 +315,9 @@ size_t TieredQRefinement::positions() const { return prefix_.coded_dimensions()+
 TieredQRefinement TieredQRefinement::train(const TieredQ& prefix,uint32_t total_code_bits,const float* sample,size_t rows,
                                            uint64_t seed) {
   if (total_code_bits<=prefix.config().code_bits) bad("refinement needs a larger budget than its prefix");
+  if (prefix.fast_prefix_bits()) bad("refinement does not extend fine-tier models; train the prefix with fine_tiers off");
   auto config=prefix.config();
-  config.code_bits=total_code_bits; config.rotate_tiers=false;
+  config.code_bits=total_code_bits; config.rotate_tiers=false; config.fine_tiers=TieredQFineTiers::off;
   // Suffix targets come from the finer model's widths; the automatic fast-scan cap would only narrow them.
   if (!config.max_bits) config.max_bits=max_bits;
   const auto finer=TieredQ::train(config,sample,rows,seed);
