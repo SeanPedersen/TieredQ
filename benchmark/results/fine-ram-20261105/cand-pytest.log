@@ -1,0 +1,19 @@
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+...FhtKacRotator is selected
+FhtKacRotator is selected
+..FhtKacRotator is selected
+.FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+.FhtKacRotator is selected
+...Exact FP32 truth@100: openai (500, 8), queries=7
+Exact FP32 truth@100: other (500, 8), queries=7
+...........
+----------------------------------------------------------------------
+Ran 21 tests in 1.606s
+
+OK

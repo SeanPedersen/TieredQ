@@ -1,0 +1,33 @@
+PASS additive 3-bit tiers
+PASS native metrics
+PASS IVF
+refinement metric 0 48->192: prefix 0.946875 nested 0.9875 flat 0.990625 suffix bits 145
+refinement metric 0 24->144: prefix 0.88125 nested 0.996875 flat 0.98125 suffix bits 118
+refinement metric 1 48->192: prefix 0.890625 nested 0.9875 flat 0.99375 suffix bits 141
+refinement metric 1 24->144: prefix 0.778125 nested 0.965625 flat 0.971875 suffix bits 116
+refinement metric 2 48->192: prefix 0.528125 nested 0.94375 flat 0.90625 suffix bits 144
+refinement metric 2 24->144: prefix 0.13125 nested 0.909375 flat 0.90625 suffix bits 120
+PASS refinement
+nested IVF tests passed
+PASS flat nested search
+PASS odd budget allocation
+PASS full mode allocation
+PASS D=1 bits=8 rotate=1
+PASS D=7 bits=56 rotate=1
+PASS D=65 bits=257 rotate=1
+PASS D=384 bits=257 rotate=0
+PASS D=511 bits=257 rotate=0
+PASS D=512 bits=257 rotate=0
+PASS D=768 bits=257 rotate=0
+PASS D=1024 bits=257 rotate=0
+PASS D=1536 bits=257 rotate=0
+PASS D=512 bits=256 rotate=0
+PASS D=512 bits=384 rotate=0
+PASS D=512 bits=512 rotate=1
+PASS D=512 bits=768 rotate=0
+PASS D=512 bits=1024 rotate=0
+PASS D=768 bits=512 rotate=1
+PASS D=768 bits=1024 rotate=0
+PASS D=7 bits=1 rotate=1
+PASS D=7 bits=56 rotate=0
+OK

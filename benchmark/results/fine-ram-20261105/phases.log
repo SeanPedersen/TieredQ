@@ -1,0 +1,6 @@
+2026-11-05T14:45:01Z start base=fef7b7587a8a7026678a61df493929411693e8e5 cand=fef7b75+candidate.patch
+2026-11-05T14:45:01Z 1 candidate build and tests
+2026-11-05T14:49:23Z 2 memory cells
+2026-11-05T14:55:02Z 3 timing on CPUs 0-7 (ABBA)
+2026-11-05T15:13:30Z quick timing
+2026-11-05T15:23:55Z quick done

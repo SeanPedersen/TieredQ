@@ -1,0 +1,424 @@
+diff --git a/benchmark/experiments/fine_ram/job_ab.sh b/benchmark/experiments/fine_ram/job_ab.sh
+new file mode 100644
+index 0000000..e58047d
+--- /dev/null
++++ b/benchmark/experiments/fine_ram/job_ab.sh
+@@ -0,0 +1,60 @@
++#!/usr/bin/env bash
++# Fine-tier serving RAM A/B: baseline tree vs candidate tree (shared prefix-view model arrays, one-shot fine-row load).
++#  1. candidate: native module, C++ suite and benchmark tests (CPUs 8-31);
++#  2. memory cells (measure_memory quick) of fine/nofine/exact at 1/2/4/8 bits/dim, both trees (3 lanes on CPUs 8-31);
++#  3. timing alone on CPUs 0-7 (SMT siblings 18-25 idle): seed 0 run.py cells at 4 and 8 bits/dim, ABBA per config.
++# Usage: W=<workspace> BASE=<baseline source> CAND=<candidate source> DATA=<cache> bash job_ab.sh
++set -euo pipefail
++W=${W:?}; BASE=${BASE:?}; CAND=${CAND:?}; DATA=${DATA:?}
++P=${P:-/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python}
++DATASETS=(openai gemini)
++VARIANTS=(fine nofine exact)
++LANES=(8-15 16-23 24-31)
++SCHEDULES=(8x32 8x1000 1x1 8x1)
++export OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 OMP_NUM_THREADS=8
++mkdir -p "$W/cells" "$W/memory-base" "$W/memory-cand" "$W/tmp"
++cd "$W"
++phase() { echo "$(date -u +%FT%TZ) $*" | tee -a "$W/phases.log"; }
++
++phase "start base=$(cat "$BASE/SOURCE_REVISION") cand=$(cat "$CAND/SOURCE_REVISION")"
++phase "1 candidate build and tests"
++for tree in "$BASE" "$CAND"; do
++  (cd "$tree/benchmark" && taskset -c 8-31 "$P" -c "from native_build import build_native; build_native()") >> "$W/native-build.log" 2>&1
++done
++(cmake -S "$CAND" -B "$W/cand-build" -DCMAKE_BUILD_TYPE=Release > "$W/cand-cmake.log" 2>&1 &&
++  taskset -c 8-31 cmake --build "$W/cand-build" -j 16 --target test_tieredq >> "$W/cand-cmake.log" 2>&1 &&
++  taskset -c 8-31 "$W/cand-build/test_tieredq" > "$W/cand-ctest.log" 2>&1) || { echo "cpp tests" >> "$W/failed.txt"; exit 1; }
++(cd "$CAND/benchmark" && PYTHONPATH="$CAND/benchmark/build-native" taskset -c 8-31 "$P" -m unittest test_native \
++  test_benchmark test_match_memory > "$W/cand-pytest.log" 2>&1) || { echo "benchmark tests" >> "$W/failed.txt"; exit 1; }
++
++phase "2 memory cells"
++for ds in "${DATASETS[@]}"; do for bits in 1 2 4 8; do for variant in "${VARIANTS[@]}"; do for tree in base cand; do
++  echo "$tree $ds $variant $bits"; done; done; done; done > "$W/tasks-memory.txt"
++for i in "${!LANES[@]}"; do
++  (awk -v n=${#LANES[@]} -v i="$i" 'NR % n == i' "$W/tasks-memory.txt" | while read -r tree ds variant bits; do
++    src=$BASE; [ "$tree" = cand ] && src=$CAND
++    (cd "$src/benchmark" && PYTHONPATH="$src/benchmark/build-native:$src/benchmark" BENCH_SEED=0 \
++      taskset -c "${LANES[$i]}" "$P" -u "$CAND/benchmark/experiments/issue4_precheck/memory.py" "$W/memory-$tree" "$DATA" \
++      "$ds" tieredq "$variant" "$bits" 0 >> "$W/lane-$i.log" 2>&1) || echo "memory $tree $ds $variant $bits" >> "$W/failed.txt"
++  done) &
++done
++wait
++
++phase "3 timing on CPUs 0-7 (ABBA)"
++ps -eo pid,pcpu,rss,psr,args --sort=-pcpu | head -25 > "$W/host-processes-timing.txt"
++cell() {  # tree round dataset variant bits
++  local src=$BASE; [ "$1" = cand ] && src=$CAND
++  local name=$W/cells/$3-$4-b$5-$1-r$2.json
++  [ -f "$name" ] && return 0
++  (cd "$src/benchmark" && PYTHONPATH="$src/benchmark/build-native:$src/benchmark" BENCH_SEED=0 taskset -c 0-7 "$P" -u run.py \
++    --codec tieredq --variant "$4" --datasets "$3" --bits "$5" --seeds 0 --k 10 100 --schedules "${SCHEDULES[@]}" \
++    --data "$DATA" --output "$W/tmp" --cell "$name" >> "$W/timing.log" 2>&1) || echo "cell $*" >> "$W/failed.txt"
++}
++for ds in "${DATASETS[@]}"; do for bits in 4 8; do for variant in "${VARIANTS[@]}"; do
++  cell base 1 "$ds" "$variant" "$bits"; cell cand 1 "$ds" "$variant" "$bits"
++  cell cand 2 "$ds" "$variant" "$bits"; cell base 2 "$ds" "$variant" "$bits"
++done; done; done
++
++phase "done"
++[ -f "$W/failed.txt" ] && { echo 1 > "$W/exit-code"; exit 1; }
++echo 0 > "$W/exit-code"
+diff --git a/benchmark/experiments/issue4_precheck/job_equal_ram.sh b/benchmark/experiments/issue4_precheck/job_equal_ram.sh
+new file mode 100644
+index 0000000..dd213c5
+--- /dev/null
++++ b/benchmark/experiments/issue4_precheck/job_equal_ram.sh
+@@ -0,0 +1,22 @@
++#!/usr/bin/env bash
++# Equal steady-RAM check (#4 precheck follow-up): measure_memory probes of one TieredQ variant around another's steady
++# RSS after reload, on the recall lanes (CPUs 8-31). Probes: lines "dataset variant bits code_bits" in $W/eqram/probes.txt.
++# Usage: W=<workspace> bash job_equal_ram.sh
++set -euo pipefail
++W=${W:?set W to the workspace}
++P=${P:-/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python}
++B=$W/source/benchmark
++O=$W/eqram
++LANES=(8-15 16-23 24-31)
++export PYTHONPATH=$B/build-native:$B OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 OMP_NUM_THREADS=8
++mkdir -p "$O"
++for i in "${!LANES[@]}"; do
++  (awk -v n=${#LANES[@]} -v i="$i" 'NR % n == i' "$O/probes.txt" | while read -r ds variant bits code; do
++    (cd "$B" && BENCH_SEED=0 taskset -c "${LANES[$i]}" "$P" -u "$B/experiments/issue4_precheck/memory.py" "$O" \
++      "$W/cache" "$ds" tieredq "$variant" "$bits" 0 "$code" >> "$O/lane-$i.log" 2>&1) ||
++      echo "$ds $variant $bits $code" >> "$O/failed.txt"
++  done) &
++done
++wait
++[ -f "$O/failed.txt" ] && { echo 1 > "$O/exit-code"; exit 1; }
++echo 0 > "$O/exit-code"
+diff --git a/benchmark/experiments/issue4_precheck/memory.py b/benchmark/experiments/issue4_precheck/memory.py
+index 8d532fc..8b7c58b 100644
+--- a/benchmark/experiments/issue4_precheck/memory.py
++++ b/benchmark/experiments/issue4_precheck/memory.py
+@@ -1,6 +1,7 @@
+ """One measure_memory cell (quick: untimed serving passes) for the #4 precheck; appends its row to OUTPUT/memory.csv.
+ 
+-Usage: memory.py OUTPUT DATA DATASET CODEC VARIANT BITS SEED   (VARIANT is ignored for the references)
++Usage: memory.py OUTPUT DATA DATASET CODEC VARIANT BITS SEED [CODE_BITS]   (VARIANT is ignored for the references;
++CODE_BITS overrides a TieredQ budget)
+ """
+ import csv
+ import os
+@@ -11,17 +12,20 @@ from measure_memory import FIELDS, run_cell
+ 
+ 
+ def main():
+-    output, data, dataset, codec, variant, bits, seed = sys.argv[1:]
++    output, data, dataset, codec, variant, bits, seed, *code_bits = sys.argv[1:]
+     output = Path(output)
+     output.mkdir(parents=True, exist_ok=True)
+     spec = dict(dataset=dataset, codec=codec, bits=int(bits), seed=int(seed), data=data, quick=True)
+     if codec == "tieredq":
+         spec["variant"] = variant
+-    row = run_cell(spec, output, dict(os.environ)) | dict(variant=variant if codec == "tieredq" else "")
++        if code_bits:
++            spec["code_bits"] = int(code_bits[0])
++    row = run_cell(spec, output, dict(os.environ)) | dict(variant=variant if codec == "tieredq" else "",
++                                                           requested_code_bits=spec.get("code_bits", ""))
+     path = output / "memory.csv"
+     new_file = not path.exists()
+     with path.open("a", newline="") as handle:
+-        writer = csv.DictWriter(handle, fieldnames=[*FIELDS, "variant"])
++        writer = csv.DictWriter(handle, fieldnames=[*FIELDS, "variant", "requested_code_bits"])
+         if new_file:
+             writer.writeheader()
+         writer.writerow(row)
+diff --git a/include/tieredq/detail/tieredq_shared_array.h b/include/tieredq/detail/tieredq_shared_array.h
+new file mode 100644
+index 0000000..bfd752c
+--- /dev/null
++++ b/include/tieredq/detail/tieredq_shared_array.h
+@@ -0,0 +1,37 @@
++// Immutable model arrays shared between copies of a model: a copied TieredQ (e.g. a fine-tier index's prefix view of
++// its model) reads the same basis and centroids instead of holding its own. Arrays are set whole, never modified.
++#pragma once
++#include <cstddef>
++#include <memory>
++#include <vector>
++
++namespace dv::tieredq_detail {
++
++template<class T> class SharedArray {
++ public:
++  SharedArray() = default;
++  SharedArray& operator=(std::vector<T> values) {
++    values_ = std::make_shared<const std::vector<T>>(std::move(values));
++    return *this;
++  }
++  const std::vector<T>& get() const { return values_ ? *values_ : none(); }
++  operator const std::vector<T>&() const { return get(); }
++  size_t size() const { return get().size(); }
++  bool empty() const { return get().empty(); }
++  const T* data() const { return get().data(); }
++  const T& operator[](size_t i) const { return get()[i]; }
++  auto begin() const { return get().begin(); }
++  auto end() const { return get().end(); }
++  size_t bytes() const { return get().capacity() * sizeof(T); }
++  // True when both hold the same allocation (not merely equal values).
++  bool shares(const SharedArray& other) const { return values_ && values_ == other.values_; }
++
++ private:
++  static const std::vector<T>& none() {
++    static const std::vector<T> none;
++    return none;
++  }
++  std::shared_ptr<const std::vector<T>> values_;
++};
++
++}  // namespace dv::tieredq_detail
+diff --git a/include/tieredq/tieredq.h b/include/tieredq/tieredq.h
+index be17da6..d1b782f 100644
+--- a/include/tieredq/tieredq.h
++++ b/include/tieredq/tieredq.h
+@@ -8,6 +8,7 @@
+ #include <vector>
+ #include <utility>
+ #include "tieredq/detail/tieredq_scan_plan.h"
++#include "tieredq/detail/tieredq_shared_array.h"
+ 
+ namespace dv {
+ namespace tieredq_detail { struct FastFine; class FastRowReader; class StageProfile; struct FastScanCache; struct FastQueryBasis; struct EncoderData; class LazyEncoder;
+@@ -168,16 +169,21 @@ class TieredQ {
+   friend class TieredQNestedIVFIndex;
+   TieredQ() = default;
+   // The fast-scan view of a fine-tier model: the same model serving prefix tiers (none wider than its prefix width,
+-  // code_bits = their bits) without fine tiers; derived state is rebuilt as on load.
++  // code_bits = their bits) without fine tiers; it shares the model's large arrays, and derived state is rebuilt as
++  // on load.
+   TieredQ prefix_view(std::vector<TieredQTier> tiers) const;
+   static TieredQ train_model(TieredQConfig config, const tieredq_detail::TrainingRows& sample, size_t rows, bool additive_wide_tiers, uint64_t seed);
+   TieredQConfig config_;
+   std::vector<TieredQTier> tiers_;
+   uint32_t fast_prefix_bits_ = 0;
+-  std::vector<float> centroids_, basis_, mean_, sigma_;
++  // The large arrays are shared by copies of the model (e.g. a fine-tier prefix view).
++  tieredq_detail::SharedArray<float> centroids_, basis_;
++  std::vector<float> mean_, sigma_;
+   // Binary16 basis of format-3 models in 16-rank panels (tieredq_basis_panels.h; files keep d x m row order);
+   // exactly one of basis_ (row-major) and basis_half_ holds the d x m basis.
+-  std::vector<uint16_t> basis_half_;
++  tieredq_detail::SharedArray<uint16_t> basis_half_;
++  // memory_bytes() less the arrays this model shares with `owner` (counted there).
++  size_t memory_bytes_beyond(const TieredQ& owner) const;
+   // Basis entry at row-major index input * m + rank, in either encoding.
+   float basis_value(size_t index) const;
+   std::vector<std::vector<float>> levels_;
+@@ -233,8 +239,9 @@ class TieredQIndex {
+   bool uses_scalar_fast_scan() const;
+   static bool native_fast_scan_available();
+   size_t payload_bytes() const;
+-  // Allocated vector data and fast-cache state, including its derived query projection/codebooks.
+-  // Excludes codec memory, allocator bookkeeping, query state and top-k scratch.
++  // Allocated vector data and fast-cache state, including its derived query projection/codebooks and a fine-tier
++  // model's prefix view (beyond the arrays it shares with codec()). Excludes codec memory, allocator bookkeeping,
++  // query state and top-k scratch.
+   size_t storage_bytes() const;
+   size_t bytes_per_vector() const;
+   void add(const float* rows, size_t count);
+diff --git a/src/tieredq.cpp b/src/tieredq.cpp
+index 16f8c11..38920f0 100644
+--- a/src/tieredq.cpp
++++ b/src/tieredq.cpp
+@@ -395,33 +395,33 @@ TieredQ TieredQ::train_model(TieredQConfig config,const tieredq_detail::Training
+   const auto& linalg=tieredq_detail::TrainingLinalg::get();
+   TieredQ c; c.config_=config;
+   tieredq_detail::TrainingRng rng(seed); auto initial=rng.choice(rows,k);
+-  c.centroids_.resize(product(k,d));
++  std::vector<float> centroids(product(k,d));
+   std::vector<float> buffer;
+-  for (unsigned j=0;j<k;++j) std::copy_n(sample.block(initial[j],1,buffer),d,c.centroids_.data()+size_t(j)*d);
++  for (unsigned j=0;j<k;++j) std::copy_n(sample.block(initial[j],1,buffer),d,centroids.data()+size_t(j)*d);
+   std::vector<uint32_t> ids(rows);
+   profile.mark("init");
+   constexpr int kmeans_iterations=20;
+   const int iterations=k==1 ? 1 : kmeans_iterations;
+   for (int it=0;it<iterations;++it) {
+-    if (k>1) nearest_centroids(sample,rows,d,c.centroids_,k,ids.data());
++    if (k>1) nearest_centroids(sample,rows,d,centroids,k,ids.data());
+     profile.mark("kmeans_assign");
+-    sample.visit([&](auto value) { tieredq_detail::update_centroids_with(value,rows,d,ids.data(),c.centroids_); });
++    sample.visit([&](auto value) { tieredq_detail::update_centroids_with(value,rows,d,ids.data(),centroids); });
+     profile.mark("kmeans_update");
+   }
+   const bool spectral_stats=!std::getenv("DV_TIEREDQ_REFERENCE_STATS");
+   std::vector<double> residual,mean,cov;
+-  if (k>1) nearest_centroids(sample,rows,d,c.centroids_,k,ids.data());
++  if (k>1) nearest_centroids(sample,rows,d,centroids,k,ids.data());
+   profile.mark("kmeans_assign");
+   if (spectral_stats && linalg.syrk && linalg.small_covariance(d)) {
+     auto centered=sample.visit([&](auto value) {
+-      return tieredq_detail::centered_residuals_with(value,rows,d,ids.data(),c.centroids_);
++      return tieredq_detail::centered_residuals_with(value,rows,d,ids.data(),centroids);
+     });
+     mean=std::move(centered.mean);
+     profile.mark("residual");
+     cov=linalg.covariance_centered(centered.values,d,n);
+   } else if (spectral_stats && linalg.syrk) {
+     sample.visit([&](auto value) {
+-      auto difference=[&](size_t i,size_t j) { return double(value(i,j))-c.centroids_[size_t(ids[i])*d+j]; };
++      auto difference=[&](size_t i,size_t j) { return double(value(i,j))-centroids[size_t(ids[i])*d+j]; };
+       mean.assign(d,0);
+       for (size_t i=0;i<rows;++i) for (int j=0;j<d;++j) mean[j]+=difference(i,size_t(j));
+       for (int j=0;j<d;++j) mean[j]/=rows;
+@@ -435,7 +435,7 @@ TieredQ TieredQ::train_model(TieredQConfig config,const tieredq_detail::Training
+     // Spectral stats only need centered rows; recomputing differences per chunk avoids any rows x d copy.
+     const bool keep_residual=!spectral_stats;
+     sample.visit([&](auto value) {
+-      auto difference=[&](size_t i,int j) { return double(value(i,size_t(j)))-c.centroids_[size_t(ids[i])*d+j]; };
++      auto difference=[&](size_t i,int j) { return double(value(i,size_t(j)))-centroids[size_t(ids[i])*d+j]; };
+       if (keep_residual) residual.resize(product(rows,d));
+       mean.assign(d,0);
+       for (size_t i=0;i<rows;++i) for (int j=0;j<d;++j) {
+@@ -558,7 +558,7 @@ TieredQ TieredQ::train_model(TieredQConfig config,const tieredq_detail::Training
+   std::vector<float> pca_basis(product(d,m));
+   std::vector<std::vector<float>> rotations;
+   for (int j=0;j<d;++j) for (int r=0;r<m;++r) pca_basis[size_t(j)*m+r]=float(cov[size_t(d-1-ranks[r])*d+j]);
+-  c.basis_=pca_basis;
++  std::vector<float> basis=pca_basis;
+   profile.mark("basis");
+   for (const auto& t:c.tiers_) {
+     const int width=int(t.dimensions); std::vector<float> q(product(width,width),0);
+@@ -569,29 +569,30 @@ TieredQ TieredQ::train_model(TieredQConfig config,const tieredq_detail::Training
+     std::vector<float> in(product(d,width)),out(in.size());
+     for (int j=0;j<d;++j) std::copy_n(pca_basis.data()+size_t(j)*m+t.start,width,in.data()+size_t(j)*width);
+     multiply(in.data(),d,width,q.data(),width,out.data());
+-    for (int j=0;j<d;++j) std::copy_n(out.data()+size_t(j)*width,width,c.basis_.data()+size_t(j)*m+t.start);
++    for (int j=0;j<d;++j) std::copy_n(out.data()+size_t(j)*width,width,basis.data()+size_t(j)*m+t.start);
+     profile.mark("tier_rotation_apply");
+   }
+   // Serving reads the binary16 basis, so the projection stats are fitted to exactly those values.
+-  c.basis_half_.resize(c.basis_.size());
+-  for (size_t i=0;i<c.basis_.size();++i) {
+-    c.basis_half_[i]=tieredq_detail::half_encode(c.basis_[i]);
+-    c.basis_[i]=tieredq_detail::half_decode(c.basis_half_[i]);
++  std::vector<uint16_t> basis_half(basis.size());
++  for (size_t i=0;i<basis.size();++i) {
++    basis_half[i]=tieredq_detail::half_encode(basis[i]);
++    basis[i]=tieredq_detail::half_decode(basis_half[i]);
+   }
+   if (spectral_stats) {
+     if (tieredq_detail::needs_empirical_projection_stats(eigenvalues,ranks))
+-      tieredq_detail::empirical_projection_stats(sample,rows,ids,c.centroids_,c.basis_,size_t(m),c.mean_,c.sigma_);
++      tieredq_detail::empirical_projection_stats(sample,rows,ids,centroids,basis,size_t(m),c.mean_,c.sigma_);
+     else
+-      tieredq_detail::spectral_projection_stats(eigenvalues,ranks,c.tiers_,rotations,mean,c.basis_,rows,c.mean_,c.sigma_);
++      tieredq_detail::spectral_projection_stats(eigenvalues,ranks,c.tiers_,rotations,mean,basis,rows,c.mean_,c.sigma_);
+   } else {
+     // Residual covariance was centered; restore the mean before fitting the projected mean.
+     std::vector<float> rfloat(residual.size());
+     for (size_t i=0;i<rows;++i) for (int j=0;j<d;++j) rfloat[i*d+j]=float(residual[i*d+j]);
+-    std::vector<float> projected(product(rows,m)); multiply(rfloat.data(),n,d,c.basis_.data(),m,projected.data());
++    std::vector<float> projected(product(rows,m)); multiply(rfloat.data(),n,d,basis.data(),m,projected.data());
+     tieredq_detail::projection_stats(projected,rows,m,c.mean_,c.sigma_);
+   }
+-  std::vector<float>().swap(c.basis_);
+-  c.basis_half_=tieredq_detail::basis_panels_from_rows(c.basis_half_,size_t(d),size_t(m));
++  std::vector<float>().swap(basis);
++  c.centroids_=std::move(centroids);
++  c.basis_half_=tieredq_detail::basis_panels_from_rows(basis_half,size_t(d),size_t(m));
+   profile.mark("projection_stats");
+   c.prepare_serving();
+   profile.mark("prepare_serving");
+@@ -887,7 +888,7 @@ void TieredQ::validate_model() const {
+   if (!levels_[0].empty()) bad("invalid zero-bit table");
+   for (unsigned b=1;b<levels_.size();++b) if (levels_[b].size()!=(size_t(1)<<b) || !std::is_sorted(levels_[b].begin(),levels_[b].end())) bad("invalid Lloyd-Max table");
+   for (float s:sigma_) if (!(s>0) || !std::isfinite(s)) bad("invalid sigma");
+-  for (const auto* a:{&centroids_,&basis_,&mean_}) finite_rows(a->data(),a->size());
++  for (const std::vector<float>* a:{&centroids_.get(),&basis_.get(),&mean_}) finite_rows(a->data(),a->size());
+   for (uint16_t v:basis_half_) if (!std::isfinite(tieredq_detail::half_decode(v))) bad("nonfinite model");
+   for (const auto& a:levels_) finite_rows(a.data(),a.size());
+ }
+@@ -920,12 +921,17 @@ std::vector<uint8_t> TieredQ::serialize() const {
+ }
+ TieredQ TieredQ::prefix_view(std::vector<TieredQTier> tiers) const {
+   TieredQ view=*this;
++  // A loaded model keeps only the persisted configuration; the training-only fields take their defaults.
++  view.config_=TieredQConfig{};
++  view.config_.dimensions=config_.dimensions; view.config_.num_centroids=config_.num_centroids;
++  view.config_.rotate_tiers=config_.rotate_tiers; view.config_.metric=config_.metric;
+   view.config_.code_bits=0;
+   for (const auto& t:tiers) view.config_.code_bits+=t.dimensions*t.bits;
+   view.tiers_=std::move(tiers);
+   view.fast_prefix_bits_=0;
+   view.levels_.resize(tieredq_detail::widest_code_bits+1);
+-  return deserialize(view.serialize());
++  view.validate_model(); view.prepare_serving();
++  return view;
+ }
+ TieredQ TieredQ::deserialize(const std::vector<uint8_t>& data) {
+   Reader r{data}; TieredQ c;
+@@ -1101,14 +1107,21 @@ float TieredQ::basis_value(size_t index) const {
+ }
+ size_t TieredQ::memory_bytes() const {
+   size_t n=sizeof(*this)+tiers_.capacity()*sizeof(TieredQTier);
+-  for (const auto* v:{&centroids_,&basis_,&mean_,&sigma_}) n+=v->capacity()*sizeof(float);
+-  n+=basis_half_.capacity()*sizeof(uint16_t);
++  n+=centroids_.bytes()+basis_.bytes()+basis_half_.bytes();
++  for (const auto* v:{&mean_,&sigma_}) n+=v->capacity()*sizeof(float);
+   n+=levels_.capacity()*sizeof(std::vector<float>);
+   for (const auto& v:levels_) n+=v.capacity()*sizeof(float);
+   n+=centroid_half_norms_.capacity()*sizeof(float)+scan_plan_.capacity()*sizeof(tieredq_detail::ScanGroupPlan);
+   for (const auto* v:{&lift_base_map_,&lift_query_map_,&lift_base_panels_.data,&lift_query_panels_.data}) n+=v->capacity()*sizeof(float);
+   return n+encoder_->bytes();
+ }
++size_t TieredQ::memory_bytes_beyond(const TieredQ& owner) const {
++  size_t shared=0;
++  if (centroids_.shares(owner.centroids_)) shared+=centroids_.bytes();
++  if (basis_.shares(owner.basis_)) shared+=basis_.bytes();
++  if (basis_half_.shares(owner.basis_half_)) shared+=basis_half_.bytes();
++  return memory_bytes()-shared;
++}
+ uint32_t TieredQ::model_id() const {
+   const auto data=serialize(); uint32_t h=2166136261u;
+   for (auto b:data) { h^=b; h*=16777619u; } return h;
+diff --git a/src/tieredq_index.cpp b/src/tieredq_index.cpp
+index 886126b..b682fbe 100644
+--- a/src/tieredq_index.cpp
++++ b/src/tieredq_index.cpp
+@@ -54,7 +54,9 @@ size_t TieredQIndex::payload_bytes() const {
+   return count_*codec_.bytes_per_vector();
+ }
+ size_t TieredQIndex::storage_bytes() const {
+-  return payload_.capacity()+fine_.capacity()+(fast_ ? tieredq_detail::fast_storage_bytes(*fast_) : 0);
++  // A fine-tier scan's prefix view of the model is fast-cache state; it shares the model's large arrays.
++  const size_t view=fine_tiers_ ? fine_tiers_->prefix.memory_bytes_beyond(codec_) : 0;
++  return payload_.capacity()+fine_.capacity()+(fast_ ? tieredq_detail::fast_storage_bytes(*fast_) : 0)+view;
+ }
+ size_t TieredQIndex::bytes_per_vector() const {
+   if (!fast_mode_) return codec_.bytes_per_vector();
+diff --git a/src/tieredq_index_read.h b/src/tieredq_index_read.h
+index b29d349..d7d0aae 100644
+--- a/src/tieredq_index_read.h
++++ b/src/tieredq_index_read.h
+@@ -22,6 +22,8 @@ template<class Reader> void TieredQIndex::read_fast_payload(Reader& reader,size_
+   auto storage=make_fast_storage(nullptr,0,lookup,int(level_max));
+   read_fast_storage(reader,*storage,rows,codec.config().num_centroids,byte_codes);
+   if (fine_tiers_) {
++    // Room for the read slack up front, so appending it does not reallocate (a transient copy of every fine row).
++    fine_.reserve(product(rows,fine_tiers_->fine_bytes)+fine_read_slack);
+     read_fast_bytes(reader,fine_,product(rows,fine_tiers_->fine_bytes));
+     fine_tiers_->validate_fine_rows(fine_.data(),rows);
+     fine_.resize(fine_.size()+fine_read_slack);
+diff --git a/tests/test_tieredq_fast_fine.cpp b/tests/test_tieredq_fast_fine.cpp
+index b3e9863..49e2409 100644
+--- a/tests/test_tieredq_fast_fine.cpp
++++ b/tests/test_tieredq_fast_fine.cpp
+@@ -171,6 +171,12 @@ void rescoring_test(uint32_t bits_per_dim,dv::TieredQIndexMode target) {
+   std::vector<float> loaded_scores(queries*k); std::vector<uint32_t> loaded_ids(queries*k);
+   loaded.search_batch(probe.data(),queries,k,loaded_scores.data(),loaded_ids.data());
+   require(loaded_ids==batch_ids && loaded_scores==batch_scores,"fine-tier index changed hits on reload");
++  // Reloaded fine rows are allocated once, without growth slack, and the scan's prefix view of the model shares its
++  // basis and centroids, so neither index holds a second copy of them.
++  require(loaded.storage_bytes()<=fast.storage_bytes(),"reloaded fine-tier index allocates more than the built one");
++  // An empty index stores no rows, so its storage is the view's own state alone.
++  const size_t basis_bytes=size_t(codec.coded_dimensions())*dimensions*sizeof(uint16_t);
++  require(dv::TieredQIndex(codec).storage_bytes()<basis_bytes,"fine-tier prefix view copies the model");
+   if (target==dv::TieredQIndexMode::fast) ivf_test(codec,data,probe,batch_scores,batch_ids);
+ }
+ } // namespace

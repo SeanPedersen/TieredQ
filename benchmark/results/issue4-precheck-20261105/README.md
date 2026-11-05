@@ -3,7 +3,14 @@
 Small matrix ahead of the full #4 re-run: which TieredQ variant(s) #4 should report, and whether any budget needs an
 extra row to be fair to the references. Tables: [summary-openai.md](summary-openai.md),
 [summary-gemini.md](summary-gemini.md). Raw rows: `results.csv` (every cell, every seed, k and schedule),
-`memory.csv`, `matches.csv`/`matches-*.json`, `calibration-*.csv`.
+`memory.csv`, `matches.csv`/`matches-*.json`, `calibration-*.csv`, and `equal-ram-memory.csv` for the follow-up.
+
+**Follow-ups, same day:**
+- **"Equal disk" below means equal effective bytes.** The match target is run.py's effective storage, the larger of
+  the file and the accounted serving bytes. Fine tiers' accounted bytes exceeded their file, so the default got
+  106-561 fewer code bits than off. The tables are unchanged; read "equal disk" as this.
+- **Finding 4's RAM premium is fixed.** See [fine-ram-20261105](../fine-ram-20261105/README.md): the default and exact
+  now use off's steady RAM, with the same hits and no QPS/latency change. The recommendation below is updated for it.
 
 ## Provenance
 
@@ -67,7 +74,7 @@ extra row to be fair to the references. Tables: [summary-openai.md](summary-open
 - Exact wins TieredQ batch throughput at 8 bits/dim: 1,271 vs 674 QPS on OpenAI and 2,427 vs 1,335 on Gemini.
 - Its single-query p50 is 2.4× worse: 32.9 vs 13.9 ms on OpenAI and 16.2 vs 6.6 ms on Gemini. Both match #31.
 
-## Findings at equal disk (R@10 / batch QPS@10 8t·b32 / single p50@10 1t·b1 ms)
+## Findings at equal disk (equal effective bytes; R@10 / batch QPS@10 8t·b32 / single p50@10 1t·b1 ms)
 
 | dataset, reference cell | reference | TieredQ default | TieredQ off | TieredQ exact |
 |---|---|---|---|---|
@@ -98,15 +105,21 @@ extra row to be fair to the references. Tables: [summary-openai.md](summary-open
      987 B RSS.
    - So the equal-RAM matches in #4 (`match_memory` ram/peak targets) will give the default fewer code bits than the
      equal-disk ones here.
+   - **Equal steady RAM** (`equal-ram-memory.csv`, seed 0): off was probed at the default's 4-bit steady RSS.
+     - OpenAI: off at 7,168 code bits (980 B) reaches R@10 0.9875 vs the default's 0.9878. That's a tie.
+     - Gemini: off at 3,392 code bits (464 B) reaches 0.9816 vs 0.9841. The default still leads.
+     - At 8 bits/dim the default wins at any measure: off is capped at 8 bits/dim.
+     - Both results predate the RAM fix, which removes the premium.
 
 ## Recommendation for the full #4 run
 
 - **Headline:** report TieredQ default (fine tiers on) at every budget. It is the shipped default, and it is never
   worse on recall than off at equal disk.
 - **No extra rows at 1-2 bits/dim.** Off is identical there, and exact is dominated.
-- **4 bits/dim:** add a TieredQ off row in the equal-memory and timing tables. Off is the faster TieredQ config by
-  15-20% batch QPS and up to 2.3× k=100 single-query, with about 10-16% less steady RAM, at about −0.004 R@10. Without
-  it, #4 would understate the best TieredQ speed against RaBitQ and overstate the default's RAM efficiency.
+- **4 bits/dim:** add a TieredQ off row in the timing tables. Off is the faster TieredQ config by 15-20% batch QPS
+  and up to 2.3× k=100 single-query, at about −0.004 R@10. Without it, #4 would understate the best TieredQ speed
+  against RaBitQ. With the RAM fix (fine-ram-20261105), off no longer saves RAM. Run #4 on a library that includes
+  that fix, or the default's equal-RAM rows carry a 6-13% RAM premium at 100K.
 - **8 bits/dim** (if #4 reports it): add an exact row. It is the fastest TieredQ batch config, about 1.8× default,
   at the same recall, but with 2.3× worse single-query latency. Show off too, because it is the case where TieredQ
   loses recall to RaBitQ at equal disk.
