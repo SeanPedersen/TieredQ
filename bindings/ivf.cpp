@@ -19,10 +19,10 @@ using Pruning = std::optional<dv::TieredQPruning>;
 
 class PythonIVFIndex {
  public:
-  PythonIVFIndex(uint32_t dimensions, uint32_t code_bits, uint32_t lists, const std::string& metric)
+  PythonIVFIndex(uint32_t dimensions, uint32_t code_bits, uint32_t lists, const std::string& metric, bool fine_tiers)
       : config_(dv::TieredQConfig::target_code_bits(dimensions, code_bits)), lists_(lists) {
     config_.metric = parse_metric(metric);
-    config_.fine_tiers = false;  // only the flat index serves fine tiers
+    config_.fine_tiers = fine_tiers;
     config_.validate();
   }
   size_t size() const {
@@ -107,10 +107,13 @@ void bind_ivf(nb::module_& module) {
       .def_rw("prefix_tiers", &dv::TieredQPruning::prefix_tiers);
 
   nb::class_<PythonIVFIndex>(module, "TieredQIVFIndex", "Fast-mode inverted-file vector index.")
-      .def(nb::init<uint32_t, uint32_t, uint32_t, const std::string&>(),
-           "dimensions"_a, "code_bits"_a, nb::kw_only(), "lists"_a = 0, "metric"_a = "ip",
+      .def(nb::init<uint32_t, uint32_t, uint32_t, const std::string&, bool>(),
+           "dimensions"_a, "code_bits"_a, nb::kw_only(), "lists"_a = 0, "metric"_a = "ip", "fine_tiers"_a = false,
            "lists 0 makes one list per codec centroid at no extra storage; otherwise a coarse quantizer with that\n"
-           "many lists is trained. metric is 'ip', 'cosine' or 'l2' (scores are -squared distances).")
+           "many lists is trained. metric is 'ip', 'cosine' or 'l2' (scores are -squared distances). fine_tiers\n"
+           "lets steep spectra scan a short prefix of each code and rescore the best candidates of the probed\n"
+           "lists exactly, at the same stored bytes (see TieredQIndex); off by default, as it gained at most 0.006\n"
+           "recall@10 for 0-45% lower QPS on Gemini-768 99k (#32).")
       .def("__len__", &PythonIVFIndex::size, nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro("dimensions", &PythonIVFIndex::dimensions)
       .def_prop_ro("code_bits", &PythonIVFIndex::code_bits, nb::call_guard<nb::gil_scoped_release>())

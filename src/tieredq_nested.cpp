@@ -230,6 +230,7 @@ void TieredQRowFileWriter::finish() {
 
 TieredQNestedIVFIndex::TieredQNestedIVFIndex(TieredQIVFIndex index,TieredQRefinement refinement,TieredQTierRows tier_rows)
     : index_(std::move(index)),refinement_(std::move(refinement)),tier_rows_(tier_rows) {
+  if (index_.codec().fast_prefix_bits()) bad("nested IVF does not serve fine-tier models; train the prefix with fine_tiers off");
   if (refinement_.prefix().model_id()!=index_.codec().model_id()) bad("refinement was trained on another prefix model");
   if (tier_rows_!=TieredQTierRows::prefix_and_suffix && tier_rows_!=TieredQTierRows::suffix) bad("invalid tier rows");
   if (tier_rows_==TieredQTierRows::suffix) documents_=index_.id_documents();

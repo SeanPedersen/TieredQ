@@ -46,7 +46,7 @@ std::vector<uint32_t> probe_order(const float* closeness,const std::vector<uint3
 } // namespace
 
 TieredQIVFIndex::TieredQIVFIndex(TieredQ codec,uint32_t lists,uint64_t seed)
-    : documents_(tieredq_detail::without_fine_tiers(std::move(codec),"TieredQIVFIndex"),TieredQIndexMode::fast),
+    : documents_(std::move(codec),TieredQIndexMode::fast),
       coarse_lists_(lists),seed_(seed) {
   list_begin_.assign(lists ? lists : documents_.codec().config().num_centroids,0);
   list_rows_.assign(list_begin_.size(),0);
@@ -138,7 +138,7 @@ void TieredQIVFIndex::build(const float* rows,size_t count) {
       for (size_t i=0;i<n;++i) std::copy_n(encoded.data()+size_t(source[first+i])*stride,stride,chunk_codes.data()+i*stride);
     }
     documents.add_encoded(chunk_codes.data(),n);
-    if (!first) tieredq_detail::reserve_fast_rows(*documents.fast_,padded);
+    if (!first) documents.reserve_rows(padded);
   }
   documents_=std::move(documents);
   list_begin_=std::move(list_begin);list_rows_=std::move(list_rows);ids_=std::move(ids);size_=count;
@@ -209,17 +209,35 @@ void TieredQIVFIndex::search_rows(const float* queries,const TieredQQuery* weigh
   std::vector<float> coarse_closeness;
   if (coarse_) { coarse_closeness.resize(product(rows,lists())); coarse_->closeness(model_queries,rows,coarse_closeness.data()); }
   const auto& cache=*documents_.fast_;
+  // Fine-tier models scan their prefix view, which shares the model's projection, so one set of query weights serves
+  // the list scans and the rescoring of their candidates.
+  const TieredQ& scan_model=documents_.scan_codec();
+  const bool fine=bool(documents_.fine_tiers_);
+  std::vector<TieredQQuery> fine_weights;
+  if (fine && !weights) fine_weights=documents_.fine_query_weights(model_queries,rows);
+  const TieredQQuery* query_weights=fine && !weights ? fine_weights.data() : weights;
+  const size_t depth=fine ? tieredq_detail::fine_candidate_depth(found,size_) : found;
+  std::vector<std::vector<TieredQHit>> candidates(fine ? rows : 0);
+  // Hits in stored documents -> the row's ids and scores in the metric's units; unfilled slots are marked.
+  auto emit=[&](size_t row,const std::vector<TieredQHit>& hits) {
+    for (size_t hit=0;hit<found;++hit) {
+      const bool filled=hit<hits.size();
+      scores[row*found+hit]=filled ? hits[hit].score : -std::numeric_limits<float>::infinity();
+      ids[row*found+hit]=filled ? ids_[hits[hit].id] : padding_id;
+    }
+    documents_.finish_scores(queries+row*d,scores+row*found,hits.size());
+  };
 #ifdef DV_TIEREDQ_X86
   const size_t code_prefix_tiers=pruning.prefix_tiers==TieredQPruning::automatic_prefix ?
       tieredq_detail::fast_range_prefix_tiers : pruning.prefix_tiers;
   const bool range=tieredq_detail::fast_scan_backend(cache)==tieredq_detail::FastScanBackend::avx512 &&
-      tieredq_detail::fast_range_checkpoint_supported(cache,model.tiers(),code_prefix_tiers);
-  const size_t prefix_rank=range ? model.tiers()[code_prefix_tiers].start : 0;
+      tieredq_detail::fast_range_checkpoint_supported(cache,scan_model.tiers(),code_prefix_tiers);
+  const size_t prefix_rank=range ? scan_model.tiers()[code_prefix_tiers].start : 0;
   const auto segments=range ? tieredq_detail::code_table_segments(cache) : std::vector<tieredq_detail::CodeTableSegment>();
 #endif
-  const bool lookup_range=tieredq_detail::lookup_range_scan_supported(cache,model.tiers(),pruning.prefix_tiers,
+  const bool lookup_range=tieredq_detail::lookup_range_scan_supported(cache,scan_model.tiers(),pruning.prefix_tiers,
       pruning.confidence);
-  tieredq_detail::with_fast_scan(cache,model,model_queries,rows,[&](const auto& prepared,size_t,auto scan) {
+  tieredq_detail::with_fast_scan(cache,scan_model,model_queries,rows,[&](const auto& prepared,size_t,auto scan) {
     const size_t workers=std::max<size_t>(1,std::min(rows,size_t(omp_get_max_threads())));
     std::exception_ptr failure; std::mutex failure_mutex;
 #pragma omp parallel for schedule(dynamic) num_threads(workers) if(workers>1 && !omp_in_parallel())
@@ -233,7 +251,7 @@ void TieredQIVFIndex::search_rows(const float* queries,const TieredQQuery* weigh
           for (size_t list=0;list<lists();++list) codec_closeness[list]=centroid[list]-model.centroid_half_norms_[list];
           closeness=codec_closeness.data();
         }
-        TopK top(found);
+        TopK top(depth);
         std::vector<float> chunk(ivf_scan_chunk);
         // Rebound inside the OpenMP region: Clang rejects the nested generic lambda naming the enclosing local.
         const size_t probed_lists=probes;
@@ -260,7 +278,7 @@ void TieredQIVFIndex::search_rows(const float* queries,const TieredQQuery* weigh
           // Bind inside the OpenMP region so Clang can capture this in the nested scan lambda.
           const auto& query_segments=segments;
           const tieredq_detail::CentroidTiles centroids(1,[&](size_t)->const TieredQQuery& { return query; });
-          tieredq_detail::FastRangeCheckpoint checkpoint{prefix_rank,tieredq_detail::prepare_fast_range_bounds(cache,model.tiers(),
+          tieredq_detail::FastRangeCheckpoint checkpoint{prefix_rank,tieredq_detail::prepare_fast_range_bounds(cache,scan_model.tiers(),
               query,code_prefix_tiers,pruning.confidence),0};
           scan_lists([&](size_t first,size_t documents,float* out,float threshold) {
             checkpoint.threshold=threshold;
@@ -273,7 +291,7 @@ void TieredQIVFIndex::search_rows(const float* queries,const TieredQQuery* weigh
         // The same checkpoint on nibble byte tables: rejected chunks score -inf, the rest equal the unpruned scan.
         if constexpr (requires { prepared[row].lookup.tables; }) if (lookup_range) {
           const auto& query=prepared[row].lookup;
-          const auto bounds=tieredq_detail::prepare_lookup_range_bounds(cache,model.tiers(),query,pruning.prefix_tiers,
+          const auto bounds=tieredq_detail::prepare_lookup_range_bounds(cache,scan_model.tiers(),query,pruning.prefix_tiers,
               pruning.confidence);
           scan_lists([&](size_t first,size_t documents,float* out,float threshold) {
             tieredq_detail::scan_range_lookup(cache,query,first,documents,out,{bounds,threshold});
@@ -283,24 +301,22 @@ void TieredQIVFIndex::search_rows(const float* queries,const TieredQQuery* weigh
         if (!scanned) scan_lists([&](size_t first,size_t documents,float* out,float) {
           scan(&prepared[row],1,first,documents,out,documents);
         });
-        const auto hits=top.finish();
-        for (size_t hit=0;hit<found;++hit) {
-          const bool filled=hit<hits.size();
-          scores[row*found+hit]=filled ? hits[hit].score : -std::numeric_limits<float>::infinity();
-          ids[row*found+hit]=filled ? ids_[hits[hit].id] : padding_id;
-        }
-        documents_.finish_scores(queries+row*d,scores+row*found,hits.size());
+        if (fine) candidates[row]=top.finish();
+        else emit(row,top.finish());
       } catch (...) {
         std::lock_guard lock(failure_mutex);
         if (!failure) failure=std::current_exception();
       }
     }
     if (failure) std::rethrow_exception(failure);
-  },weights);
+  },query_weights);
+  if (!fine) return;
+  documents_.rescore_candidates(query_weights,candidates,found);
+  for (size_t row=0;row<rows;++row) emit(row,candidates[row]);
 }
 
 // Payload: version, list count, coarse flag (+ seed, trained flag and centroids), size, per-list offset and rows,
-// padded ids, fast payload. An unbuilt coarse index has no centroids yet.
+// padded ids, fast payload (with the fine rows of fine-tier models). An unbuilt coarse index has no centroids yet.
 void TieredQIVFIndex::write_lists(tieredq_detail::Writer& writer) const {
   writer.u32(ivf_payload_version);writer.u32(uint32_t(lists()));writer.u32(coarse_lists_ ? 1 : 0);
   if (coarse_lists_) {
@@ -313,18 +329,13 @@ void TieredQIVFIndex::write_lists(tieredq_detail::Writer& writer) const {
   for (uint32_t id:ids_) writer.u32(id);
 }
 
-std::vector<uint8_t> TieredQIVFIndex::fast_payload() const {
-  const auto storage=documents_.fast_ ? documents_.fast_ : documents_.make_fast_storage(nullptr,0);
-  return tieredq_detail::serialize_fast_storage(*storage);
-}
-
 std::vector<uint8_t> TieredQIVFIndex::serialize() const {
   tieredq_detail::Writer writer;
   const auto model=codec().serialize();
   writer.u64(model.size());
   writer.data.insert(writer.data.end(),model.begin(),model.end());
   write_lists(writer);
-  const auto fast=fast_payload();
+  const auto fast=documents_.fast_payload();
   writer.data.insert(writer.data.end(),fast.begin(),fast.end());
   return std::move(writer.data);
 }
@@ -378,7 +389,7 @@ TieredQIVFIndex TieredQIVFIndex::deserialize(const std::vector<uint8_t>& bytes) 
 void TieredQIVFIndex::save(const std::string& path) const {
   tieredq_detail::Writer writer;
   write_lists(writer);
-  const auto fast=fast_payload();
+  const auto fast=documents_.fast_payload();
   writer.data.insert(writer.data.end(),fast.begin(),fast.end());
   tieredq_detail::save_file(path,codec().serialize(),writer.data,ids_.size(),tieredq_detail::ivf_index_file_kind);
 }

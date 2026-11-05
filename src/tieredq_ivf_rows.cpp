@@ -17,6 +17,7 @@ void TieredQIVFIndex::document_rows(const uint32_t* documents,size_t count,uint8
   if (!count) return;
   if (!documents || !rows) bad("null document buffer");
   const TieredQ& model=codec();
+  if (documents_.fine_tiers_) bad("document_rows does not serve fine-tier models");
   for (size_t i=0;i<count;++i)
     if (documents[i]>=ids_.size() || ids_[documents[i]]==padding_id) bad("invalid stored document");
   tieredq_detail::read_fast_rows(*documents_.fast_,model.levels_,model.tiers_,model.coded_dimensions(),model.code_bytes(),

@@ -61,6 +61,26 @@ def test_ivf_scanning_every_list_matches_the_flat_index(data):
     np.testing.assert_allclose(scores, flat_scores, rtol=1e-5, atol=1e-5)
 
 
+def test_ivf_fine_tiers_match_the_flat_index_and_round_trip(tmp_path):
+    rng = np.random.default_rng(3)
+    steep = 0.85 ** np.arange(DIMENSIONS)  # steep enough that 8 bits/dim allocates codes past the 8-bit prefix
+    vectors = (rng.normal(size=(ROWS, DIMENSIONS)) * steep).astype(np.float32)
+    queries = (rng.normal(size=(QUERIES, DIMENSIONS)) * steep).astype(np.float32)
+    bits = 8 * DIMENSIONS
+    ivf = TieredQIVFIndex(DIMENSIONS, bits, lists=LISTS, fine_tiers=True)
+    flat = TieredQIndex(DIMENSIONS, bits)
+    ivf.build(vectors)
+    flat.add(vectors)
+    assert flat.fast_prefix_bits > 0
+    scores, ids = ivf.search(queries, k=K, nprobe=ivf.lists)
+    flat_scores, flat_ids = flat.search(queries, k=K)
+    np.testing.assert_array_equal(ids, flat_ids)
+    np.testing.assert_allclose(scores, flat_scores, rtol=1e-5, atol=1e-5)
+    path = str(tmp_path / "fine-ivf.tq")
+    ivf.save(path)
+    assert_same(TieredQIVFIndex.load(path).search(queries, k=K, nprobe=NPROBE), ivf.search(queries, k=K, nprobe=NPROBE))
+
+
 def test_ivf_search_shapes_padding_pruning_and_persistence(data, tmp_path):
     vectors, queries = data
     ivf = TieredQIVFIndex(DIMENSIONS, CODE_BITS, lists=LISTS)

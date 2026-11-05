@@ -79,12 +79,13 @@ void TieredQIndex::add(const float* rows,size_t count) {
       const size_t n=std::min(add_chunk_rows,count-first);
       const auto encoded=codec_.encode(rows+first*d,n);
       add_encoded(encoded.data(),n);
-      if (!first) {
-        tieredq_detail::reserve_fast_rows(*fast_,count);
-        if (fine_tiers_) fine_.reserve(product(count,fine_tiers_->fine_bytes)+tieredq_detail::fine_read_slack);
-      }
+      if (!first) reserve_rows(count);
     }
   } catch (...) { fast_.reset(); count_=0; throw; }
+}
+void TieredQIndex::reserve_rows(size_t count) {
+  tieredq_detail::reserve_fast_rows(*fast_,count);
+  if (fine_tiers_) fine_.reserve(product(count,fine_tiers_->fine_bytes)+tieredq_detail::fine_read_slack);
 }
 void TieredQIndex::add_encoded(const uint8_t* encoded,size_t count) {
   if (count>UINT32_MAX-size()) bad("index exceeds uint32 document ids");
@@ -303,6 +304,40 @@ void TieredQIndex::keep_best(std::vector<TieredQHit>& hits,size_t k) {
   });
   hits.resize(kept);
 }
+// The scan hands over candidates one query at a time. Rescoring then decodes each chunk's distinct candidates once,
+// in document order: neighbours in a lookup block share the cache lines one document's pair bytes span, which random
+// reads waste (#26). Queries then score their candidates in parallel.
+void TieredQIndex::rescore_candidates(const TieredQQuery* weights,
+    std::vector<std::vector<TieredQHit>>& candidates,size_t k) const {
+  const size_t rows=candidates.size();
+  const auto& reader=fine_tiers_->reader;
+  const size_t stride=fine_tiers_->prefix.bytes_per_vector();
+  std::vector<uint32_t> docs; std::vector<uint8_t> decoded;
+  for (size_t first=0;first<rows;first+=tieredq_detail::fine_rescore_query_chunk) {
+    const size_t last=std::min(rows,first+tieredq_detail::fine_rescore_query_chunk);
+    docs.clear();
+    for (size_t row=first;row<last;++row) for (const auto& hit:candidates[row]) docs.push_back(hit.id);
+    std::sort(docs.begin(),docs.end()); docs.erase(std::unique(docs.begin(),docs.end()),docs.end());
+    decoded.resize(product(docs.size(),stride)+tieredq_detail::fine_read_slack);
+    const size_t pieces=(docs.size()+tieredq_detail::fine_decode_docs-1)/tieredq_detail::fine_decode_docs;
+    #pragma omp parallel for schedule(dynamic) if(!omp_in_parallel())
+    for (ptrdiff_t piece=0;piece<ptrdiff_t(pieces);++piece) {
+      const size_t begin=size_t(piece)*tieredq_detail::fine_decode_docs;
+      const size_t n=std::min(tieredq_detail::fine_decode_docs,docs.size()-begin);
+      reader->read(*fast_,docs.data()+begin,n,decoded.data()+begin*stride);
+    }
+    #pragma omp parallel for schedule(dynamic) if(!omp_in_parallel())
+    for (ptrdiff_t row=ptrdiff_t(first);row<ptrdiff_t(last);++row) {
+      auto& hits=candidates[size_t(row)];
+      thread_local std::vector<const uint8_t*> row_of;
+      row_of.resize(hits.size());
+      for (size_t i=0;i<hits.size();++i)
+        row_of[i]=decoded.data()+size_t(std::lower_bound(docs.begin(),docs.end(),hits[i].id)-docs.begin())*stride;
+      score_fine(weights[size_t(row)],hits.data(),hits.size(),row_of.data());
+      keep_best(hits,k);
+    }
+  }
+}
 void TieredQIndex::search_batch_fast(const float* queries,size_t rows,size_t k,
     float* scores,uint32_t* ids) const {
   if (!rows || !k || !size()) return;
@@ -324,43 +359,14 @@ void TieredQIndex::search_batch_fast_model(const float* queries,size_t rows,size
     }
   };
   if (fine_tiers_) {
-    // The scan hands over candidates one query at a time. Rescoring then decodes each chunk's distinct candidates
-    // once, in document order: neighbours in a lookup block share the cache lines one document's pair bytes span,
-    // which random reads waste (#26). Queries then score their candidates in parallel.
-    std::vector<std::vector<TieredQHit>> candidates(rows);
     // One projection serves both the scan and rescoring, as in single searches, which keeps both searches' results
     // identical; projecting again for rescoring cost up to 3/4 of the fine-tier overhead at 4 bits/dim (#31).
+    std::vector<std::vector<TieredQHit>> candidates(rows);
     const auto weights=fine_query_weights(queries,rows);
     fast_search(*fast_,scan_codec(),queries,rows,depth,
         [&](size_t row,std::vector<TieredQHit> hits) { candidates[row]=std::move(hits); },&weights);
-    const auto& reader=fine_tiers_->reader;
-    const size_t stride=fine_tiers_->prefix.bytes_per_vector();
-    std::vector<uint32_t> docs; std::vector<uint8_t> decoded;
-    for (size_t first=0;first<rows;first+=tieredq_detail::fine_rescore_query_chunk) {
-      const size_t last=std::min(rows,first+tieredq_detail::fine_rescore_query_chunk);
-      docs.clear();
-      for (size_t row=first;row<last;++row) for (const auto& hit:candidates[row]) docs.push_back(hit.id);
-      std::sort(docs.begin(),docs.end()); docs.erase(std::unique(docs.begin(),docs.end()),docs.end());
-      decoded.resize(product(docs.size(),stride)+tieredq_detail::fine_read_slack);
-      const size_t pieces=(docs.size()+tieredq_detail::fine_decode_docs-1)/tieredq_detail::fine_decode_docs;
-      #pragma omp parallel for schedule(dynamic)
-      for (ptrdiff_t piece=0;piece<ptrdiff_t(pieces);++piece) {
-        const size_t begin=size_t(piece)*tieredq_detail::fine_decode_docs;
-        const size_t n=std::min(tieredq_detail::fine_decode_docs,docs.size()-begin);
-        reader->read(*fast_,docs.data()+begin,n,decoded.data()+begin*stride);
-      }
-      #pragma omp parallel for schedule(dynamic)
-      for (ptrdiff_t row=ptrdiff_t(first);row<ptrdiff_t(last);++row) {
-        auto& hits=candidates[size_t(row)];
-        thread_local std::vector<const uint8_t*> row_of;
-        row_of.resize(hits.size());
-        for (size_t i=0;i<hits.size();++i)
-          row_of[i]=decoded.data()+size_t(std::lower_bound(docs.begin(),docs.end(),hits[i].id)-docs.begin())*stride;
-        score_fine(weights[size_t(row)],hits.data(),hits.size(),row_of.data());
-        keep_best(hits,found);
-        write(size_t(row),hits);
-      }
-    }
+    rescore_candidates(weights.data(),candidates,found);
+    for (size_t row=0;row<rows;++row) write(row,candidates[row]);
     return;
   }
   fast_search(*fast_,scan_codec(),queries,rows,depth,[&](size_t row,std::vector<TieredQHit> hits) {

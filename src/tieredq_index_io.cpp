@@ -7,18 +7,18 @@ using tieredq_detail::Layout;
 using tieredq_detail::bad;
 using tieredq_detail::product;
 using tieredq_detail::save_file;
+std::vector<uint8_t> TieredQIndex::fast_payload() const {
+  auto storage=fast_ ? fast_ : make_fast_storage(nullptr,0);
+  auto payload=tieredq_detail::serialize_fast_storage(*storage,
+      fine_tiers_ ? tieredq_detail::fine_payload_version : tieredq_detail::fast_payload_version);
+  if (!fine_tiers_) return payload;
+  tieredq_detail::Writer fine{std::move(payload)};
+  tieredq_detail::write_fast_bytes(fine,std::span(fine_).first(product(size(),fine_tiers_->fine_bytes)));
+  return std::move(fine.data);
+}
 void TieredQIndex::save(const std::string& path) const {
   if (fast_mode_) {
-    auto storage=fast_ ? fast_ : make_fast_storage(nullptr,0);
-    auto payload=tieredq_detail::serialize_fast_storage(*storage,
-        fine_tiers_ ? tieredq_detail::fine_payload_version : tieredq_detail::fast_payload_version);
-    if (fine_tiers_) {
-      tieredq_detail::Writer fine{std::move(payload)};
-      const auto rows=std::span(fine_).first(product(size(),fine_tiers_->fine_bytes));
-      tieredq_detail::write_fast_bytes(fine,rows);
-      payload=std::move(fine.data);
-    }
-    save_file(path,codec_.serialize(),payload,size(),tieredq_detail::fast_index_file_kind);
+    save_file(path,codec_.serialize(),fast_payload(),size(),tieredq_detail::fast_index_file_kind);
     return;
   }
   const size_t stride=codec_.bytes_per_vector();

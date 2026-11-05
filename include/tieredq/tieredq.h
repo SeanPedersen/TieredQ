@@ -31,8 +31,8 @@ struct TieredQConfig {
   // Training-only fine tiers (#26), for fast-target inner product and cosine with a scan cap of at least 6 bits: ranks
   // may take up to max_tier_bits in total, and the fast scan reads only each code's top max_scan_bits (its prefix)
   // before rescoring its candidates exactly, at the same stored bytes. Models get them whenever the allocation codes a
-  // rank wider than the prefix; other targets and metrics ignore the flag. Only the flat TieredQIndex serves
-  // fine-tier models; other indexes reject them, so train their models with fine_tiers off.
+  // rank wider than the prefix; other targets and metrics ignore the flag. The flat TieredQIndex and
+  // TieredQIVFIndex serve fine-tier models; other indexes reject them, so train their models with fine_tiers off.
   bool fine_tiers = true;
   uint32_t max_tier_bits = 12;
   // Training-only: only the top-N PCA ranks may exceed 6 bits (UINT32_MAX disables the restriction).
@@ -288,6 +288,14 @@ class TieredQIndex {
   // Exact scores of scanned candidates; rows[i] is hits[i]'s prefix row (fine_read_slack readable bytes past each).
   void score_fine(const TieredQQuery& weights, TieredQHit* hits, size_t count, const uint8_t* const* rows) const;
   static void keep_best(std::vector<TieredQHit>& hits, size_t k);
+  // Rescores every query's scanned candidates exactly and keeps each one's best k: decodes the distinct candidates of
+  // a chunk of queries once, in document order (hits.id are fast-storage documents).
+  void rescore_candidates(const TieredQQuery* weights, std::vector<std::vector<TieredQHit>>& candidates,
+                          size_t k) const;
+  // Room for count documents ahead of an empty index's appends.
+  void reserve_rows(size_t count);
+  // Fast payload bytes (storage, then fine rows) as save() and TieredQIVFIndex persist them.
+  std::vector<uint8_t> fast_payload() const;
   // Query weights for fine-tier scans and rescoring, from the scan's own projection where it has one.
   std::vector<TieredQQuery> fine_query_weights(const float* queries, size_t rows) const;
 };
@@ -349,7 +357,6 @@ class TieredQIVFIndex {
   void save(const std::string& path) const;
   static TieredQIVFIndex load(const std::string& path);
  private:
-  std::vector<uint8_t> fast_payload() const;
   std::vector<TieredQHit> search_hits(const float* query, const TieredQQuery* weights, size_t k, size_t nprobe,
                                       TieredQPruning pruning) const;
   void search_rows(const float* queries, const TieredQQuery* weights, size_t rows, size_t k, size_t nprobe,

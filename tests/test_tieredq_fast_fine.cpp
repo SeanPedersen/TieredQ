@@ -1,6 +1,6 @@
 // Fast mode with fine tiers (#26): refined prefix books, the automatic policy, model round trips, exact rescoring of
-// the scanned prefix candidates at every prefix width, batch/single agreement, rejected targets and indexes, and
-// persistence.
+// the scanned prefix candidates at every prefix width, batch/single agreement, rejected targets and indexes, the
+// flat and IVF indexes' agreement, and persistence.
 #include "tieredq/tieredq.h"
 #include "tieredq/tieredq_blocks.h"
 #include "tieredq/tieredq_refinement.h"
@@ -84,6 +84,44 @@ void policy_test() {
             "fine tiers reached an L2 target");
 }
 
+// IVF over a fine-tier model: probing every list scans and rescores like the flat index, so its hits equal the flat
+// index's; single, batched and prepared-weight searches agree, and the index round-trips through bytes and files.
+void ivf_test(const dv::TieredQ& codec,const std::vector<float>& data,const std::vector<float>& probe,
+              const std::vector<float>& flat_scores,const std::vector<uint32_t>& flat_ids) {
+  for (const uint32_t lists:{0u,8u}) {
+    dv::TieredQIVFIndex ivf(codec,lists); ivf.build(data.data(),rows);
+    std::vector<float> scores(queries*k); std::vector<uint32_t> ids(queries*k);
+    ivf.search_batch(probe.data(),queries,k,ivf.lists(),scores.data(),ids.data());
+    require(ids==flat_ids && scores==flat_scores,"fine-tier IVF full probe differs from the flat index");
+    const auto weights=codec.query_weights(probe.data(),queries);
+    std::vector<float> prepared_scores(queries*k); std::vector<uint32_t> prepared_ids(queries*k);
+    ivf.search_batch(probe.data(),weights.data(),queries,k,ivf.lists(),prepared_scores.data(),prepared_ids.data());
+    for (size_t q=0;q<queries;++q) {
+      const auto hits=ivf.search(probe.data()+q*dimensions,k,ivf.lists());
+      require(hits.size()==k,"fine-tier IVF single search size");
+      for (size_t i=0;i<k;++i) {
+        require(hits[i].id==ids[q*k+i] && hits[i].score==scores[q*k+i],"fine-tier IVF single and batch differ");
+        require(std::fabs(hits[i].score-prepared_scores[q*k+i])<=score_tolerance*(1+std::fabs(hits[i].score)),
+                "fine-tier IVF prepared-weight scores differ");
+      }
+    }
+    std::vector<float> partial_scores(queries*k); std::vector<uint32_t> partial_ids(queries*k);
+    ivf.search_batch(probe.data(),queries,k,1,partial_scores.data(),partial_ids.data());
+    for (size_t q=0;q<queries;++q) for (size_t i=1;i<k;++i)
+      require(partial_scores[q*k+i]<=partial_scores[q*k+i-1],"fine-tier IVF partial probe is not sorted");
+    const auto round_trip=dv::TieredQIVFIndex::deserialize(ivf.serialize());
+    const auto path=std::filesystem::temp_directory_path()/("tieredq-ivf-fine-"+std::to_string(getpid()));
+    ivf.save(path.string());
+    const auto loaded=dv::TieredQIVFIndex::load(path.string());
+    std::filesystem::remove(path);
+    for (const auto* reloaded:{&round_trip,&loaded}) {
+      std::vector<float> again_scores(queries*k); std::vector<uint32_t> again_ids(queries*k);
+      reloaded->search_batch(probe.data(),queries,k,ivf.lists(),again_scores.data(),again_ids.data());
+      require(again_ids==ids && again_scores==scores,"fine-tier IVF changed hits on reload");
+    }
+  }
+}
+
 // Fine-tier fast search of a fast target (nibble prefix scan) or a full target (exact prefix scan): batch equals single
 // search, rescored scores equal the full-width codes' exact scores, and the index round-trips.
 void rescoring_test(uint32_t bits_per_dim,dv::TieredQIndexMode target) {
@@ -118,9 +156,8 @@ void rescoring_test(uint32_t bits_per_dim,dv::TieredQIndexMode target) {
   require(fast.bytes_per_vector()<=codec.code_bytes()+codec.metadata_bytes_per_vector()+dimensions/2,
           "fine-tier fast storage exceeds its code budget");
 
-  // Only the flat index serves fine-tier models.
+  // Only the flat and IVF indexes serve fine-tier models.
   const auto rejects=[](auto&& build) { try { build(); } catch (const std::runtime_error&) { return true; } return false; };
-  require(rejects([&] { dv::TieredQIVFIndex ivf(codec); }),"IVF accepted a fine-tier model");
   require(rejects([&] { dv::TieredQFastBlocks blocks(codec); }),"fast blocks accepted a fine-tier model");
   require(rejects([&] { dv::TieredQRefinement::train(codec,codec.config().code_bits+dimensions,data.data(),rows); }),
           "refinement accepted a fine-tier prefix");
@@ -134,6 +171,7 @@ void rescoring_test(uint32_t bits_per_dim,dv::TieredQIndexMode target) {
   std::vector<float> loaded_scores(queries*k); std::vector<uint32_t> loaded_ids(queries*k);
   loaded.search_batch(probe.data(),queries,k,loaded_scores.data(),loaded_ids.data());
   require(loaded_ids==batch_ids && loaded_scores==batch_scores,"fine-tier index changed hits on reload");
+  if (target==dv::TieredQIndexMode::fast) ivf_test(codec,data,probe,batch_scores,batch_ids);
 }
 } // namespace
 

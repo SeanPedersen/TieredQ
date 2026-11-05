@@ -62,9 +62,9 @@ index = TieredQIndex.load("index.tq")
   1M sets (OpenAI-1536, MS MARCO Cohere-1024, 6-8 bits/dim) top-10 misses fell 46-79% and search got 3-24% faster (likely
   as the scan reads fewer bits); encoding is 11-34% slower (wider codes). With `exact_fast_scores=True` the prefix is the
   8-bit Lloyd-Max code, scanned exactly, and fine bits refine its cells: at 8 bits/dim mean top-10 misses fell from 28 to
-  15 (Gemini-768) and 18 to 9 (OpenAI-1536) at the same batch speed. Only the flat `TieredQIndex` serves fine-tier
-  models: train IVF, nested and refinement models with `TieredQConfig::fine_tiers = false` (the Python IVF and nested
-  indexes do).
+  15 (Gemini-768) and 18 to 9 (OpenAI-1536) at the same batch speed. The flat `TieredQIndex` and `TieredQIVFIndex` serve
+  fine-tier models (IVF scans the probed lists to the same candidate depth and rescores those candidates); train nested
+  and refinement models with `TieredQConfig::fine_tiers = false` (the Python nested index does).
 - In C++, use `dv::TieredQIndex(codec)` for fast mode or
   `dv::TieredQIndex(codec, dv::TieredQIndexMode::full)` for full mode.
   Inspect the enum with `index.mode()`; the boolean constructor is removed.
