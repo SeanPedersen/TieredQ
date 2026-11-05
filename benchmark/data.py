@@ -13,6 +13,7 @@ DIMENSIONS = {"sift": 128, "glove": 200, "openai": 1536}
 SPLIT_SEED = 42
 SOURCES = json.loads(Path(__file__).with_name("datasets.json").read_text())
 HASH_CHUNK_BYTES = 1024 * 1024
+MIN_TRUTH_OVERLAP = 0.999
 
 def download(url, target, expected_sha256):
     if target.exists():
@@ -98,23 +99,40 @@ def prepare(root, name, max_base=None, query_count=QUERY_COUNT):
     return base, queries, truth
 
 
-def ground_truth(base, queries, l2):
+def deep_truth(root, name, base, queries, truth, depth):
+    """Exact top-`depth` truth for a prepared split, cached by its content; its top 10 must match `truth`."""
+    digest = hashlib.sha256(base.tobytes())
+    digest.update(queries.tobytes())
+    cache = root / f"{name}-{len(base)}-{len(queries)}-truth{depth}-{digest.hexdigest()[:16]}.npy"
+    if cache.exists():
+        return np.load(cache)
+    print(f"Exact FP32 truth@{depth}: {name} {base.shape}, queries={len(queries)}", flush=True)
+    deep = ground_truth(base, queries, name == "sift", depth)
+    # Ties may reorder equal scores across a block boundary; anything beyond that means a different split.
+    overlap = np.mean([len(set(a) & set(b[:TOP_K])) / TOP_K for a, b in zip(truth, deep, strict=True)])
+    if overlap < MIN_TRUTH_OVERLAP:
+        raise ValueError(f"truth@{depth} top-{TOP_K} overlap {overlap:.4f} with the cached truth")
+    np.save(cache, deep)
+    return deep
+
+
+def ground_truth(base, queries, l2, depth=TOP_K):
     query_chunk, base_chunk = 32, 16384
     output = []
     for start in range(0, len(queries), query_chunk):
         q = queries[start:start + query_chunk]
-        best_scores = np.full((len(q), TOP_K), -np.inf, dtype=np.float32)
-        best_ids = np.zeros((len(q), TOP_K), dtype=np.uint32)
+        best_scores = np.full((len(q), depth), -np.inf, dtype=np.float32)
+        best_ids = np.zeros((len(q), depth), dtype=np.uint32)
         for offset in range(0, len(base), base_chunk):
             block = base[offset:offset + base_chunk]
             scores = q @ block.T
             if l2:
                 scores = 2 * scores - np.sum(block * block, axis=1)
-            local_k = min(TOP_K, len(block))
+            local_k = min(depth, len(block))
             local = np.argpartition(-scores, local_k - 1, axis=1)[:, :local_k]
             scores = np.concatenate([best_scores, np.take_along_axis(scores, local, axis=1)], axis=1)
             ids = np.concatenate([best_ids, (local + offset).astype(np.uint32)], axis=1)
-            top = np.argsort(-scores, axis=1, kind="stable")[:, :TOP_K]
+            top = np.argsort(-scores, axis=1, kind="stable")[:, :depth]
             best_scores = np.take_along_axis(scores, top, axis=1)
             best_ids = np.take_along_axis(ids, top, axis=1)
         output.append(best_ids)

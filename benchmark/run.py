@@ -15,7 +15,12 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
 # Bits per original dimension accepted by both native codecs.
 BIT_BUDGETS = range(1, 9)
-FIELDS = "dataset,d,base_n,queries,metric,codec,config,target_bits,effective_bits_per_dim,effective_bytes_per_vector,build_s,encode_vps,recall10,qps,p50_ms,p95_ms,threads,batch,rerank,seed".split(",")
+THREAD_COUNTS = (1, 8)
+BATCH_SIZES = (1, 32, 1000)
+FIELDS = "dataset,d,base_n,queries,metric,codec,config,target_bits,effective_bits_per_dim,effective_bytes_per_vector,build_s,encode_vps,recall10,recall100,qps,p50_ms,p95_ms,threads,batch,k,rerank,seed".split(",")
+# TieredQ fast-index variants: fine tiers on (the default), off (the pre-#31 fast mode), or a full-target model's
+# exact fast scores (with their default fine tiers).
+TIEREDQ_VARIANTS = {"fine": "fast-native", "nofine": "fast-native-nofine", "exact": "exact-native"}
 
 
 def command(args):
@@ -32,32 +37,45 @@ def codec_config(args, transform):
         from qdrant_codec import CONFIG
         return CONFIG
     if args.codec == "tieredq":
-        return "fast-native" if args.legacy_l2_lift or args.datasets[0] != "sift" else "fast-native-metric-l2"
+        name = TIEREDQ_VARIANTS[args.variant]
+        return name if args.legacy_l2_lift or args.datasets[0] != "sift" else f"{name}-metric-l2"
     if args.codec == "tieredq-nested":
         return f"nested-native-p{args.prefix_bits}-k{args.candidates}"
     return "flat-fht-full-score-hacc" if args.full_score else "flat-fht-native-bounds-hacc"
 
 
+def tieredq_index(vectors, bits, seed, l2, code_bits=0, variant="fine", native_metric=True):
+    """A flat fast-index TieredQ variant; code_bits (if set) overrides bits per dimension."""
+    import codec_native
+    return codec_native.Index(vectors, bits, seed, True, l2, True, code_bits, native_metric,
+                              exact=variant == "exact", fine_tiers=variant != "nofine")
+
+
 def build_index(args, vectors):
     import codec_native
+    l2 = args.datasets[0] == "sift"
     if args.codec == "qdrant":
         from qdrant_codec import QdrantIndex
-        return QdrantIndex.build(vectors, args.bits[0], args.datasets[0] == "sift")
+        return QdrantIndex.build(vectors, args.bits[0], l2)
     if args.codec == "tieredq-nested":
         return codec_native.NestedIndex(vectors, args.seeds[0], args.prefix_bits, args.code_bits, args.candidates)
-    return codec_native.Index(vectors, args.bits[0], args.seeds[0], args.codec == "tieredq", args.datasets[0] == "sift",
-                              True, args.code_bits or 0, not args.legacy_l2_lift)
+    if args.codec == "tieredq":
+        return tieredq_index(vectors, args.bits[0], args.seeds[0], l2, args.code_bits or 0, args.variant,
+                             not args.legacy_l2_lift)
+    return codec_native.Index(vectors, args.bits[0], args.seeds[0], False, l2)
 
 
 def worker(args):
     import numpy as np
     from threadpoolctl import threadpool_limits
-    from data import prepare, codec_vectors
+    from data import prepare, codec_vectors, deep_truth
     from measure import measure
     import codec_native
     from l2_transform import L2Transform
     with threadpool_limits(limits=1):
         base, queries, truth = prepare(args.data, args.datasets[0], args.max_base, args.queries)
+        if max(args.k) > truth.shape[1]:
+            truth = deep_truth(args.data, args.datasets[0], base, queries, truth, max(args.k))
         d = base.shape[1]
         # TieredQ serves SIFT with its native L2 metric; --legacy-l2-lift keeps the old adapter path.
         lift = args.datasets[0] == "sift" and args.codec == "tieredq" and args.legacy_l2_lift
@@ -82,29 +100,45 @@ def worker(args):
             scale = transform.scale if transform else float(np.max(np.linalg.norm(base, axis=1)))
             index = L2Search(index, scale, transform)
             probes = queries
-        recall_only = None
-        if args.seeds[0] != 0:
-            from measure import recall
-            ids = np.empty((len(probes), 10), dtype=np.uint32)
-            for offset in range(0, len(probes), 32):
-                index.search(probes[offset:offset+32], ids[offset:offset+32], 8)
-            recall_only = dict(recall10=recall(truth, ids), qps=float("nan"),
-                               p50_ms=float("nan"), p95_ms=float("nan"))
         rows = []
-        for threads in args.threads:
-            for batch in args.batches:
-                metrics = measure(index, probes, truth, threads, batch) if recall_only is None else recall_only
-                rows.append(common | metrics | dict(threads=threads, batch=batch))
-                print(f"{args.datasets[0]} {args.codec} b={args.bits[0]} seed={args.seeds[0]} t={threads} batch={batch}: {metrics}", flush=True)
+        schedules = args.schedules or [(threads, batch) for threads in args.threads for batch in args.batches]
+        for k in args.k:
+            recall_only = None if args.seeds[0] == 0 else recall_pass(index, probes, truth, k)
+            for threads, batch in schedules:
+                metrics = measure(index, probes, truth, threads, batch, k) if recall_only is None else recall_only
+                rows.append(common | dict(recall100=float("nan")) | metrics | dict(threads=threads, batch=batch, k=k))
+                print(f"{args.datasets[0]} {args.codec} {common['config']} b={args.bits[0]} seed={args.seeds[0]} "
+                      f"k={k} t={threads} batch={batch}: {metrics}", flush=True)
         args.cell.write_text(json.dumps(rows))
+
+
+def schedule(text):
+    """THREADSxBATCH, e.g. 8x32."""
+    threads, batch = map(int, text.split("x"))
+    if threads not in THREAD_COUNTS or batch not in BATCH_SIZES:
+        raise argparse.ArgumentTypeError(f"schedule needs threads in {THREAD_COUNTS} and batch in {BATCH_SIZES}")
+    return threads, batch
+
+
+def recall_pass(index, probes, truth, k):
+    """Recall of one untimed batch-32, 8-thread pass (non-zero seeds report recall only)."""
+    import numpy as np
+    from measure import recalls
+    ids = np.empty((len(probes), k), dtype=np.uint32)
+    for offset in range(0, len(probes), 32):
+        index.search(probes[offset:offset+32], ids[offset:offset+32], 8)
+    return recalls(truth, ids) | dict(qps=float("nan"), p50_ms=float("nan"), p95_ms=float("nan"))
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--datasets", nargs="+", choices=["sift", "glove", "openai", "gemini", "openai1m", "msmarco1m", "msmarco1m-doc"], default=["sift", "glove", "openai"])
     parser.add_argument("--bits", nargs="+", type=int, choices=BIT_BUDGETS, default=[1,2,4,8], metavar="{1..8}")
-    parser.add_argument("--threads", nargs="+", type=int, choices=[1,8], default=[1,8])
-    parser.add_argument("--batches", nargs="+", type=int, choices=[1,32], default=[1,32])
+    parser.add_argument("--threads", nargs="+", type=int, choices=THREAD_COUNTS, default=[1,8])
+    parser.add_argument("--batches", nargs="+", type=int, choices=BATCH_SIZES, default=[1,32])
+    parser.add_argument("--schedules", nargs="+", type=schedule, metavar="THREADSxBATCH",
+                        help="Explicit timing schedules (replace the --threads x --batches product)")
+    parser.add_argument("--k", nargs="+", type=int, choices=[10,100], default=[10], help="Search depths")
     parser.add_argument("--seeds", nargs="+", type=int, default=[0,1,2])
     parser.add_argument("--queries", type=int, default=1000)
     parser.add_argument("--max-base", type=int)
@@ -113,6 +147,7 @@ def main():
     parser.add_argument("--full-score", action="store_true", help="Disable native RaBitQ extra-bit bound pruning")
     parser.add_argument("--legacy-l2-lift", action="store_true", help="Use the original unconditioned TieredQ L2 lift")
     parser.add_argument("--codec", choices=["tieredq", "tieredq-nested", "rabitq", "qdrant"])
+    parser.add_argument("--variant", choices=TIEREDQ_VARIANTS, default="fine", help="TieredQ fast-index variant")
     parser.add_argument("--cell", type=Path)
     parser.add_argument("--code-bits", type=int, help="Exact TieredQ code budget per vector (e.g. a match_memory result); "
                         "for tieredq-nested the total prefix plus suffix budget")
@@ -123,6 +158,10 @@ def main():
         parser.error("--max-base must be at least 10")
     if args.code_bits is not None and (args.codec not in ("tieredq", "tieredq-nested") or args.code_bits < 1):
         parser.error("--code-bits needs --codec tieredq or tieredq-nested and a positive budget")
+    if args.variant != "fine" and args.codec != "tieredq":
+        parser.error("--variant needs --codec tieredq")
+    if args.codec == "qdrant" and args.k != [10]:
+        parser.error("the TQ+ shim searches k=10 only")
     if args.codec == "tieredq-nested" and not (args.code_bits and args.prefix_bits and args.candidates):
         parser.error("--codec tieredq-nested needs --code-bits, --prefix-bits and --candidates")
     if any(seed < 0 for seed in args.seeds):

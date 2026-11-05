@@ -40,17 +40,21 @@ class Index {
   }
   // code_bits overrides the TieredQ per-vector code budget; 0 keeps bits per effective dimension. native_metric
   // passes raw L2 rows to TieredQ's own L2 metric; otherwise L2 rows arrive lifted by the caller (one extra column).
+  // exact serves a full-target model through the fast index (exact_fast_scores in the Python bindings). Full mode
+  // trains without fine tiers, which only the fast index serves.
   Index(Matrix base, size_t bits, uint64_t seed, bool tieredq, bool l2, bool fast = true, size_t code_bits = 0,
-        bool native_metric = false)
+        bool native_metric = false, bool exact = false, bool fine_tiers = true)
       : width_(base.shape(1)), count_(base.shape(0)) {
     if (count_ < top_k || !width_ || bits < 1 || bits > 8) throw std::invalid_argument("invalid index shape/bits");
+    if (exact && !fast) throw std::invalid_argument("exact scores need the fast index");
     if (tieredq) {
       const bool lifted = l2 && !native_metric;
       const size_t budget = code_bits ? code_bits : bits * (width_ - (lifted ? 1 : 0));
       auto config = dv::TieredQConfig::target_code_bits(width_, budget);
       if (l2 && native_metric) config.metric = dv::TieredQMetric::l2;
       config.num_centroids = std::min<size_t>(256, count_ / 2);
-      config.target_mode = fast ? dv::TieredQIndexMode::fast : dv::TieredQIndexMode::full;
+      config.target_mode = fast && !exact ? dv::TieredQIndexMode::fast : dv::TieredQIndexMode::full;
+      config.fine_tiers = fine_tiers && fast;
       const size_t train_count = std::min(count_, training_limit);
       std::vector<uint32_t> order(count_);
       std::iota(order.begin(), order.end(), 0);
@@ -90,18 +94,19 @@ class Index {
     result["scalar_fast_scan"] = tq_->uses_scalar_fast_scan();
     return result;
   }
+  // The ids width is the search depth k.
   void search(Matrix queries, Ids ids, int threads) const {
-    const size_t rows=queries.shape(0);
-    if (queries.shape(1)!=width_ || ids.shape(0)!=rows || ids.shape(1)!=top_k || threads<1)
+    const size_t rows=queries.shape(0), k=ids.shape(1);
+    if (queries.shape(1)!=width_ || ids.shape(0)!=rows || k<1 || k>count_ || threads<1)
       throw std::invalid_argument("invalid search shapes/threads");
     omp_set_num_threads(threads);
     if (tq_) {
-      std::vector<float> scores(rows*top_k);
-      tq_->search_batch(queries.data(), rows, top_k, scores.data(), ids.data());
+      std::vector<float> scores(rows*k);
+      tq_->search_batch(queries.data(), rows, k, scores.data(), ids.data());
       return;
     }
     #pragma omp parallel for schedule(static) if(rows > 1)
-    for (size_t i=0; i<rows; ++i) rq_->search(queries.data()+i*width_, top_k, ids.data()+i*top_k);
+    for (size_t i=0; i<rows; ++i) rq_->search(queries.data()+i*width_, k, ids.data()+i*k);
   }
   size_t save(const std::string& path) const {
     if (rq_) rq_->save(path); else tq_->save(path);
@@ -182,10 +187,10 @@ NB_MODULE(codec_native, m) {
 #endif
   m.def("set_threads", [](int n){ omp_set_dynamic(0); omp_set_num_threads(n); });
   nb::class_<Index>(m,"Index")
-    .def(nb::init<Matrix,size_t,uint64_t,bool,bool>(), nb::call_guard<nb::gil_scoped_release>())
-    .def(nb::init<Matrix,size_t,uint64_t,bool,bool,bool>(), nb::call_guard<nb::gil_scoped_release>())
-    .def(nb::init<Matrix,size_t,uint64_t,bool,bool,bool,size_t>(), nb::call_guard<nb::gil_scoped_release>())
-    .def(nb::init<Matrix,size_t,uint64_t,bool,bool,bool,size_t,bool>(), nb::call_guard<nb::gil_scoped_release>())
+    .def(nb::init<Matrix,size_t,uint64_t,bool,bool,bool,size_t,bool,bool,bool>(), nb::arg("base"), nb::arg("bits"),
+         nb::arg("seed"), nb::arg("tieredq"), nb::arg("l2"), nb::arg("fast") = true, nb::arg("code_bits") = 0,
+         nb::arg("native_metric") = false, nb::arg("exact") = false, nb::arg("fine_tiers") = true,
+         nb::call_guard<nb::gil_scoped_release>())
     .def("diagnostics", &Index::diagnostics)
     .def_prop_ro("encode_seconds", &Index::encode_seconds)
     .def("search", &Index::search, nb::call_guard<nb::gil_scoped_release>())

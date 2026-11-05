@@ -3,16 +3,24 @@ import time
 import numpy as np
 
 TOP_K = 10
+# Recall@depth reported for every search at least that deep.
+RECALL_DEPTHS = (10, 100)
 WARMUPS = 3
 REPEATS = 3
 
 
-def recall(truth, ids):
-    return float(np.mean([len(set(a) & set(b)) / TOP_K for a, b in zip(truth, ids, strict=True)]))
+def recall(truth, ids, depth=TOP_K):
+    if truth.shape[1] < depth or ids.shape[1] < depth:
+        raise ValueError(f"recall@{depth} needs truth and results at least {depth} deep")
+    return float(np.mean([len(set(a[:depth]) & set(b[:depth])) / depth for a, b in zip(truth, ids, strict=True)]))
 
 
-def measure(index, queries, truth, threads, batch):
-    output = np.empty((len(queries), TOP_K), dtype=np.uint32)
+def recalls(truth, ids):
+    return {f"recall{depth}": recall(truth, ids, depth) for depth in RECALL_DEPTHS if depth <= ids.shape[1]}
+
+
+def measure(index, queries, truth, threads, batch, k=TOP_K):
+    output = np.empty((len(queries), k), dtype=np.uint32)
     for i in range(WARMUPS):
         index.search(queries[i % len(queries):i % len(queries)+1], output[:1], threads)
     durations = []
@@ -26,7 +34,7 @@ def measure(index, queries, truth, threads, batch):
             total += elapsed
             # Batch response latency, never mislabel amortized throughput as latency.
             durations.extend([elapsed * 1000] * (stop-start))
-    return {"recall10": recall(truth, output), "qps": len(queries)*REPEATS/total,
+    return recalls(truth, output) | {"qps": len(queries)*REPEATS/total,
             "p50_ms": float(np.percentile(durations, 50)),
             "p95_ms": float(np.percentile(durations, 95))}
 

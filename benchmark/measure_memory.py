@@ -6,7 +6,8 @@ component accounting of the reloaded index, steady RSS growth after reload, and 
 their maximum. Recall is a reload check against the
 8-thread batch-32 benchmark rows; per-schedule recall is kept in each cell's serve.json. Build peak is RSS growth from the loaded
 FP32 corpus through training, encoding and packing. RSS deltas start from a reset high-water mark.
-A cell spec may carry an exact TieredQ `code_bits` budget in place of bits × dimensions (see match_memory.py).
+A cell spec may carry an exact TieredQ `code_bits` budget in place of bits × dimensions (see match_memory.py), and a
+run.py TieredQ `variant` (default fine).
 With `quick`, the query workload is one untimed pass per schedule: same allocations and peak, no timing.
 A dataset with a companion query set on the same base (MS MARCO's doc queries) also scores that set at the primary
 schedule after all memory reads, so one match yields both recalls (`companion_recall10`).
@@ -86,8 +87,11 @@ def build_index(spec, vectors):
     if spec["codec"] == "qdrant":
         from qdrant_codec import QdrantIndex
         return QdrantIndex.build(vectors, spec["bits"], spec["dataset"] == "sift")
-    return codec_native.Index(vectors, spec["bits"], spec["seed"], spec["codec"] == "tieredq",
-                              spec["dataset"] == "sift", True, spec.get("code_bits", 0), True)
+    if spec["codec"] == "tieredq":
+        from run import tieredq_index
+        return tieredq_index(vectors, spec["bits"], spec["seed"], spec["dataset"] == "sift", spec.get("code_bits", 0),
+                             spec.get("variant", "fine"))
+    return codec_native.Index(vectors, spec["bits"], spec["seed"], False, spec["dataset"] == "sift")
 
 
 def load_index(spec, cell):
@@ -205,7 +209,8 @@ def to_row(spec, built, served):
 
 def cell_name(spec):
     budget = f"c{spec['code_bits']}" if spec.get("code_bits") else spec["bits"]
-    return f"cell-{spec['dataset']}-{spec['codec']}-{budget}-{spec['seed']}"
+    variant = f"-{spec['variant']}" if spec.get("variant", "fine") != "fine" else ""
+    return f"cell-{spec['dataset']}-{spec['codec']}{variant}-{budget}-{spec['seed']}"
 
 
 def run_cell(spec, output, env):

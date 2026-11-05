@@ -102,5 +102,33 @@ class NativeTests(unittest.TestCase):
         overlap = np.mean([len(set(a) & set(b)) for a, b in zip(ids, exact)])
         self.assertGreaterEqual(overlap, 8)
 
+    def test_tieredq_variants_search_deeper_than_ten(self):
+        from data import ground_truth
+        from measure import recalls
+        rng = np.random.default_rng(47)
+        base = rng.normal(size=(2048, 64)).astype(np.float32)
+        base /= np.linalg.norm(base, axis=1, keepdims=True)
+        probes = base[:16] + 0.05*rng.normal(size=(16, 64)).astype(np.float32)
+        truth = ground_truth(base, probes, False, 100)
+        codec_native.set_threads(8)
+        for variant in (dict(), dict(fine_tiers=False), dict(exact=True)):
+            index = codec_native.Index(base, 8, 0, True, False, True, 0, True, **variant)
+            ids = np.empty((16, 100), dtype=np.uint32)
+            index.search(probes, ids, 8)
+            serial = np.empty_like(ids)
+            for i in range(len(probes)):
+                index.search(probes[i:i+1], serial[i:i+1], 1)
+            np.testing.assert_array_equal(ids, serial)
+            self.assertGreater(recalls(truth, ids)["recall100"], .9, variant)
+        rabitq = codec_native.Index(base, 4, 0, False, False)
+        ids = np.empty((16, 100), dtype=np.uint32)
+        rabitq.search(probes, ids, 8)
+        self.assertGreater(recalls(truth, ids)["recall100"], .8)
+
+    def test_exact_scores_need_the_fast_index(self):
+        base = np.random.default_rng(53).normal(size=(64, 16)).astype(np.float32)
+        with self.assertRaises(ValueError):
+            codec_native.Index(base, 4, 0, True, False, False, exact=True)
+
 if __name__ == "__main__":
     unittest.main()

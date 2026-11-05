@@ -21,6 +21,22 @@ class BenchmarkTests(unittest.TestCase):
             expected = np.argsort(-scores, axis=1)[:, :10]
             np.testing.assert_array_equal(ground_truth(base, queries, l2), expected)
 
+    def test_deep_truth_extends_cached_truth_and_recall_reads_its_depth(self):
+        from data import deep_truth
+        from measure import recalls
+        rng = np.random.default_rng(11)
+        base = rng.normal(size=(500, 8)).astype(np.float32)
+        queries = rng.normal(size=(7, 8)).astype(np.float32)
+        truth = ground_truth(base, queries, False)
+        with tempfile.TemporaryDirectory() as directory:
+            deep = deep_truth(Path(directory), "openai", base, queries, truth, 100)
+            np.testing.assert_array_equal(deep_truth(Path(directory), "openai", base, queries, truth, 100), deep)
+            with self.assertRaises(ValueError):
+                deep_truth(Path(directory), "other", base, queries, truth[::-1].copy(), 100)
+        np.testing.assert_array_equal(deep[:, :10], truth)
+        self.assertEqual(recalls(deep, deep), {"recall10": 1.0, "recall100": 1.0})
+        self.assertEqual(recalls(deep, deep[:, :10].copy()), {"recall10": 1.0})
+
     def test_l2_lift_preserves_exact_rankings(self):
         rng = np.random.default_rng(7)
         base = rng.normal(size=(40, 8)).astype(np.float32)
