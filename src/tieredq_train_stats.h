@@ -18,12 +18,34 @@ inline std::pair<float,float> projected_moments(double sum,double square,size_t 
   const double average=sum/rows;
   return projected_distribution(average,square/rows-average*average);
 }
-inline bool needs_empirical_projection_stats(const std::vector<double>& eigenvalues,const std::vector<int>& ranks) {
+// Variance the binary16 basis rounding alone can leak into a direction; eigenvalues are ascending.
+inline double rounding_variance(const std::vector<double>& eigenvalues) {
   constexpr double binary16_epsilon=0x1p-10;
-  const double rounding_variance=eigenvalues.back()*binary16_epsilon*binary16_epsilon;
+  return eigenvalues.back()*binary16_epsilon*binary16_epsilon;
+}
+inline bool needs_empirical_projection_stats(const std::vector<double>& eigenvalues,const std::vector<int>& ranks) {
+  const double noise=rounding_variance(eigenvalues);
   return std::any_of(ranks.begin(),ranks.end(),[&](int rank) {
-    return eigenvalues[eigenvalues.size()-1-rank]<=rounding_variance;
+    return eigenvalues[eigenvalues.size()-1-rank]<=noise;
   });
+}
+// A rank-deficient sample codes directions it never varied in, whose fitted sigma is only rounding noise. Rows added
+// later can carry real energy there: their z then swamps the scale search and the fp16 factor overflows (#35).
+// Unobserved directions are assumed to vary at least as much as the least-varying observed one. A sample that varied
+// in no direction (one row, duplicates) only reveals its coordinates' magnitude, the centroids' mean square; an
+// all-zero sample reveals nothing, so the floor falls back to the coordinates of a unit-norm row.
+inline void floor_unobserved_sigma(const std::vector<double>& eigenvalues,const std::vector<float>& centroids,
+                                   std::vector<float>& sigma) {
+  const size_t dimensions=eigenvalues.size();
+  const auto observed=std::upper_bound(eigenvalues.begin(),eigenvalues.end(),rounding_variance(eigenvalues));
+  double variance=observed==eigenvalues.end() ? 0 : *observed;
+  if (!(variance>0)) {
+    for (const float value:centroids) variance+=double(value)*value;
+    variance/=double(centroids.size());
+  }
+  if (!(variance>0)) variance=1.0/double(dimensions);
+  const float floor=float(std::sqrt(variance));
+  for (auto& value:sigma) value=std::max(value,floor);
 }
 // Spectral moments describe the orthogonal basis before binary16 rounding. Near the covariance's null space,
 // rounding mixes in enough positive-variance directions that those moments no longer describe the stored basis.

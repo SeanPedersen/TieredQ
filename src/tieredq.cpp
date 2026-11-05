@@ -579,9 +579,10 @@ TieredQ TieredQ::train_model(TieredQConfig config,const tieredq_detail::Training
     basis[i]=tieredq_detail::half_decode(basis_half[i]);
   }
   if (spectral_stats) {
-    if (tieredq_detail::needs_empirical_projection_stats(eigenvalues,ranks))
+    if (tieredq_detail::needs_empirical_projection_stats(eigenvalues,ranks)) {
       tieredq_detail::empirical_projection_stats(sample,rows,ids,centroids,basis,size_t(m),c.mean_,c.sigma_);
-    else
+      tieredq_detail::floor_unobserved_sigma(eigenvalues,centroids,c.sigma_);
+    } else
       tieredq_detail::spectral_projection_stats(eigenvalues,ranks,c.tiers_,rotations,mean,basis,rows,c.mean_,c.sigma_);
   } else {
     // Residual covariance was centered; restore the mean before fitting the projected mean.

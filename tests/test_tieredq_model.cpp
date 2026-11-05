@@ -124,6 +124,14 @@ void encoder_boundaries() {
     std::vector<float> mean,sigma;
     empirical_projection_stats(TrainingRows{sample.data(),2},2,ids,centroids,basis,1,mean,sigma);
     require(mean[0]==0 && std::abs(sigma[0]-(0x1p-11f+1e-9f))<1e-10f,"rounded null-space variance");
+    // Unobserved directions vary at least like the least-varying observed one, else like the sample's magnitude.
+    std::vector<float> floored{1e-9f,3.f};
+    floor_unobserved_sigma({1e-16,4,16},{},floored);
+    require(floored[0]==2.f && floored[1]==3.f,"observed sigma floor");
+    floor_unobserved_sigma({0,0},{3,-3,3,-3},floored={1e-9f});
+    require(floored[0]==3.f,"centroid magnitude sigma floor");
+    floor_unobserved_sigma({0,0,0,0},{0,0},floored={1e-9f});
+    require(floored[0]==0.5f,"unit-row sigma floor");
   }
   {
     const std::vector<double> eigenvalues{4./3,16./3},residual_mean{2,3};
