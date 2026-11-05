@@ -1,6 +1,6 @@
 # Standalone TieredQ codec and exhaustive in-memory index.
 cmake_minimum_required(VERSION 3.18)
-project(TieredQ VERSION 0.1.0 LANGUAGES CXX)
+project(TieredQ VERSION 0.1.1 LANGUAGES CXX)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 set(TIEREDQ_STANDALONE OFF)
