@@ -1,0 +1,191 @@
+[
+  {
+    "dataset": "openai",
+    "reference": "qdrant",
+    "reference_bits": 1,
+    "target_bytes_per_vector": 200.33016,
+    "variant": "fine",
+    "code_bits": 1263,
+    "bytes_per_vector": 199.53088
+  },
+  {
+    "dataset": "openai",
+    "reference": "qdrant",
+    "reference_bits": 1,
+    "target_bytes_per_vector": 200.33016,
+    "variant": "nofine",
+    "code_bits": 1263,
+    "bytes_per_vector": 199.53088
+  },
+  {
+    "dataset": "openai",
+    "reference": "qdrant",
+    "reference_bits": 1,
+    "target_bytes_per_vector": 200.33016,
+    "variant": "exact",
+    "code_bits": 1161,
+    "bytes_per_vector": 200.0392
+  },
+  {
+    "dataset": "openai",
+    "reference": "qdrant",
+    "reference_bits": 2,
+    "target_bytes_per_vector": 392.33005,
+    "variant": "fine",
+    "code_bits": 2695,
+    "bytes_per_vector": 391.83328
+  },
+  {
+    "dataset": "openai",
+    "reference": "qdrant",
+    "reference_bits": 2,
+    "target_bytes_per_vector": 392.33005,
+    "variant": "nofine",
+    "code_bits": 2695,
+    "bytes_per_vector": 391.83328
+  },
+  {
+    "dataset": "openai",
+    "reference": "qdrant",
+    "reference_bits": 2,
+    "target_bytes_per_vector": 392.33005,
+    "variant": "exact",
+    "code_bits": 2687,
+    "bytes_per_vector": 390.13642
+  },
+  {
+    "dataset": "openai",
+    "reference": "qdrant",
+    "reference_bits": 4,
+    "target_bytes_per_vector": 776.33032,
+    "variant": "fine",
+    "code_bits": 5516,
+    "bytes_per_vector": 773.38264
+  },
+  {
+    "dataset": "openai",
+    "reference": "qdrant",
+    "reference_bits": 4,
+    "target_bytes_per_vector": 776.33032,
+    "variant": "nofine",
+    "code_bits": 5638,
+    "bytes_per_vector": 776.13832
+  },
+  {
+    "dataset": "openai",
+    "reference": "qdrant",
+    "reference_bits": 4,
+    "target_bytes_per_vector": 776.33032,
+    "variant": "exact",
+    "code_bits": 5632,
+    "bytes_per_vector": 772.75337
+  },
+  {
+    "dataset": "openai",
+    "reference": "rabitq",
+    "reference_bits": 1,
+    "target_bytes_per_vector": 204.0696,
+    "variant": "fine",
+    "code_bits": 1288,
+    "bytes_per_vector": 203.02968
+  },
+  {
+    "dataset": "openai",
+    "reference": "rabitq",
+    "reference_bits": 1,
+    "target_bytes_per_vector": 204.0696,
+    "variant": "nofine",
+    "code_bits": 1288,
+    "bytes_per_vector": 203.02968
+  },
+  {
+    "dataset": "openai",
+    "reference": "rabitq",
+    "reference_bits": 1,
+    "target_bytes_per_vector": 204.0696,
+    "variant": "exact",
+    "code_bits": 1189,
+    "bytes_per_vector": 204.04872
+  },
+  {
+    "dataset": "openai",
+    "reference": "rabitq",
+    "reference_bits": 2,
+    "target_bytes_per_vector": 404.0696,
+    "variant": "fine",
+    "code_bits": 2777,
+    "bytes_per_vector": 403.35136
+  },
+  {
+    "dataset": "openai",
+    "reference": "rabitq",
+    "reference_bits": 2,
+    "target_bytes_per_vector": 404.0696,
+    "variant": "nofine",
+    "code_bits": 2777,
+    "bytes_per_vector": 403.35136
+  },
+  {
+    "dataset": "openai",
+    "reference": "rabitq",
+    "reference_bits": 2,
+    "target_bytes_per_vector": 404.0696,
+    "variant": "exact",
+    "code_bits": 2784,
+    "bytes_per_vector": 402.63132
+  },
+  {
+    "dataset": "openai",
+    "reference": "rabitq",
+    "reference_bits": 4,
+    "target_bytes_per_vector": 788.0696,
+    "variant": "fine",
+    "code_bits": 5620,
+    "bytes_per_vector": 787.4096
+  },
+  {
+    "dataset": "openai",
+    "reference": "rabitq",
+    "reference_bits": 4,
+    "target_bytes_per_vector": 788.0696,
+    "variant": "nofine",
+    "code_bits": 5726,
+    "bytes_per_vector": 787.16296
+  },
+  {
+    "dataset": "openai",
+    "reference": "rabitq",
+    "reference_bits": 4,
+    "target_bytes_per_vector": 788.0696,
+    "variant": "exact",
+    "code_bits": 5726,
+    "bytes_per_vector": 784.75363
+  },
+  {
+    "dataset": "openai",
+    "reference": "rabitq",
+    "reference_bits": 8,
+    "target_bytes_per_vector": 1556.0696,
+    "variant": "fine",
+    "code_bits": 11282,
+    "bytes_per_vector": 1555.71136
+  },
+  {
+    "dataset": "openai",
+    "reference": "rabitq",
+    "reference_bits": 8,
+    "target_bytes_per_vector": 1556.0696,
+    "variant": "nofine",
+    "code_bits": 11843,
+    "bytes_per_vector": 1555.71696
+  },
+  {
+    "dataset": "openai",
+    "reference": "rabitq",
+    "reference_bits": 8,
+    "target_bytes_per_vector": 1556.0696,
+    "variant": "exact",
+    "code_bits": 11303,
+    "bytes_per_vector": 1555.06106
+  }
+]

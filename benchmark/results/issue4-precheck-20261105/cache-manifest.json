@@ -1,0 +1,20 @@
+{
+  "openai": {
+    "source": "/home/sean/experiments/TieredQ-issue20-ship-20261029/data/openai",
+    "cache": "openai-100000-1000-v2.npz",
+    "array_sha256": {
+      "base": "09bf358f7e818a69aac33aaf8888a702e2843c4ff2904b9cfdf3bbfd5ab6a948",
+      "queries": "59f90bed24086c0a74d4d80a626a8945e6718ab373807063b089d4a4477ef1cd",
+      "truth": "3c170137a11342f3936a2dfda21feaf2061ade02b2c540278b43c634574a3c3a"
+    }
+  },
+  "gemini": {
+    "source": "/home/sean/experiments/TieredQ-issue20-ship-20261029/data/gemini",
+    "cache": "gemini-prepared.npz",
+    "array_sha256": {
+      "base": "89744af8576116555f3e8ac384b1d318c5f3da192ebd193a76f03606b007fa1a",
+      "queries": "fa594bfbaebf5a68681f42b8570c6908df94db48f114e117e6e6185eda49d6b9",
+      "truth": "8eaa35bafe1ed4806fbd0182f75476ba5f12803e0d84959b01966b231dd70240"
+    }
+  }
+}

@@ -1,0 +1,191 @@
+[
+  {
+    "dataset": "gemini",
+    "reference": "qdrant",
+    "reference_bits": 1,
+    "target_bytes_per_vector": 104.16422222222222,
+    "variant": "fine",
+    "code_bits": 676,
+    "bytes_per_vector": 103.76686868686869
+  },
+  {
+    "dataset": "gemini",
+    "reference": "qdrant",
+    "reference_bits": 1,
+    "target_bytes_per_vector": 104.16422222222222,
+    "variant": "nofine",
+    "code_bits": 676,
+    "bytes_per_vector": 103.76686868686869
+  },
+  {
+    "dataset": "gemini",
+    "reference": "qdrant",
+    "reference_bits": 1,
+    "target_bytes_per_vector": 104.16422222222222,
+    "variant": "exact",
+    "code_bits": 600,
+    "bytes_per_vector": 103.51725252525253
+  },
+  {
+    "dataset": "gemini",
+    "reference": "qdrant",
+    "reference_bits": 2,
+    "target_bytes_per_vector": 200.1640303030303,
+    "variant": "fine",
+    "code_bits": 1415,
+    "bytes_per_vector": 198.99806060606062
+  },
+  {
+    "dataset": "gemini",
+    "reference": "qdrant",
+    "reference_bits": 2,
+    "target_bytes_per_vector": 200.1640303030303,
+    "variant": "nofine",
+    "code_bits": 1415,
+    "bytes_per_vector": 198.99806060606062
+  },
+  {
+    "dataset": "gemini",
+    "reference": "qdrant",
+    "reference_bits": 2,
+    "target_bytes_per_vector": 200.1640303030303,
+    "variant": "exact",
+    "code_bits": 1404,
+    "bytes_per_vector": 196.91341414141414
+  },
+  {
+    "dataset": "gemini",
+    "reference": "qdrant",
+    "reference_bits": 4,
+    "target_bytes_per_vector": 392.16421212121213,
+    "variant": "fine",
+    "code_bits": 2861,
+    "bytes_per_vector": 389.75612121212123
+  },
+  {
+    "dataset": "gemini",
+    "reference": "qdrant",
+    "reference_bits": 4,
+    "target_bytes_per_vector": 392.16421212121213,
+    "variant": "nofine",
+    "code_bits": 2925,
+    "bytes_per_vector": 391.72557575757577
+  },
+  {
+    "dataset": "gemini",
+    "reference": "qdrant",
+    "reference_bits": 4,
+    "target_bytes_per_vector": 392.16421212121213,
+    "variant": "exact",
+    "code_bits": 2910,
+    "bytes_per_vector": 389.0851717171717
+  },
+  {
+    "dataset": "gemini",
+    "reference": "rabitq",
+    "reference_bits": 1,
+    "target_bytes_per_vector": 108.04412121212121,
+    "variant": "fine",
+    "code_bits": 706,
+    "bytes_per_vector": 108.02351515151516
+  },
+  {
+    "dataset": "gemini",
+    "reference": "rabitq",
+    "reference_bits": 1,
+    "target_bytes_per_vector": 108.04412121212121,
+    "variant": "nofine",
+    "code_bits": 706,
+    "bytes_per_vector": 108.02351515151516
+  },
+  {
+    "dataset": "gemini",
+    "reference": "rabitq",
+    "reference_bits": 1,
+    "target_bytes_per_vector": 108.04412121212121,
+    "variant": "exact",
+    "code_bits": 623,
+    "bytes_per_vector": 107.773898989899
+  },
+  {
+    "dataset": "gemini",
+    "reference": "rabitq",
+    "reference_bits": 2,
+    "target_bytes_per_vector": 212.0441212121212,
+    "variant": "fine",
+    "code_bits": 1510,
+    "bytes_per_vector": 211.52072727272727
+  },
+  {
+    "dataset": "gemini",
+    "reference": "rabitq",
+    "reference_bits": 2,
+    "target_bytes_per_vector": 212.0441212121212,
+    "variant": "nofine",
+    "code_bits": 1510,
+    "bytes_per_vector": 211.52072727272727
+  },
+  {
+    "dataset": "gemini",
+    "reference": "rabitq",
+    "reference_bits": 2,
+    "target_bytes_per_vector": 212.0441212121212,
+    "variant": "exact",
+    "code_bits": 1504,
+    "bytes_per_vector": 209.41362626262625
+  },
+  {
+    "dataset": "gemini",
+    "reference": "rabitq",
+    "reference_bits": 4,
+    "target_bytes_per_vector": 404.04412121212124,
+    "variant": "fine",
+    "code_bits": 2951,
+    "bytes_per_vector": 404.02537373737374
+  },
+  {
+    "dataset": "gemini",
+    "reference": "rabitq",
+    "reference_bits": 4,
+    "target_bytes_per_vector": 404.04412121212124,
+    "variant": "nofine",
+    "code_bits": 3017,
+    "bytes_per_vector": 403.99886868686866
+  },
+  {
+    "dataset": "gemini",
+    "reference": "rabitq",
+    "reference_bits": 4,
+    "target_bytes_per_vector": 404.04412121212124,
+    "variant": "exact",
+    "code_bits": 3006,
+    "bytes_per_vector": 401.08732323232323
+  },
+  {
+    "dataset": "gemini",
+    "reference": "rabitq",
+    "reference_bits": 8,
+    "target_bytes_per_vector": 788.0441212121212,
+    "variant": "fine",
+    "code_bits": 5708,
+    "bytes_per_vector": 787.8256161616162
+  },
+  {
+    "dataset": "gemini",
+    "reference": "rabitq",
+    "reference_bits": 8,
+    "target_bytes_per_vector": 788.0441212121212,
+    "variant": "nofine",
+    "code_bits": 6079,
+    "bytes_per_vector": 787.6999595959596
+  },
+  {
+    "dataset": "gemini",
+    "reference": "rabitq",
+    "reference_bits": 8,
+    "target_bytes_per_vector": 788.0441212121212,
+    "variant": "exact",
+    "code_bits": 5689,
+    "bytes_per_vector": 787.6816565656566
+  }
+]

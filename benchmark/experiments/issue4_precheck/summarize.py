@@ -115,6 +115,11 @@ TIMING_HEADER = ("| codec | bits/dim | code bits | QPS@10 8t·b32 | QPS@10 8t·b
                  "p50@100 8t·b1 | p95@100 8t·b1 | bits/vector | encode vectors/s |\n" + "|---" * 17 + "|")
 
 
+def memory_order(row):
+    config = {"fine": "fast-native", "nofine": "fast-native-nofine", "exact": "exact-native"}.get(row["variant"])
+    return int(row["target_bits"]), CODEC_ORDER.index((row["codec"], config))
+
+
 def dataset_summary(dataset, cells, matches, memory):
     nominal = {key: cell for key, cell in cells.items() if key[0] == dataset and key[3] == 0}
     budgets = sorted({key[2] for key in nominal})
@@ -128,7 +133,7 @@ def dataset_summary(dataset, cells, matches, memory):
         for codec in CODEC_ORDER:
             cell = nominal.get((dataset, codec, bits, 0))
             if cell is None:
-                lines.append(f"| {CODEC_NAMES[codec]} | {bits} | " + f"{NA} | " * 6)
+                lines.append(f"| {CODEC_NAMES[codec]} | {bits} | " + " | ".join([NA] * 6) + " |")
                 continue
             lines.append(f"| {CODEC_NAMES[codec]} | {bits} | " + metrics(cell))
             timing.append(timing_row(CODEC_NAMES[codec], bits, cell))
@@ -153,7 +158,7 @@ def dataset_summary(dataset, cells, matches, memory):
         lines += ["", "## Memory (seed 0, nominal budgets; measure_memory quick cells)", "",
                   "| codec | bits/dim | disk bytes/vector | steady RAM after reload, bytes/vector | peak RAM bytes/vector | build peak bytes/vector |",
                   "|---|---|---|---|---|---|"]
-        for row in memory:
+        for row in sorted(memory, key=memory_order):
             if row["dataset"] != dataset:
                 continue
             label = {"fine": CODEC_NAMES[("tieredq", "fast-native")], "nofine": CODEC_NAMES[("tieredq", "fast-native-nofine")],
