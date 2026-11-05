@@ -82,7 +82,7 @@ void tieredq_blocks_tests() {
   const auto training = normal_rows(training_rows, 3), data = normal_rows(counts[std::size(counts) - 1], 5), query = normal_rows(1, 7);
   for (uint32_t bits_per_dim : {1u, 2u, 4u}) {
     auto config = dv::TieredQConfig::target_code_bits(dimensions, dimensions * bits_per_dim);
-    config.num_centroids = centroids; config.fine_tiers = dv::TieredQFineTiers::off;
+    config.num_centroids = centroids; config.fine_tiers = false;
     const auto codec = dv::TieredQ::train(config, training.data(), training_rows);
     const dv::TieredQFastBlocks native(codec);
     check_format(codec, native, data, query, true);
@@ -100,7 +100,7 @@ void tieredq_blocks_tests() {
   require(rejected, "unknown fast block format accepted");
   {
     auto config = dv::TieredQConfig::target_code_bits(dimensions, dimensions * 2);
-    config.num_centroids = centroids; config.fine_tiers = dv::TieredQFineTiers::off;
+    config.num_centroids = centroids; config.fine_tiers = false;
     const auto codec = dv::TieredQ::train(config, training.data(), training_rows);
     const dv::TieredQFastBlocks blocks(codec);
     const auto rows = codec.encode(data.data(), 17);

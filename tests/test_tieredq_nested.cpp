@@ -32,7 +32,7 @@ std::vector<float> clustered_rows(size_t count,uint32_t noise_seed) {
 TieredQ train(const std::vector<float>& data,uint32_t code_bits,TieredQMetric metric,
               TieredQIndexMode mode=TieredQIndexMode::fast) {
   auto config=TieredQConfig::target_code_bits(dimensions,code_bits);
-  config.num_centroids=centroids; config.metric=metric; config.target_mode=mode; config.fine_tiers=TieredQFineTiers::off;
+  config.num_centroids=centroids; config.metric=metric; config.target_mode=mode; config.fine_tiers=false;
   return TieredQ::train(config,data.data(),rows,seed);
 }
 TieredQIVFIndex built(const TieredQ& codec,const std::vector<float>& data) {

@@ -28,7 +28,7 @@ std::vector<float> clustered_rows(size_t count,uint32_t noise_seed) {
 }
 TieredQNestedIndex flat(const std::vector<float>& data,TieredQTierRows tier_rows) {
   auto config=TieredQConfig::target_code_bits(dimensions,prefix_bits);
-  config.num_centroids=centroids; config.fine_tiers=TieredQFineTiers::off;
+  config.num_centroids=centroids; config.fine_tiers=false;
   auto prefix=TieredQ::train(config,data.data(),rows,seed);
   auto refinement=TieredQRefinement::train(prefix,total_bits,data.data(),rows,seed);
   return TieredQNestedIndex(std::move(prefix),std::move(refinement),data.data(),rows,tier_rows);

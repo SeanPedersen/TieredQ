@@ -41,14 +41,14 @@ void refined_book_test() {
 }
 
 // Rows whose spectrum decays by `decay` per dimension; steep decays allocate codes wider than the prefix.
-constexpr double steep_decay=0.9,flat_decay=1.0;
+constexpr double steep_decay=0.9;
 std::vector<float> decaying_rows(size_t count,std::mt19937& random,double decay=steep_decay) {
   std::normal_distribution<float> normal;
   std::vector<float> data(count*dimensions);
   for (size_t i=0;i<count;++i) for (uint32_t j=0;j<dimensions;++j) data[i*dimensions+j]=float(normal(random)*std::pow(decay,j));
   return data;
 }
-dv::TieredQ train(const std::vector<float>& data,uint32_t bits_per_dim,dv::TieredQFineTiers fine,
+dv::TieredQ train(const std::vector<float>& data,uint32_t bits_per_dim,bool fine,
                   dv::TieredQIndexMode target=dv::TieredQIndexMode::fast,dv::TieredQMetric metric=dv::TieredQMetric::inner_product) {
   dv::TieredQConfig config{dimensions,bits_per_dim*dimensions,centroids};
   config.fine_tiers=fine; config.target_mode=target; config.metric=metric;
@@ -60,35 +60,30 @@ uint32_t widest(const dv::TieredQ& codec) {
   return out;
 }
 
-// Automatic training adds fine tiers to steep spectra at the automatic prefix width and leaves flat ones alone.
+// Training adds fine tiers to steep spectra at the automatic prefix width unless switched off; full and L2 targets
+// ignore the flag.
 void policy_test() {
   std::mt19937 random(26);
-  const auto steep=decaying_rows(rows,random),flat=decaying_rows(rows,random,flat_decay);
+  const auto steep=decaying_rows(rows,random);
   for (uint32_t bits_per_dim=dv::tieredq_detail::additive_wide_max_bits;bits_per_dim<=dv::tieredq_detail::widest_code_bits;++bits_per_dim) {
-    const auto codec=train(steep,bits_per_dim,dv::TieredQFineTiers::automatic);
-    require(codec.fast_prefix_bits()==bits_per_dim && widest(codec)>bits_per_dim,"automatic training skipped fine tiers");
-    const auto plain=train(flat,bits_per_dim,dv::TieredQFineTiers::automatic);
-    require(!plain.fast_prefix_bits() && widest(plain)<=bits_per_dim,"automatic training added fine tiers to a flat spectrum");
-    const auto off=train(steep,bits_per_dim,dv::TieredQFineTiers::off);
+    const auto codec=train(steep,bits_per_dim,true);
+    require(codec.fast_prefix_bits()==bits_per_dim && widest(codec)>bits_per_dim,"training skipped fine tiers");
+    const auto off=train(steep,bits_per_dim,false);
     require(!off.fast_prefix_bits() && widest(off)<=bits_per_dim,"fine tiers switched off were added");
     const auto restored=dv::TieredQ::deserialize(codec.serialize());
     require(restored.fast_prefix_bits()==codec.fast_prefix_bits() && restored.serialize()==codec.serialize(),
             "fine-tier model round trip");
   }
   for (auto [target,metric]:{std::pair{dv::TieredQIndexMode::full,dv::TieredQMetric::inner_product},
-                             std::pair{dv::TieredQIndexMode::fast,dv::TieredQMetric::l2}}) {
-    bool rejected=false;
-    try { train(steep,dv::tieredq_detail::widest_code_bits,dv::TieredQFineTiers::on,target,metric); } catch (const std::runtime_error&) { rejected=true; }
-    require(rejected,"a full or L2 target accepted fine tiers");
-    require(!train(steep,dv::tieredq_detail::widest_code_bits,dv::TieredQFineTiers::automatic,target,metric).fast_prefix_bits(),
-            "automatic fine tiers reached a full or L2 target");
-  }
+                             std::pair{dv::TieredQIndexMode::fast,dv::TieredQMetric::l2}})
+    require(!train(steep,dv::tieredq_detail::widest_code_bits,true,target,metric).fast_prefix_bits(),
+            "fine tiers reached a full or L2 target");
 }
 
 void rescoring_test(uint32_t bits_per_dim) {
   std::mt19937 random(26);
   const auto data=decaying_rows(rows,random),probe=decaying_rows(queries,random);
-  const auto codec=train(data,bits_per_dim,dv::TieredQFineTiers::on);
+  const auto codec=train(data,bits_per_dim,true);
   require(codec.fast_prefix_bits()==bits_per_dim && widest(codec)>bits_per_dim+2,
           "fixture allocates no tier 3 bits past its prefix");
   require(codec.config().code_bits<=bits_per_dim*dimensions,"fine-tier model exceeds its code budget");

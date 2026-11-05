@@ -2,10 +2,9 @@
 code budget (real codec and kernels).
 
 Variants: "full" is full mode (exact FP32 scoring of Lloyd-Max codes, no fine tiers), "exact" a fast index over a
-full-target (Lloyd-Max) model with exact_fast_scores, "off" is today's fast mode
-(automatic cap max(6, ceil(B)) for inner product), "auto" lets training decide (policy C: fine tiers when the allocator
-predicts a clear weighted-error drop), "on" / "on:N" forces fine tiers up to 12 / N bits; a "/pW" suffix sets the scan
-cap (prefix width) to W instead of the automatic cap.
+full-target (Lloyd-Max) model with exact_fast_scores, "off" is fast mode without fine tiers (automatic cap
+max(6, ceil(B)) for inner product), "on" / "on:N" fast mode with fine tiers up to 12 / N bits (the default since #31);
+a "/pW" suffix sets the scan cap (prefix width) to W instead of the automatic cap.
 Fine-tier indexes scan each code's prefix with the unchanged nibble scan to depth max(32, 1.5k) and rescore those
 candidates exactly from prefix plus fine bits.
 
@@ -33,6 +32,7 @@ from recall_sim import top_ids
 WIDEST_FINE_BITS = 12
 FULL_VARIANT = "full"
 EXACT_VARIANT = "exact"
+FINE_MODES = ("on", "off")
 TIMING_REPEATS = 3
 LATENCY_QUERIES = 200
 
@@ -62,18 +62,20 @@ def single_latency_ms(index, queries, k):
 
 
 def fine_options(variant):
-    """MODE[:MAX_TIER_BITS][/pPREFIX]: fine_tiers mode, fine cap and an explicit scan cap (prefix width)."""
+    """on|off[:MAX_TIER_BITS][/pPREFIX]: fine tiers on or off, their width cap and an explicit scan cap (prefix width)."""
     head, _, prefix = variant.partition("/p")
     mode, _, bits = head.partition(":")
-    return {"fine_tiers": mode, "max_tier_bits": int(bits) if bits else WIDEST_FINE_BITS, "max_scan_bits": int(prefix or 0)}
+    if mode not in FINE_MODES:
+        raise ValueError(f"unknown variant {variant!r}")
+    return {"fine_tiers": mode == "on", "max_tier_bits": int(bits) if bits else WIDEST_FINE_BITS, "max_scan_bits": int(prefix or 0)}
 
 
 def index_options(variant):
     """"full": full mode; "exact": fast index with exact_fast_scores; every other variant is a fast fine-tier setting."""
     if variant == FULL_VARIANT:
-        return {"mode": "full", "fine_tiers": "off"}
+        return {"mode": "full", "fine_tiers": False}
     if variant == EXACT_VARIANT:
-        return {"mode": "fast", "exact_fast_scores": True, "fine_tiers": "off"}
+        return {"mode": "fast", "exact_fast_scores": True, "fine_tiers": False}
     return {"mode": "fast", **fine_options(variant)}
 
 
@@ -112,7 +114,7 @@ def evaluate(name, base, queries, bits_per_dim, variants, depths, seeds):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--bits-per-dim", type=int, default=8)
-    parser.add_argument("--variants", nargs="+", default=["off", "auto", "on:10", "on:12"])
+    parser.add_argument("--variants", nargs="+", default=["off", "on:10", "on:12"])
     parser.add_argument("--k", type=int, nargs="+", default=[10, 100])
     parser.add_argument("--seeds", type=int, nargs="+", default=[0])
     parser.add_argument("datasets", nargs="+")

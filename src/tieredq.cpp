@@ -310,8 +310,6 @@ void TieredQConfig::validate() const {
     bad("dimensions must be positive and budget must be in [1, 8*D]");
   if (!num_centroids || num_centroids>256) bad("centroid count must be in [1, 256]");
   if (max_scan_bits>tieredq_detail::widest_code_bits) bad("max scan bits per coordinate must be in [1, 8], or 0 for automatic");
-  if (fine_tiers!=TieredQFineTiers::automatic && fine_tiers!=TieredQFineTiers::off && fine_tiers!=TieredQFineTiers::on)
-    bad("invalid fine-tier mode");
   if (!max_tier_bits || max_tier_bits>tieredq_detail::widest_fine_code_bits) bad("max tier bits must be in [1, 12]");
   if (target_mode!=TieredQIndexMode::fast && target_mode!=TieredQIndexMode::full) bad("invalid target index mode");
   if (metric!=TieredQMetric::inner_product && metric!=TieredQMetric::cosine && metric!=TieredQMetric::l2) bad("invalid metric");
@@ -482,11 +480,7 @@ TieredQ TieredQ::train_model(TieredQConfig config,const tieredq_detail::Training
         : tieredq_detail::widest_code_bits;
   // Fine tiers (#26) refine additive prefix books, which exist from the automatic cap's minimum width up.
   const bool fine_possible=fast_additive && config.max_scan_bits>=tieredq_detail::additive_wide_max_bits;
-  if (config.fine_tiers==TieredQFineTiers::on && !fine_possible)
-    bad("fine tiers need fast-target inner-product or cosine training with max_scan_bits of at least 6");
-  if (config.fine_tiers==TieredQFineTiers::on && config.max_tier_bits<=config.max_scan_bits)
-    bad("fine tiers need max_tier_bits above max_scan_bits");
-  const bool fine_tiers=fine_possible && config.fine_tiers!=TieredQFineTiers::off && config.max_tier_bits>config.max_scan_bits;
+  const bool fine_tiers=fine_possible && config.fine_tiers && config.max_tier_bits>config.max_scan_bits;
   tieredq_detail::AllocationModel allocation{std::vector<double>(d),std::vector<uint32_t>(d),std::vector(d,gaussian)};
   for (int j=0;j<d;++j) {
     allocation.variance[j]=eigenvalues[d-1-j];
@@ -527,8 +521,7 @@ TieredQ TieredQ::train_model(TieredQConfig config,const tieredq_detail::Training
     bits=tieredq_detail::additive_wide_allocation(weighted,config.code_bits);
     if (fine_tiers) {
       auto books=tieredq_detail::fine_codebooks(config.max_scan_bits);
-      if (auto fine=tieredq_detail::fine_allocation(weighted,bits,books,config.max_tier_bits,config.wide_dims,config.code_bits,
-                                                    config.fine_tiers==TieredQFineTiers::on)) {
+      if (auto fine=tieredq_detail::fine_allocation(weighted,books,config.max_tier_bits,config.wide_dims,config.code_bits)) {
         bits=std::move(*fine);
         c.fast_prefix_bits_=config.max_scan_bits;
         c.levels_.resize(tieredq_detail::widest_fine_code_bits+1);

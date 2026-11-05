@@ -14,7 +14,7 @@ def test_rank_deficient_fp16_training(metric, seed, count):
     rows /= np.linalg.norm(rows, axis=1, keepdims=True)
     rows = rows.astype(np.float16).astype(np.float32)
     index = TieredQIndex(
-        dimensions=dimensions, code_bits=4 * dimensions, metric=metric, fine_tiers="off"
+        dimensions=dimensions, code_bits=4 * dimensions, metric=metric, fine_tiers=False
     )
     index.add(rows)
     scores, ids = index.search(rows[:2], k=10)
@@ -34,7 +34,7 @@ def test_degenerate_training_and_persistence(kind, mode, tmp_path):
         rows = np.repeat(rng.standard_normal((1, dimensions)), count, axis=0).astype(np.float32)
     else:
         rows = (rng.standard_normal((count, 3)) @ rng.standard_normal((3, dimensions))).astype(np.float32)
-    index = TieredQIndex(dimensions=dimensions, code_bits=4 * dimensions, mode=mode, fine_tiers="off")
+    index = TieredQIndex(dimensions=dimensions, code_bits=4 * dimensions, mode=mode, fine_tiers=False)
     index.add(rows)
     expected = index.search(rows[:2], k=10)
     assert np.isfinite(expected[0]).all()

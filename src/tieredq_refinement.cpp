@@ -317,7 +317,7 @@ TieredQRefinement TieredQRefinement::train(const TieredQ& prefix,uint32_t total_
   if (total_code_bits<=prefix.config().code_bits) bad("refinement needs a larger budget than its prefix");
   if (prefix.fast_prefix_bits()) bad("refinement does not extend fine-tier models; train the prefix with fine_tiers off");
   auto config=prefix.config();
-  config.code_bits=total_code_bits; config.rotate_tiers=false; config.fine_tiers=TieredQFineTiers::off;
+  config.code_bits=total_code_bits; config.rotate_tiers=false; config.fine_tiers=false;
   // Suffix targets come from the finer model's widths; the automatic fast-scan cap would only narrow them.
   if (!config.max_scan_bits) config.max_scan_bits=max_bits;
   const auto finer=TieredQ::train(config,sample,rows,seed);

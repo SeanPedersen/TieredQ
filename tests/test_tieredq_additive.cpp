@@ -142,7 +142,7 @@ void wide_index_test() {
   std::vector<float> training(training_rows*dimensions),rows(documents*dimensions),query(dimensions);
   for (auto* values:{&training,&rows,&query}) for (size_t i=0;i<values->size();++i)
     (*values)[i]=normal(random)*std::exp(-float(i%dimensions)/8);
-  TieredQConfig config{dimensions,wide_bits,centroids,true}; config.fine_tiers=TieredQFineTiers::off;
+  TieredQConfig config{dimensions,wide_bits,centroids,true}; config.fine_tiers=false;
   const auto codec=TieredQ::train(config,training.data(),training_rows);
   require(codec.tiers().front().bits>lookup_code_bits,"wide test needs a wide tier");
   require(persisted_levels(codec,codec.tiers().front().bits)==additive_wide_codebook(codec.tiers().front().bits),"fast wide tier is not additive");

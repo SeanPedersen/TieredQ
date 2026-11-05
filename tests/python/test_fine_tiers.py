@@ -1,4 +1,4 @@
-"""Fine-tier configuration of the flat index (#26): option validation, forced fine tiers, persistence and rejection."""
+"""Fine-tier configuration of the flat index (#26, #31): option validation, default fine tiers, persistence."""
 import numpy as np
 import pytest
 from tieredq import TieredQIndex
@@ -16,10 +16,10 @@ def steep_rows(count, seed):
     return (rng.normal(size=(count, DIMENSIONS)) * DECAY ** np.arange(DIMENSIONS)).astype(np.float32)
 
 
-@pytest.mark.parametrize("options", [{"fine_tiers": "yes"}, {"fine_tiers": "AUTO"}])
-def test_invalid_fine_tier_mode_is_rejected(options):
-    with pytest.raises(ValueError, match="fine_tiers must be"):
-        TieredQIndex(DIMENSIONS, BITS_PER_DIM * DIMENSIONS, **options)
+@pytest.mark.parametrize("value", ["auto", "on", "off"])
+def test_fine_tiers_takes_a_bool(value):
+    with pytest.raises(TypeError):
+        TieredQIndex(DIMENSIONS, BITS_PER_DIM * DIMENSIONS, fine_tiers=value)
 
 
 @pytest.mark.parametrize("options", [{"max_scan_bits": 9}, {"max_tier_bits": 13}, {"max_tier_bits": 0}])
@@ -28,10 +28,10 @@ def test_out_of_range_caps_are_rejected(options):
         TieredQIndex(DIMENSIONS, BITS_PER_DIM * DIMENSIONS, **options)
 
 
-def test_forced_fine_tiers_search_and_round_trip(tmp_path):
+def test_fine_tiers_search_and_round_trip(tmp_path):
     vectors, queries = steep_rows(ROWS, 26), steep_rows(QUERIES, 27)
-    plain = TieredQIndex(DIMENSIONS, BITS_PER_DIM * DIMENSIONS, fine_tiers="off")
-    fine = TieredQIndex(DIMENSIONS, BITS_PER_DIM * DIMENSIONS, fine_tiers="on")
+    plain = TieredQIndex(DIMENSIONS, BITS_PER_DIM * DIMENSIONS, fine_tiers=False)
+    fine = TieredQIndex(DIMENSIONS, BITS_PER_DIM * DIMENSIONS)
     plain.add(vectors)
     fine.add(vectors)
     assert fine.fast_prefix_bits == BITS_PER_DIM and plain.fast_prefix_bits == 0
@@ -46,7 +46,7 @@ def test_forced_fine_tiers_search_and_round_trip(tmp_path):
         np.testing.assert_array_equal(actual, reference)
 
 
-def test_full_mode_rejects_forced_fine_tiers():
-    index = TieredQIndex(DIMENSIONS, BITS_PER_DIM * DIMENSIONS, mode="full", fine_tiers="on")
-    with pytest.raises(RuntimeError, match="fine tiers"):
-        index.add(steep_rows(ROWS, 26))
+def test_full_mode_ignores_fine_tiers():
+    index = TieredQIndex(DIMENSIONS, BITS_PER_DIM * DIMENSIONS, mode="full", fine_tiers=True)
+    index.add(steep_rows(ROWS, 26))
+    assert index.fast_prefix_bits == 0

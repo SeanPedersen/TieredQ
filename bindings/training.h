@@ -28,12 +28,6 @@ inline dv::TieredQMetric parse_metric(const std::string& metric) {
   if (metric=="l2") return dv::TieredQMetric::l2;
   throw std::invalid_argument("metric must be 'ip', 'cosine' or 'l2'");
 }
-inline dv::TieredQFineTiers parse_fine_tiers(const std::string& mode) {
-  if (mode=="auto") return dv::TieredQFineTiers::automatic;
-  if (mode=="off") return dv::TieredQFineTiers::off;
-  if (mode=="on") return dv::TieredQFineTiers::on;
-  throw std::invalid_argument("fine_tiers must be 'auto', 'off' or 'on'");
-}
 inline const char* metric_name(dv::TieredQMetric metric) {
   return metric==dv::TieredQMetric::l2 ? "l2" : metric==dv::TieredQMetric::cosine ? "cosine" : "ip";
 }

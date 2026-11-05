@@ -28,7 +28,7 @@ std::vector<float> clustered_rows(size_t count,uint32_t noise_seed) {
 }
 TieredQ train(const std::vector<float>& sample,TieredQMetric metric,uint32_t code_bits,uint64_t model_seed=seed) {
   auto config=TieredQConfig::target_code_bits(dimensions,code_bits);
-  config.num_centroids=centroids; config.metric=metric; config.fine_tiers=TieredQFineTiers::off;
+  config.num_centroids=centroids; config.metric=metric; config.fine_tiers=false;
   return TieredQ::train(config,sample.data(),rows,model_seed);
 }
 float exact(TieredQMetric metric,const float* q,const float* x) {
@@ -109,7 +109,7 @@ void wide_batch_test() {
   std::vector<float> data(wide_rows*wide);
   for (size_t i=0;i<wide_rows;++i) for (uint32_t j=0;j<wide;++j) data[i*wide+j]=normal(random)*std::exp(-decay*float(j)/wide);
   auto config=TieredQConfig::target_code_bits(wide,wide/4);
-  config.num_centroids=centroids; config.fine_tiers=TieredQFineTiers::off;
+  config.num_centroids=centroids; config.fine_tiers=false;
   const auto prefix=TieredQ::train(config,data.data(),wide_rows,seed);
   const auto refinement=TieredQRefinement::train(prefix,4*wide,data.data(),wide_rows,seed);
   require(refinement.positions()-prefix.coded_dimensions()>block_ranks,"wide refinement fits one basis block");

@@ -31,7 +31,7 @@ std::vector<float> clustered_rows(size_t count,uint32_t seed) {
 TieredQ train(TieredQMetric metric,uint32_t code_bits) {
   const auto sample=clustered_rows(rows,3);
   auto config=TieredQConfig::target_code_bits(dimensions,code_bits);
-  config.num_centroids=centroids; config.metric=metric; config.fine_tiers=TieredQFineTiers::off;
+  config.num_centroids=centroids; config.metric=metric; config.fine_tiers=false;
   return TieredQ::train(config,sample.data(),rows,7);
 }
 struct Results { std::vector<float> scores; std::vector<uint32_t> ids; };

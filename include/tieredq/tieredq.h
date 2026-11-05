@@ -19,7 +19,6 @@ enum class TieredQKernel { automatic, scalar, avx2, avx512, neon };
 // and queries into one more dimension (whitened for the query distribution, as calibrated on the training sample),
 // where inner products rank by distance; index scores are estimates of -|q - x|^2.
 enum class TieredQMetric { inner_product, cosine, l2 };
-enum class TieredQFineTiers { automatic, off, on };
 struct TieredQConfig {
   uint32_t dimensions = 512;
   uint32_t code_bits = 512;
@@ -31,10 +30,10 @@ struct TieredQConfig {
   uint32_t max_scan_bits = 0;
   // Training-only fine tiers (#26), for fast-target inner product and cosine with a scan cap of at least 6 bits: ranks
   // may take up to max_tier_bits in total, and the fast scan reads only each code's top max_scan_bits (its prefix)
-  // before rescoring its candidates exactly, at the same stored bytes. automatic adds them when the allocator predicts
-  // a clear error drop, on whenever the allocation uses them. Only the flat TieredQIndex serves fine-tier models; other
-  // indexes reject them. Other targets and metrics ignore automatic and reject on.
-  TieredQFineTiers fine_tiers = TieredQFineTiers::automatic;
+  // before rescoring its candidates exactly, at the same stored bytes. Models get them whenever the allocation codes a
+  // rank wider than the prefix; other targets and metrics ignore the flag. Only the flat TieredQIndex serves
+  // fine-tier models; other indexes reject them, so train their models with fine_tiers off.
+  bool fine_tiers = true;
   uint32_t max_tier_bits = 12;
   // Training-only: only the top-N PCA ranks may exceed 6 bits (UINT32_MAX disables the restriction).
   uint32_t wide_dims = UINT32_MAX;
