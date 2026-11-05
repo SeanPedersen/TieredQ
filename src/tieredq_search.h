@@ -91,21 +91,27 @@ inline size_t query_tile_height(size_t rows,size_t tallest) {
   const size_t workers=omp_in_parallel() ? 1 : std::max<size_t>(1,size_t(omp_get_max_threads()));
   return std::clamp<size_t>((rows+workers-1)/workers,1,tallest);
 }
-// Prepares queries in tiles of up to `tile` rows, tiles in parallel: prepare_tile(first_query, rows, out).
-template<class Prepared,class PrepareTile>
-std::vector<Prepared> prepare_search_tiles(const float* queries,size_t rows,size_t dimensions,size_t tile,PrepareTile prepare_tile) {
-  std::vector<Prepared> prepared(rows);
-  const size_t tiles=(rows+tile-1)/tile;
+// Runs task(i) for i in [0, count) in parallel (serially inside a parallel region); rethrows the first failure.
+template<class Task>
+void parallel_tasks(size_t count,Task task) {
   std::exception_ptr failure; std::mutex failure_mutex;
-#pragma omp parallel for schedule(static) num_threads(std::max<size_t>(1,std::min(tiles,size_t(omp_get_max_threads())))) if(tiles>1 && !omp_in_parallel())
-  for (size_t t=0;t<tiles;++t) {
-    try { prepare_tile(queries+t*tile*dimensions,std::min(tile,rows-t*tile),prepared.data()+t*tile); }
+#pragma omp parallel for schedule(static) num_threads(std::max<size_t>(1,std::min(count,size_t(omp_get_max_threads())))) if(count>1 && !omp_in_parallel())
+  for (size_t i=0;i<count;++i) {
+    try { task(i); }
     catch (...) {
       std::lock_guard<std::mutex> lock(failure_mutex);
       if (!failure) failure=std::current_exception();
     }
   }
   if (failure) std::rethrow_exception(failure);
+}
+// Prepares queries in tiles of up to `tile` rows, tiles in parallel: prepare_tile(first_query, rows, out).
+template<class Prepared,class PrepareTile>
+std::vector<Prepared> prepare_search_tiles(const float* queries,size_t rows,size_t dimensions,size_t tile,PrepareTile prepare_tile) {
+  std::vector<Prepared> prepared(rows);
+  parallel_tasks((rows+tile-1)/tile,[&](size_t t) {
+    prepare_tile(queries+t*tile*dimensions,std::min(tile,rows-t*tile),prepared.data()+t*tile);
+  });
   return prepared;
 }
 } // namespace dv::tieredq_detail

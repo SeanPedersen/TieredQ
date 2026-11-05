@@ -18,8 +18,9 @@
 namespace dv::tieredq_detail {
 
 // Candidates rescored per query: at least this many, and this multiple of k (#26, 100k Gemini, OpenAI and GloVe:
-// k = 10 recall stops changing from 24 candidates; k = 100 still gains up to 1.5 k on OpenAI and GloVe).
-constexpr size_t fine_min_candidates=32;
+// k = 10 recall stops changing from 24 candidates; k = 100 still gains up to 1.5 k on OpenAI and GloVe; #31: Gemini
+// and OpenAI at 4 and 8 bits/dim keep k = 10 recall from 16).
+constexpr size_t fine_min_candidates=24;
 constexpr size_t fine_candidates_per_k_numerator=3,fine_candidates_per_k_denominator=2;
 // Batch rescoring decodes the distinct candidates of this many queries at a time (bounding its row buffer), in pieces
 // of consecutive documents.

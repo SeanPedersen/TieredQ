@@ -280,18 +280,21 @@ void TieredQIndex::score_fine(const TieredQQuery& weights,TieredQHit* hits,size_
 std::vector<TieredQQuery> TieredQIndex::fine_query_weights(const float* queries,size_t rows) const {
   if (!fast_->lookup) return codec_.model_query_weights(queries,rows);
   // Lookup scans project with their own map (faster than model_query_weights for one row); its outputs
-  // are the rank weights, then centroid scores and correction weights, which rescoring needs as well.
+  // are the rank weights, then centroid scores and correction weights, which rescoring needs as well. Tiles of
+  // queries project in parallel, as the scan's own preparation does.
   const auto& projection=fast_->lookup->projection;
-  const auto outputs=tieredq_detail::project_fast_queries(projection,queries,rows,tieredq_detail::FastQueryBasis::from(scan_codec()));
-  std::vector<TieredQQuery> weights(rows);
+  const auto basis=tieredq_detail::FastQueryBasis::from(scan_codec());
   const size_t m=projection.weights,centroids=projection.centroids;
-  for (size_t row=0;row<rows;++row) {
-    const auto& out=outputs[row];
-    weights[row].weights.assign(out.begin(),out.begin()+m);
-    weights[row].centroid_scores.assign(out.begin()+m,out.begin()+m+centroids);
-    weights[row].correction_weights.assign(out.begin()+m+centroids,out.begin()+m+2*centroids);
-  }
-  return weights;
+  return tieredq_detail::prepare_search_tiles<TieredQQuery>(queries,rows,projection.dimensions,
+      tieredq_detail::query_tile_height(rows,tieredq_detail::basis_query_tile),[&](const float* first,size_t count,TieredQQuery* out) {
+        const auto outputs=tieredq_detail::project_fast_queries(projection,first,count,basis);
+        for (size_t row=0;row<count;++row) {
+          const auto& output=outputs[row];
+          out[row].weights.assign(output.begin(),output.begin()+m);
+          out[row].centroid_scores.assign(output.begin()+m,output.begin()+m+centroids);
+          out[row].correction_weights.assign(output.begin()+m+centroids,output.begin()+m+2*centroids);
+        }
+      });
 }
 void TieredQIndex::keep_best(std::vector<TieredQHit>& hits,size_t k) {
   const size_t kept=std::min(k,hits.size());
@@ -325,11 +328,11 @@ void TieredQIndex::search_batch_fast_model(const float* queries,size_t rows,size
     // once, in document order: neighbours in a lookup block share the cache lines one document's pair bytes span,
     // which random reads waste (#26). Queries then score their candidates in parallel.
     std::vector<std::vector<TieredQHit>> candidates(rows);
-    // Batch scans prepare their lookup queries in parallel tiles themselves, so the weights only rescore; they come
-    // from the same projection as single searches', which keeps both searches' results identical.
-    fast_search(*fast_,scan_codec(),queries,rows,depth,
-        [&](size_t row,std::vector<TieredQHit> hits) { candidates[row]=std::move(hits); });
+    // One projection serves both the scan and rescoring, as in single searches, which keeps both searches' results
+    // identical; projecting again for rescoring cost up to 3/4 of the fine-tier overhead at 4 bits/dim (#31).
     const auto weights=fine_query_weights(queries,rows);
+    fast_search(*fast_,scan_codec(),queries,rows,depth,
+        [&](size_t row,std::vector<TieredQHit> hits) { candidates[row]=std::move(hits); },&weights);
     const auto& reader=fine_tiers_->reader;
     const size_t stride=fine_tiers_->prefix.bytes_per_vector();
     std::vector<uint32_t> docs; std::vector<uint8_t> decoded;

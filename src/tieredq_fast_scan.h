@@ -44,11 +44,11 @@ auto fast_search_queries(const FastScanCache& cache,const TieredQ& codec,const f
   using Prepared=decltype(prepare(queries));
   if (prepared_weights) {
     std::vector<Prepared> prepared(rows);
-    for (size_t row=0;row<rows;++row) {
+    parallel_tasks(rows,[&](size_t row) {
       if constexpr (requires (Prepared query) { query.lookup.tables; })
-        if (cache.lookup) { prepared[row].lookup=fast_lookup_query(*cache.lookup,fast_query_output(cache,prepared_weights[row])); continue; }
+        if (cache.lookup) { prepared[row].lookup=fast_lookup_query(*cache.lookup,fast_query_output(cache,prepared_weights[row])); return; }
       prepared[row]=from_weights(prepared_weights[row]);
-    }
+    });
     return prepared;
   }
   if constexpr (requires (Prepared query) { query.lookup.tables; })

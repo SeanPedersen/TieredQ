@@ -53,11 +53,12 @@ index = TieredQIndex.load("index.tq")
   The former `fast_mode` boolean argument/property has been removed; use `mode`.
 - Fast ip/cosine indexes use fine tiers by default (#26, #31): ranks coded with up to `max_tier_bits=12` bits at the
   same bytes, whose top bits are an ordinary fast code at the automatic cap (6 bits, or ceil(bits/dim) when larger).
-  The scan reads only those prefixes, then rescores max(32, 1.5·k) candidates exactly. Training uses them whenever the
+  The scan reads only those prefixes, then rescores max(24, 1.5·k) candidates exactly. Training uses them whenever the
   allocation codes a rank wider than the prefix; `fine_tiers=False` disables them, and `index.fast_prefix_bits` is the
   prefix width (0: none). 100k vectors, mean missed top-10 hits over 3 seeds, fine tiers vs none: Gemini-768 66 → 15,
   OpenAI-1536 44 → 6 at 8 bits/dim; 209 → 171 and 168 → 115 at 4 bits/dim; GloVe-200 162 → 87 at 8 bits/dim and
-  unchanged at 2-4 (no rank goes wide). Batch time per query is +0-15% at 6-8 bits/dim and +30-40% at 3-4 bits/dim. On
+  unchanged at 2-4 (no rank goes wide). Batch QPS vs fine tiers off (100k, #31): +5-6% at 8 bits/dim and -4% to -8% at
+  3-4 bits/dim for k=10; -5% to -7% at 8 and -22% to -27% at 3-4 bits/dim for k=100 (rescoring 150 candidates). On
   1M sets (OpenAI-1536, MS MARCO Cohere-1024, 6-8 bits/dim) top-10 misses fell 46-79% and search got 3-24% faster (likely
   as the scan reads fewer bits); encoding is 11-34% slower (wider codes). With `exact_fast_scores=True` the prefix is the
   8-bit Lloyd-Max code, scanned exactly, and fine bits refine its cells: at 8 bits/dim mean top-10 misses fell from 28 to
