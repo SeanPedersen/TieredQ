@@ -4,6 +4,7 @@
 #include "tieredq_encode_float.h"
 #include "tieredq_io.h"
 #include "tieredq_layout.h"
+#include "tieredq_lookup_layout.h"
 #include "training_rng.h"
 #include <algorithm>
 #include <cmath>
@@ -29,18 +30,13 @@ struct RefinementEncoder {
 namespace {
 using tieredq_detail::bad;
 using tieredq_detail::product;
-constexpr uint32_t refinement_magic=0x46525154,refinement_format=1;  // "TQRF"
+constexpr uint32_t refinement_magic=0x46525154,refinement_format=1,wide_refinement_format=2;  // "TQRF"
 constexpr uint32_t max_bits=8;
+constexpr uint32_t max_fine_bits=tieredq_detail::widest_fine_code_bits;
 constexpr size_t lloyd_iterations=60,level_rows=20000,encode_block_rows=256;
 // Rotated prefix blocks must span the finer model's ranks at the same positions (FP16 bases).
 constexpr double span_tolerance=1e-2,centroid_tolerance=1e-4;
 
-uint32_t read_bits(const uint8_t* doc,uint32_t offset,uint32_t bits) {
-  if (!bits) return 0;
-  uint32_t value=uint32_t(doc[offset/8])>>(offset%8);
-  if (offset%8+bits>8) value|=uint32_t(doc[offset/8+1])<<(8-offset%8);
-  return value&((1u<<bits)-1);
-}
 uint16_t read_half(const uint8_t* doc) { return uint16_t(doc[0])|uint16_t(doc[1])<<8; }
 void write_half(uint8_t* doc,double value) {
   const uint16_t bits=tieredq_detail::half_encode(value); doc[0]=uint8_t(bits); doc[1]=uint8_t(bits>>8);
@@ -78,7 +74,7 @@ constexpr size_t read_padding=16;
 constexpr uint32_t segment_lanes=16;
 // Level tables pad past their end so 16-float register loads of the last tables stay inside.
 constexpr size_t level_padding=2*segment_lanes;
-// A field of bits (<= 8) at bit offset `bit` of a padded row.
+// A field of bits (<= 12) at bit offset `bit` of a padded row.
 uint32_t field(const uint8_t* doc,uint32_t bit,uint32_t bits) {
   uint32_t word; std::memcpy(&word,doc+bit/8,sizeof(word));
   return (word>>(bit%8))&((1u<<bits)-1);
@@ -121,16 +117,17 @@ const FieldPattern* field_patterns() {
   return patterns.data();
 }
 __attribute__((target("avx512f,avx512bw")))
-inline __m512i fields_avx512(const FieldPattern* patterns,const uint8_t* doc,uint32_t bit,uint32_t bits) {
+inline __m512i fields_avx512(const FieldPattern* patterns,const uint8_t* doc,uint32_t bit,uint32_t bits,__mmask16 live) {
   if (!bits) return _mm512_setzero_si512();
   const __m512i mask=_mm512_set1_epi32(int((1u<<bits)-1));
-  const FieldPattern& pattern=patterns[(bit%8)*pattern_widths+bits];
-  if (!pattern.fits) {
+  if (bits>max_bits || !patterns[(bit%8)*pattern_widths+bits].fits) {
     const __m512i offset=_mm512_add_epi32(_mm512_set1_epi32(int(bit)),
         _mm512_mullo_epi32(_mm512_set_epi32(15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0),_mm512_set1_epi32(int(bits))));
-    const __m512i word=_mm512_i32gather_epi32(_mm512_srli_epi32(offset,3),doc,1);
+    const __m512i word=_mm512_mask_i32gather_epi32(_mm512_setzero_si512(),live,
+        _mm512_srli_epi32(offset,3),doc,1);
     return _mm512_and_si512(_mm512_srlv_epi32(word,_mm512_and_si512(offset,_mm512_set1_epi32(7))),mask);
   }
+  const FieldPattern& pattern=patterns[(bit%8)*pattern_widths+bits];
   const __m512i window=_mm512_broadcast_i32x4(_mm_loadu_si128(reinterpret_cast<const __m128i*>(doc+bit/8)));
   const __m512i word=_mm512_shuffle_epi8(window,_mm512_load_si512(pattern.control));
   return _mm512_and_si512(_mm512_srlv_epi32(word,_mm512_load_si512(pattern.shift)),mask);
@@ -145,8 +142,8 @@ float segment_sum_avx512(const uint8_t* prefix,const uint8_t* suffix,const Segme
   for (const Segment* s=first;s!=last;++s) {
     const __mmask16 live=__mmask16((1u<<s->count)-1);
     const __m512i code=_mm512_or_si512(
-        _mm512_sllv_epi32(fields_avx512(patterns,prefix,s->prefix_bit,s->prefix_bits),_mm512_set1_epi32(int(s->shift))),
-        fields_avx512(patterns,suffix,s->suffix_bit,s->suffix_bits));
+        _mm512_sllv_epi32(fields_avx512(patterns,prefix,s->prefix_bit,s->prefix_bits,live),_mm512_set1_epi32(int(s->shift))),
+        fields_avx512(patterns,suffix,s->suffix_bit,s->suffix_bits,live));
     const float* table=levels+s->table;
     const __m512 level=s->table_size<=segment_lanes ? _mm512_permutexvar_ps(code,_mm512_loadu_ps(table)) :
         s->table_size<=2*segment_lanes ? _mm512_permutex2var_ps(_mm512_loadu_ps(table),code,_mm512_loadu_ps(table+segment_lanes)) :
@@ -313,34 +310,48 @@ TieredQKernel resolve_kernel(TieredQKernel kernel) {
 size_t TieredQRefinement::positions() const { return prefix_.coded_dimensions()+extra_mean_.size(); }
 
 TieredQRefinement TieredQRefinement::train(const TieredQ& prefix,uint32_t total_code_bits,const float* sample,size_t rows,
-                                           uint64_t seed) {
+                                           uint64_t seed,bool fine_tiers,uint32_t max_tier_bits) {
+  if (max_tier_bits<max_bits || max_tier_bits>max_fine_bits) bad("refinement max tier bits must be in [8, 12]");
   if (total_code_bits<=prefix.config().code_bits) bad("refinement needs a larger budget than its prefix");
   if (prefix.fast_prefix_bits()) bad("refinement does not extend fine-tier models; train the prefix with fine_tiers off");
   auto config=prefix.config();
-  config.code_bits=total_code_bits; config.rotate_tiers=false; config.fine_tiers=false;
+  config.code_bits=total_code_bits; config.rotate_tiers=false; config.fine_tiers=fine_tiers;
+  config.max_tier_bits=max_tier_bits;
   // Suffix targets come from the finer model's widths; the automatic fast-scan cap would only narrow them.
   if (!config.max_scan_bits) config.max_scan_bits=max_bits;
   const auto finer=TieredQ::train(config,sample,rows,seed);
-  const size_t d=prefix.model_dimensions(),m1=prefix.coded_dimensions(),mf=finer.coded_dimensions();
+  TieredQRefinement out;
+  out.prefix_=prefix;
+  out.initialize_layout(finer,seed,fine_tiers ? max_tier_bits : max_bits);
+  out.prepare();
+  const size_t fitted=std::min(rows,level_rows);
+  std::vector<float> model_rows(product(fitted,prefix.model_dimensions()));
+  prefix.lift(sample,fitted,false,model_rows.data());
+  out.fit_levels(model_rows.data(),fitted,prefix.encode(sample,fitted));
+  out.prepare();
+  return out;
+}
+
+void TieredQRefinement::initialize_layout(const TieredQ& finer,uint64_t seed,uint32_t bit_cap) {
+  const size_t d=prefix_.model_dimensions(),m1=prefix_.coded_dimensions(),mf=finer.coded_dimensions();
   if (mf<m1) bad("refinement's finer model codes fewer ranks than the prefix");
+  if (finer.centroids_.size()!=prefix_.centroids_.size()) bad("refinement centroids differ");
   double centroid_error=0,centroid_scale=0;
-  for (size_t i=0;i<prefix.centroids_.size();++i) {
-    centroid_error=std::max(centroid_error,double(std::fabs(prefix.centroids_[i]-finer.centroids_[i])));
-    centroid_scale=std::max(centroid_scale,double(std::fabs(prefix.centroids_[i])));
+  for (size_t i=0;i<prefix_.centroids_.size();++i) {
+    centroid_error=std::max(centroid_error,double(std::fabs(prefix_.centroids_[i]-finer.centroids_[i])));
+    centroid_scale=std::max(centroid_scale,double(std::fabs(prefix_.centroids_[i])));
   }
-  if (finer.centroids_.size()!=prefix.centroids_.size() || centroid_error>centroid_tolerance*std::max(centroid_scale,1e-30))
+  if (centroid_error>centroid_tolerance*std::max(centroid_scale,1e-30))
     bad("refinement must train on the prefix's sample and seed (centroids differ)");
   // Model-space bases as row-major d x m floats.
   std::vector<float> coarse(product(d,m1)),fine(product(d,mf));
-  for (size_t i=0;i<coarse.size();++i) coarse[i]=prefix.basis_value(i);
+  for (size_t i=0;i<coarse.size();++i) coarse[i]=prefix_.basis_value(i);
   for (size_t i=0;i<fine.size();++i) fine[i]=finer.basis_value(i);
   std::vector<uint32_t> finer_bits;
   for (const auto& tier:finer.tiers()) finer_bits.insert(finer_bits.end(),tier.dimensions,tier.bits);
 
-  TieredQRefinement out;
-  out.prefix_=prefix;
   uint32_t offset=0;
-  for (const auto& tier:prefix.tiers()) {
+  for (const auto& tier:prefix_.tiers()) {
     // Each prefix block must span the finer model's ranks at its positions (rotation only).
     double span=0,bits=0;
     for (uint32_t a=0;a<tier.dimensions;++a) for (uint32_t b=0;b<tier.dimensions;++b) {
@@ -352,13 +363,13 @@ TieredQRefinement TieredQRefinement::train(const TieredQ& prefix,uint32_t total_
       bad("refinement must train on the prefix's sample and seed (PCA ranks differ)");
     for (uint32_t a=0;a<tier.dimensions;++a) bits+=finer_bits[tier.start+a];
     const double target=std::round(bits/tier.dimensions)-double(tier.bits);
-    const uint32_t gain=uint32_t(std::clamp(target,0.0,double(max_bits-tier.bits)));
-    out.blocks_.push_back({tier.start,tier.dimensions,tier.bits,tier.bit_offset,gain,offset,{}});
+    const uint32_t gain=uint32_t(std::clamp(target,0.0,double(bit_cap-tier.bits)));
+    blocks_.push_back({tier.start,tier.dimensions,tier.bits,tier.bit_offset,gain,offset,{}});
     offset+=gain*tier.dimensions;
   }
   // Ranks only the suffix codes: runs of equal finer bits, each rotated as training rotates a tier.
   const size_t extra=mf-m1;
-  out.extra_basis_.assign(product(d,extra),0);
+  extra_basis_.assign(product(d,extra),0);
   for (size_t start=m1;start<mf;) {
     size_t end=start;
     while (end<mf && finer_bits[end]==finer_bits[start]) ++end;
@@ -367,21 +378,21 @@ TieredQRefinement TieredQRefinement::train(const TieredQ& prefix,uint32_t total_
     for (size_t j=0;j<d;++j) for (uint32_t c=0;c<width;++c) {
       double sum=0;
       for (uint32_t k=0;k<width;++k) sum+=double(fine[j*mf+start+k])*rotation[size_t(k)*width+c];
-      out.extra_basis_[j*extra+start-m1+c]=tieredq_detail::half_encode(sum);
+      extra_basis_[j*extra+start-m1+c]=tieredq_detail::half_encode(sum);
     }
-    out.runs_.push_back({uint32_t(start),width,finer_bits[start],offset,{}});
+    runs_.push_back({uint32_t(start),width,finer_bits[start],offset,{}});
     offset+=finer_bits[start]*width;
     start=end;
   }
-  out.suffix_bits_=offset;
-  out.extra_mean_.assign(extra,0.0f); out.extra_sigma_.assign(extra,1.0f);
-  out.prepare();
-  const size_t fitted=std::min(rows,level_rows);
-  std::vector<float> model_rows(product(fitted,d));
-  prefix.lift(sample,fitted,false,model_rows.data());
-  out.fit_levels(model_rows.data(),fitted,prefix.encode(sample,fitted));
-  out.prepare();
-  return out;
+  suffix_bits_=offset;
+  extra_mean_.assign(extra,0.0f); extra_sigma_.assign(extra,1.0f);
+}
+
+uint32_t TieredQRefinement::max_code_bits() const {
+  uint32_t width=0;
+  for (const auto& block:blocks_) width=std::max(width,block.bits+block.gain);
+  for (const auto& run:runs_) width=std::max(width,run.bits);
+  return width;
 }
 
 void TieredQRefinement::prepare() {
@@ -476,7 +487,7 @@ void TieredQRefinement::fit_levels(const float* model_rows,size_t rows,const std
       if (factor==0) continue;
       for (uint32_t j=0;j<block.dimensions;++j) {
         const size_t r=block.start+j;
-        cells[read_bits(doc,block.prefix_offset+j*block.bits,block.bits)].push_back(v[i*p+r]/(factor*prefix_.sigma_[r]));
+        cells[tieredq_detail::read_wide_code(doc,block.prefix_offset+j*block.bits,block.bits)].push_back(v[i*p+r]/(factor*prefix_.sigma_[r]));
       }
     }
     block.levels.clear();
@@ -511,7 +522,7 @@ void TieredQRefinement::encode(const float* rows,size_t count,const uint8_t* pre
         const size_t sub=size_t(1)<<block.gain;
         for (uint32_t j=0;j<block.dimensions;++j) {
           const size_t r=block.start+j;
-          const uint32_t cell=read_bits(prefix_doc,block.prefix_offset+j*block.bits,block.bits);
+          const uint32_t cell=tieredq_detail::read_wide_code(prefix_doc,block.prefix_offset+j*block.bits,block.bits);
           const double unit=factor*prefix_.sigma_[r];
           const float* levels=block.levels.data()+size_t(cell)*sub;
           const uint32_t code=unit!=0 ? nearest(levels,sub,v[i*p+r]/unit) : 0;
@@ -635,7 +646,7 @@ void TieredQRefinement::score(const uint8_t* prefix_rows,const uint8_t* suffix_r
 
 std::vector<uint8_t> TieredQRefinement::serialize() const {
   tieredq_detail::Writer w;
-  w.u32(refinement_magic); w.u32(refinement_format); w.u32(prefix_.model_id());
+  w.u32(refinement_magic); w.u32(max_code_bits()>max_bits ? wide_refinement_format : refinement_format); w.u32(prefix_.model_id());
   w.u64(suffix_bits_);
   w.u32(uint32_t(blocks_.size()));
   for (const auto& b:blocks_) {
@@ -651,7 +662,9 @@ std::vector<uint8_t> TieredQRefinement::serialize() const {
 TieredQRefinement TieredQRefinement::deserialize(const std::vector<uint8_t>& data,TieredQ prefix) {
   tieredq_detail::Reader r{data};
   if (r.u32()!=refinement_magic) bad("not a TieredQ refinement");
-  if (r.u32()!=refinement_format) bad("unsupported refinement format");
+  const uint32_t format=r.u32();
+  if (format!=refinement_format && format!=wide_refinement_format) bad("unsupported refinement format");
+  const uint32_t bit_cap=format==refinement_format ? max_bits : max_fine_bits;
   if (r.u32()!=prefix.model_id()) bad("refinement belongs to a different prefix model");
   TieredQRefinement out;
   out.prefix_=std::move(prefix);
@@ -664,7 +677,7 @@ TieredQRefinement TieredQRefinement::deserialize(const std::vector<uint8_t>& dat
     Block b{r.u32(),r.u32(),r.u32(),r.u32(),r.u32(),r.u32(),r.floats()};
     const auto& tier=out.prefix_.tiers()[i];
     if (b.start!=tier.start || b.dimensions!=tier.dimensions || b.bits!=tier.bits || b.prefix_offset!=tier.bit_offset ||
-        b.bits+b.gain>max_bits || b.suffix_offset!=bits || b.levels.size()!=size_t(1)<<(b.bits+b.gain))
+        b.bits>bit_cap || b.gain>bit_cap-b.bits || b.suffix_offset!=bits || b.levels.size()!=size_t(1)<<(b.bits+b.gain))
       bad("invalid refinement block");
     bits+=uint64_t(b.gain)*b.dimensions;
     out.blocks_.push_back(std::move(b));
@@ -673,7 +686,7 @@ TieredQRefinement TieredQRefinement::deserialize(const std::vector<uint8_t>& dat
   size_t next=m1;
   for (uint32_t i=0;i<runs;++i) {
     Run run{r.u32(),r.u32(),r.u32(),r.u32(),r.floats()};
-    if (run.start!=next || !run.dimensions || !run.bits || run.bits>max_bits || run.suffix_offset!=bits ||
+    if (run.start!=next || !run.dimensions || !run.bits || run.bits>bit_cap || run.suffix_offset!=bits ||
         run.levels.size()!=size_t(1)<<run.bits)
       bad("invalid refinement run");
     bits+=uint64_t(run.bits)*run.dimensions; next+=run.dimensions;

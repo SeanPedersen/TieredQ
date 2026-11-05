@@ -83,7 +83,8 @@ after `code_bits` are keyword-only:
   15 (Gemini-768) and 18 to 9 (OpenAI-1536) at the same batch speed. The flat `TieredQIndex` and `TieredQIVFIndex` serve
   fine-tier models (opt in with `fine_tiers=True` on Python IVF; it defaults to `False` there). IVF scans the probed
   lists to the same candidate depth and rescores those candidates. Train nested
-  and refinement models with `TieredQConfig::fine_tiers = false` (the Python nested index does).
+  prefix models with `TieredQConfig::fine_tiers = false` (the Python nested index does).
+  Nested suffix refinement can independently opt into wider codes with `fine_tiers=True`.
 - In C++, use `dv::TieredQIndex(codec)` for fast mode or
   `dv::TieredQIndex(codec, dv::TieredQIndexMode::full)` for full mode.
   Inspect the enum with `index.mode()`; the boolean constructor is removed.
@@ -126,7 +127,9 @@ ivf.build(vectors)  # trains the codec (seeded 32,768-row sample) and the lists,
 scores, ids = ivf.search(queries, k=10, nprobe=32)
 
 # Prefix codes in an in-RAM IVF; candidates rescored with a 4 bits/dim refinement tier on SSD.
-index = TieredQNestedIVFIndex.build(vectors, prefix_bits=d, total_bits=4 * d, lists=256)
+index = TieredQNestedIVFIndex.build(
+    vectors, prefix_bits=d, total_bits=4 * d, lists=256, fine_tiers=True
+)
 index.write_tier("tier.rows", vectors)  # or index.attach_tier(index.encode_tier(vectors)) to keep it in RAM
 index.attach_tier("tier.rows", reads="direct", queue_depth=32)
 scores, ids = index.search(queries, k=10, nprobe=64, candidates=50)
@@ -138,10 +141,19 @@ index.save("nested.tq")  # IVF, refinement and tier layout; attach the tier agai
   `build` or `train_lists(sample)` trains the codec. Call `train_lists` before
   `build` to fix the partition on a separate sample.
 - `TieredQNestedIVFIndex.build(vectors, *, prefix_bits, total_bits, lists=0,
-  metric="ip", tier_rows="prefix_and_suffix", sample=None)` trains a nested index.
+  metric="ip", tier_rows="prefix_and_suffix", sample=None, fine_tiers=False, max_tier_bits=12)` trains a nested index.
   `prefix_bits` and `total_bits` are budgets per vector, with the prefix included
-  in `total_bits`. Neither IVF constructor exposes the flat index's `mode`,
-  `allocation_power`, `exact_fast_scores`, or bit-cap options.
+  in `total_bits`. For inner product/cosine, `fine_tiers=True` lets suffix training allocate
+  combined prefix/suffix codes wider than 8 bits, up to `max_tier_bits` (8–12).
+  The IVF prefix stays fixed; candidates are rescored directly with all suffix bits.
+  `max_refinement_bits` reports the widest realized code;
+  `total_bits` and `tier_bytes_per_vector` report realized storage after block rounding.
+  Wider suffix models use refinement format 2; existing format 1 models still load.
+  In a [local Gemini-768 benchmark](benchmark/results/nested-fine-local-20261105/README.md),
+  an 8-bit/dimension total budget improved full-probe recall@10 from 99.44% to 99.76%
+  (57% fewer misses), with median batch time per query changing from 2.480 to 2.501 ms
+  on one M1 thread with a RAM tier. The 4-bit/dimension control was unchanged.
+  Neither IVF constructor exposes the flat index's `mode`, `allocation_power`, or `exact_fast_scores`.
 - IVF searches require keyword `nprobe`; nested searches also require
   `candidates >= k`. Results use `2**32 - 1` ids and `-inf` scores for slots
   beyond the rows in the probed lists.
@@ -238,7 +250,8 @@ auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*p
   auto config = dv::TieredQConfig::target_code_bits(d, d);
   config.fine_tiers = false;
   auto codec = dv::TieredQ::train(config, sample, rows, seed);
-  auto refinement = dv::TieredQRefinement::train(codec, /*total_code_bits=*/4 * d, sample, rows, seed);
+  auto refinement = dv::TieredQRefinement::train(codec, /*total_code_bits=*/4 * d, sample, rows, seed,
+                                               /*fine_tiers=*/true, /*max_tier_bits=*/12);
   dv::TieredQIVFIndex ivf(codec);
   ivf.build(data, n);
   dv::TieredQNestedIVFIndex index(std::move(ivf), std::move(refinement));

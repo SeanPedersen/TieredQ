@@ -43,7 +43,7 @@ dv::TieredQFileReads parse_reads(const std::string& reads) {
 }
 // Trains the prefix, the lists (on sample, when given) and the refinement on one seeded sample, then builds the lists.
 dv::TieredQNestedIVFIndex train_nested(const dv::TieredQConfig& prefix, uint32_t total_bits, uint32_t lists,
-                                       dv::TieredQTierRows tier_rows, Matrix vectors, OptionalMatrix sample) {
+                                       dv::TieredQTierRows tier_rows, Matrix vectors, OptionalMatrix sample, bool fine_tiers, uint32_t max_tier_bits) {
   const size_t width = prefix.dimensions;
   const float* training = sample ? sample->data() : vectors.data();
   const size_t training_rows = sample ? sample->shape(0) : vectors.shape(0);
@@ -53,7 +53,8 @@ dv::TieredQNestedIVFIndex train_nested(const dv::TieredQConfig& prefix, uint32_t
   auto config = prefix;
   config.num_centroids = auto_centroids(sampled);
   auto codec = dv::TieredQ::train(config, rows.data(), sampled, training_seed);
-  auto refinement = dv::TieredQRefinement::train(codec, total_bits, rows.data(), sampled, training_seed);
+  auto refinement = dv::TieredQRefinement::train(codec, total_bits, rows.data(), sampled, training_seed,
+                                               fine_tiers, max_tier_bits);
   dv::TieredQIVFIndex index(std::move(codec), lists, training_seed);
   if (sample) index.train_lists(sample->data(), sample->shape(0));
   index.build(vectors.data(), vectors.shape(0));
@@ -70,6 +71,7 @@ class PythonNestedIndex {
   const char* metric() const { return metric_name(prefix().config().metric); }
   uint32_t prefix_bits() const { return prefix().config().code_bits; }
   size_t total_bits() const { return prefix_bits() + index_.refinement().suffix_bits(); }
+  uint32_t max_refinement_bits() const { return index_.refinement().max_code_bits(); }
   size_t lists() const { return index_.index().lists(); }
   size_t storage_bytes() const { return index_.index().storage_bytes(); }
   const char* tier_rows() const { return tier_rows_name(index_.tier_rows()); }
@@ -173,27 +175,30 @@ void bind_nested(nb::module_& module) {
   nb::class_<PythonNestedIndex>(module, "TieredQNestedIVFIndex",
       "In-RAM IVF over prefix codes whose candidates are rescored with refinement tier rows from RAM or SSD.")
       .def_static("build", [](Matrix vectors, uint32_t prefix_bits, uint32_t total_bits, uint32_t lists,
-                              const std::string& metric, const std::string& tier_rows, OptionalMatrix sample) {
+                              const std::string& metric, const std::string& tier_rows, OptionalMatrix sample, bool fine_tiers, uint32_t max_tier_bits) {
         auto config = dv::TieredQConfig::target_code_bits(uint32_t(vectors.shape(1)), prefix_bits);
         config.metric = parse_metric(metric);
-        config.fine_tiers = false;  // only the flat index serves fine tiers
+        config.fine_tiers = false;  // The IVF prefix stays independently scannable.
         config.validate();
         if (sample) require_width(sample->shape(1), config.dimensions);
         const auto layout = parse_tier_rows(tier_rows);
         nb::gil_scoped_release release;
-        return std::make_unique<PythonNestedIndex>(train_nested(config, total_bits, lists, layout, vectors, sample));
+        return std::make_unique<PythonNestedIndex>(train_nested(config, total_bits, lists, layout, vectors, sample, fine_tiers, max_tier_bits));
       }, "vectors"_a.noconvert(), nb::kw_only(), "prefix_bits"_a, "total_bits"_a, "lists"_a = 0, "metric"_a = "ip",
          "tier_rows"_a = "prefix_and_suffix", "sample"_a.noconvert() = nb::none(),
+         "fine_tiers"_a = false, "max_tier_bits"_a = 12,
          "Trains the prefix codec (prefix_bits), the refinement (total_bits, prefix included) and the lists on a\n"
          "seeded sample of at most 32,768 rows of sample, else of vectors, then indexes vectors. A given sample\n"
          "also trains the lists on all its rows, so a partition learned on earlier data stays fixed. tier_rows\n"
          "'prefix_and_suffix' reads each candidate in one row; 'suffix' stores a smaller tier and decodes the\n"
-         "prefix from the lists. No tier is attached yet.")
+         "prefix from the lists. fine_tiers permits wider suffix refinement (up to max_tier_bits, at most 12)\n"
+         "for inner product/cosine. No tier is attached yet.")
       .def("__len__", &PythonNestedIndex::size)
       .def_prop_ro("dimensions", &PythonNestedIndex::dimensions)
       .def_prop_ro("metric", &PythonNestedIndex::metric)
       .def_prop_ro("prefix_bits", &PythonNestedIndex::prefix_bits, "Code bits the IVF scans.")
       .def_prop_ro("total_bits", &PythonNestedIndex::total_bits, "Prefix plus suffix code bits candidates rescore with.")
+      .def_prop_ro("max_refinement_bits", &PythonNestedIndex::max_refinement_bits, "Widest combined prefix/suffix code.")
       .def_prop_ro("lists", &PythonNestedIndex::lists)
       .def_prop_ro("storage_bytes", &PythonNestedIndex::storage_bytes, "In-RAM IVF bytes, excluding the tier.")
       .def_prop_ro("tier_rows", &PythonNestedIndex::tier_rows)

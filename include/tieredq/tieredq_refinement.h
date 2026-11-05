@@ -26,9 +26,13 @@ class TieredQRefinement {
  public:
   // total_code_bits sizes the finer model (prefix plus suffix). sample, rows and seed must be the prefix's training
   // inputs: the finer model has to share its centroids and PCA basis, which training checks.
+  // fine_tiers enables wider IP/cosine allocation for the suffix (max_tier_bits in [8, 12]);
+  // the prefix must have fine tiers disabled.
   static TieredQRefinement train(const TieredQ& prefix, uint32_t total_code_bits, const float* sample, size_t rows,
-                                 uint64_t seed = 0);
+                                 uint64_t seed = 0, bool fine_tiers = false, uint32_t max_tier_bits = 12);
   const TieredQ& prefix() const { return prefix_; }
+  // Widest combined prefix/suffix code; fine_tiers allows up to max_tier_bits (at most 12).
+  uint32_t max_code_bits() const;
   size_t suffix_bits() const { return suffix_bits_; }
   size_t suffix_code_bytes() const { return (suffix_bits_ + 7) / 8; }
   size_t bytes_per_vector() const { return suffix_code_bytes() + metadata_bytes; }
@@ -80,6 +84,7 @@ class TieredQRefinement {
   std::vector<float> level_table_;
   // Encoder-only state (every position's basis as FP32 panels, centroid projections), built on first use.
   std::shared_ptr<tieredq_detail::RefinementEncoder> encoder_;
+  void initialize_layout(const TieredQ& finer, uint64_t seed, uint32_t bit_cap);
   void prepare();
   void check_prefix_query(const TieredQQuery& prefix_query) const;
   TieredQRefinementQuery assemble_query(TieredQQuery prefix_query, const float* extra_weights) const;

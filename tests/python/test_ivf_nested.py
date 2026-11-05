@@ -228,3 +228,39 @@ def test_nested_rejects_bad_inputs(data, tmp_path):
         index.attach_tier(tmp_path / "tier.rows", reads="mmap")
     with pytest.raises(ValueError, match="one row per indexed vector"):
         index.write_tier(tmp_path / "tier.rows", vectors[:-1])
+
+
+@pytest.mark.parametrize("layout", LAYOUTS)
+@pytest.mark.parametrize("metric", ["ip", "cosine"])
+@pytest.mark.parametrize("prefix_bits", [1, 2 * DIMENSIONS])
+def test_nested_fine_suffix_preserves_prefix_and_round_trips(tmp_path, layout, metric, prefix_bits):
+    rng = np.random.default_rng(3)
+    vectors = (rng.normal(size=(ROWS, DIMENSIONS)) * 0.85 ** np.arange(DIMENSIONS)).astype(np.float32)
+    queries = (rng.normal(size=(QUERIES, DIMENSIONS)) * 0.85 ** np.arange(DIMENSIONS)).astype(np.float32)
+    options = dict(prefix_bits=prefix_bits, total_bits=8 * DIMENSIONS, lists=LISTS,
+                   tier_rows=layout, metric=metric)
+    baseline = TieredQNestedIVFIndex.build(vectors, **options)
+    fine = TieredQNestedIVFIndex.build(vectors, fine_tiers=True, **options)
+    assert baseline.max_refinement_bits <= 8 < fine.max_refinement_bits <= 12
+    ids = fine.candidates(queries, k=CANDIDATES, nprobe=NPROBE)
+    np.testing.assert_array_equal(ids, baseline.candidates(queries, k=CANDIDATES, nprobe=NPROBE))
+    tier = fine.encode_tier(vectors)
+    fine.attach_tier(tier)
+    expected = fine.search(queries, k=K, nprobe=NPROBE, candidates=CANDIDATES)
+    assert np.isfinite(expected[0]).all()
+    assert_same(fine.rescore(queries, ids, tier[ids], k=K), expected)
+    restored = TieredQNestedIVFIndex.deserialize(fine.serialize())
+    assert restored.max_refinement_bits == fine.max_refinement_bits
+    np.testing.assert_array_equal(restored.encode_tier(vectors), tier)
+    restored.attach_tier(tier)
+    assert_same(restored.search(queries, k=K, nprobe=NPROBE, candidates=CANDIDATES), expected)
+    path = tmp_path / "fine-tier.rows"
+    fine.write_tier(path, vectors)
+    restored.attach_tier(path)
+    assert_same(restored.search(queries, k=K, nprobe=NPROBE, candidates=CANDIDATES), expected)
+
+
+@pytest.mark.parametrize("cap", [0, 7, 13])
+def test_nested_fine_suffix_rejects_invalid_cap(data, cap):
+    with pytest.raises(RuntimeError, match="max tier bits"):
+        nested(data[0], "suffix", fine_tiers=True, max_tier_bits=cap)

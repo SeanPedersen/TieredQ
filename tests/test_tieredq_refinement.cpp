@@ -143,6 +143,46 @@ void quality_test(TieredQMetric metric,uint32_t prefix_bits,uint32_t total_bits)
   require(1-nested<=kept_misses*(1-alone),"refinement does not halve its prefix's misses");
   require(nested>=full-flat_margin,"refinement ranks clearly worse than the flat model of its budget");
 }
+// Wide suffix fields cross byte boundaries; restored encoders and every available scoring kernel agree.
+void fine_suffix_test() {
+  const auto sample=clustered_rows(rows,3),data=clustered_rows(rows,11),probes=clustered_rows(queries,13);
+  const auto prefix=train(sample,TieredQMetric::inner_product,2*dimensions);
+  const auto baseline=TieredQRefinement::train(prefix,8*dimensions,sample.data(),rows,seed);
+  require(baseline.max_code_bits()<=8,"default refinement changed its width cap");
+  for (uint32_t cap:{10u,12u}) {
+    const auto refinement=TieredQRefinement::train(prefix,8*dimensions,sample.data(),rows,seed,true,cap);
+    require(refinement.max_code_bits()>8 && refinement.max_code_bits()<=cap,"fine refinement did not go wide");
+    const auto bytes=refinement.serialize();
+    const auto restored=TieredQRefinement::deserialize(bytes,prefix);
+    require(restored.serialize()==bytes,"wide refinement persistence changed");
+    const auto prefix_codes=prefix.encode(data.data(),rows);
+    std::vector<uint8_t> codes(rows*refinement.bytes_per_vector()),again(codes.size());
+    refinement.encode(data.data(),rows,prefix_codes.data(),codes.data());
+    restored.encode(data.data(),rows,prefix_codes.data(),again.data());
+    require(codes==again,"wide refinement persistence changed encoding");
+    kernel_parity(refinement,prefix_codes,codes,probes);
+    require(refined_scores(refinement,prefix_codes,codes,probes)==refined_scores(restored,prefix_codes,codes,probes),
+            "wide refinement persistence changed scores");
+    auto old_format=bytes;
+    old_format[4]=1;
+    bool rejected=false;
+    try { TieredQRefinement::deserialize(old_format,prefix); } catch (const std::exception&) { rejected=true; }
+    require(rejected,"legacy refinement format accepted wide codes");
+  }
+  // A tiny prefix forces suffix fields themselves past eight bits, including three-byte packed fields.
+  auto tiny_config=TieredQConfig::target_code_bits(dimensions,1);
+  tiny_config.num_centroids=centroids; tiny_config.fine_tiers=false;
+  tiny_config.target_mode=TieredQIndexMode::full;
+  const auto tiny=TieredQ::train(tiny_config,sample.data(),rows,seed);
+  const auto wide=TieredQRefinement::train(tiny,8*dimensions,sample.data(),rows,seed,true);
+  uint32_t prefix_width=0;
+  for (const auto& tier:tiny.tiers()) prefix_width=std::max(prefix_width,tier.bits);
+  require(wide.max_code_bits()>prefix_width+8,"wide suffix field regression did not exercise wide fields");
+  const auto prefix_codes=tiny.encode(data.data(),rows);
+  std::vector<uint8_t> codes(rows*wide.bytes_per_vector());
+  wide.encode(data.data(),rows,prefix_codes.data(),codes.data());
+  kernel_parity(wide,prefix_codes,codes,probes);
+}
 void persistence_test() {
   const auto sample=clustered_rows(rows,3),data=clustered_rows(rows,11),probes=clustered_rows(queries,13);
   const auto prefix=train(sample,TieredQMetric::inner_product,dimensions);
@@ -175,6 +215,7 @@ void tieredq_refinement_tests() {
     quality_test(metric,dimensions,4*dimensions);
     quality_test(metric,dimensions/2,3*dimensions);
   }
+  fine_suffix_test();
   persistence_test();
   wide_batch_test();
   std::cout<<"PASS refinement\n";
