@@ -9,6 +9,7 @@ ROWS = 1024
 QUERIES = 8
 K = 10
 DECAY = 0.85  # per-dimension spectrum decay steep enough that 8 bits/dim allocates codes past 8 bits
+LLOYD_MAX_PREFIX_BITS = 8  # exact fast scores scan the 8-bit Lloyd-Max prefix of their fine tiers
 
 
 def steep_rows(count, seed):
@@ -50,3 +51,23 @@ def test_full_mode_ignores_fine_tiers():
     index = TieredQIndex(DIMENSIONS, BITS_PER_DIM * DIMENSIONS, mode="full", fine_tiers=True)
     index.add(steep_rows(ROWS, 26))
     assert index.fast_prefix_bits == 0
+
+
+def test_exact_fast_scores_use_lloyd_max_fine_tiers(tmp_path):
+    vectors, queries = steep_rows(ROWS, 26), steep_rows(QUERIES, 27)
+    exact = TieredQIndex(DIMENSIONS, BITS_PER_DIM * DIMENSIONS, exact_fast_scores=True)
+    plain = TieredQIndex(DIMENSIONS, BITS_PER_DIM * DIMENSIONS, exact_fast_scores=True, fine_tiers=False)
+    exact.add(vectors)
+    plain.add(vectors)
+    assert exact.fast_prefix_bits == LLOYD_MAX_PREFIX_BITS and plain.fast_prefix_bits == 0
+    scores, ids = exact.search(queries, K)
+    for row, query in enumerate(queries):
+        single_scores, single_ids = exact.search(query[None, :], K)
+        np.testing.assert_array_equal(single_ids[0], ids[row])
+        np.testing.assert_array_equal(single_scores[0], scores[row])
+    path = str(tmp_path / "exact-fine.tq")
+    exact.save(path)
+    loaded = TieredQIndex.load(path)
+    assert loaded.fast_prefix_bits == LLOYD_MAX_PREFIX_BITS
+    for actual, reference in zip(loaded.search(queries, K), (scores, ids)):
+        np.testing.assert_array_equal(actual, reference)

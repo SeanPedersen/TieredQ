@@ -31,13 +31,16 @@ def assert_same(actual, expected):
         np.testing.assert_array_equal(left, right)
 
 
-# Fast and full training yield the same model only at 8 bits/dim with exact_fast_scores: fast targets allocate on
+# Fast and full training yield the same model only at 8 bits/dim with exact_fast_scores and no fine tiers (full mode
+# trains without them): fast targets allocate on
 # variance^1.5 and fill nibble padding (#9), so the 1-bit budget compares the fast index with its own fast scan instead.
 @pytest.mark.parametrize("code_bits", [DIMENSIONS, DIMENSIONS * 8])
 def test_fast_only_search_storage_append_and_roundtrip(code_bits, tmp_path):
     same_model = code_bits == DIMENSIONS * 8
     rows = np.random.default_rng(13).normal(size=(INITIAL_ROWS * 2, DIMENSIONS)).astype(np.float32)
-    fast = TieredQIndex(dimensions=DIMENSIONS, code_bits=code_bits, mode="fast", exact_fast_scores=same_model)
+    fast = TieredQIndex(
+        dimensions=DIMENSIONS, code_bits=code_bits, mode="fast", exact_fast_scores=same_model, fine_tiers=False
+    )
     exact = TieredQIndex(dimensions=DIMENSIONS, code_bits=code_bits, mode="full")
     assert fast.mode == "fast" and exact.mode == "full"
     assert fast.storage_bytes == 0

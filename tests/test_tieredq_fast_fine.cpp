@@ -60,8 +60,8 @@ uint32_t widest(const dv::TieredQ& codec) {
   return out;
 }
 
-// Training adds fine tiers to steep spectra at the automatic prefix width unless switched off; full and L2 targets
-// ignore the flag.
+// Training adds fine tiers to steep spectra at the automatic prefix width unless switched off: fast targets over the
+// additive prefix, ip full targets (exact fast scores) over the 8-bit Lloyd-Max prefix. L2 ignores the flag.
 void policy_test() {
   std::mt19937 random(26);
   const auto steep=decaying_rows(rows,random);
@@ -74,18 +74,24 @@ void policy_test() {
     require(restored.fast_prefix_bits()==codec.fast_prefix_bits() && restored.serialize()==codec.serialize(),
             "fine-tier model round trip");
   }
-  for (auto [target,metric]:{std::pair{dv::TieredQIndexMode::full,dv::TieredQMetric::inner_product},
-                             std::pair{dv::TieredQIndexMode::fast,dv::TieredQMetric::l2}})
-    require(!train(steep,dv::tieredq_detail::widest_code_bits,true,target,metric).fast_prefix_bits(),
-            "fine tiers reached a full or L2 target");
+  const auto exact=train(steep,dv::tieredq_detail::widest_code_bits,true,dv::TieredQIndexMode::full);
+  require(exact.fast_prefix_bits()==dv::tieredq_detail::widest_code_bits && widest(exact)>dv::tieredq_detail::widest_code_bits,
+          "full-target training skipped fine tiers");
+  require(!train(steep,dv::tieredq_detail::widest_code_bits,false,dv::TieredQIndexMode::full).fast_prefix_bits(),
+          "full-target fine tiers switched off were added");
+  for (auto target:{dv::TieredQIndexMode::fast,dv::TieredQIndexMode::full})
+    require(!train(steep,dv::tieredq_detail::widest_code_bits,true,target,dv::TieredQMetric::l2).fast_prefix_bits(),
+            "fine tiers reached an L2 target");
 }
 
-void rescoring_test(uint32_t bits_per_dim) {
+// Fine-tier fast search of a fast target (nibble prefix scan) or a full target (exact prefix scan): batch equals single
+// search, rescored scores equal the full-width codes' exact scores, and the index round-trips.
+void rescoring_test(uint32_t bits_per_dim,dv::TieredQIndexMode target) {
   std::mt19937 random(26);
   const auto data=decaying_rows(rows,random),probe=decaying_rows(queries,random);
-  const auto codec=train(data,bits_per_dim,true);
-  require(codec.fast_prefix_bits()==bits_per_dim && widest(codec)>bits_per_dim+2,
-          "fixture allocates no tier 3 bits past its prefix");
+  const auto codec=train(data,bits_per_dim,true,target);
+  const uint32_t prefix=target==dv::TieredQIndexMode::fast ? bits_per_dim : dv::tieredq_detail::widest_code_bits;
+  require(codec.fast_prefix_bits()==prefix && widest(codec)>prefix+2,"fixture allocates no tier 3 bits past its prefix");
   require(codec.config().code_bits<=bits_per_dim*dimensions,"fine-tier model exceeds its code budget");
 
   dv::TieredQIndex fast(codec),full(codec,dv::TieredQIndexMode::full);
@@ -135,5 +141,6 @@ void tieredq_fast_fine_tests() {
   refined_book_test();
   policy_test();
   for (uint32_t bits_per_dim=dv::tieredq_detail::additive_wide_max_bits;bits_per_dim<=dv::tieredq_detail::widest_code_bits;++bits_per_dim)
-    rescoring_test(bits_per_dim);
+    rescoring_test(bits_per_dim,dv::TieredQIndexMode::fast);
+  rescoring_test(dv::tieredq_detail::widest_code_bits,dv::TieredQIndexMode::full);
 }

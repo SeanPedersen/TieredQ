@@ -478,8 +478,10 @@ TieredQ TieredQ::train_model(TieredQConfig config,const tieredq_detail::Training
     config.max_scan_bits=fast_additive
         ? std::max(tieredq_detail::additive_wide_max_bits,(config.code_bits+uint32_t(d)-1)/uint32_t(d))
         : tieredq_detail::widest_code_bits;
-  // Fine tiers (#26) refine additive prefix books, which exist from the automatic cap's minimum width up.
-  const bool fine_possible=fast_additive && config.max_scan_bits>=tieredq_detail::additive_wide_max_bits;
+  // Fine tiers (#26, #31) refine the prefix book: additive for fast targets, which exist from the automatic cap's
+  // minimum width up, and Lloyd-Max for ip/cosine full targets (exact fast scores). L2 keeps codes at 8 bits.
+  const bool lloyd_max_fine=config.target_mode==TieredQIndexMode::full && additive_wide_tiers;
+  const bool fine_possible=(fast_additive || lloyd_max_fine) && config.max_scan_bits>=tieredq_detail::additive_wide_max_bits;
   const bool fine_tiers=fine_possible && config.fine_tiers && config.max_tier_bits>config.max_scan_bits;
   tieredq_detail::AllocationModel allocation{std::vector<double>(d),std::vector<uint32_t>(d),std::vector(d,gaussian)};
   for (int j=0;j<d;++j) {
@@ -498,6 +500,12 @@ TieredQ TieredQ::train_model(TieredQConfig config,const tieredq_detail::Training
                                                : tieredq_detail::default_allocation_power(config.code_bits,uint32_t(d));
   auto weighted=allocation;
   for (auto& v:weighted.variance) v=std::pow(std::max(0.0,v),power);
+  const auto use_fine_tiers=[&](tieredq_detail::Allocation fine,tieredq_detail::FineBooks books) {
+    bits=std::move(fine);
+    c.fast_prefix_bits_=books.prefix_bits;
+    c.levels_.resize(tieredq_detail::widest_fine_code_bits+1);
+    for (unsigned b=books.prefix_bits+1;b<=tieredq_detail::widest_fine_code_bits;++b) c.levels_[b]=std::move(books.books[b]);
+  };
   // Fast caches of models with every tier <= 4 bits use the x86 nibble lookup, which stores 3-bit codes exactly
   // only for the additive codebook (tieredq_lookup_layout.h). The MSE allocation decides that layout and its padded
   // storage limit, so stored bytes do not depend on the weights; the exact allocator then fills that storage.
@@ -520,14 +528,16 @@ TieredQ TieredQ::train_model(TieredQConfig config,const tieredq_detail::Training
       c.levels_[b]=tieredq_detail::additive_wide_codebook(b);
     bits=tieredq_detail::additive_wide_allocation(weighted,config.code_bits);
     if (fine_tiers) {
-      auto books=tieredq_detail::fine_codebooks(config.max_scan_bits);
-      if (auto fine=tieredq_detail::fine_allocation(weighted,books,config.max_tier_bits,config.wide_dims,config.code_bits)) {
-        bits=std::move(*fine);
-        c.fast_prefix_bits_=config.max_scan_bits;
-        c.levels_.resize(tieredq_detail::widest_fine_code_bits+1);
-        for (unsigned b=config.max_scan_bits+1;b<=tieredq_detail::widest_fine_code_bits;++b) c.levels_[b]=std::move(books.books[b]);
-      }
+      auto books=tieredq_detail::fine_codebooks(tieredq_detail::additive_wide_codebook(config.max_scan_bits),config.max_scan_bits);
+      if (auto fine=tieredq_detail::additive_fine_allocation(weighted,books,config.max_tier_bits,config.wide_dims,config.code_bits))
+        use_fine_tiers(std::move(*fine),std::move(books));
     }
+  } else if (fine_tiers && lloyd_max_fine) {
+    auto books=tieredq_detail::fine_codebooks(c.levels_[config.max_scan_bits],config.max_scan_bits);
+    if (auto fine=tieredq_detail::lloyd_max_fine_allocation(weighted,books,config.max_tier_bits,config.wide_dims,config.code_bits))
+      use_fine_tiers(std::move(*fine),std::move(books));
+    else if (power!=1.0)
+      bits=tieredq_detail::greedy_allocation(weighted,config.code_bits,false);
   } else if (power!=1.0) {
     bits=tieredq_detail::greedy_allocation(weighted,config.code_bits,false);
   }

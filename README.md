@@ -42,8 +42,11 @@ index = TieredQIndex.load("index.tq")
   whitened queries.
   `allocation_power=` overrides it.
 - `mode="fast"` is the default and stores the native fast search representation. Models with tiers above 4 bits score
-  through approximate byte tables (L2 models keep exact FP32 scoring); `exact_fast_scores=True` keeps bit-exact
-  FP32 scoring at lower speed.
+  through approximate byte tables (L2 models keep exact FP32 scoring); `exact_fast_scores=True` trains Lloyd-Max
+  books and scans them in exact FP32 instead. That is the batch-throughput option: at 8 bits/dim on AVX-512 (100k,
+  ip) batch search ran about 2x faster than the byte tables at equal recall on Gemini-768 and OpenAI-1536 (with its
+  fine tiers, below) and better recall on GloVe-200, while single-query latency was 2-3x higher (4-10x on NEON and AVX2;
+  #31).
   Use `mode="full"` for compact packed rows and FP32 scoring of quantized vectors,
   with slower search. Both modes scan every vector; saving and loading preserve
   the selected representation. Read the selection from `index.mode`.
@@ -56,7 +59,9 @@ index = TieredQIndex.load("index.tq")
   OpenAI-1536 44 → 6 at 8 bits/dim; 209 → 171 and 168 → 115 at 4 bits/dim; GloVe-200 162 → 87 at 8 bits/dim and
   unchanged at 2-4 (no rank goes wide). Batch time per query is +0-15% at 6-8 bits/dim and +30-40% at 3-4 bits/dim. On
   1M sets (OpenAI-1536, MS MARCO Cohere-1024, 6-8 bits/dim) top-10 misses fell 46-79% and search got 3-24% faster (likely
-  as the scan reads fewer bits); encoding is 11-34% slower (wider codes). Only the flat `TieredQIndex` serves fine-tier
+  as the scan reads fewer bits); encoding is 11-34% slower (wider codes). With `exact_fast_scores=True` the prefix is the
+  8-bit Lloyd-Max code, scanned exactly, and fine bits refine its cells: at 8 bits/dim mean top-10 misses fell from 28 to
+  15 (Gemini-768) and 18 to 9 (OpenAI-1536) at the same batch speed. Only the flat `TieredQIndex` serves fine-tier
   models: train IVF, nested and refinement models with `TieredQConfig::fine_tiers = false` (the Python IVF and nested
   indexes do).
 - In C++, use `dv::TieredQIndex(codec)` for fast mode or
@@ -162,8 +167,8 @@ auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*p
   was 1.0–1.8× faster with unchanged recall@10. Flat single-query search prunes the same way, 1.0–1.2× faster except
   Gemini-768 at 2 bits/dim, 5–18% slower. Larger suffix shares lose with the exact bound, which loosens faster than it
   saves work.
-  To prune through the exact FP32 scan instead, train with `TieredQConfig::target_mode = TieredQIndexMode::full`
-  (Python `exact_fast_scores=True`). Measured at 4 bits/dim, before nibble scans were pruned: on OpenAI-1536 100k
+  To prune through the exact FP32 scan instead, train with `TieredQConfig::target_mode = TieredQIndexMode::full` and
+  `fine_tiers = false` (Python `exact_fast_scores=True`). Measured at 4 bits/dim, before nibble scans were pruned: on OpenAI-1536 100k
   exact with confidence 8 was 4–11% faster than nibble scoring at equal or slightly higher recall, and on OpenAI 1M
   17–21% faster but 0.4 pt R@10 lower; on Gemini-768 nibble scoring was 20–38% faster, at 0.2 pt R@10 lower. At
   2 bits/dim nibble scoring was faster on both (#13).

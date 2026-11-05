@@ -170,7 +170,7 @@ void full_mode_allocation() {
   std::vector<float> sample(2*d*d,0);
   for(unsigned i=0;i<d;++i) { sample[i*d+i]=1; sample[(d+i)*d+i]=-1; }
   for (uint32_t code_bits:{3*d,2*d+1}) {
-    TieredQConfig config{d,code_bits,1,false}; config.target_mode=dv::TieredQIndexMode::full;
+    TieredQConfig config{d,code_bits,1,false}; config.target_mode=dv::TieredQIndexMode::full; config.fine_tiers=false;
     auto codec=TieredQ::train(config,sample.data(),2*d);
     uint32_t stored=0,three=0;
     for (const auto& tier:codec.tiers()) { stored+=tier.dimensions*tier.bits; if (tier.bits==3) three+=tier.dimensions; }

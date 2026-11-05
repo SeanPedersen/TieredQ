@@ -35,7 +35,8 @@ class PythonIndex {
     config_.target_mode = exact_fast_scores ? dv::TieredQIndexMode::full : mode_;
     config_.metric = parse_metric(metric);
     config_.max_scan_bits = max_scan_bits;
-    config_.fine_tiers = fine_tiers;
+    // Full mode scores wide fine-tier codes only through its scalar scan, so it keeps codes at 8 bits.
+    config_.fine_tiers = fine_tiers && mode_ != dv::TieredQIndexMode::full;
     config_.max_tier_bits = max_tier_bits;
     if (allocation_power) {
       if (!(*allocation_power > 0)) throw std::invalid_argument("allocation_power must be positive");
@@ -165,11 +166,13 @@ void bind_index(nb::module_& module) {
            "allocation_power"_a = nb::none(), "exact_fast_scores"_a = false, "max_scan_bits"_a = 0, "fine_tiers"_a = true,
            "max_tier_bits"_a = 12,
            "metric is 'ip', 'cosine' or 'l2' (scores are -squared distances); allocation_power overrides the\n"
-           "variance power bit allocation uses (default: 1.5 for ip/cosine, 1 for l2); exact_fast_scores keeps\n"
-           "bit-exact FP32 fast scoring of tiers above 4 bits instead of the faster approximate byte tables.\n"
+           "variance power bit allocation uses (default: 1.5 for ip/cosine, 1 for l2); exact_fast_scores trains\n"
+           "Lloyd-Max books scanned in exact FP32 instead of approximate byte tables: faster batch search at 6-8\n"
+           "bits/dim, slower single queries.\n"
            "max_scan_bits caps the bits per coordinate the scan reads (0: automatic, at most 8). fine_tiers lets fast\n"
            "ip/cosine indexes code ranks with up to max_tier_bits (at most 12) at the same bytes: the scan reads each\n"
-           "code's top max_scan_bits and rescores its candidates exactly. Other modes and metrics ignore it.")
+           "code's top max_scan_bits (8 with exact_fast_scores) and rescores its candidates exactly. Full mode and l2\n"
+           "ignore it.")
       .def("__len__", &PythonIndex::size, nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro("dimensions", &PythonIndex::dimensions)
       .def_prop_ro("fast_prefix_bits", &PythonIndex::fast_prefix_bits, nb::call_guard<nb::gil_scoped_release>())
