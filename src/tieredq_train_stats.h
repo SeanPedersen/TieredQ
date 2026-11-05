@@ -1,4 +1,4 @@
-// Projected mean and variance with row-ordered reductions; tiles columns for cache locality.
+// Projected moments from PCA spectra or sampled residuals, including rounded-basis leakage into null directions.
 #pragma once
 #include <algorithm>
 #include <array>
@@ -6,6 +6,8 @@
 #include <vector>
 #include <utility>
 #include "tieredq/tieredq.h"
+#include "tieredq_encode_float.h"
+#include "tieredq_train_rows.h"
 
 namespace dv::tieredq_detail {
 inline std::pair<float,float> projected_distribution(double average,double variance) {
@@ -15,6 +17,42 @@ inline std::pair<float,float> projected_distribution(double average,double varia
 inline std::pair<float,float> projected_moments(double sum,double square,size_t rows) {
   const double average=sum/rows;
   return projected_distribution(average,square/rows-average*average);
+}
+inline bool needs_empirical_projection_stats(const std::vector<double>& eigenvalues,const std::vector<int>& ranks) {
+  constexpr double binary16_epsilon=0x1p-10;
+  const double rounding_variance=eigenvalues.back()*binary16_epsilon*binary16_epsilon;
+  return std::any_of(ranks.begin(),ranks.end(),[&](int rank) {
+    return eigenvalues[eigenvalues.size()-1-rank]<=rounding_variance;
+  });
+}
+// Spectral moments describe the orthogonal basis before binary16 rounding. Near the covariance's null space,
+// rounding mixes in enough positive-variance directions that those moments no longer describe the stored basis.
+// Fit the rounded projections in bounded row chunks, retaining the same input-order moment reductions.
+inline void empirical_projection_stats(const TrainingRows& sample,size_t rows,const std::vector<uint32_t>& ids,
+                                      const std::vector<float>& centroids,const std::vector<float>& basis,size_t columns,
+                                      std::vector<float>& mean,std::vector<float>& sigma) {
+  constexpr size_t chunk_rows=64;
+  const size_t dimensions=sample.dimensions;
+  const auto panels=pack_panels(dimensions,columns,[&](size_t j,size_t r) { return basis[j*columns+r]; });
+  const size_t stride=panels.padded_columns();
+  std::vector<float> residual(std::min(rows,chunk_rows)*dimensions),projected(std::min(rows,chunk_rows)*stride);
+  std::vector<double> sums(columns),squares(columns);
+  sample.visit([&](auto value) {
+    for (size_t first=0;first<rows;first+=chunk_rows) {
+      const size_t count=std::min(chunk_rows,rows-first);
+      for (size_t i=0;i<count;++i) for (size_t j=0;j<dimensions;++j)
+        residual[i*dimensions+j]=float(double(value(first+i,j))-centroids[size_t(ids[first+i])*dimensions+j]);
+      float_matrix(residual.data(),count,dimensions,panels,projected.data(),stride);
+      for (size_t i=0;i<count;++i) for (size_t j=0;j<columns;++j) {
+        const double v=projected[i*stride+j]; sums[j]+=v; squares[j]+=v*v;
+      }
+    }
+  });
+  mean.resize(columns); sigma.resize(columns);
+  for (size_t j=0;j<columns;++j) {
+    const auto moments=projected_moments(sums[j],squares[j],rows);
+    mean[j]=moments.first; sigma[j]=moments.second;
+  }
 }
 inline void spectral_projection_stats(const std::vector<double>& eigenvalues,const std::vector<int>& ranks,
                                       const std::vector<TieredQTier>& tiers,const std::vector<std::vector<float>>& rotations,

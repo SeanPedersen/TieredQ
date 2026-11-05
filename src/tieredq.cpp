@@ -576,7 +576,10 @@ TieredQ TieredQ::train_model(TieredQConfig config,const tieredq_detail::Training
     c.basis_[i]=tieredq_detail::half_decode(c.basis_half_[i]);
   }
   if (spectral_stats) {
-    tieredq_detail::spectral_projection_stats(eigenvalues,ranks,c.tiers_,rotations,mean,c.basis_,rows,c.mean_,c.sigma_);
+    if (tieredq_detail::needs_empirical_projection_stats(eigenvalues,ranks))
+      tieredq_detail::empirical_projection_stats(sample,rows,ids,c.centroids_,c.basis_,size_t(m),c.mean_,c.sigma_);
+    else
+      tieredq_detail::spectral_projection_stats(eigenvalues,ranks,c.tiers_,rotations,mean,c.basis_,rows,c.mean_,c.sigma_);
   } else {
     // Residual covariance was centered; restore the mean before fitting the projected mean.
     std::vector<float> rfloat(residual.size());

@@ -114,6 +114,18 @@ void wide_grid_threshold_parity() {
 }
 void encoder_boundaries() {
   {
+    using namespace tieredq_detail;
+    require(!needs_empirical_projection_stats({1,4},{0,1}),"well-conditioned spectral moments");
+    require(needs_empirical_projection_stats({-1e-16,4},{0,1}),"null-space spectral moments");
+    require(!needs_empirical_projection_stats({0,4},{0}),"uncoded null space needs no projection pass");
+    // An exactly rank-one sample leaks into its null direction when one rounded coefficient differs.
+    const std::vector<float> sample{1,1,-1,-1},centroids{0,0},basis{0.5f,-0.50048828125f};
+    const std::vector<uint32_t> ids{0,0};
+    std::vector<float> mean,sigma;
+    empirical_projection_stats(TrainingRows{sample.data(),2},2,ids,centroids,basis,1,mean,sigma);
+    require(mean[0]==0 && std::abs(sigma[0]-(0x1p-11f+1e-9f))<1e-10f,"rounded null-space variance");
+  }
+  {
     const std::vector<double> eigenvalues{4./3,16./3},residual_mean{2,3};
     const std::vector<int> ranks{1,0};
     const std::vector<TieredQTier> tiers{{0,2,2,0,0}};
