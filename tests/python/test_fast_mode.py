@@ -196,7 +196,10 @@ def foreign_fast_file(tmp_path):
         pytest.skip("NEON consumes every persisted fast representation natively")
     dimensions, rows = 8, 32
     vectors = np.random.default_rng(59).normal(size=(rows, dimensions)).astype(np.float32)
-    index = TieredQIndex(dimensions=dimensions, code_bits=dimensions * 8, mode="fast", exact_fast_scores=True)
+    # Fine-tier sections follow the fast payload; the zeroing below must only touch fast codes.
+    index = TieredQIndex(
+        dimensions=dimensions, code_bits=dimensions * 8, mode="fast", exact_fast_scores=True, fine_tiers=False
+    )
     index.add(vectors)
     path = tmp_path / "foreign.tq"
     index.save(str(path))
