@@ -1,11 +1,14 @@
 // IVF over the codec's centroids or a coarse quantizer (beyond the codec's 256-centroid limit): a full probe returns
 // the flat fast index's hits bit for bit in every fast layout and metric, partial probes stay inside the probed
-// lists, unfilled slots are marked, and both persistence paths round-trip.
+// lists, unfilled slots are marked, and both persistence paths round-trip. Ids are Elias-Fano lists; version 2 files
+// with raw ids still load.
 #include "tieredq/tieredq.h"
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
+#include <numeric>
 #include <random>
 #include <set>
 #include <stdexcept>
@@ -13,6 +16,7 @@
 namespace {
 using namespace dv;
 void require(bool condition,const char* message) { if (!condition) throw std::runtime_error(message); }
+template<class F> bool rejects(F&& action) { try { action(); } catch (const std::runtime_error&) { return true; } return false; }
 constexpr uint32_t dimensions=48,centroids=8;
 constexpr size_t rows=3001,queries=24,k=10;
 // Rows around one fixed set of cluster centers; seed varies only the noise, so samples, data and queries agree.
@@ -188,8 +192,72 @@ void multi_chunk_build_test(uint32_t lists) {
   TieredQIVFIndex ivf(codec,lists); ivf.build(data.data(),many);
   same(run(ivf,probes,ivf.lists()),expected,"multi-chunk IVF build differs from the flat index");
 }
+// Random partitions, including empty lists, one-id lists and a lone list (zero-width low parts): every id decodes at
+// its position in order and at random, the words round-trip, and corrupt or mis-sized streams are rejected.
+void elias_fano_test() {
+  using tieredq_detail::EliasFanoLists;
+  std::mt19937 random(41);
+  for (uint32_t lists:{1u,3u,50u}) for (uint32_t universe:{0u,1u,5u,1000u,5000u}) {
+    std::vector<uint32_t> list_of(universe),sizes(lists,0);
+    std::vector<std::vector<uint32_t>> expected(lists);
+    for (uint32_t id=0;id<universe;++id) {
+      constexpr uint32_t crowded=7;
+      const uint32_t list=uint32_t(random()%lists);
+      list_of[id]=list%crowded ? list : 0;  // skews sizes and leaves lists empty
+      ++sizes[list_of[id]];expected[list_of[id]].push_back(id);
+    }
+    const auto encoded=EliasFanoLists::encode(list_of,lists);
+    const auto decoded=EliasFanoLists::decode(sizes,encoded.words());
+    std::vector<uint32_t> at,positions;
+    for (uint32_t list=0;list<lists;++list) {
+      std::vector<uint32_t> listed;
+      decoded.for_each(list,[&](size_t position,uint32_t id) { require(position==listed.size(),"Elias-Fano order"); listed.push_back(id); });
+      require(listed==expected[list],"Elias-Fano lists do not round-trip");
+      for (uint32_t position=0;position<listed.size();++position) { at.push_back(list); positions.push_back(position); }
+    }
+    std::vector<size_t> order(at.size());
+    std::iota(order.begin(),order.end(),0); std::shuffle(order.begin(),order.end(),random);
+    std::vector<uint32_t> shuffled_at,shuffled_positions,ids(at.size());
+    for (size_t i:order) { shuffled_at.push_back(at[i]); shuffled_positions.push_back(positions[i]); }
+    decoded.ids(shuffled_at.data(),shuffled_positions.data(),ids.size(),ids.data());
+    for (size_t i=0;i<ids.size();++i) require(ids[i]==expected[shuffled_at[i]][shuffled_positions[i]],"Elias-Fano random access differs");
+    auto longer=encoded.words(); longer.push_back(0);
+    require(rejects([&] { EliasFanoLists::decode(sizes,longer); }),"mis-sized Elias-Fano stream accepted");
+    if (universe<2) continue;
+    // The first list's first low bit or, for zero-width low parts, its first high one: either changes an id.
+    auto corrupt=encoded.words(); corrupt[0]^=1;
+    require(rejects([&] { EliasFanoLists::decode(sizes,corrupt); }),"corrupt Elias-Fano stream accepted");
+  }
+}
+// A version 2 file (raw ids; tests/fixtures/tieredq_ivf_v2.md) loads with the stored document of every id that the
+// pre-#34 build reported, and saving it again (version 3) keeps every hit in a smaller file.
+void raw_ids_file_test() {
+  const auto fixtures=std::filesystem::path(__FILE__).parent_path()/"fixtures";
+  const auto fixture=(fixtures/"tieredq_ivf_v2.tq").string();
+  const auto loaded=TieredQIVFIndex::load(fixture);
+  constexpr size_t fixture_rows=600,fixture_lists=20;
+  require(loaded.size()==fixture_rows && loaded.lists()==fixture_lists,"version 2 IVF shape");
+  std::vector<uint32_t> documents(fixture_rows);
+  std::ifstream(fixtures/"tieredq_ivf_v2.documents",std::ios::binary).read(reinterpret_cast<char*>(documents.data()),
+      std::streamsize(documents.size()*sizeof(uint32_t)));
+  require(loaded.id_documents()==documents,"version 2 IVF ids differ from the stored documents");
+  const size_t d=loaded.codec().config().dimensions;
+  std::vector<float> probes(queries*d);
+  for (size_t i=0;i<probes.size();++i) probes[i]=std::sin(0.1f*float(i));
+  const auto expected=run(loaded,probes,fixture_lists);
+  const auto path=(std::filesystem::temp_directory_path()/("tieredq-ivf-v3-"+std::to_string(::getpid())+".tq")).string();
+  loaded.save(path);
+  const auto saved_bytes=std::filesystem::file_size(path);
+  const auto reloaded=TieredQIVFIndex::load(path);
+  std::filesystem::remove(path);
+  same(run(reloaded,probes,fixture_lists),expected,"version 3 IVF resave differs");
+  require(reloaded.id_documents()==documents,"version 3 IVF resave moves ids");
+  require(saved_bytes<std::filesystem::file_size(fixture),"Elias-Fano ids do not shrink the file");
+}
 } // namespace
 void tieredq_ivf_tests() {
+  elias_fano_test();
+  raw_ids_file_test();
   // 1 bit/dim takes the nibble lookup layout on x86, 4 bits int8 levels or codes, 6 bits wide code lookups.
   for (uint32_t bits:{1u,2u,4u,6u})
     for (auto metric:{TieredQMetric::inner_product,TieredQMetric::cosine,TieredQMetric::l2}) full_probe_test(metric,bits*dimensions);

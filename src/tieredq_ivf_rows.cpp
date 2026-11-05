@@ -9,7 +9,8 @@ namespace { constexpr uint32_t padding_id=UINT32_MAX; }
 
 std::vector<uint32_t> TieredQIVFIndex::id_documents() const {
   std::vector<uint32_t> documents(size_,padding_id);
-  for (size_t doc=0;doc<ids_.size();++doc) if (ids_[doc]!=padding_id) documents[ids_[doc]]=uint32_t(doc);
+  for (uint32_t list=0;list<lists();++list)
+    ids_.for_each(list,[&](size_t position,uint32_t id) { documents[id]=uint32_t(list_begin_[list]+position); });
   return documents;
 }
 
@@ -19,7 +20,7 @@ void TieredQIVFIndex::document_rows(const uint32_t* documents,size_t count,uint8
   const TieredQ& model=codec();
   if (documents_.fine_tiers_) bad("document_rows does not serve fine-tier models");
   for (size_t i=0;i<count;++i)
-    if (documents[i]>=ids_.size() || ids_[documents[i]]==padding_id) bad("invalid stored document");
+    if (!live(documents[i])) bad("invalid stored document");
   tieredq_detail::read_fast_rows(*documents_.fast_,model.levels_,model.tiers_,model.coded_dimensions(),model.code_bytes(),
                                  model.bytes_per_vector(),documents,count,rows);
 }

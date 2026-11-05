@@ -6,6 +6,7 @@
 #include "tieredq_index_read.h"
 #include "tieredq_ivf_coarse.h"
 #include "tieredq_fast_fine.h"
+#include <bit>
 #include <numeric>
 namespace dv {
 using tieredq_detail::bad;
@@ -15,8 +16,8 @@ using tieredq_detail::selection_block;
 using tieredq_detail::fast_list_alignment;
 using tieredq_detail::CoarseQuantizer;
 namespace {
-// Version 2 adds the coarse quantizer section.
-constexpr uint32_t ivf_payload_version=2;
+// Version 2 adds the coarse quantizer section; version 3 stores the ids as Elias-Fano lists instead of raw.
+constexpr uint32_t raw_ids_payload_version=2,ivf_payload_version=3;
 constexpr uint32_t padding_id=UINT32_MAX;
 // Scored documents per scan call at most; calls start on list starts or chunk multiples, both aligned, and chunk
 // multiples are whole lookup blocks.
@@ -50,6 +51,7 @@ TieredQIVFIndex::TieredQIVFIndex(TieredQ codec,uint32_t lists,uint64_t seed)
       coarse_lists_(lists),seed_(seed) {
   list_begin_.assign(lists ? lists : documents_.codec().config().num_centroids,0);
   list_rows_.assign(list_begin_.size(),0);
+  ids_=tieredq_detail::EliasFanoLists::encode({},list_rows_.size());
 }
 
 // Model-space rows [first, first + count): the input itself for inner-product models, otherwise the metric's lift.
@@ -112,11 +114,11 @@ void TieredQIVFIndex::build(const float* rows,size_t count) {
   for (size_t list=0;list<lists;++list) { list_begin[list]=uint32_t(padded); padded+=aligned(list_rows[list]); }
   if (padded>=padding_id) bad("index exceeds uint32 document ids");
   // source[doc]: the row stored at doc; padding repeats its list's last row (valid codes for every kernel, never
-  // selected: scans stop at list_rows).
-  std::vector<uint32_t> ids(padded,padding_id),source(padded),filled(lists,0);
+  // selected: scans stop at list_rows). Rows fill each list in input order, so every list's ids ascend.
+  std::vector<uint32_t> source(padded),filled(lists,0);
   for (size_t row=0;row<count;++row) {
-    const size_t list=list_of[row],doc=list_begin[list]+filled[list]++;
-    ids[doc]=source[doc]=uint32_t(row);
+    const size_t list=list_of[row];
+    source[list_begin[list]+filled[list]++]=uint32_t(row);
   }
   for (size_t list=0;list<lists;++list) {
     const size_t first=list_begin[list],live=list_rows[list];
@@ -141,19 +143,51 @@ void TieredQIVFIndex::build(const float* rows,size_t count) {
     if (!first) documents.reserve_rows(padded);
   }
   documents_=std::move(documents);
-  list_begin_=std::move(list_begin);list_rows_=std::move(list_rows);ids_=std::move(ids);size_=count;
+  ids_=tieredq_detail::EliasFanoLists::encode(list_of,lists);
+  list_begin_=std::move(list_begin);list_rows_=std::move(list_rows);size_=count;
 }
 
 std::vector<uint32_t> TieredQIVFIndex::list_assignment() const {
   std::vector<uint32_t> lists(size_);
-  for (uint32_t list=0;list<list_rows_.size();++list)
-    for (size_t doc=list_begin_[list];doc<list_begin_[list]+list_rows_[list];++doc) lists[ids_[doc]]=list;
+  for (uint32_t list=0;list<list_rows_.size();++list) ids_.for_each(list,[&](size_t,uint32_t id) { lists[id]=list; });
   return lists;
 }
 
+// The last list starting at or before document holds it (empty lists share their successor's start). The search is
+// branch-free: hits land in arbitrary lists, so a branching search mispredicts at every level.
+TieredQIVFIndex::Place TieredQIVFIndex::place_of(size_t document) const {
+  const size_t last=list_begin_.size()-1;
+  size_t list=0;
+  for (size_t step=std::bit_floor(last);step;step/=2) {
+    const size_t probe=std::min(list+step,last);
+    list=list_begin_[probe]<=document ? probe : list;
+  }
+  return {uint32_t(list),uint32_t(document-list_begin_[list])};
+}
+
+bool TieredQIVFIndex::live(size_t document) const {
+  const Place place=place_of(document);
+  return document<stored_documents() && place.position<list_rows_[place.list];
+}
+
+// Hits are live documents; their rows are decoded together so that the lookups overlap in memory.
+std::vector<uint32_t> TieredQIVFIndex::hit_rows(const std::vector<TieredQHit>& hits) const {
+  std::vector<uint32_t> lists(hits.size()),positions(hits.size()),rows(hits.size());
+  for (size_t hit=0;hit<hits.size();++hit) {
+    const Place place=place_of(hits[hit].id);
+    lists[hit]=place.list;positions[hit]=place.position;
+  }
+  ids_.ids(lists.data(),positions.data(),hits.size(),rows.data());
+  return rows;
+}
+
+size_t TieredQIVFIndex::stored_documents() const {
+  return list_begin_.empty() ? 0 : list_begin_.back()+aligned(list_rows_.back());
+}
+
 size_t TieredQIVFIndex::storage_bytes() const {
-  return documents_.storage_bytes()+(list_begin_.capacity()+list_rows_.capacity()+ids_.capacity())*sizeof(uint32_t)+
-      (coarse_ ? coarse_->allocated_bytes() : 0);
+  return documents_.storage_bytes()+(list_begin_.capacity()+list_rows_.capacity())*sizeof(uint32_t)+
+      ids_.allocated_bytes()+(coarse_ ? coarse_->allocated_bytes() : 0);
 }
 
 std::vector<TieredQHit> TieredQIVFIndex::search(const float* query,size_t k,size_t nprobe,TieredQPruning pruning) const {
@@ -220,10 +254,11 @@ void TieredQIVFIndex::search_rows(const float* queries,const TieredQQuery* weigh
   std::vector<std::vector<TieredQHit>> candidates(fine ? rows : 0);
   // Hits in stored documents -> the row's ids and scores in the metric's units; unfilled slots are marked.
   auto emit=[&](size_t row,const std::vector<TieredQHit>& hits) {
+    const auto rows_of_hits=hit_rows(hits);
     for (size_t hit=0;hit<found;++hit) {
       const bool filled=hit<hits.size();
       scores[row*found+hit]=filled ? hits[hit].score : -std::numeric_limits<float>::infinity();
-      ids[row*found+hit]=filled ? ids_[hits[hit].id] : padding_id;
+      ids[row*found+hit]=filled ? rows_of_hits[hit] : padding_id;
     }
     documents_.finish_scores(queries+row*d,scores+row*found,hits.size());
   };
@@ -316,7 +351,8 @@ void TieredQIVFIndex::search_rows(const float* queries,const TieredQQuery* weigh
 }
 
 // Payload: version, list count, coarse flag (+ seed, trained flag and centroids), size, per-list offset and rows,
-// padded ids, fast payload (with the fine rows of fine-tier models). An unbuilt coarse index has no centroids yet.
+// Elias-Fano id words, fast payload (with the fine rows of fine-tier models). An unbuilt coarse index has no centroids
+// yet.
 void TieredQIVFIndex::write_lists(tieredq_detail::Writer& writer) const {
   writer.u32(ivf_payload_version);writer.u32(uint32_t(lists()));writer.u32(coarse_lists_ ? 1 : 0);
   if (coarse_lists_) {
@@ -325,8 +361,8 @@ void TieredQIVFIndex::write_lists(tieredq_detail::Writer& writer) const {
   }
   writer.u64(size_);
   for (size_t list=0;list<lists();++list) { writer.u32(list_begin_[list]);writer.u32(list_rows_[list]); }
-  writer.u64(ids_.size());
-  for (uint32_t id:ids_) writer.u32(id);
+  writer.u64(ids_.words().size());
+  for (uint64_t word:ids_.words()) writer.u64(word);
 }
 
 std::vector<uint8_t> TieredQIVFIndex::serialize() const {
@@ -343,7 +379,8 @@ std::vector<uint8_t> TieredQIVFIndex::serialize() const {
 // Reads the list section into an index built from the payload's model and validates it.
 template<class Reader>
 TieredQIVFIndex TieredQIVFIndex::read_lists(TieredQ model,Reader& reader) {
-  if (reader.u32()!=ivf_payload_version) bad("unsupported IVF payload version");
+  const uint32_t version=reader.u32();
+  if (version!=raw_ids_payload_version && version!=ivf_payload_version) bad("unsupported IVF payload version");
   const uint32_t lists=reader.u32(),coarse=reader.u32();
   if (coarse>1 || (!coarse && lists!=model.config().num_centroids) || !lists) bad("invalid IVF list count");
   const uint64_t seed=coarse ? reader.u64() : 0;
@@ -364,17 +401,34 @@ TieredQIVFIndex TieredQIVFIndex::read_lists(TieredQ model,Reader& reader) {
     if (index.list_begin_[list]!=padded) bad("invalid IVF list offsets");
     padded+=aligned(index.list_rows_[list]);live+=index.list_rows_[list];
   }
-  if (live!=index.size_ || reader.u64()!=padded) bad("invalid IVF list sizes");
-  index.ids_.resize(padded);
-  std::vector<bool> seen(index.size_,false);
-  for (auto& id:index.ids_) {
-    id=reader.u32();
-    if (id==padding_id) continue;
-    if (id>=index.size_ || seen[id]) bad("invalid IVF ids");
-    seen[id]=true;
+  if (live!=index.size_) bad("invalid IVF list sizes");
+  if (version==raw_ids_payload_version) index.read_raw_ids(reader,padded);
+  else {
+    const uint64_t words=reader.u64();
+    if (words>reader.remaining()/sizeof(uint64_t)) bad("truncated IVF ids");
+    std::vector<uint64_t> stream(words);
+    for (auto& word:stream) word=reader.u64();
+    index.ids_=tieredq_detail::EliasFanoLists::decode(index.list_rows_,std::move(stream));
   }
   index.documents_.read_fast_payload(reader,padded);
   return index;
+}
+
+template<class Reader>
+void TieredQIVFIndex::read_raw_ids(Reader& reader,size_t padded) {
+  if (reader.u64()!=padded) bad("invalid IVF list sizes");
+  std::vector<uint32_t> list_of(size_,padding_id);
+  for (uint32_t list=0;list<lists();++list) {
+    const size_t live=list_rows_[list];
+    for (size_t position=0,previous=0;position<aligned(live);++position) {
+      const uint32_t id=reader.u32();
+      if (position>=live) { if (id!=padding_id) bad("invalid IVF ids"); continue; }
+      // Elias-Fano keeps ids sorted: a list stored in another order would no longer match its documents.
+      if (id>=size_ || list_of[id]!=padding_id || (position && id<=previous)) bad("invalid IVF ids");
+      list_of[id]=list;previous=id;
+    }
+  }
+  ids_=tieredq_detail::EliasFanoLists::encode(list_of,lists());
 }
 
 TieredQIVFIndex TieredQIVFIndex::deserialize(const std::vector<uint8_t>& bytes) {
@@ -391,7 +445,7 @@ void TieredQIVFIndex::save(const std::string& path) const {
   write_lists(writer);
   const auto fast=documents_.fast_payload();
   writer.data.insert(writer.data.end(),fast.begin(),fast.end());
-  tieredq_detail::save_file(path,codec().serialize(),writer.data,ids_.size(),tieredq_detail::ivf_index_file_kind);
+  tieredq_detail::save_file(path,codec().serialize(),writer.data,stored_documents(),tieredq_detail::ivf_index_file_kind);
 }
 
 TieredQIVFIndex TieredQIVFIndex::load(const std::string& path) {
@@ -401,7 +455,7 @@ TieredQIVFIndex TieredQIVFIndex::load(const std::string& path) {
     auto model=TieredQ::deserialize(file.model);
     file.model=std::vector<uint8_t>();
     auto index=read_lists(std::move(model),reader);
-    if (index.ids_.size()!=file.header.rows) bad("IVF row count mismatch");
+    if (index.stored_documents()!=file.header.rows) bad("IVF row count mismatch");
     return index;
   };
   try {

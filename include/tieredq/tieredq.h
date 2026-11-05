@@ -8,6 +8,7 @@
 #include <vector>
 #include <utility>
 #include "tieredq/detail/tieredq_scan_plan.h"
+#include "tieredq/detail/tieredq_elias_fano.h"
 #include "tieredq/detail/tieredq_shared_array.h"
 
 namespace dv {
@@ -340,7 +341,7 @@ class TieredQIVFIndex {
   size_t list_size(size_t list) const { return list_rows_.at(list); }
   // The list of every input row (row order), e.g. to share the partition with another index.
   std::vector<uint32_t> list_assignment() const;
-  // Fast representation (including list padding), list offsets and the id map.
+  // Fast representation (including list padding), list offsets and the Elias-Fano id lists.
   size_t storage_bytes() const;
   std::vector<TieredQHit> search(const float* query, size_t k, size_t nprobe, TieredQPruning pruning = {}) const;
   // Results are rows x min(k, size()) in row-major order; slots past the probed rows hold id UINT32_MAX and
@@ -372,9 +373,17 @@ class TieredQIVFIndex {
   std::vector<uint32_t> coarse_lists(const float* rows, size_t count);
   void write_lists(tieredq_detail::Writer& writer) const;
   template<class Reader> static TieredQIVFIndex read_lists(TieredQ model, Reader& reader);
+  // Version 2 payloads store every padded document's id raw; build() wrote them ascending per list.
+  template<class Reader> void read_raw_ids(Reader& reader, size_t padded);
+  struct Place { uint32_t list, position; };
+  Place place_of(size_t document) const;
+  bool live(size_t document) const;  // not list padding
+  // Input rows of hits on stored documents.
+  std::vector<uint32_t> hit_rows(const std::vector<TieredQHit>& hits) const;
+  size_t stored_documents() const;
   TieredQIndex documents_;
   std::vector<uint32_t> list_begin_, list_rows_; // first padded document and live rows per list
-  std::vector<uint32_t> ids_;                    // padded document -> input row; UINT32_MAX for padding
+  tieredq_detail::EliasFanoLists ids_;           // input rows of every list, ascending
   size_t size_ = 0;
   uint32_t coarse_lists_ = 0;                    // 0: lists are the codec's centroids
   uint64_t seed_ = 0;
