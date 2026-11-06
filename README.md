@@ -1,6 +1,6 @@
 # TieredQ: Variance-Aware Bit Allocation
 
-TieredQ is a new vector quantization algorithm that dynamically allocates bits per dimension, providing high recall compression ratio. TieredQ centers and rotates vectors into a PCA basis, then greedily allocates 0–8/12 bits per dimension to reduce quantization error. TieredQ provides same recall per bit at +40% lower RAM & disk usage (in low bit budgets like 1,2,4 bits per dimension) compared to RaBitQ and TurboQuant. ANN indexes (like IVF or HNSW) can use the codec to save RAM and disk space (this repo provides a reference IVF_TieredQ implementation).
+TieredQ is a new vector quantization algorithm that dynamically allocates bits per dimension, providing high recall compression ratio. TieredQ centers and rotates vectors into a PCA basis, then greedily allocates 0–8/12 bits per dimension to reduce quantization error. TieredQ provides same recall per bit at about 36–52% less RAM & disk usage (in low bit budgets like 1,2,4 bits per dimension) compared to RaBitQ and TurboQuant. ANN indexes (f.e. IVF / HNSW) can use the codec to save RAM and disk space (reference IVF_TieredQ implementation is provided).
 
 TieredQ core algorithm:
 1. PCA
@@ -9,6 +9,7 @@ TieredQ core algorithm:
 
 [blog post](https://seanpedersen.github.io/posts/tieredq/)
 
+Recall per bits used:
 ![Recall@10 versus serialized bits per original dimension for TieredQ, RaBitQ and Qdrant TQ+ across six datasets](benchmark/results/issue4-current-20261105/recall-storage.png)
 
 [Final benchmark report](docs/benchmark-report.md)
