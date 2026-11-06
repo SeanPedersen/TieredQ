@@ -1,0 +1,16 @@
+# Isolated geometry-aware ANN research prototype.
+cmake_minimum_required(VERSION 3.18)
+project(geometry_ann LANGUAGES CXX)
+add_library(geometry_ann index.cpp training.cpp geometry.cpp search_state.cpp search_hierarchy.cpp graph.cpp search_graph.cpp)
+target_compile_features(geometry_ann PUBLIC cxx_std_20)
+target_include_directories(geometry_ann PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_options(geometry_ann PRIVATE -Wall -Wextra -Wpedantic -ffp-contract=off)
+add_executable(geometry_bench benchmark.cpp benchmark_options.cpp dataset.cpp)
+target_link_libraries(geometry_bench PRIVATE geometry_ann)
+add_executable(geometry_tests tests.cpp graph_tests.cpp)
+target_link_libraries(geometry_tests PRIVATE geometry_ann)
+enable_testing()
+add_test(NAME geometry_tests COMMAND geometry_tests)
+
+add_executable(graph_bench graph_benchmark.cpp graph_settings.cpp graph_measurement.cpp benchmark_options.cpp dataset.cpp)
+target_link_libraries(graph_bench PRIVATE geometry_ann)
