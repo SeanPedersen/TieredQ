@@ -9,6 +9,10 @@ TieredQ core algorithm:
 
 [blog post](https://seanpedersen.github.io/posts/tieredq/)
 
+![Recall@10 versus serialized bits per original dimension for TieredQ, RaBitQ and Qdrant TQ+ across six datasets](benchmark/results/issue4-current-20261105/recall-storage.png)
+
+[Final benchmark report](docs/benchmark-report.md)
+
 ## Install
 
 Install [TieredQ from PyPI](https://pypi.org/project/tieredq/):
