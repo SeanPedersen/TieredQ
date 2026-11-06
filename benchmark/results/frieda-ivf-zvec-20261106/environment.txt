@@ -1,0 +1,67 @@
+Linux vps-9ad39dea 7.0.0-43-generic #43-Ubuntu SMP PREEMPT_DYNAMIC Fri Oct 23 13:25:25 UTC 2026 x86_64 GNU/Linux
+Architecture:                            x86_64
+CPU op-mode(s):                          32-bit, 64-bit
+Address sizes:                           40 bits physical, 48 bits virtual
+Byte Order:                              Little Endian
+CPU(s):                                  4
+On-line CPU(s) list:                     0-3
+Vendor ID:                               AuthenticAMD
+Model name:                              AMD EPYC-Milan Processor
+CPU family:                              25
+Model:                                   1
+Thread(s) per core:                      1
+Core(s) per socket:                      1
+Socket(s):                               4
+Stepping:                                1
+BogoMIPS:                                4599.99
+Flags:                                   fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm rep_good nopl xtopology cpuid extd_apicid tsc_known_freq pni pclmulqdq ssse3 fma cx16 pcid sse4_1 sse4_2 x2apic movbe popcnt aes xsave avx f16c rdrand hypervisor lahf_lm svm cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw topoext perfctr_core ssbd ibrs ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 erms invpcid rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves clzero xsaveerptr wbnoinvd arat npt nrip_save umip pku ospke rdpid fsrm
+Virtualization:                          AMD-V
+Hypervisor vendor:                       KVM
+Virtualization type:                     full
+L1d cache:                               128 KiB (4 instances)
+L1i cache:                               128 KiB (4 instances)
+L2 cache:                                2 MiB (4 instances)
+L3 cache:                                128 MiB (4 instances)
+NUMA node(s):                            1
+NUMA node0 CPU(s):                       0-3
+Vulnerability Gather data sampling:      Not affected
+Vulnerability Ghostwrite:                Not affected
+Vulnerability Indirect target selection: Not affected
+Vulnerability Itlb multihit:             Not affected
+Vulnerability L1tf:                      Not affected
+Vulnerability Mds:                       Not affected
+Vulnerability Meltdown:                  Not affected
+Vulnerability Mmio stale data:           Not affected
+Vulnerability Old microcode:             Not affected
+Vulnerability Reg file data sampling:    Not affected
+Vulnerability Retbleed:                  Not affected
+Vulnerability Spec rstack overflow:      Vulnerable: Safe RET, no microcode
+Vulnerability Spec store bypass:         Mitigation; Speculative Store Bypass disabled via prctl
+Vulnerability Spectre v1:                Mitigation; usercopy/swapgs barriers and __user pointer sanitization
+Vulnerability Spectre v2:                Mitigation; Retpolines; IBPB conditional; IBRS_FW; STIBP disabled; RSB filling; PBRSB-eIBRS Not affected; BHI Not affected
+Vulnerability Srbds:                     Not affected
+Vulnerability Tsa:                       Vulnerable: No microcode
+Vulnerability Tsx async abort:           Not affected
+Vulnerability Vmscape:                   Not affected
+               total        used        free      shared  buff/cache   available
+Mem:           7.6Gi       4.3Gi       2.1Gi       1.9Gi       3.3Gi       3.2Gi
+Swap:             0B          0B          0B
+ 23:52:13 up 1 day,  7:03,  1 user,  load average: 2.04, 1.15, 0.66
+gcc (Ubuntu 15.2.0-16ubuntu1) 15.2.0
+Copyright (C) 2025 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+Python 3.12.16
+iniconfig==2.3.1
+numpy==2.5.4
+packaging==26.3
+pluggy==1.7.0
+pygments==2.21.0
+pytest==9.2.0
+tieredq @ file:///home/ubuntu/experiments/tieredq-ivf-zvec-20261106/source
+zvec==0.8.0
+89744af8576116555f3e8ac384b1d318c5f3da192ebd193a76f03606b007fa1a  data/base.f32
+fa594bfbaebf5a68681f42b8570c6908df94db48f114e117e6e6185eda49d6b9  data/queries.f32
+8eaa35bafe1ed4806fbd0182f75476ba5f12803e0d84959b01966b231dd70240  data/truth.u32
+748a79495b7e498364ea99ad1caaa5269cd46bbf

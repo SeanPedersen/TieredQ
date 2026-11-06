@@ -1,0 +1,3 @@
+PASS: 203 unique cells, 609 timing passes, stable recall within every cell; TSV medians and index bytes match JSONL.
+Median per-cell maximum/minimum QPS ratio: 1.023; worst: 1.278.
+Remote job exit code: 0.
