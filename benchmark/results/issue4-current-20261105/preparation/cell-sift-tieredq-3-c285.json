@@ -1,0 +1,83 @@
+{
+  "dataset": "sift",
+  "codec": "tieredq",
+  "base_n": 1000000,
+  "queries": 1000,
+  "index_diagnostics": {
+    "tiers": [
+      {
+        "start": 0,
+        "dimensions": 7,
+        "bits": 6
+      },
+      {
+        "start": 7,
+        "dimensions": 11,
+        "bits": 5
+      },
+      {
+        "start": 18,
+        "dimensions": 17,
+        "bits": 4
+      },
+      {
+        "start": 35,
+        "dimensions": 20,
+        "bits": 3
+      },
+      {
+        "start": 55,
+        "dimensions": 19,
+        "bits": 2
+      },
+      {
+        "start": 74,
+        "dimensions": 22,
+        "bits": 1
+      }
+    ],
+    "coded_dimensions": 96,
+    "packed_code_bytes": 36,
+    "vector_bytes": 41,
+    "allocated_vector_bytes": 41001520,
+    "model_serialized_bytes": 193496,
+    "model_memory_bytes": 843688,
+    "model_serving_memory_bytes": 447056,
+    "scalar_fast_scan": false
+  },
+  "target_bits": 3,
+  "code_bits": 285,
+  "available": true,
+  "search_ids_equal": true,
+  "method": "Separate native preparation-only diagnostic, including call overhead; three warmups and repeats",
+  "schedules": [
+    {
+      "threads": 1,
+      "batch": 1,
+      "preparation_ms_per_query": 0.018428583221975714,
+      "fraction_of_end_to_end": 0.0016527665571637198,
+      "end_to_end_mean_ms_per_query": 11.150142857198565
+    },
+    {
+      "threads": 1,
+      "batch": 32,
+      "preparation_ms_per_query": 0.0031473739994301773,
+      "fraction_of_end_to_end": 0.001072494996317591,
+      "end_to_end_mean_ms_per_query": 2.934628143009225
+    },
+    {
+      "threads": 8,
+      "batch": 1,
+      "preparation_ms_per_query": 0.018375850335966486,
+      "fraction_of_end_to_end": 0.010128188491776886,
+      "end_to_end_mean_ms_per_query": 1.81432744373645
+    },
+    {
+      "threads": 8,
+      "batch": 32,
+      "preparation_ms_per_query": 0.0024505019925224283,
+      "fraction_of_end_to_end": 0.005506001585443807,
+      "end_to_end_mean_ms_per_query": 0.44506016834444984
+    }
+  ]
+}

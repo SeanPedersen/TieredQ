@@ -1,0 +1,14 @@
+{"code_bits": 1600, "seed": 0, "recall10": 0.992}
+{"code_bits": 800, "seed": 0, "recall10": 0.9007000000000002}
+{"code_bits": 1200, "seed": 0, "recall10": 0.9717}
+{"code_bits": 1000, "seed": 0, "recall10": 0.9445000000000001}
+{"code_bits": 1100, "seed": 0, "recall10": 0.956}
+{"code_bits": 1050, "seed": 0, "recall10": 0.9516}
+{"code_bits": 1025, "seed": 0, "recall10": 0.9474000000000001}
+{"code_bits": 1037, "seed": 0, "recall10": 0.9472}
+{"code_bits": 1043, "seed": 0, "recall10": 0.9504000000000001}
+{"code_bits": 1043, "seed": 1, "recall10": 0.9487000000000001}
+{"code_bits": 1043, "seed": 2, "recall10": 0.9497000000000002}
+{"code_bits": 1051, "seed": 0, "recall10": 0.9516}
+{"code_bits": 1051, "seed": 1, "recall10": 0.9476000000000001}
+{"code_bits": 1051, "seed": 2, "recall10": 0.9512}

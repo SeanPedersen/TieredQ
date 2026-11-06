@@ -1,0 +1,17 @@
+{
+  "revision": "222b2e44ab1c3f17e8246396ead6558e45041df7",
+  "command": [
+    "cargo",
+    "+1.99.1",
+    "build",
+    "--release",
+    "--locked",
+    "--offline",
+    "-j2"
+  ],
+  "flags": {
+    "RUSTFLAGS": "-C target-cpu=native -C opt-level=3",
+    "CFLAGS": "-O3 -march=native -ffp-contract=off"
+  },
+  "additional_api": "preparation-api.rs"
+}

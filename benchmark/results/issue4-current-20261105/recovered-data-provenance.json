@@ -1,0 +1,21 @@
+{
+  "glove": {
+    "source": "/home/sean/experiments/TieredQ-issue20-ship-20261029/data/glove",
+    "array_sha256": {
+      "base": "dbef767dd011fb713d9951e8b65d3ba1d3a008bc98f56a5815d6a810c2606c8a",
+      "queries": "39bbfe76c243fb3628e3fd002feaea49cd547416ac9474d476e1a3eb293a78d2",
+      "truth": "71058b7b59408346c816a7acd0c7e4475b472f98925fcfcf12dd9734f1e74439"
+    },
+    "truth": "reused byte-identical cached truth"
+  },
+  "sift": {
+    "source": "/home/sean/experiments/TieredQ-issue4-equal-memory-after-20261028/data/sift.hdf5",
+    "source_sha256": "dd6f0a6ed6b7ebb8934680f861a33ed01ff33991eaee4fd60914d854a0ca5984",
+    "array_sha256": {
+      "base": "ac8e11ed111b09e882bcf0ef1a77ebdd36c89f495bce8fd596603f69c35148e6",
+      "queries": "bd4faea0cbb6d80054ef3b7554cef8298001ee9c15ce798352b86bc1a206d598",
+      "truth": "b052425178b193b82bd1a7ab6e62446aaeca33202e98c0b57b4ae1db617d9a49"
+    },
+    "truth": "regenerated exact FP32 top-10 with current unchanged top-10 algorithm"
+  }
+}

@@ -1,0 +1,40 @@
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-sift-rabitq-2-0: disk 416.0, peak RAM 420.9 bits/vector
+sift rabitq 2 cached seed-0 recall and disk verified
+cell-sift-qdrant-2-0: disk 352.0, peak RAM 359.6 bits/vector
+sift qdrant 2 cached seed-0 recall and disk verified
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-glove-rabitq-2-0: disk 672.1, peak RAM 719.3 bits/vector
+glove rabitq 2 cached seed-0 recall and disk verified
+cell-glove-qdrant-2-0: disk 464.4, peak RAM 533.1 bits/vector
+glove qdrant 2 cached seed-0 recall and disk verified
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-openai-rabitq-2-0: disk 3232.6, peak RAM 3311.5 bits/vector
+openai rabitq 2 cached seed-0 recall and disk verified
+cell-openai-qdrant-2-0: disk 3138.6, peak RAM 3237.2 bits/vector
+openai qdrant 2 cached seed-0 recall and disk verified
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-gemini-rabitq-2-0: disk 1696.4, peak RAM 1744.0 bits/vector
+gemini rabitq 2 cached seed-0 recall and disk verified
+cell-gemini-qdrant-2-0: disk 1601.3, peak RAM 1676.8 bits/vector
+gemini qdrant 2 cached seed-0 recall and disk verified
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-openai1m-rabitq-2-0: disk 3232.1, peak RAM 3241.0 bits/vector
+openai1m rabitq 2 cached seed-0 recall and disk verified
+Traceback (most recent call last):
+  File "/home/sean/experiments/TieredQ-issue4-current-20261105/source/benchmark/experiments/issue4_current/reference_builds.py", line 24, in <module>
+    new = fresh.measure(ds, codec, a.bits, 0)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sean/experiments/TieredQ-issue4-current-20261105/source/benchmark/match_memory.py", line 56, in measure
+    row = {name: "" if value is None else str(value) for name, value in run_cell(spec, self.output, self.env).items()}
+                                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sean/experiments/TieredQ-issue4-current-20261105/source/benchmark/measure_memory.py", line 226, in run_cell
+    subprocess.run([sys.executable, str(HERE / "measure_memory.py"), "--worker", phase,
+  File "/home/sean/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python', '/home/sean/experiments/TieredQ-issue4-current-20261105/source/benchmark/measure_memory.py', '--worker', 'build', '--spec', '{"dataset": "openai1m", "codec": "qdrant", "bits": 2, "seed": 0, "data": "/home/sean/experiments/TieredQ-issue4-current-20261105/data", "quick": true}', '--cell', '/home/sean/experiments/TieredQ-issue4-current-20261105/reference-build-b2/cell-openai1m-qdrant-2-0']' died with <Signals.SIGSEGV: 11>.

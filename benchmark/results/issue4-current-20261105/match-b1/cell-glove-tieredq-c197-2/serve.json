@@ -1,0 +1,27 @@
+{
+  "serve_baseline_rss_bytes": 54104064,
+  "ram_loaded_total_rss_bytes": 58257408,
+  "ram_peak_total_rss_bytes": 59924480,
+  "ram_accounted_bytes": 3311344,
+  "ram_loaded_rss_bytes": 4153344,
+  "ram_load_peak_rss_bytes": 5050368,
+  "ram_query_peak_rss_bytes": 5820416,
+  "ram_peak_rss_bytes": 5820416,
+  "recall10": 0.39949999999999997,
+  "ids_sha256": "376e95403d636092966df1dfbd07a861e61fbebbc7aeadf2c02efe5b015767a8",
+  "companion_recall10": null,
+  "schedule_metrics": {
+    "t1-b1": {
+      "recall10": 0.39949999999999997
+    },
+    "t1-b32": {
+      "recall10": 0.39949999999999997
+    },
+    "t8-b1": {
+      "recall10": 0.39949999999999997
+    },
+    "t8-b32": {
+      "recall10": 0.39949999999999997
+    }
+  }
+}

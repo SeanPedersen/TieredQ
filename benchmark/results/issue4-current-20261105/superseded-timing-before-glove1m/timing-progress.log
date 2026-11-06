@@ -1,0 +1,6 @@
+1/167 sift tieredq 3 285: 53s
+2/167 sift qdrant 2 0: 227s
+3/167 sift qdrant 1 0: 497s
+4/167 openai1m tieredq 1 1499: 599s
+5/167 openai tieredq 1 1268: 611s
+6/167 openai tieredq 3 4068: 644s

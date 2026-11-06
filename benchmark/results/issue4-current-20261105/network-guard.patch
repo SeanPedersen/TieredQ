@@ -1,0 +1,10 @@
+--- a/benchmark/data.py
++++ b/benchmark/data.py
+@@ -19,6 +19,7 @@
+     if target.exists():
+         verify_checksum(target, expected_sha256)
+         return
++    raise RuntimeError("issue4 current run forbids downloads; prepared cache missing: " + str(target))
+     partial = target.with_suffix(".partial")
+     print(f"Downloading {url}", flush=True)
+     subprocess.run(["curl", "--fail", "--location", "--retry", "3", "--output", str(partial), url], check=True)

@@ -1,0 +1,15 @@
+{
+  "adapter_attributes": {
+    "rabitq_container": "direct-flat",
+    "rabitq_high_accuracy": true,
+    "rabitq_implicit_ids": true
+  },
+  "packages": {
+    "numpy": "2.5.4",
+    "threadpoolctl": "3.7.0",
+    "pyarrow": "26.0.0",
+    "h5py": "3.16.0",
+    "nanobind": "3.1.0"
+  },
+  "rustc": "rustc 1.99.1 (58cf8f9c3 2026-10-13)"
+}

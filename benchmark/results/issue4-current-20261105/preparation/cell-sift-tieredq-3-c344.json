@@ -1,0 +1,83 @@
+{
+  "dataset": "sift",
+  "codec": "tieredq",
+  "base_n": 1000000,
+  "queries": 1000,
+  "index_diagnostics": {
+    "tiers": [
+      {
+        "start": 0,
+        "dimensions": 12,
+        "bits": 6
+      },
+      {
+        "start": 12,
+        "dimensions": 14,
+        "bits": 5
+      },
+      {
+        "start": 26,
+        "dimensions": 18,
+        "bits": 4
+      },
+      {
+        "start": 44,
+        "dimensions": 22,
+        "bits": 3
+      },
+      {
+        "start": 66,
+        "dimensions": 22,
+        "bits": 2
+      },
+      {
+        "start": 88,
+        "dimensions": 20,
+        "bits": 1
+      }
+    ],
+    "coded_dimensions": 108,
+    "packed_code_bytes": 43,
+    "vector_bytes": 49,
+    "allocated_vector_bytes": 49001580,
+    "model_serialized_bytes": 196688,
+    "model_memory_bytes": 946216,
+    "model_serving_memory_bytes": 451280,
+    "scalar_fast_scan": false
+  },
+  "target_bits": 3,
+  "code_bits": 344,
+  "available": true,
+  "search_ids_equal": true,
+  "method": "Separate native preparation-only diagnostic, including call overhead; three warmups and repeats",
+  "schedules": [
+    {
+      "threads": 1,
+      "batch": 1,
+      "preparation_ms_per_query": 0.01862015660056689,
+      "fraction_of_end_to_end": 0.0012608061851026929,
+      "end_to_end_mean_ms_per_query": 14.768452772977374
+    },
+    {
+      "threads": 1,
+      "batch": 32,
+      "preparation_ms_per_query": 0.0030533730217333264,
+      "fraction_of_end_to_end": 0.0009482781272232833,
+      "end_to_end_mean_ms_per_query": 3.2199129496681658
+    },
+    {
+      "threads": 8,
+      "batch": 1,
+      "preparation_ms_per_query": 0.01796102429216262,
+      "fraction_of_end_to_end": 0.008000782967152918,
+      "end_to_end_mean_ms_per_query": 2.244908325335321
+    },
+    {
+      "threads": 8,
+      "batch": 32,
+      "preparation_ms_per_query": 0.0024278079993867627,
+      "fraction_of_end_to_end": 0.0050801773154710034,
+      "end_to_end_mean_ms_per_query": 0.4778982796512234
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "preparation-build/tieredq_index.cpp": "5e02bf8ce26969b099fbbc8494b2c8dca0a316c8a0538c20ad3abb976d5cc6f3",
+  "preparation-build/rabitq_flat.h": "83ae3789d431b2c2e5087cc9d2b5f39f3fff1e902e02032c0fd1c431160d2c9b",
+  "preparation-build/module.cpp": "d6e5fdae267d5d46e5879e0e3df33fd22cd6c72c0e5529d9bcb18a85030aaf82",
+  "preparation-build/codec_preparation.cpython-312-x86_64-linux-gnu.so": "9241524d922ecc944615565f1b9074dfb26aa01ee85f7618b3248f572c60f0f3",
+  "preparation-build/include/tieredq/tieredq.h": "82d3d04a81c418127fe6240b12dc33f6279f12d8459625caba6912982e88a23b",
+  "preparation-qdrant/Cargo.lock": "1fe4f2e8078a3b24544d14bdd655b29fa13c29dbe864bb476f54c48641e95e04",
+  "preparation-qdrant/Cargo.toml": "173b5f8e12be96941371323778340e1751a2716e735310e7ed51aabb2313821a",
+  "preparation-qdrant/preparation-api.rs": "63ea213d92f8306eaba276d9492c8882e46f7800b87978d0423d74d728d77bf5",
+  "preparation-qdrant/src/lib.rs": "ef149cf2fd46d24c29987e15cc8881a0071dc4a9bc620836a7ea2156e3e0ffd0",
+  "preparation-qdrant/target/release/libqdrant_bench.so": "bd61e1a0e6bbc448d4387cfa5032aca873855a09f46d5aa08b95d2a392a3a7bd",
+  "preparation-qdrant/target/release/deps/libqdrant_bench.so": "bd61e1a0e6bbc448d4387cfa5032aca873855a09f46d5aa08b95d2a392a3a7bd",
+  "preparation-qdrant/target/release/build/thiserror-6907abb7ecdcbb6e/out/private.rs": "f7906d652f9ff9cfb6ba31b096ffc511c7fb98ee44614c10d6fe41ad533bdc0c",
+  "preparation-qdrant/target/release/build/serde_core-e54a613ce6dcc159/out/private.rs": "899563ce84b59b13cd7036e25f7897c1e730906f62a43aff14472d11c4229f34",
+  "preparation-qdrant/target/release/build/serde-a1bd4965ff3150d6/out/private.rs": "edaefc31eb178d1c82d9ab94c18a374316f8ff13ad55147cc631698dc9498162"
+}

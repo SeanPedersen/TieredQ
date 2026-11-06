@@ -1,0 +1,42 @@
+{
+  "dataset": "openai1m",
+  "codec": "qdrant",
+  "base_n": 999000,
+  "queries": 1000,
+  "index_diagnostics": null,
+  "target_bits": 4,
+  "code_bits": 0,
+  "available": true,
+  "search_ids_equal": true,
+  "method": "Separate native preparation-only diagnostic, including call overhead; three warmups and repeats",
+  "schedules": [
+    {
+      "threads": 1,
+      "batch": 1,
+      "preparation_ms_per_query": 0.02916984537538762,
+      "fraction_of_end_to_end": 0.0002968351748486286,
+      "end_to_end_mean_ms_per_query": 98.26950390991503
+    },
+    {
+      "threads": 1,
+      "batch": 32,
+      "preparation_ms_per_query": 0.027940327000881855,
+      "fraction_of_end_to_end": 0.0002839212379732478,
+      "end_to_end_mean_ms_per_query": 98.40872489966569
+    },
+    {
+      "threads": 8,
+      "batch": 1,
+      "preparation_ms_per_query": 0.03011008140068346,
+      "fraction_of_end_to_end": 0.00030540691214957374,
+      "end_to_end_mean_ms_per_query": 98.59004561735976
+    },
+    {
+      "threads": 8,
+      "batch": 32,
+      "preparation_ms_per_query": 0.008960455025468642,
+      "fraction_of_end_to_end": 0.000738118548905666,
+      "end_to_end_mean_ms_per_query": 12.139587927648487
+    }
+  ]
+}

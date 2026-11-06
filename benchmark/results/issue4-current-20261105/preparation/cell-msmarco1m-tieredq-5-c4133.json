@@ -1,0 +1,98 @@
+{
+  "dataset": "msmarco1m",
+  "codec": "tieredq",
+  "base_n": 1000000,
+  "queries": 1000,
+  "index_diagnostics": {
+    "tiers": [
+      {
+        "start": 0,
+        "dimensions": 1,
+        "bits": 9
+      },
+      {
+        "start": 1,
+        "dimensions": 15,
+        "bits": 8
+      },
+      {
+        "start": 16,
+        "dimensions": 126,
+        "bits": 7
+      },
+      {
+        "start": 142,
+        "dimensions": 175,
+        "bits": 6
+      },
+      {
+        "start": 317,
+        "dimensions": 203,
+        "bits": 5
+      },
+      {
+        "start": 520,
+        "dimensions": 111,
+        "bits": 4
+      },
+      {
+        "start": 631,
+        "dimensions": 92,
+        "bits": 3
+      },
+      {
+        "start": 723,
+        "dimensions": 109,
+        "bits": 2
+      },
+      {
+        "start": 832,
+        "dimensions": 112,
+        "bits": 1
+      }
+    ],
+    "coded_dimensions": 944,
+    "packed_code_bytes": 516,
+    "vector_bytes": 521,
+    "allocated_vector_bytes": 521291708,
+    "model_serialized_bytes": 3022556,
+    "model_memory_bytes": 9936472,
+    "model_serving_memory_bytes": 3053096,
+    "scalar_fast_scan": false
+  },
+  "target_bits": 5,
+  "code_bits": 4133,
+  "available": true,
+  "search_ids_equal": true,
+  "method": "Separate native preparation-only diagnostic, including call overhead; three warmups and repeats",
+  "schedules": [
+    {
+      "threads": 1,
+      "batch": 1,
+      "preparation_ms_per_query": 0.16629587801192733,
+      "fraction_of_end_to_end": 0.004292325632955702,
+      "end_to_end_mean_ms_per_query": 38.742605345488606
+    },
+    {
+      "threads": 1,
+      "batch": 32,
+      "preparation_ms_per_query": 0.06290085001091938,
+      "fraction_of_end_to_end": 0.003077944488975519,
+      "end_to_end_mean_ms_per_query": 20.435992343661685
+    },
+    {
+      "threads": 8,
+      "batch": 1,
+      "preparation_ms_per_query": 0.16496873372913493,
+      "fraction_of_end_to_end": 0.02384784282004495,
+      "end_to_end_mean_ms_per_query": 6.917553716450735
+    },
+    {
+      "threads": 8,
+      "batch": 32,
+      "preparation_ms_per_query": 0.012919650350037651,
+      "fraction_of_end_to_end": 0.004737408089764813,
+      "end_to_end_mean_ms_per_query": 2.7271558846599264
+    }
+  ]
+}

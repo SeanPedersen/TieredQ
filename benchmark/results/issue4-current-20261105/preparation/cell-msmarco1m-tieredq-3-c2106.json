@@ -1,0 +1,83 @@
+{
+  "dataset": "msmarco1m",
+  "codec": "tieredq",
+  "base_n": 1000000,
+  "queries": 1000,
+  "index_diagnostics": {
+    "tiers": [
+      {
+        "start": 0,
+        "dimensions": 8,
+        "bits": 6
+      },
+      {
+        "start": 8,
+        "dimensions": 102,
+        "bits": 5
+      },
+      {
+        "start": 110,
+        "dimensions": 162,
+        "bits": 4
+      },
+      {
+        "start": 272,
+        "dimensions": 200,
+        "bits": 3
+      },
+      {
+        "start": 472,
+        "dimensions": 112,
+        "bits": 2
+      },
+      {
+        "start": 584,
+        "dimensions": 72,
+        "bits": 1
+      }
+    ],
+    "coded_dimensions": 656,
+    "packed_code_bytes": 263,
+    "vector_bytes": 268,
+    "allocated_vector_bytes": 268183344,
+    "model_serialized_bytes": 2399612,
+    "model_memory_bytes": 7543776,
+    "model_serving_memory_bytes": 2430088,
+    "scalar_fast_scan": false
+  },
+  "target_bits": 3,
+  "code_bits": 2106,
+  "available": true,
+  "search_ids_equal": true,
+  "method": "Separate native preparation-only diagnostic, including call overhead; three warmups and repeats",
+  "schedules": [
+    {
+      "threads": 1,
+      "batch": 1,
+      "preparation_ms_per_query": 0.1330954964311483,
+      "fraction_of_end_to_end": 0.0062745826645274035,
+      "end_to_end_mean_ms_per_query": 21.21184842835646
+    },
+    {
+      "threads": 1,
+      "batch": 32,
+      "preparation_ms_per_query": 0.054591850348515436,
+      "fraction_of_end_to_end": 0.00479076780172718,
+      "end_to_end_mean_ms_per_query": 11.395219432015438
+    },
+    {
+      "threads": 8,
+      "batch": 1,
+      "preparation_ms_per_query": 0.13452488300390542,
+      "fraction_of_end_to_end": 0.03837428036691725,
+      "end_to_end_mean_ms_per_query": 3.5056001498305704
+    },
+    {
+      "threads": 8,
+      "batch": 32,
+      "preparation_ms_per_query": 0.011742906421811009,
+      "fraction_of_end_to_end": 0.00781250197670423,
+      "end_to_end_mean_ms_per_query": 1.5030916416823554
+    }
+  ]
+}

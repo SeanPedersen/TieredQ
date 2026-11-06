@@ -1,0 +1,373 @@
+{
+  "unchanged_paths": [
+    "benchmark/native/rabitq_flat.h",
+    "benchmark/native/reference.cpp",
+    "benchmark/qdrant_codec.py",
+    "benchmark/turboquant"
+  ],
+  "baseline": "d89d27d",
+  "current": "c74b4e354b92d848a004e0f50199c3f7db7e0ca4",
+  "report_recall_checks": [
+    {
+      "dataset": "sift",
+      "codec": "rabitq",
+      "bits": 1,
+      "recall10_mean": 0.24950000000000003,
+      "reported_recall10": 0.2495,
+      "disk_bytes": [
+        "28000624",
+        "28000624",
+        "28000624"
+      ]
+    },
+    {
+      "dataset": "sift",
+      "codec": "qdrant",
+      "bits": 1,
+      "recall10_mean": 0.2685,
+      "reported_recall10": 0.2685,
+      "disk_bytes": [
+        "28002849",
+        "28002849",
+        "28002849"
+      ]
+    },
+    {
+      "dataset": "glove",
+      "codec": "rabitq",
+      "bits": 1,
+      "recall10_mean": 0.40776666666666667,
+      "reported_recall10": 0.4078,
+      "disk_bytes": [
+        "4401200",
+        "4401200",
+        "4401200"
+      ]
+    },
+    {
+      "dataset": "glove",
+      "codec": "qdrant",
+      "bits": 1,
+      "recall10_mean": 0.35529999999999995,
+      "reported_recall10": 0.3553,
+      "disk_bytes": [
+        "3304457",
+        "3304457",
+        "3304457"
+      ]
+    },
+    {
+      "dataset": "openai",
+      "codec": "rabitq",
+      "bits": 1,
+      "recall10_mean": 0.8140333333333335,
+      "reported_recall10": 0.814,
+      "disk_bytes": [
+        "20406960",
+        "20406960",
+        "20406960"
+      ]
+    },
+    {
+      "dataset": "openai",
+      "codec": "qdrant",
+      "bits": 1,
+      "recall10_mean": 0.8142,
+      "reported_recall10": 0.8142,
+      "disk_bytes": [
+        "20033016",
+        "20033016",
+        "20033016"
+      ]
+    },
+    {
+      "dataset": "gemini",
+      "codec": "rabitq",
+      "bits": 1,
+      "recall10_mean": 0.7216,
+      "reported_recall10": 0.7216,
+      "disk_bytes": [
+        "10696368",
+        "10696368",
+        "10696368"
+      ]
+    },
+    {
+      "dataset": "gemini",
+      "codec": "qdrant",
+      "bits": 1,
+      "recall10_mean": 0.698,
+      "reported_recall10": 0.698,
+      "disk_bytes": [
+        "10312258",
+        "10312258",
+        "10312258"
+      ]
+    },
+    {
+      "dataset": "openai1m",
+      "codec": "rabitq",
+      "bits": 1,
+      "recall10_mean": 0.8295666666666668,
+      "reported_recall10": 0.8296,
+      "disk_bytes": [
+        "203804592",
+        "203804592",
+        "203804592"
+      ]
+    },
+    {
+      "dataset": "openai1m",
+      "codec": "qdrant",
+      "bits": 1,
+      "recall10_mean": 0.8270000000000001,
+      "reported_recall10": 0.827,
+      "disk_bytes": [
+        "199833057",
+        "199833057",
+        "199833057"
+      ]
+    },
+    {
+      "dataset": "sift",
+      "codec": "rabitq",
+      "bits": 2,
+      "recall10_mean": 0.5484,
+      "reported_recall10": 0.5484,
+      "disk_bytes": [
+        "52000624",
+        "52000624",
+        "52000624"
+      ]
+    },
+    {
+      "dataset": "sift",
+      "codec": "qdrant",
+      "bits": 2,
+      "recall10_mean": 0.5605999999999999,
+      "reported_recall10": 0.5606,
+      "disk_bytes": [
+        "44002847",
+        "44002847",
+        "44002847"
+      ]
+    },
+    {
+      "dataset": "glove",
+      "codec": "rabitq",
+      "bits": 2,
+      "recall10_mean": 0.6596666666666666,
+      "reported_recall10": 0.6597,
+      "disk_bytes": [
+        "8401200",
+        "8401200",
+        "8401200"
+      ]
+    },
+    {
+      "dataset": "glove",
+      "codec": "qdrant",
+      "bits": 2,
+      "recall10_mean": 0.6276,
+      "reported_recall10": 0.6276,
+      "disk_bytes": [
+        "5804444",
+        "5804444",
+        "5804444"
+      ]
+    },
+    {
+      "dataset": "openai",
+      "codec": "rabitq",
+      "bits": 2,
+      "recall10_mean": 0.9012666666666668,
+      "reported_recall10": 0.9013,
+      "disk_bytes": [
+        "40406960",
+        "40406960",
+        "40406960"
+      ]
+    },
+    {
+      "dataset": "openai",
+      "codec": "qdrant",
+      "bits": 2,
+      "recall10_mean": 0.9046000000000002,
+      "reported_recall10": 0.9046,
+      "disk_bytes": [
+        "39233005",
+        "39233005",
+        "39233005"
+      ]
+    },
+    {
+      "dataset": "gemini",
+      "codec": "rabitq",
+      "bits": 2,
+      "recall10_mean": 0.8549333333333334,
+      "reported_recall10": 0.8549,
+      "disk_bytes": [
+        "20992368",
+        "20992368",
+        "20992368"
+      ]
+    },
+    {
+      "dataset": "gemini",
+      "codec": "qdrant",
+      "bits": 2,
+      "recall10_mean": 0.8398000000000002,
+      "reported_recall10": 0.8398,
+      "disk_bytes": [
+        "19816239",
+        "19816239",
+        "19816239"
+      ]
+    },
+    {
+      "dataset": "openai1m",
+      "codec": "rabitq",
+      "bits": 2,
+      "recall10_mean": 0.9101333333333335,
+      "reported_recall10": 0.9101,
+      "disk_bytes": [
+        "403604592",
+        "403604592",
+        "403604592"
+      ]
+    },
+    {
+      "dataset": "openai1m",
+      "codec": "qdrant",
+      "bits": 2,
+      "recall10_mean": 0.9104000000000002,
+      "reported_recall10": 0.9104,
+      "disk_bytes": [
+        "391640975",
+        "391640975",
+        "391640975"
+      ]
+    },
+    {
+      "dataset": "sift",
+      "codec": "rabitq",
+      "bits": 4,
+      "recall10_mean": 0.8450333333333334,
+      "reported_recall10": 0.845,
+      "disk_bytes": [
+        "84000624",
+        "84000624",
+        "84000624"
+      ]
+    },
+    {
+      "dataset": "sift",
+      "codec": "qdrant",
+      "bits": 4,
+      "recall10_mean": 0.8525000000000001,
+      "reported_recall10": 0.8525,
+      "disk_bytes": [
+        "76002849",
+        "76002849",
+        "76002849"
+      ]
+    },
+    {
+      "dataset": "glove",
+      "codec": "rabitq",
+      "bits": 4,
+      "recall10_mean": 0.8818333333333335,
+      "reported_recall10": 0.8818,
+      "disk_bytes": [
+        "14801200",
+        "14801200",
+        "14801200"
+      ]
+    },
+    {
+      "dataset": "glove",
+      "codec": "qdrant",
+      "bits": 4,
+      "recall10_mean": 0.8826000000000002,
+      "reported_recall10": 0.8826,
+      "disk_bytes": [
+        "10804466",
+        "10804466",
+        "10804466"
+      ]
+    },
+    {
+      "dataset": "openai",
+      "codec": "rabitq",
+      "bits": 4,
+      "recall10_mean": 0.9673666666666667,
+      "reported_recall10": 0.9674,
+      "disk_bytes": [
+        "78806960",
+        "78806960",
+        "78806960"
+      ]
+    },
+    {
+      "dataset": "openai",
+      "codec": "qdrant",
+      "bits": 4,
+      "recall10_mean": 0.9715000000000001,
+      "reported_recall10": 0.9715,
+      "disk_bytes": [
+        "77633032",
+        "77633032",
+        "77633032"
+      ]
+    },
+    {
+      "dataset": "gemini",
+      "codec": "rabitq",
+      "bits": 4,
+      "recall10_mean": 0.9515666666666668,
+      "reported_recall10": 0.9516,
+      "disk_bytes": [
+        "40000368",
+        "40000368",
+        "40000368"
+      ]
+    },
+    {
+      "dataset": "gemini",
+      "codec": "qdrant",
+      "bits": 4,
+      "recall10_mean": 0.9521000000000002,
+      "reported_recall10": 0.9521,
+      "disk_bytes": [
+        "38824257",
+        "38824257",
+        "38824257"
+      ]
+    },
+    {
+      "dataset": "openai1m",
+      "codec": "rabitq",
+      "bits": 4,
+      "recall10_mean": 0.9700666666666667,
+      "reported_recall10": 0.9701,
+      "disk_bytes": [
+        "787220592",
+        "787220592",
+        "787220592"
+      ]
+    },
+    {
+      "dataset": "openai1m",
+      "codec": "qdrant",
+      "bits": 4,
+      "recall10_mean": 0.9722999999999999,
+      "reported_recall10": 0.9723,
+      "disk_bytes": [
+        "775257103",
+        "775257103",
+        "775257103"
+      ]
+    }
+  ],
+  "shared_adapter_change": "Search depth generalized from fixed 10 to output width; current runs remain k=10. Independent native caller parity passed for both metrics and all reference bit widths."
+}

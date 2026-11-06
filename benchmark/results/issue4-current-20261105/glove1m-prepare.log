@@ -1,0 +1,22 @@
+Verified original 100K base is byte-identical subset; all 1000 queries unchanged
+{
+  "dataset": "glove1m",
+  "d": 200,
+  "base_n": 1000000,
+  "queries": 1000,
+  "metric": "cosine",
+  "source": "/home/sean/experiments/diskovec-ntu-20261021/work/ntu-comparison/rabitq-turboquant-comparison/ann/data/raw/glove-200-angular.hdf5",
+  "source_sha256": "4839085e5a8bb293434a1a66e1aa0193afc3f07c6797a85f1dbd91656172da20",
+  "source_rows": 1183514,
+  "split_seed": 42,
+  "split": "Original sorted seed-42 100K draw, extended by a 900K draw from remaining rows using the same RNG stream; sorted union",
+  "original100k_subset": true,
+  "queries_byte_identical": true,
+  "array_sha256": {
+    "base": "7b0329c856ff4928b9059284cafec636a1c3978502617877754eb11bf9597bfd",
+    "queries": "39bbfe76c243fb3628e3fd002feaea49cd547416ac9474d476e1a3eb293a78d2",
+    "truth": "6570b69a67d99b42c1a8af3f55e2a62bc92b08869fe4e6a2276144526e08afe6"
+  },
+  "cache_sha256": "e21c9f551c96dbd70fbc9325a3e818d8c02c8c9efc090f829566de8acc624170",
+  "preparation_wall_s": 13.409751879997202
+}

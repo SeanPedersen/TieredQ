@@ -1,0 +1,10 @@
+{
+  "status": "passed",
+  "counts": {
+    "reference_checks": 48,
+    "matches": 108,
+    "equal_recall": 42,
+    "timing_cells": 168
+  },
+  "schedule_recall_differences": []
+}

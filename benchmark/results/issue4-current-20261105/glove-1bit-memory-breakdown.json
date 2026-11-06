@@ -1,0 +1,38 @@
+{
+  "note": "Diagnostic seed-0 phase breakdown; resource targets continue to use archived reference minima across seeds.",
+  "records": [
+    {
+      "codec": "tieredq",
+      "budget": 62,
+      "seed": 0,
+      "disk_bytes": 1534484,
+      "loaded_rss_growth_bytes": 2519040,
+      "reload_peak_growth_bytes": 2871296,
+      "serving_peak_growth_bytes": 4136960,
+      "query_phase_growth_above_loaded_bytes": 1617920,
+      "source": "/home/sean/experiments/TieredQ-issue4-current-20261105/match-b1/cell-glove-tieredq-c62-0"
+    },
+    {
+      "codec": "tieredq",
+      "budget": 152,
+      "seed": 0,
+      "disk_bytes": 2671444,
+      "loaded_rss_growth_bytes": 3698688,
+      "reload_peak_growth_bytes": 3973120,
+      "serving_peak_growth_bytes": 5328896,
+      "query_phase_growth_above_loaded_bytes": 1630208,
+      "source": "/home/sean/experiments/TieredQ-issue4-current-20261105/match-b1/cell-glove-tieredq-c152-0"
+    },
+    {
+      "codec": "qdrant",
+      "budget": 1,
+      "seed": 0,
+      "disk_bytes": 3304457,
+      "loaded_rss_growth_bytes": 3588096,
+      "reload_peak_growth_bytes": 3588096,
+      "serving_peak_growth_bytes": 4108288,
+      "query_phase_growth_above_loaded_bytes": 520192,
+      "source": "/home/sean/experiments/TieredQ-issue4-current-20261105/reference-build-b1/cell-glove-qdrant-1-0"
+    }
+  ]
+}

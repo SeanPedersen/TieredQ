@@ -1,0 +1,34 @@
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-glove1m-rabitq-1-0: disk 352.0, peak RAM 356.5 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-glove1m-rabitq-1-1: disk 352.0, peak RAM 356.6 bits/vector
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-glove1m-rabitq-1-2: disk 352.0, peak RAM 356.7 bits/vector
+cell-glove1m-tieredq-c352-0: disk 394.4, peak RAM 420.0 bits/vector
+cell-glove1m-tieredq-c308-0: disk 354.4, peak RAM 380.3 bits/vector
+cell-glove1m-tieredq-c300-0: disk 346.4, peak RAM 372.9 bits/vector
+cell-glove1m-tieredq-c300-1: disk 346.4, peak RAM 373.0 bits/vector
+cell-glove1m-tieredq-c300-2: disk 346.4, peak RAM 372.1 bits/vector
+cell-glove1m-tieredq-c292-0: disk 338.4, peak RAM 364.5 bits/vector
+cell-glove1m-tieredq-c292-1: disk 338.4, peak RAM 365.0 bits/vector
+cell-glove1m-tieredq-c292-2: disk 338.4, peak RAM 363.8 bits/vector
+cell-glove1m-tieredq-c284-0: disk 330.4, peak RAM 356.5 bits/vector
+cell-glove1m-tieredq-c276-0: disk 322.4, peak RAM 348.2 bits/vector
+cell-glove1m-tieredq-c276-1: disk 322.4, peak RAM 347.4 bits/vector
+cell-glove1m-tieredq-c276-2: disk 322.4, peak RAM 349.2 bits/vector
+cell-glove1m-qdrant-1-0: disk 264.0, peak RAM 270.4 bits/vector
+cell-glove1m-qdrant-1-1: disk 264.0, peak RAM 270.5 bits/vector
+cell-glove1m-qdrant-1-2: disk 264.0, peak RAM 270.4 bits/vector
+cell-glove1m-tieredq-c215-0: disk 266.4, peak RAM 291.7 bits/vector
+cell-glove1m-tieredq-c207-0: disk 258.4, peak RAM 285.1 bits/vector
+cell-glove1m-tieredq-c207-1: disk 258.4, peak RAM 283.8 bits/vector
+cell-glove1m-tieredq-c207-2: disk 258.4, peak RAM 284.4 bits/vector
+cell-glove1m-tieredq-c199-0: disk 250.3, peak RAM 276.4 bits/vector
+cell-glove1m-tieredq-c199-1: disk 250.3, peak RAM 278.6 bits/vector
+cell-glove1m-tieredq-c199-2: disk 250.3, peak RAM 276.2 bits/vector
+cell-glove1m-tieredq-c191-0: disk 234.3, peak RAM 261.2 bits/vector
+cell-glove1m-tieredq-c191-1: disk 234.3, peak RAM 259.8 bits/vector
+cell-glove1m-tieredq-c191-2: disk 234.3, peak RAM 259.4 bits/vector

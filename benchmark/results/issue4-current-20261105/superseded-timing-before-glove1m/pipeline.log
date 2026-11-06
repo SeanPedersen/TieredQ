@@ -1,0 +1,1 @@
+Terminated                 taskset -c 8-17 "$P" -u "$B/experiments/issue4_current/timing.py" "$W" > "$W/timing-progress.log" 2>&1

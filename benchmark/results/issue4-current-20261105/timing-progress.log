@@ -1,0 +1,168 @@
+1/168 glove1m rabitq 1 0: 55s
+2/168 openai tieredq 4 5570: 97s
+3/168 sift tieredq 3 285: 148s
+4/168 glove1m tieredq 2 204: 173s
+5/168 gemini tieredq 2 1513: 183s
+6/168 openai tieredq 1 794: 192s
+7/168 openai rabitq 2 0: 211s
+8/168 msmarco1m tieredq 2 1101: 290s
+9/168 glove1m rabitq 4 0: 351s
+10/168 glove1m tieredq 4 603: 398s
+11/168 sift rabitq 1 0: 435s
+12/168 openai1m tieredq 2 1557: 542s
+13/168 glove1m qdrant 4 0: 845s
+14/168 msmarco1m tieredq 3 2464: 999s
+15/168 openai tieredq 2 2709: 1019s
+16/168 openai1m qdrant 1 0: 1773s
+17/168 glove1m tieredq 5 801: 1831s
+18/168 msmarco1m qdrant 2 0: 2410s
+19/168 glove1m tieredq 4 631: 2458s
+20/168 gemini tieredq 2 860: 2465s
+21/168 openai1m tieredq 5 6197: 2827s
+22/168 openai1m tieredq 4 6116: 3179s
+23/168 openai1m tieredq 2 1820: 3301s
+24/168 sift qdrant 1 0: 3567s
+25/168 openai1m tieredq 4 6091: 3916s
+26/168 glove1m tieredq 2 276: 3945s
+27/168 sift qdrant 2 0: 4114s
+28/168 msmarco1m tieredq 3 2137: 4252s
+29/168 gemini tieredq 1 706: 4259s
+30/168 openai tieredq 1 1304: 4270s
+31/168 gemini tieredq 2 1250: 4280s
+32/168 msmarco1m qdrant 4 0: 4959s
+33/168 msmarco1m tieredq 5 4133: 5202s
+34/168 openai1m tieredq 1 1507: 5304s
+35/168 gemini tieredq 3 1858: 5317s
+36/168 openai tieredq 2 2639: 5337s
+37/168 openai1m tieredq 1 1499: 5438s
+38/168 gemini tieredq 2 1352: 5447s
+39/168 msmarco1m tieredq 5 4232: 5690s
+40/168 msmarco1m tieredq 4 4087: 5925s
+41/168 gemini tieredq 4 3029: 5946s
+42/168 openai1m tieredq 1 874: 6015s
+43/168 glove1m tieredq 3 408: 6049s
+44/168 glove1m tieredq 4 756: 6104s
+45/168 gemini rabitq 2 0: 6113s
+46/168 sift tieredq 2 154: 6151s
+47/168 openai tieredq 2 2797: 6172s
+48/168 sift tieredq 5 538: 6253s
+49/168 openai1m tieredq 3 3986: 6485s
+50/168 gemini tieredq 1 630: 6491s
+51/168 msmarco1m tieredq 5 4180: 6731s
+52/168 msmarco1m rabitq 2 0: 6873s
+53/168 openai tieredq 4 5620: 6916s
+54/168 gemini qdrant 2 0: 6960s
+55/168 openai tieredq 3 3846: 6992s
+56/168 sift rabitq 2 0: 7030s
+57/168 glove1m tieredq 3 416: 7065s
+58/168 openai qdrant 2 0: 7150s
+59/168 openai tieredq 3 4068: 7183s
+60/168 sift tieredq 4 509: 7263s
+61/168 sift qdrant 4 0: 7442s
+62/168 openai1m qdrant 2 0: 8290s
+63/168 gemini qdrant 4 0: 8343s
+64/168 gemini rabitq 1 0: 8352s
+65/168 glove1m tieredq 6 1131: 8428s
+66/168 openai1m tieredq 1 892: 8499s
+67/168 openai1m tieredq 1 1532: 8605s
+68/168 openai1m tieredq 4 6059: 8958s
+69/168 sift tieredq 2 134: 8978s
+70/168 glove1m qdrant 2 0: 9272s
+71/168 openai1m tieredq 3 3137: 9464s
+72/168 openai1m qdrant 4 0: 10451s
+73/168 gemini tieredq 1 436: 10456s
+74/168 gemini tieredq 2 770: 10463s
+75/168 sift tieredq 5 576: 10548s
+76/168 sift tieredq 3 352: 10612s
+77/168 openai1m tieredq 2 3040: 10784s
+78/168 glove1m tieredq 2 292: 10814s
+79/168 msmarco1m tieredq 3 2054: 10946s
+80/168 openai tieredq 4 5221: 10985s
+81/168 openai1m tieredq 2 2946: 11159s
+82/168 sift tieredq 3 315: 11217s
+83/168 openai tieredq 1 1205: 11228s
+84/168 sift tieredq 1 74: 11244s
+85/168 openai1m tieredq 2 3048: 11418s
+86/168 msmarco1m tieredq 3 2189: 11557s
+87/168 openai rabitq 1 0: 11574s
+88/168 openai tieredq 4 5653: 11616s
+89/168 gemini tieredq 1 523: 11622s
+90/168 gemini tieredq 4 2862: 11642s
+91/168 openai1m tieredq 3 3108: 11820s
+92/168 gemini tieredq 2 1429: 11830s
+93/168 glove1m tieredq 2 359: 11863s
+94/168 msmarco1m tieredq 5 4239: 12107s
+95/168 sift tieredq 5 608: 12201s
+96/168 msmarco1m tieredq 3 2336: 12352s
+97/168 msmarco1m tieredq 1 1018: 12425s
+98/168 openai1m tieredq 5 6153: 12782s
+99/168 glove1m tieredq 1 171: 12806s
+100/168 msmarco1m tieredq 3 2152: resumed 139s
+101/168 glove1m tieredq 6 1139: resumed 216s
+102/168 openai tieredq 2 2535: resumed 236s
+103/168 gemini tieredq 1 673: resumed 242s
+104/168 sift tieredq 2 253: resumed 293s
+105/168 sift tieredq 2 160: resumed 330s
+106/168 openai tieredq 2 2568: resumed 350s
+107/168 glove1m rabitq 2 0: resumed 408s
+108/168 openai1m rabitq 1 0: resumed 603s
+109/168 glove1m qdrant 1 0: resumed 873s
+110/168 gemini tieredq 3 1842: resumed 886s
+111/168 glove1m tieredq 6 1114: resumed 961s
+112/168 glove1m tieredq 5 821: resumed 1020s
+113/168 glove1m tieredq 1 191: resumed 1044s
+114/168 openai1m tieredq 1 1524: resumed 1147s
+115/168 openai1m tieredq 5 6208: resumed 1506s
+116/168 glove1m tieredq 4 758: resumed 1561s
+117/168 gemini tieredq 4 2648: resumed 1580s
+118/168 msmarco1m rabitq 4 0: resumed 1736s
+119/168 openai tieredq 1 1125: resumed 1747s
+120/168 openai tieredq 2 2810: resumed 1768s
+121/168 sift tieredq 3 344: resumed 1833s
+122/168 openai tieredq 4 5267: resumed 1873s
+123/168 openai qdrant 1 0: resumed 1950s
+124/168 msmarco1m tieredq 2 1108: resumed 2030s
+125/168 glove1m tieredq 1 199: resumed 2055s
+126/168 openai tieredq 4 5752: resumed 2099s
+127/168 gemini qdrant 1 0: resumed 2141s
+128/168 msmarco1m tieredq 3 2099: resumed 2273s
+129/168 sift rabitq 4 0: resumed 2316s
+130/168 msmarco1m tieredq 2 1079: resumed 2395s
+131/168 openai1m rabitq 2 0: resumed 2607s
+132/168 sift tieredq 1 66: resumed 2623s
+133/168 glove1m tieredq 2 400: resumed 2657s
+134/168 msmarco1m rabitq 1 0: resumed 2793s
+135/168 openai1m tieredq 2 1540: resumed 2900s
+136/168 openai tieredq 1 1268: resumed 2911s
+137/168 msmarco1m tieredq 5 4150: resumed 3153s
+138/168 gemini tieredq 3 1890: resumed 3166s
+139/168 openai rabitq 4 0: resumed 3189s
+140/168 sift tieredq 2 146: resumed 3228s
+141/168 msmarco1m tieredq 3 2145: resumed 3366s
+142/168 glove1m tieredq 2 300: resumed 3397s
+143/168 glove1m tieredq 4 619: resumed 3445s
+144/168 msmarco1m tieredq 2 1052: resumed 3522s
+145/168 msmarco1m tieredq 1 594: resumed 3571s
+146/168 gemini tieredq 1 398: resumed 3576s
+147/168 glove1m tieredq 5 813: resumed 3635s
+148/168 msmarco1m tieredq 1 602: resumed 3686s
+149/168 gemini tieredq 4 2936: resumed 3707s
+150/168 glove1m tieredq 2 391: resumed 3741s
+151/168 msmarco1m tieredq 2 1069: resumed 3819s
+152/168 openai qdrant 4 0: resumed 3919s
+153/168 openai1m tieredq 3 3129: resumed 4109s
+154/168 openai1m tieredq 2 3024: resumed 4282s
+155/168 glove1m tieredq 6 1051: resumed 4353s
+156/168 gemini tieredq 2 1302: resumed 4363s
+157/168 msmarco1m tieredq 2 1114: resumed 4441s
+158/168 openai1m tieredq 3 4140: resumed 4684s
+159/168 openai tieredq 2 1652: resumed 4698s
+160/168 gemini rabitq 4 0: resumed 4708s
+161/168 gemini tieredq 2 1421: resumed 4718s
+162/168 gemini tieredq 4 2600: resumed 4737s
+163/168 glove1m tieredq 2 207: resumed 4762s
+164/168 openai1m rabitq 4 0: resumed 4993s
+165/168 openai tieredq 2 1570: resumed 5006s
+166/168 gemini tieredq 4 2917: resumed 5027s
+167/168 msmarco1m tieredq 3 2106: resumed 5159s
+168/168 msmarco1m qdrant 1 0: resumed 5707s

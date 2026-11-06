@@ -1,0 +1,88 @@
+{
+  "dataset": "openai",
+  "codec": "tieredq",
+  "base_n": 100000,
+  "queries": 1000,
+  "index_diagnostics": {
+    "tiers": [
+      {
+        "start": 0,
+        "dimensions": 17,
+        "bits": 7
+      },
+      {
+        "start": 17,
+        "dimensions": 61,
+        "bits": 6
+      },
+      {
+        "start": 78,
+        "dimensions": 124,
+        "bits": 5
+      },
+      {
+        "start": 202,
+        "dimensions": 226,
+        "bits": 4
+      },
+      {
+        "start": 428,
+        "dimensions": 300,
+        "bits": 3
+      },
+      {
+        "start": 728,
+        "dimensions": 329,
+        "bits": 2
+      },
+      {
+        "start": 1057,
+        "dimensions": 272,
+        "bits": 1
+      }
+    ],
+    "coded_dimensions": 1329,
+    "packed_code_bytes": 480,
+    "vector_bytes": 486,
+    "allocated_vector_bytes": 48848824,
+    "model_serialized_bytes": 5699260,
+    "model_memory_bytes": 18557376,
+    "model_serving_memory_bytes": 5775760,
+    "scalar_fast_scan": false
+  },
+  "target_bits": 3,
+  "code_bits": 3846,
+  "available": true,
+  "search_ids_equal": true,
+  "method": "Separate native preparation-only diagnostic, including call overhead; three warmups and repeats",
+  "schedules": [
+    {
+      "threads": 1,
+      "batch": 1,
+      "preparation_ms_per_query": 0.25459234314136364,
+      "fraction_of_end_to_end": 0.06496635968715778,
+      "end_to_end_mean_ms_per_query": 3.9188334449912263
+    },
+    {
+      "threads": 1,
+      "batch": 32,
+      "preparation_ms_per_query": 0.12588862134240722,
+      "fraction_of_end_to_end": 0.05502022465694915,
+      "end_to_end_mean_ms_per_query": 2.288042662990241
+    },
+    {
+      "threads": 8,
+      "batch": 1,
+      "preparation_ms_per_query": 0.23360926423144215,
+      "fraction_of_end_to_end": 0.1723691856604316,
+      "end_to_end_mean_ms_per_query": 1.3552843760116957
+    },
+    {
+      "threads": 8,
+      "batch": 32,
+      "preparation_ms_per_query": 0.021514349971160602,
+      "fraction_of_end_to_end": 0.060415193541799334,
+      "end_to_end_mean_ms_per_query": 0.3561082686307297
+    }
+  ]
+}

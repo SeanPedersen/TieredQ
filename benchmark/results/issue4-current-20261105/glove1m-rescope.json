@@ -1,0 +1,11 @@
+{
+  "driver_pid": 3396641,
+  "children": [
+    {
+      "pid": 3441533,
+      "args": "/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python -u /home/sean/experiments/TieredQ-issue4-current-20261105/source/benchmark/experiments/issue4_current/measure_cell.py --codec rabitq --datasets msmarco1m --bits 4 --seeds 0 --threads 1 8 --batches 1 32 --queries 1000 --data /home/sean/experiments/TieredQ-issue4-current-20261105/data --output /home/sean/experiments/TieredQ-issue4-current-20261105/timing --cell /home/sean/experiments/TieredQ-issue4-current-20261105/timing/cell-msmarco1m-rabitq-4.json"
+    }
+  ],
+  "requested_utc": "2026-11-05T22:28:56.992108+00:00",
+  "reason": "User requested replacing primary GloVe100K with GloVe1M; finish current timing cell, then archive partial session and retime updated matrix."
+}

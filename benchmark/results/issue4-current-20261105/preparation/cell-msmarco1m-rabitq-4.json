@@ -1,0 +1,42 @@
+{
+  "dataset": "msmarco1m",
+  "codec": "rabitq",
+  "base_n": 1000000,
+  "queries": 1000,
+  "index_diagnostics": null,
+  "target_bits": 4,
+  "code_bits": 0,
+  "available": true,
+  "search_ids_equal": true,
+  "method": "Separate native preparation-only diagnostic, including call overhead; three warmups and repeats",
+  "schedules": [
+    {
+      "threads": 1,
+      "batch": 1,
+      "preparation_ms_per_query": 0.007796541375379699,
+      "fraction_of_end_to_end": 0.0005951748609643339,
+      "end_to_end_mean_ms_per_query": 13.099581126036355
+    },
+    {
+      "threads": 1,
+      "batch": 32,
+      "preparation_ms_per_query": 0.005993275675185335,
+      "fraction_of_end_to_end": 0.0004575947190336616,
+      "end_to_end_mean_ms_per_query": 13.097344496985897
+    },
+    {
+      "threads": 8,
+      "batch": 1,
+      "preparation_ms_per_query": 0.007401567398725699,
+      "fraction_of_end_to_end": 0.0005629270520570549,
+      "end_to_end_mean_ms_per_query": 13.148359759366334
+    },
+    {
+      "threads": 8,
+      "batch": 32,
+      "preparation_ms_per_query": 0.0021702139832389853,
+      "fraction_of_end_to_end": 0.0012447251833213352,
+      "end_to_end_mean_ms_per_query": 1.7435286216738557
+    }
+  ]
+}

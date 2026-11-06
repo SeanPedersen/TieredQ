@@ -1,0 +1,1 @@
+Diagnostic objcopy --dump-section was invoked on the loaded native adapter without an output object; objcopy rewrote it in place. Workers with existing memory mappings failed. These reference checks are excluded; rerun after rebuilding and validation. No library source changes.

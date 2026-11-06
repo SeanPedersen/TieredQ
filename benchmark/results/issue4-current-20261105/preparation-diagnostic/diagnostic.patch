@@ -1,0 +1,172 @@
+--- include/tieredq/tieredq.h
++++ include/tieredq/tieredq.h
+@@ -215,6 +215,7 @@
+ };
+ class TieredQIndex {
+  public:
++  void issue4_prepare(const float* queries,size_t rows) const;
+   // Fast mode owns only its approximate search representation; the mode is persisted.
+   explicit TieredQIndex(TieredQ codec, TieredQIndexMode mode = TieredQIndexMode::fast);
+   ~TieredQIndex();
+--- src/tieredq_index.cpp
++++ tieredq_index.cpp
+@@ -453,3 +453,27 @@
+   }
+ }
+ } // namespace dv
++
++namespace dv {
++void TieredQIndex::issue4_prepare(const float* queries,size_t rows) const {
++  const ModelQueries model(codec_,queries,rows);
++  std::vector<TieredQQuery> weights;
++  if (fine_tiers_) weights=fine_query_weights(model.data,rows);
++#ifdef DV_TIEREDQ_X86
++  if (rows==1 && tieredq_detail::fast_scan_backend(*fast_)==tieredq_detail::FastScanBackend::avx512 &&
++      tieredq_detail::fast_range_checkpoint_supported(*fast_,scan_codec().tiers())) {
++    const auto prepared=fine_tiers_ ? weights : scan_codec().model_query_weights(model.data,1);
++    const auto bounds=tieredq_detail::prepare_fast_range_bounds(*fast_,scan_codec().tiers(),prepared[0]);
++    asm volatile("" : : "g"(&prepared),"g"(&bounds) : "memory");
++    return;
++  }
++#endif
++  tieredq_detail::with_fast_scan(*fast_,scan_codec(),model.data,rows,[&](const auto& prepared,size_t,auto) {
++    if constexpr (requires { prepared[0].lookup; }) if (rows==1 && tieredq_detail::lookup_range_scan_supported(*fast_,scan_codec().tiers())) {
++      const auto bounds=tieredq_detail::prepare_lookup_range_bounds(*fast_,scan_codec().tiers(),prepared[0].lookup);
++      asm volatile("" : : "g"(&bounds) : "memory");
++    }
++    asm volatile("" : : "g"(&prepared) : "memory");
++  },fine_tiers_ ? weights.data() : nullptr);
++}
++}
+--- benchmark/native/rabitq_flat.h
++++ rabitq_flat.h
+@@ -84,6 +84,17 @@
+   double encode_seconds() const { return encode_s_; }
+   size_t size() const { return count_; }
+   size_t dimensions() const { return dimensions_; }
++  void prepare_only(const float* vector) const {
++    std::vector<float> rotated(padded_);
++    rotator_->rotate(vector,rotated.data());
++    const float distance=std::sqrt(rabitqlib::euclidean_sqr(rotated.data(),center_.data(),padded_));
++    rabitqlib::buffer::SearchBuffer<float> top(10);
++    rabitqlib::SplitBatchQuery<float> query(rotated.data(),padded_,extra_bits_,metric_,high_accuracy);
++    const float center_ip=metric_==rabitqlib::METRIC_IP
++        ? rabitqlib::dot_product<float>(rotated.data(),center_.data(),padded_) : 0;
++    query.set_g_add(distance,center_ip);
++    asm volatile("" : : "g"(&query) : "memory");
++  }
+   void search(const float* vector,size_t k,uint32_t* ids) const {
+     std::vector<float> rotated(padded_);
+     rotator_->rotate(vector,rotated.data());
+--- benchmark/native/module.cpp
++++ module.cpp
+@@ -20,29 +20,29 @@
+ constexpr size_t top_k = 10;
+ constexpr bool rabitq_high_accuracy = benchmark::RaBitQFlat::high_accuracy;
+ constexpr size_t training_limit = 32768;
+-class Index {
++class PreparationIndex {
+   std::unique_ptr<dv::TieredQIndex> tq_;
+   std::unique_ptr<benchmark::RaBitQFlat> rq_;
+   size_t width_, count_;
+   double encode_s_ = 0;
+-  Index(std::unique_ptr<dv::TieredQIndex> tq, std::unique_ptr<benchmark::RaBitQFlat> rq, size_t width, size_t count)
++  PreparationIndex(std::unique_ptr<dv::TieredQIndex> tq, std::unique_ptr<benchmark::RaBitQFlat> rq, size_t width, size_t count)
+       : tq_(std::move(tq)), rq_(std::move(rq)), width_(width), count_(count) {}
+  public:
+-  static Index load(const std::string& path, bool tieredq) {
++  static PreparationIndex load(const std::string& path, bool tieredq) {
+     if (!tieredq) {
+       auto rq = benchmark::RaBitQFlat::load(path);
+       const size_t width = rq->dimensions(), count = rq->size();
+-      return Index(nullptr, std::move(rq), width, count);
++      return PreparationIndex(nullptr, std::move(rq), width, count);
+     }
+     auto tq = std::make_unique<dv::TieredQIndex>(dv::TieredQIndex::load(path));
+     const size_t width = tq->codec().config().dimensions, count = tq->size();
+-    return Index(std::move(tq), nullptr, width, count);
++    return PreparationIndex(std::move(tq), nullptr, width, count);
+   }
+   // code_bits overrides the TieredQ per-vector code budget; 0 keeps bits per effective dimension. native_metric
+   // passes raw L2 rows to TieredQ's own L2 metric; otherwise L2 rows arrive lifted by the caller (one extra column).
+   // exact serves a full-target model through the fast index (exact_fast_scores in the Python bindings). Full mode
+   // trains without fine tiers, which only the fast index serves.
+-  Index(Matrix base, size_t bits, uint64_t seed, bool tieredq, bool l2, bool fast = true, size_t code_bits = 0,
++  PreparationIndex(Matrix base, size_t bits, uint64_t seed, bool tieredq, bool l2, bool fast = true, size_t code_bits = 0,
+         bool native_metric = false, bool exact = false, bool fine_tiers = true)
+       : width_(base.shape(1)), count_(base.shape(0)) {
+     if (count_ < top_k || !width_ || bits < 1 || bits > 8) throw std::invalid_argument("invalid index shape/bits");
+@@ -71,6 +71,12 @@
+     encode_s_ = rq_->encode_seconds();
+   }
+   double encode_seconds() const { return encode_s_; }
++  void prepare_only(Matrix queries,int threads) const {
++    omp_set_num_threads(threads);
++    if (tq_) { tq_->issue4_prepare(queries.data(),queries.shape(0)); return; }
++    #pragma omp parallel for schedule(static) if(queries.shape(0)>1)
++    for (size_t i=0;i<queries.shape(0);++i) rq_->prepare_only(queries.data()+i*width_);
++  }
+   nb::dict diagnostics() const {
+     if (!tq_) throw std::invalid_argument("TieredQ diagnostics require a TieredQ index");
+     const auto& codec = tq_->codec();
+@@ -125,13 +131,13 @@
+   }
+ };
+ // Flat nested TieredQ (#13): a prefix_bits prefix scanned for every row, the top `candidates` rescored with a
+-// TieredQRefinement tier to code_bits, both trained on the same seeded sample as Index's TieredQ path.
+-class NestedIndex {
++// TieredQRefinement tier to code_bits, both trained on the same seeded sample as PreparationIndex's TieredQ path.
++class PreparationNestedIndex {
+   std::unique_ptr<dv::TieredQNestedIndex> nested_;
+   size_t width_, candidates_;
+   double encode_s_ = 0;
+  public:
+-  NestedIndex(Matrix base, uint64_t seed, size_t prefix_bits, size_t code_bits, size_t candidates)
++  PreparationNestedIndex(Matrix base, uint64_t seed, size_t prefix_bits, size_t code_bits, size_t candidates)
+       : width_(base.shape(1)), candidates_(candidates) {
+     const size_t count = base.shape(0);
+     if (count < top_k || !width_ || candidates < top_k || prefix_bits >= code_bits)
+@@ -171,7 +177,7 @@
+     return std::max(nested_->nested().serialize().size()+tier, nested_->storage_bytes());
+   }
+ };
+-NB_MODULE(codec_native, m) {
++NB_MODULE(codec_preparation, m) {
+   m.attr("rabitq_high_accuracy") = rabitq_high_accuracy;
+   m.attr("rabitq_implicit_ids") = true;
+   m.attr("rabitq_container") = "direct-flat";
+@@ -186,21 +192,22 @@
+   m.attr("compiled_avx2") = false;
+ #endif
+   m.def("set_threads", [](int n){ omp_set_dynamic(0); omp_set_num_threads(n); });
+-  nb::class_<Index>(m,"Index")
++  nb::class_<PreparationIndex>(m,"PreparationIndex")
+     .def(nb::init<Matrix,size_t,uint64_t,bool,bool,bool,size_t,bool,bool,bool>(), nb::arg("base"), nb::arg("bits"),
+          nb::arg("seed"), nb::arg("tieredq"), nb::arg("l2"), nb::arg("fast") = true, nb::arg("code_bits") = 0,
+          nb::arg("native_metric") = false, nb::arg("exact") = false, nb::arg("fine_tiers") = true,
+          nb::call_guard<nb::gil_scoped_release>())
+-    .def("diagnostics", &Index::diagnostics)
+-    .def_prop_ro("encode_seconds", &Index::encode_seconds)
+-    .def("search", &Index::search, nb::call_guard<nb::gil_scoped_release>())
+-    .def("storage", &Index::storage)
+-    .def("save", &Index::save, nb::call_guard<nb::gil_scoped_release>())
+-    .def("resident_bytes", &Index::resident_bytes)
+-    .def_static("load", &Index::load, nb::call_guard<nb::gil_scoped_release>());
+-  nb::class_<NestedIndex>(m,"NestedIndex")
++    .def("prepare_only", &PreparationIndex::prepare_only)
++    .def("diagnostics", &PreparationIndex::diagnostics)
++    .def_prop_ro("encode_seconds", &PreparationIndex::encode_seconds)
++    .def("search", &PreparationIndex::search, nb::call_guard<nb::gil_scoped_release>())
++    .def("storage", &PreparationIndex::storage)
++    .def("save", &PreparationIndex::save, nb::call_guard<nb::gil_scoped_release>())
++    .def("resident_bytes", &PreparationIndex::resident_bytes)
++    .def_static("load", &PreparationIndex::load, nb::call_guard<nb::gil_scoped_release>());
++  nb::class_<PreparationNestedIndex>(m,"PreparationNestedIndex")
+     .def(nb::init<Matrix,uint64_t,size_t,size_t,size_t>(), nb::call_guard<nb::gil_scoped_release>())
+-    .def_prop_ro("encode_seconds", &NestedIndex::encode_seconds)
+-    .def("search", &NestedIndex::search, nb::call_guard<nb::gil_scoped_release>())
+-    .def("storage", &NestedIndex::storage);
++    .def_prop_ro("encode_seconds", &PreparationNestedIndex::encode_seconds)
++    .def("search", &PreparationNestedIndex::search, nb::call_guard<nb::gil_scoped_release>())
++    .def("storage", &PreparationNestedIndex::storage);
+ }

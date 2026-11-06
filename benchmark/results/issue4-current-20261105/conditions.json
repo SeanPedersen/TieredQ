@@ -1,0 +1,86 @@
+{
+  "timing_cpus": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "timing_smt_siblings": [
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25
+  ],
+  "match_lanes": {
+    "1": [
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "2": [
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23
+    ],
+    "4": [
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31
+    ]
+  },
+  "recall_seeds": [
+    0,
+    1,
+    2
+  ],
+  "timing_seed": 0,
+  "queries": 1000,
+  "threads": [
+    1,
+    8
+  ],
+  "batches": [
+    1,
+    32
+  ],
+  "warmups": 3,
+  "repeats": 3,
+  "flags": "-O3 -march=native -ffp-contract=off",
+  "variant": "default flat fast index; fine tiers enabled",
+  "cpu_governor": "powersave",
+  "cpu_driver": "intel_pstate",
+  "intel_no_turbo": "0",
+  "smt_topology": {
+    "0": "0,18",
+    "1": "1,19",
+    "2": "2,20",
+    "3": "3,21",
+    "4": "4,22",
+    "5": "5,23",
+    "6": "6,24",
+    "7": "7,25"
+  }
+}

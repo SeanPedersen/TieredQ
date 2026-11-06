@@ -1,0 +1,48 @@
+--- a/benchmark/measure_memory.py
++++ b/benchmark/measure_memory.py
+@@ -130,7 +130,8 @@
+         vectors = transform.base_vectors(base) if transform else base
+         index = build_index(spec, vectors)
+         build_s = time.perf_counter() - start
+-        build_peak = memory_status()[1] - baseline
++        build_peak_total = memory_status()[1]
++        build_peak = build_peak_total - baseline
+         code_bits = (sum(tier["dimensions"] * tier["bits"] for tier in index.diagnostics()["tiers"])
+                      if spec["codec"] == "tieredq" else None)
+         index_bytes = index.save(str(index_path(spec, cell)))
+@@ -140,7 +141,9 @@
+                      query_map=transform.query_map)
+             transform_bytes = (cell / "transform.npz").stat().st_size
+         return dict(d=base.shape[1], base_n=len(base), code_bits=code_bits, build_s=build_s,
+-                    build_peak_rss_bytes=build_peak,
++                    build_peak_rss_bytes=build_peak, build_baseline_rss_bytes=baseline,
++                    build_peak_total_rss_bytes=build_peak_total,
++                    encode_s=index.encode_seconds, encode_vps=len(base)/index.encode_seconds,
+                     disk_bytes=index_bytes + transform_bytes,
+                     index_sha256=index_sha256(index_path(spec, cell)))
+ 
+@@ -187,7 +190,9 @@
+         companion_recall = (single_pass(index, companion_queries, companion_truth, PRIMARY_THREADS, PRIMARY_BATCH,
+                                         recall)["recall10"]
+                             if companion else None)
+-        return dict(ram_accounted_bytes=accounted, ram_loaded_rss_bytes=loaded_rss - baseline,
++        return dict(serve_baseline_rss_bytes=baseline, ram_loaded_total_rss_bytes=loaded_rss,
++                    ram_peak_total_rss_bytes=baseline+max(load_peak, query_peak),
++                    ram_accounted_bytes=accounted, ram_loaded_rss_bytes=loaded_rss - baseline,
+                     ram_load_peak_rss_bytes=load_peak, ram_query_peak_rss_bytes=query_peak,
+                     ram_peak_rss_bytes=max(load_peak, query_peak), recall10=metrics[PRIMARY_SCHEDULE]["recall10"],
+                     ids_sha256=hashlib.sha256(ids.tobytes()).hexdigest(), companion_recall10=companion_recall,
+--- a/benchmark/run.py
++++ b/benchmark/run.py
+@@ -86,7 +86,10 @@
+         index = build_index(args, vectors)
+         build_s = time.perf_counter() - start
+         with tempfile.TemporaryDirectory(dir=args.output) as temporary:
+-            total_bytes = index.storage(str(Path(temporary) / "index.bin"))
++            saved = Path(temporary) / "index.bin"
++            index.storage(str(saved))
++            total_bytes = (sum(p.stat().st_size for p in saved.iterdir()) if saved.is_dir()
++                           else saved.stat().st_size)
+         if transform:
+             total_bytes += transform.storage_bytes
+         common = dict(dataset=args.datasets[0], d=d, base_n=len(base), queries=len(queries),

@@ -1,0 +1,42 @@
+{
+  "dataset": "glove1m",
+  "codec": "qdrant",
+  "base_n": 1000000,
+  "queries": 1000,
+  "index_diagnostics": null,
+  "target_bits": 2,
+  "code_bits": 0,
+  "available": true,
+  "search_ids_equal": true,
+  "method": "Separate native preparation-only diagnostic, including call overhead; three warmups and repeats",
+  "schedules": [
+    {
+      "threads": 1,
+      "batch": 1,
+      "preparation_ms_per_query": 0.0055625446208675084,
+      "fraction_of_end_to_end": 0.00018254321522627706,
+      "end_to_end_mean_ms_per_query": 30.47248079843606
+    },
+    {
+      "threads": 1,
+      "batch": 32,
+      "preparation_ms_per_query": 0.003574316962234055,
+      "fraction_of_end_to_end": 0.00011762373385114845,
+      "end_to_end_mean_ms_per_query": 30.387718916977366
+    },
+    {
+      "threads": 8,
+      "batch": 1,
+      "preparation_ms_per_query": 0.00554337718252403,
+      "fraction_of_end_to_end": 0.00018179877508642332,
+      "end_to_end_mean_ms_per_query": 30.491829110998275
+    },
+    {
+      "threads": 8,
+      "batch": 32,
+      "preparation_ms_per_query": 0.0021080653386889026,
+      "fraction_of_end_to_end": 0.0005393573777549412,
+      "end_to_end_mean_ms_per_query": 3.908475948662575
+    }
+  ]
+}

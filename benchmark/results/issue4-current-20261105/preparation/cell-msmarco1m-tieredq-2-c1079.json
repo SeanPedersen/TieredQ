@@ -1,0 +1,73 @@
+{
+  "dataset": "msmarco1m",
+  "codec": "tieredq",
+  "base_n": 1000000,
+  "queries": 1000,
+  "index_diagnostics": {
+    "tiers": [
+      {
+        "start": 0,
+        "dimensions": 60,
+        "bits": 4
+      },
+      {
+        "start": 60,
+        "dimensions": 109,
+        "bits": 3
+      },
+      {
+        "start": 169,
+        "dimensions": 183,
+        "bits": 2
+      },
+      {
+        "start": 352,
+        "dimensions": 147,
+        "bits": 1
+      }
+    ],
+    "coded_dimensions": 499,
+    "packed_code_bytes": 135,
+    "vector_bytes": 140,
+    "allocated_vector_bytes": 140096896,
+    "model_serialized_bytes": 2076780,
+    "model_memory_bytes": 6348456,
+    "model_serving_memory_bytes": 2119504,
+    "scalar_fast_scan": false
+  },
+  "target_bits": 2,
+  "code_bits": 1079,
+  "available": true,
+  "search_ids_equal": true,
+  "method": "Separate native preparation-only diagnostic, including call overhead; three warmups and repeats",
+  "schedules": [
+    {
+      "threads": 1,
+      "batch": 1,
+      "preparation_ms_per_query": 0.10389782081862602,
+      "fraction_of_end_to_end": 0.008462505527489353,
+      "end_to_end_mean_ms_per_query": 12.277430186736941
+    },
+    {
+      "threads": 1,
+      "batch": 32,
+      "preparation_ms_per_query": 0.05344455465092324,
+      "fraction_of_end_to_end": 0.00783112528962781,
+      "end_to_end_mean_ms_per_query": 6.824632817675592
+    },
+    {
+      "threads": 8,
+      "batch": 1,
+      "preparation_ms_per_query": 0.1066932504278763,
+      "fraction_of_end_to_end": 0.05294433763723679,
+      "end_to_end_mean_ms_per_query": 2.0151966232709433
+    },
+    {
+      "threads": 8,
+      "batch": 32,
+      "preparation_ms_per_query": 0.010618807330805188,
+      "fraction_of_end_to_end": 0.011930334756345235,
+      "end_to_end_mean_ms_per_query": 0.8900678436669598
+    }
+  ]
+}

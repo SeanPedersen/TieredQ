@@ -1,0 +1,1 @@
+Timing session superseded at a completed-cell boundary because the user requested GloVe-1M instead of GloVe-100K as the primary comparison. Existing measurements are retained here and will not be mixed with the restarted final timing session. The 100K accuracy/memory results remain a scaling appendix and evidence for issue #38.

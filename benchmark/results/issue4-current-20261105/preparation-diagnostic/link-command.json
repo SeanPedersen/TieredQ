@@ -1,0 +1,20 @@
+[
+  "/usr/bin/c++",
+  "-fPIC",
+  "-O3",
+  "-DNDEBUG",
+  "-shared",
+  "-Wl,-s",
+  "-Wl,--gc-sections",
+  "-o",
+  "/home/sean/experiments/TieredQ-issue4-current-20261105/preparation-build/codec_preparation.cpython-312-x86_64-linux-gnu.so",
+  "/home/sean/experiments/TieredQ-issue4-current-20261105/preparation-build/module.cpp.o",
+  "libnanobind-static.a",
+  "/home/sean/experiments/TieredQ-issue4-current-20261105/preparation-build/tieredq_index.cpp.o",
+  "tieredq/libdv_tieredq.a",
+  "/usr/lib/libopenblas.so",
+  "/usr/lib/libgomp.so",
+  "/usr/lib/libpthread.a",
+  "-ldl",
+  "/usr/lib/liburing.so"
+]

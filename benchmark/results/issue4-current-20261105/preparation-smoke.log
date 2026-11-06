@@ -1,0 +1,44 @@
+sift tieredq fast-native-metric-l2 b=4 seed=0 k=10 t=1 batch=1: {'recall10': 0.9485714285714284, 'qps': 20304.60761384685, 'p50_ms': 0.05119699926581234, 'p95_ms': 0.05260220495983958}
+sift tieredq fast-native-metric-l2 b=4 seed=0 k=10 t=1 batch=32: {'recall10': 0.9485714285714284, 'qps': 106105.29725539492, 'p50_ms': 0.268584000878036, 'p95_ms': 0.2951640053652227}
+sift tieredq fast-native-metric-l2 b=4 seed=0 k=10 t=8 batch=1: {'recall10': 0.9485714285714284, 'qps': 29967.421030731886, 'p50_ms': 0.032373995054513216, 'p95_ms': 0.03689419536385685}
+sift tieredq fast-native-metric-l2 b=4 seed=0 k=10 t=8 batch=32: {'recall10': 0.9485714285714284, 'qps': 39640.14312905739, 'p50_ms': 0.6332789926091209, 'p95_ms': 1.0058320040116087}
+sift qdrant qdrant-turboquant-plus b=1 seed=0 k=10 t=1 batch=1: {'recall10': 0.4914285714285714, 'qps': 37991.37736845642, 'p50_ms': 0.02527599281165749, 'p95_ms': 0.028964999364688993}
+sift qdrant qdrant-turboquant-plus b=1 seed=0 k=10 t=1 batch=32: {'recall10': 0.4914285714285714, 'qps': 42753.0002519659, 'p50_ms': 0.7551769958809018, 'p95_ms': 0.7574629998998716}
+sift qdrant qdrant-turboquant-plus b=1 seed=0 k=10 t=8 batch=1: {'recall10': 0.4914285714285714, 'qps': 38448.3018600251, 'p50_ms': 0.02550300268922001, 'p95_ms': 0.028908991953358054}
+sift qdrant qdrant-turboquant-plus b=1 seed=0 k=10 t=8 batch=32: {'recall10': 0.4914285714285714, 'qps': 75977.39463952844, 'p50_ms': 0.32380899938289076, 'p95_ms': 0.464376003947109}
+sift qdrant qdrant-turboquant-plus b=2 seed=0 k=10 t=1 batch=1: {'recall10': 0.6885714285714286, 'qps': 47727.967203527485, 'p50_ms': 0.0202410010388121, 'p95_ms': 0.023211806546896696}
+sift qdrant qdrant-turboquant-plus b=2 seed=0 k=10 t=1 batch=32: {'recall10': 0.6885714285714286, 'qps': 62735.2573307588, 'p50_ms': 0.49788999604061246, 'p95_ms': 0.522987000294961}
+sift qdrant qdrant-turboquant-plus b=2 seed=0 k=10 t=8 batch=1: {'recall10': 0.6885714285714286, 'qps': 48556.19427869142, 'p50_ms': 0.02028699964284897, 'p95_ms': 0.020902801770716906}
+sift qdrant qdrant-turboquant-plus b=2 seed=0 k=10 t=8 batch=32: {'recall10': 0.6885714285714286, 'qps': 90912.00325247615, 'p50_ms': 0.32328200177289546, 'p95_ms': 0.344883999787271}
+sift qdrant qdrant-turboquant-plus b=4 seed=0 k=10 t=1 batch=1: {'recall10': 0.9142857142857143, 'qps': 30656.692926003463, 'p50_ms': 0.031584000680595636, 'p95_ms': 0.03772320051211864}
+sift qdrant qdrant-turboquant-plus b=4 seed=0 k=10 t=1 batch=32: {'recall10': 0.9142857142857143, 'qps': 40696.90131695603, 'p50_ms': 0.778336005168967, 'p95_ms': 0.7893300062278286}
+sift qdrant qdrant-turboquant-plus b=4 seed=0 k=10 t=8 batch=1: {'recall10': 0.9142857142857143, 'qps': 30947.625194435805, 'p50_ms': 0.03124200156889856, 'p95_ms': 0.04069459973834455}
+sift qdrant qdrant-turboquant-plus b=4 seed=0 k=10 t=8 batch=32: {'recall10': 0.9142857142857143, 'qps': 87798.95576512902, 'p50_ms': 0.2621449966682121, 'p95_ms': 0.46693600597791374}
+FhtKacRotator is selected
+sift rabitq flat-fht-native-bounds-hacc b=4 seed=0 k=10 t=1 batch=1: {'recall10': 0.8999999999999998, 'qps': 48042.32114410947, 'p50_ms': 0.02037599915638566, 'p95_ms': 0.02246899821329862}
+sift rabitq flat-fht-native-bounds-hacc b=4 seed=0 k=10 t=1 batch=32: {'recall10': 0.8999999999999998, 'qps': 62113.74823238831, 'p50_ms': 0.5250400135992095, 'p95_ms': 0.5291429988574237}
+sift rabitq flat-fht-native-bounds-hacc b=4 seed=0 k=10 t=8 batch=1: {'recall10': 0.8999999999999998, 'qps': 51584.60627790211, 'p50_ms': 0.01912500010803342, 'p95_ms': 0.021196992020122707}
+sift rabitq flat-fht-native-bounds-hacc b=4 seed=0 k=10 t=8 batch=32: {'recall10': 0.8999999999999998, 'qps': 59259.45920822925, 'p50_ms': 0.4686410102294758, 'p95_ms': 0.4803409974556416}
+FhtKacRotator is selected
+glove tieredq fast-native b=4 seed=0 k=10 t=1 batch=1: {'recall10': 0.9428571428571428, 'qps': 27711.373338628477, 'p50_ms': 0.03583599755074829, 'p95_ms': 0.03743700799532235}
+glove tieredq fast-native b=4 seed=0 k=10 t=1 batch=32: {'recall10': 0.9428571428571428, 'qps': 41038.53314348327, 'p50_ms': 0.7602979894727468, 'p95_ms': 0.7966929988469929}
+glove tieredq fast-native b=4 seed=0 k=10 t=8 batch=1: {'recall10': 0.9428571428571428, 'qps': 29087.347011225327, 'p50_ms': 0.03480800660327077, 'p95_ms': 0.037447805516421795}
+glove tieredq fast-native b=4 seed=0 k=10 t=8 batch=32: {'recall10': 0.9428571428571428, 'qps': 34825.03886308655, 'p50_ms': 0.8175339899025857, 'p95_ms': 0.9373460052302107}
+glove qdrant qdrant-turboquant-plus b=1 seed=0 k=10 t=1 batch=1: {'recall10': 0.3885714285714286, 'qps': 22106.61769096685, 'p50_ms': 0.044693006202578545, 'p95_ms': 0.04879740590695292}
+glove qdrant qdrant-turboquant-plus b=1 seed=0 k=10 t=1 batch=32: {'recall10': 0.3885714285714286, 'qps': 38423.944558292555, 'p50_ms': 0.8249490056186914, 'p95_ms': 0.8333080040756613}
+glove qdrant qdrant-turboquant-plus b=1 seed=0 k=10 t=8 batch=1: {'recall10': 0.3885714285714286, 'qps': 36499.97857352591, 'p50_ms': 0.025920002372004092, 'p95_ms': 0.030818799859844148}
+glove qdrant qdrant-turboquant-plus b=1 seed=0 k=10 t=8 batch=32: {'recall10': 0.3885714285714286, 'qps': 70847.38189978177, 'p50_ms': 0.38694099930580705, 'p95_ms': 0.48488999891560525}
+glove qdrant qdrant-turboquant-plus b=2 seed=0 k=10 t=1 batch=1: {'recall10': 0.6485714285714286, 'qps': 23661.028084089343, 'p50_ms': 0.04074299067724496, 'p95_ms': 0.047760800225660205}
+glove qdrant qdrant-turboquant-plus b=2 seed=0 k=10 t=1 batch=32: {'recall10': 0.6485714285714286, 'qps': 29683.959146915946, 'p50_ms': 1.0663959983503446, 'p95_ms': 1.0817440052051097}
+glove qdrant qdrant-turboquant-plus b=2 seed=0 k=10 t=8 batch=1: {'recall10': 0.6485714285714286, 'qps': 24402.85642107416, 'p50_ms': 0.04024599911645055, 'p95_ms': 0.044266396434977644}
+glove qdrant qdrant-turboquant-plus b=2 seed=0 k=10 t=8 batch=32: {'recall10': 0.6485714285714286, 'qps': 62907.17380438712, 'p50_ms': 0.41624699952080846, 'p95_ms': 0.5867689906153828}
+glove qdrant qdrant-turboquant-plus b=4 seed=0 k=10 t=1 batch=1: {'recall10': 0.8485714285714284, 'qps': 25834.833743222225, 'p50_ms': 0.03429500793572515, 'p95_ms': 0.05329260020516813}
+glove qdrant qdrant-turboquant-plus b=4 seed=0 k=10 t=1 batch=32: {'recall10': 0.8485714285714284, 'qps': 45467.024028417574, 'p50_ms': 0.7015289884293452, 'p95_ms': 0.7186550064943731}
+glove qdrant qdrant-turboquant-plus b=4 seed=0 k=10 t=8 batch=1: {'recall10': 0.8485714285714284, 'qps': 39605.37744344936, 'p50_ms': 0.025016997824423015, 'p95_ms': 0.025595197803340852}
+glove qdrant qdrant-turboquant-plus b=4 seed=0 k=10 t=8 batch=32: {'recall10': 0.8485714285714284, 'qps': 81134.45918556265, 'p50_ms': 0.3164450026815757, 'p95_ms': 0.4713560047093779}
+FhtKacRotator is selected
+glove rabitq flat-fht-native-bounds-hacc b=4 seed=0 k=10 t=1 batch=1: {'recall10': 0.9028571428571427, 'qps': 43550.06924982099, 'p50_ms': 0.022038002498447895, 'p95_ms': 0.0278376042842865}
+glove rabitq flat-fht-native-bounds-hacc b=4 seed=0 k=10 t=1 batch=32: {'recall10': 0.9028571428571427, 'qps': 58851.65208357037, 'p50_ms': 0.5322340002749115, 'p95_ms': 0.5690590041922405}
+glove rabitq flat-fht-native-bounds-hacc b=4 seed=0 k=10 t=8 batch=1: {'recall10': 0.9028571428571427, 'qps': 47625.44095025081, 'p50_ms': 0.020487001165747643, 'p95_ms': 0.026087794685736295}
+glove rabitq flat-fht-native-bounds-hacc b=4 seed=0 k=10 t=8 batch=32: {'recall10': 0.9028571428571427, 'qps': 76773.9715536629, 'p50_ms': 0.24124699120875448, 'p95_ms': 0.3176910104230046}
+FhtKacRotator is selected

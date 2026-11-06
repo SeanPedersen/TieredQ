@@ -1,0 +1,42 @@
+{
+  "dataset": "gemini",
+  "codec": "qdrant",
+  "base_n": 99000,
+  "queries": 1000,
+  "index_diagnostics": null,
+  "target_bits": 1,
+  "code_bits": 0,
+  "available": true,
+  "search_ids_equal": true,
+  "method": "Separate native preparation-only diagnostic, including call overhead; three warmups and repeats",
+  "schedules": [
+    {
+      "threads": 1,
+      "batch": 1,
+      "preparation_ms_per_query": 0.013697443127360506,
+      "fraction_of_end_to_end": 0.0031828547905258385,
+      "end_to_end_mean_ms_per_query": 4.303508651457378
+    },
+    {
+      "threads": 1,
+      "batch": 32,
+      "preparation_ms_per_query": 0.011302850990129324,
+      "fraction_of_end_to_end": 0.002750824856482623,
+      "end_to_end_mean_ms_per_query": 4.1088951786562875
+    },
+    {
+      "threads": 8,
+      "batch": 1,
+      "preparation_ms_per_query": 0.01449342664758054,
+      "fraction_of_end_to_end": 0.003496890154300165,
+      "end_to_end_mean_ms_per_query": 4.144661687401822
+    },
+    {
+      "threads": 8,
+      "batch": 32,
+      "preparation_ms_per_query": 0.0049310086615150794,
+      "fraction_of_end_to_end": 0.008850267207289297,
+      "end_to_end_mean_ms_per_query": 0.5571592976824224
+    }
+  ]
+}

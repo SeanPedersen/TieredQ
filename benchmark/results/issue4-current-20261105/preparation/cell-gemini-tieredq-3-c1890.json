@@ -1,0 +1,83 @@
+{
+  "dataset": "gemini",
+  "codec": "tieredq",
+  "base_n": 99000,
+  "queries": 1000,
+  "index_diagnostics": {
+    "tiers": [
+      {
+        "start": 0,
+        "dimensions": 22,
+        "bits": 6
+      },
+      {
+        "start": 22,
+        "dimensions": 110,
+        "bits": 5
+      },
+      {
+        "start": 132,
+        "dimensions": 135,
+        "bits": 4
+      },
+      {
+        "start": 267,
+        "dimensions": 116,
+        "bits": 3
+      },
+      {
+        "start": 383,
+        "dimensions": 110,
+        "bits": 2
+      },
+      {
+        "start": 493,
+        "dimensions": 98,
+        "bits": 1
+      }
+    ],
+    "coded_dimensions": 591,
+    "packed_code_bytes": 236,
+    "vector_bytes": 241,
+    "allocated_vector_bytes": 23958640,
+    "model_serialized_bytes": 1701236,
+    "model_memory_bytes": 5652952,
+    "model_serving_memory_bytes": 1718912,
+    "scalar_fast_scan": false
+  },
+  "target_bits": 3,
+  "code_bits": 1890,
+  "available": true,
+  "search_ids_equal": true,
+  "method": "Separate native preparation-only diagnostic, including call overhead; three warmups and repeats",
+  "schedules": [
+    {
+      "threads": 1,
+      "batch": 1,
+      "preparation_ms_per_query": 0.0903655182919465,
+      "fraction_of_end_to_end": 0.057240012441002686,
+      "end_to_end_mean_ms_per_query": 1.578712415289677
+    },
+    {
+      "threads": 1,
+      "batch": 32,
+      "preparation_ms_per_query": 0.050013354930949085,
+      "fraction_of_end_to_end": 0.04678347631137599,
+      "end_to_end_mean_ms_per_query": 1.069038875992798
+    },
+    {
+      "threads": 8,
+      "batch": 1,
+      "preparation_ms_per_query": 0.08039117657851118,
+      "fraction_of_end_to_end": 0.23193232771651057,
+      "end_to_end_mean_ms_per_query": 0.34661479652277194
+    },
+    {
+      "threads": 8,
+      "batch": 32,
+      "preparation_ms_per_query": 0.010151885692418242,
+      "fraction_of_end_to_end": 0.06612575929019336,
+      "end_to_end_mean_ms_per_query": 0.15352391868752116
+    }
+  ]
+}

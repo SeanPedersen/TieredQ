@@ -1,0 +1,66 @@
+test_batched_search_matches_serial_and_storage_exists (test_native.NativeTests.test_batched_search_matches_serial_and_storage_exists) ... FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+ok
+test_exact_code_budget_sets_tieredq_tiers (test_native.NativeTests.test_exact_code_budget_sets_tieredq_tiers) ... ok
+test_exact_scores_need_the_fast_index (test_native.NativeTests.test_exact_scores_need_the_fast_index) ... ok
+test_flat_storage_has_no_per_vector_id_array (test_native.NativeTests.test_flat_storage_has_no_per_vector_id_array) ... FhtKacRotator is selected
+FhtKacRotator is selected
+ok
+test_native_l2_metric_ranks_like_exact_l2 (test_native.NativeTests.test_native_l2_metric_ranks_like_exact_l2) ... ok
+test_rabitq_native_l2_uses_original_norms (test_native.NativeTests.test_rabitq_native_l2_uses_original_norms) ... FhtKacRotator is selected
+ok
+test_saved_index_reloads_with_identical_results (test_native.NativeTests.test_saved_index_reloads_with_identical_results) ... FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+ok
+test_tieredq_variants_search_deeper_than_ten (test_native.NativeTests.test_tieredq_variants_search_deeper_than_ten) ... FhtKacRotator is selected
+ok
+test_official_defaults_match_adapter_for_all_budgets_and_metrics (test_reference.ReferenceTests.test_official_defaults_match_adapter_for_all_budgets_and_metrics) ... FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+FhtKacRotator is selected
+ok
+test_batch_tail_and_recall (test_benchmark.BenchmarkTests.test_batch_tail_and_recall) ... ok
+test_chunked_truth_matches_direct_l2_and_cosine (test_benchmark.BenchmarkTests.test_chunked_truth_matches_direct_l2_and_cosine) ... ok
+test_deep_truth_extends_cached_truth_and_recall_reads_its_depth (test_benchmark.BenchmarkTests.test_deep_truth_extends_cached_truth_and_recall_reads_its_depth) ... Exact FP32 truth@100: openai (500, 8), queries=7
+Exact FP32 truth@100: other (500, 8), queries=7
+ok
+test_download_checks_cached_source_without_overwriting (test_benchmark.BenchmarkTests.test_download_checks_cached_source_without_overwriting) ... ok
+test_l2_lift_preserves_exact_rankings (test_benchmark.BenchmarkTests.test_l2_lift_preserves_exact_rankings) ... ok
+test_query_metric_lift_handles_rank_deficient_calibration (test_benchmark.BenchmarkTests.test_query_metric_lift_handles_rank_deficient_calibration) ... ok
+test_query_metric_lift_preserves_scores_and_times_the_query_transform (test_benchmark.BenchmarkTests.test_query_metric_lift_preserves_scores_and_times_the_query_transform) ... ok
+test_companion_delta_is_tieredq_minus_reference (test_match_memory.CompanionRecallTest.test_companion_delta_is_tieredq_minus_reference) ... ok
+test_omits_companion_recall_for_cells_without_it (test_match_memory.CompanionRecallTest.test_omits_companion_recall_for_cells_without_it) ... ok
+test_summarises_companion_recall_when_every_cell_has_it (test_match_memory.CompanionRecallTest.test_summarises_companion_recall_when_every_cell_has_it) ... ok
+test_gives_up_after_bounded_step_downs (test_match_memory.ConfirmTest.test_gives_up_after_bounded_step_downs) ... ok
+test_no_candidates_measures_nothing (test_match_memory.ConfirmTest.test_no_candidates_measures_nothing) ... ok
+test_steps_below_cached_budgets_when_seed_noise_overshoots (test_match_memory.ConfirmTest.test_steps_below_cached_budgets_when_seed_noise_overshoots) ... ok
+test_reload_preserves_top10 (__main__.QdrantSmoke.test_reload_preserves_top10) ... ok
+
+----------------------------------------------------------------------
+Ran 23 tests in 7.445s
+
+OK

@@ -1,0 +1,38 @@
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-sift-rabitq-4-0: disk 672.0, peak RAM 676.8 bits/vector
+sift rabitq 4 cached seed-0 recall and disk verified
+cell-sift-qdrant-4-0: disk 608.0, peak RAM 615.5 bits/vector
+sift qdrant 4 cached seed-0 recall and disk verified
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-glove-rabitq-4-0: disk 1184.1, peak RAM 1232.7 bits/vector
+glove rabitq 4 cached seed-0 recall and disk verified
+cell-glove-qdrant-4-0: disk 864.4, peak RAM 935.5 bits/vector
+glove qdrant 4 cached seed-0 recall and disk verified
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-openai-rabitq-4-0: disk 6304.6, peak RAM 6383.5 bits/vector
+openai rabitq 4 cached seed-0 recall and disk verified
+cell-openai-qdrant-4-0: disk 6210.6, peak RAM 6302.6 bits/vector
+openai qdrant 4 cached seed-0 recall and disk verified
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-gemini-rabitq-4-0: disk 3232.4, peak RAM 3280.1 bits/vector
+gemini rabitq 4 cached seed-0 recall and disk verified
+cell-gemini-qdrant-4-0: disk 3137.3, peak RAM 3217.2 bits/vector
+gemini qdrant 4 cached seed-0 recall and disk verified
+FhtKacRotator is selected
+FhtKacRotator is selected
+Traceback (most recent call last):
+  File "/home/sean/experiments/TieredQ-issue4-current-20261105/source/benchmark/experiments/issue4_current/reference_builds.py", line 24, in <module>
+    new = fresh.measure(ds, codec, a.bits, 0)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sean/experiments/TieredQ-issue4-current-20261105/source/benchmark/match_memory.py", line 56, in measure
+    row = {name: "" if value is None else str(value) for name, value in run_cell(spec, self.output, self.env).items()}
+                                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sean/experiments/TieredQ-issue4-current-20261105/source/benchmark/measure_memory.py", line 226, in run_cell
+    subprocess.run([sys.executable, str(HERE / "measure_memory.py"), "--worker", phase,
+  File "/home/sean/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['/home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python', '/home/sean/experiments/TieredQ-issue4-current-20261105/source/benchmark/measure_memory.py', '--worker', 'serve', '--spec', '{"dataset": "openai1m", "codec": "rabitq", "bits": 4, "seed": 0, "data": "/home/sean/experiments/TieredQ-issue4-current-20261105/data", "quick": true}', '--cell', '/home/sean/experiments/TieredQ-issue4-current-20261105/reference-build-b4/cell-openai1m-rabitq-4-0']' died with <Signals.SIGBUS: 7>.

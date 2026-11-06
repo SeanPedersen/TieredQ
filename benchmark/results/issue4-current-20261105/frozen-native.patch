@@ -1,0 +1,19 @@
+--- a/benchmark/native_build.py
++++ b/benchmark/native_build.py
+@@ -24,6 +24,16 @@
+ 
+ 
+ def build_native(full_score=False):
++    marker = HERE/"issue4-prebuilt.json"
++    if marker.exists() and not full_score:
++        import hashlib
++        saved = json.loads(marker.read_text())
++        module = Path(saved["module"])
++        if hashlib.file_digest(module.open("rb"), "sha256").hexdigest() != saved["sha256"]:
++            raise RuntimeError("Frozen issue4 adapter hash changed")
++        directory = HERE/"build-native"
++        commands = audit_compile_commands(json.loads((directory/"compile_commands.json").read_text()))
++        return NativeBuild(directory, HERE/".deps/rabitq-native", commands)
+     deps = HERE/".deps"
+     deps.mkdir(exist_ok=True)
+     directory = HERE/("build-full-score" if full_score else "build-native")

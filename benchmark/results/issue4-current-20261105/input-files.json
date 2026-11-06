@@ -1,0 +1,152 @@
+{
+  "sift-1000000-1000-v2.npz": {
+    "source": "/home/sean/experiments/TieredQ-issue4-current-20261105/recovered-cache/sift-1000000-1000-v2.npz",
+    "bytes": 512552750,
+    "shapes": {
+      "base": [
+        1000000,
+        128
+      ],
+      "queries": [
+        1000,
+        128
+      ],
+      "truth": [
+        1000,
+        10
+      ]
+    },
+    "sha256": "73402b14388036a7bd7e206805077198d534a5399aacb285faa52f6f298bd2cd"
+  },
+  "glove-100000-1000-v2.npz": {
+    "source": "/home/sean/experiments/TieredQ-issue4-current-20261105/recovered-cache/glove-100000-1000-v2.npz",
+    "bytes": 80840750,
+    "shapes": {
+      "base": [
+        100000,
+        200
+      ],
+      "queries": [
+        1000,
+        200
+      ],
+      "truth": [
+        1000,
+        10
+      ]
+    },
+    "sha256": "16fc87a7dfe1c3ba4b2d699ed6a081b2281796d79d1c89c3f1692859355bedbc"
+  },
+  "openai-100000-1000-v2.npz": {
+    "source": "/home/sean/experiments/TieredQ-issue4-precheck-20261105/cache/openai-100000-1000-v2.npz",
+    "bytes": 620584750,
+    "shapes": {
+      "base": [
+        100000,
+        1536
+      ],
+      "queries": [
+        1000,
+        1536
+      ],
+      "truth": [
+        1000,
+        10
+      ]
+    },
+    "sha256": "4180a7f53936222fd8612ea1796e73db747ef57bd5e0acc3a14e6317cde221f3"
+  },
+  "gemini-prepared.npz": {
+    "source": "/home/sean/experiments/TieredQ-issue4-precheck-20261105/cache/gemini-prepared.npz",
+    "bytes": 307240750,
+    "shapes": {
+      "base": [
+        99000,
+        768
+      ],
+      "queries": [
+        1000,
+        768
+      ],
+      "truth": [
+        1000,
+        10
+      ]
+    },
+    "sha256": "88cd5c383ec84c896e56df497f09cc905c493df1782736597d4a8aa0fe445f05"
+  },
+  "openai1m-999000-1000-v2.npz": {
+    "source": "/home/sean/experiments/TieredQ-issue4-1m-20261030/data/openai1m-999000-1000-v2.npz",
+    "bytes": 6144040870,
+    "shapes": {
+      "base": [
+        999000,
+        1536
+      ],
+      "queries": [
+        1000,
+        1536
+      ],
+      "truth": [
+        1000,
+        10
+      ]
+    },
+    "sha256": "71ef455ffcfdb9bf3e49c85574db3b01bab0d69b69dbb75f3e554c833a3de947"
+  },
+  "msmarco1m-1000000-1000-v1.npz": {
+    "source": "/home/sean/experiments/TieredQ-issue22-msmarco-20261031/data/msmarco1m-1000000-1000-v1.npz",
+    "bytes": 4133050164,
+    "shapes": {
+      "base": [
+        1000000,
+        1024
+      ],
+      "base_ids": [
+        1000000
+      ],
+      "real": [
+        1000,
+        1024
+      ],
+      "real_ids": [
+        1000
+      ],
+      "doc": [
+        1000,
+        1024
+      ],
+      "doc_ids": [
+        1000
+      ],
+      "truth_real": [
+        1000,
+        100
+      ],
+      "truth_doc": [
+        1000,
+        100
+      ]
+    },
+    "sha256": "dcc6d18e76d03d503316e204417053b82d7b74dfca15341a74f7f18b82805a10"
+  },
+  "glove1m-1000000-1000-v1.npz": {
+    "source": "/home/sean/experiments/TieredQ-issue4-current-20261105/data/glove1m-1000000-1000-v1.npz",
+    "bytes": 800840750,
+    "shapes": {
+      "base": [
+        1000000,
+        200
+      ],
+      "queries": [
+        1000,
+        200
+      ],
+      "truth": [
+        1000,
+        10
+      ]
+    },
+    "sha256": "e21c9f551c96dbd70fbc9325a3e818d8c02c8c9efc090f829566de8acc624170"
+  }
+}

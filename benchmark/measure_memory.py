@@ -255,7 +255,7 @@ def prepare_native():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--datasets", nargs="+", choices=DATASETS, default=DATASETS)
+    parser.add_argument("--datasets", nargs="+", choices=DATASETS+["glove1m"], default=DATASETS)
     parser.add_argument("--codecs", nargs="+", choices=CODECS + OPTIONAL_CODECS, default=CODECS)
     parser.add_argument("--bits", nargs="+", type=int, choices=SUPPORTED_BITS, default=BIT_BUDGETS)
     parser.add_argument("--seeds", nargs="+", type=int, default=[0])

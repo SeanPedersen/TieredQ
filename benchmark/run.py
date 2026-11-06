@@ -132,7 +132,7 @@ def recall_pass(index, probes, truth, k):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--datasets", nargs="+", choices=["sift", "glove", "openai", "gemini", "openai1m", "msmarco1m", "msmarco1m-doc"], default=["sift", "glove", "openai"])
+    parser.add_argument("--datasets", nargs="+", choices=["sift", "glove", "glove1m", "openai", "gemini", "openai1m", "msmarco1m", "msmarco1m-doc"], default=["sift", "glove", "openai"])
     parser.add_argument("--bits", nargs="+", type=int, choices=BIT_BUDGETS, default=[1,2,4,8], metavar="{1..8}")
     parser.add_argument("--threads", nargs="+", type=int, choices=THREAD_COUNTS, default=[1,8])
     parser.add_argument("--batches", nargs="+", type=int, choices=BATCH_SIZES, default=[1,32])

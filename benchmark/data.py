@@ -50,6 +50,9 @@ def prepare(root, name, max_base=None, query_count=QUERY_COUNT):
     if name == "openai1m":
         from openai1m_data import prepare_openai1m
         return prepare_openai1m(root, max_base, query_count)
+    if name == "glove1m":
+        from glove1m_data import prepare_glove1m
+        return prepare_glove1m(root, max_base, query_count)
     if name in {"msmarco1m", "msmarco1m-doc"}:
         from msmarco1m_data import prepare_msmarco1m
         return prepare_msmarco1m(root, "doc" if name.endswith("-doc") else "real", max_base, query_count)

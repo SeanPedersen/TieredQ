@@ -1,0 +1,25 @@
+{
+  "native_configurations": 12,
+  "metrics": [
+    "cosine",
+    "l2"
+  ],
+  "bits": [
+    1,
+    2,
+    4
+  ],
+  "codecs": [
+    "tieredq",
+    "rabitq"
+  ],
+  "threads": [
+    1,
+    8
+  ],
+  "batches": [
+    1,
+    32
+  ],
+  "search_ids_equal": true
+}

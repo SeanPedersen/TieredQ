@@ -1,0 +1,774 @@
+    PID PSR %CPU   RSS     ELAPSED COMMAND
+3396643  11  200  4308       00:00 ps -eo pid,psr,pcpu,rss,etime,args --sort=-pcpu
+3396641  16 61.5 18756       00:00 /home/sean/experiments/TieredQ-issue4-range-refresh-20261027-Rkn542/source/benchmark/.venv/bin/python -u /home/sean/experiments/TieredQ-issue4-current-20261105/source/benchmark/experiments/issue4_current/timing.py /home/sean/experiments/TieredQ-issue4-current-20261105
+   1893  35  5.1 198220 1-06:44:35 /usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock
+   1362   6  4.9 83908  1-06:44:49 /usr/bin/containerd
+1929568   1  4.1 490144   05:40:43 /home/sean/.npm-global/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/bin/codex --yolo
+1392239   3  2.7 20752  1-00:29:23 btop
+2942668  17  2.7 34524    18:04:40 btop
+   2203  30  2.2 167484 1-06:44:34 /usr/bin/kwin_wayland --wayland-fd 7 --socket wayland-1 --xwayland-fd 8 --xwayland-fd 9 --xwayland-display :0 --xwayland-initfd 11 --xwayland-init-display :1 --xwayland-xauthority /run/user/1000/xauth_rdQRhV --xwayland
+   2243   3  1.3 271276 1-06:44:34 /usr/bin/plasmashell --no-respawn
+    464  17  1.2     0  1-06:57:19 [nv_queue]
+1344364  16  1.1 51512  1-00:42:00 /usr/bin/zellij --server /tmp/zellij-1000/contract_version_1/sincere-drum
+2942194   4  0.9 13780    18:04:41 mosh-server new -c 256 -s -l LANG=en_US.UTF-8
+1391707  14  0.8  9640  1-00:29:25 mosh-server new -c 256 -s -l LANG=en_US.UTF-8
+1887638  34  0.8 62120    22:32:36 redis-server *:6379
+   1494   3  0.8 223072 1-06:44:49 /home/sean/.hermes/tools/python-3.14.7+20260901-linux-x64/bin/python3 -I -c import os, re, sys import contextlib, hashlib, io, pathlib, shutil, subprocess os.environ.pop('PYTHONHOME', None) os.environ.pop('PYTHONPATH', None) sys.path.insert(0, '/home/sean/.hermes/hermes-agent') def _hermes_closure_repair():     import contextlib, hashlib, io, shutil, subprocess     from pathlib import Path     root = Path('/home/sean/.hermes/hermes-agent')     git = root / '.git'     try:         if git.is_file():             text = git.read_text(encoding='utf-8-sig').strip()             git = root / text[7:].strip() if text.startswith('gitdir:') else git         fields = dict(line.partition('=')[::2] for line in (git / 'hermes-update-pull').read_text(encoding='utf-8-sig').splitlines())     except OSError:         return     pre = fields.get('pre', '').strip()     if not re.fullmatch('[0-9a-f]{40}|[0-9a-f]{64}', pre):         return     closure = git / 'hermes-update-recovery' / pre     files = (*('hermes_cli/_early_recovery.py', 'hermes_cli/update_lock.py', 'hermes_cli/update_custody.py'), 'hermes_cli/__init__.py')      def blob_id(data):         return hashlib.new('sha1' if len(pre) == 40 else 'sha256', b'blob %d\0' % len(data) + data).hexdigest()      def verified():         try:             listed = dict(line.split(' ', 1)[::-1] for line in (closure / 'MANIFEST').read_text(encoding='utf-8-sig').splitlines())             return (set(listed) == set(files) and listed['hermes_cli/__init__.py'] == blob_id(b'')                     and all(blob_id((closure / rel).read_bytes()) == oid for rel, oid in listed.items()))         except (OSError, ValueError):             return False      if not verified():         exe = fields.get('git', '').strip()         if not (os.path.isabs(exe) and os.path.isfile(exe)):             names = ('git.exe',) if os.name == 'nt' else ('git',)             exe = next((os.path.join(d, n) for d in os.environ.get('PATH', '').split(os.pathsep) if os.path.isabs(d)                         for n in names if os.path.isfile(os.path.join(d, n))), '')         if not exe:             return          def git_out(*args):             done = subprocess.run([exe, '--no-replace-objects', '-C', str(root), *args], capture_output=True, timeout=60,                                   stdin=subprocess.DEVNULL, creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))             if done.returncode != 0:                 raise OSError(done.stderr)             return done.stdout          staging = closure.with_name('.%s.%d.launch' % (pre, os.getpid()))         try:             ids = {}             for entry in git_out('ls-tree', '-z', '--full-tree', pre, '--', *('hermes_cli/_early_recovery.py', 'hermes_cli/update_lock.py', 'hermes_cli/update_custody.py')).split(b'\0'):                 meta, _, rel = entry.decode('utf-8', 'replace').partition('\t')                 if meta.split()[1:2] == ['blob']:                     ids[rel] = meta.split()[2]             blobs = {'hermes_cli/__init__.py': b''}             for rel in ('hermes_cli/_early_recovery.py', 'hermes_cli/update_lock.py', 'hermes_cli/update_custody.py'):                 blobs[rel] = git_out('cat-file', 'blob', ids[rel])                 if blob_id(blobs[rel]) != ids[rel]:  # an object that inflates to bytes pre never had                     raise OSError('%s does not hash to %s' % (rel, ids[rel]))             blobs['MANIFEST'] = ''.join('%s %s\n' % (blob_id(data), rel) for rel, data in blobs.items()).encode('utf-8')             for rel, data in blobs.items():                 (staging / rel).parent.mkdir(parents=True, exist_ok=True)                 (staging / rel).write_bytes(data)             shutil.rmtree(closure, ignore_errors=True)             os.replace(staging, closure)         except (OSError, KeyError, subprocess.SubprocessError):             pass         finally:             shutil.rmtree(staging, ignore_errors=True)         if not verified():             return     for name in [n for n in sys.modules if n.split('.')[0] in ('hermes_cli', 'hermes_bootstrap', 'hermes_constants', 'pm')]:         del sys.modules[name]     tree = os.path.normcase(os.path.realpath(root))     sys.path[:] = [str(closure)] + [p for p in sys.path if p and os.path.normcase(os.path.realpath(p)) != tree                                     and not os.path.normcase(os.path.realpath(p)).startswith(tree + os.sep)]     sys.dont_write_bytecode = True     said = io.StringIO()     restored = False     try:         with contextlib.redirect_stderr(said):             from hermes_cli import _early_recovery             restored = _early_recovery.restore_interrupted_pull(root)     except Exception as exc:         said.write('hermes: the checkout cannot start after an interrupted `hermes update`, and it was not '                    'repaired: %s\n' % (exc,))     if restored:         sys.stderr.write('hermes: the checkout could not start after an interrupted `hermes update`; '                          'repaired it with the recovery code saved before the update.\n' + said.getvalue())         _early_recovery.relaunch_after_restore()     sys.stderr.write(said.getvalue() or 'hermes: the checkout cannot start after an interrupted `hermes update`; '                      'launch again once the update that owns it finishes.\n')     raise SystemExit(1) if sys.argv[1:2] == ['--print-runtime-command']:     sys.dont_write_bytecode = True     from pathlib import Path     try:         from hermes_cli import _early_recovery     except Exception as exc:         if _hermes_closure_repair() or not isinstance(exc, ImportError):             raise         _early_recovery = None  # a tree without the repair: the imports below report real damage     if _early_recovery is not None and _early_recovery.restore_interrupted_pull(Path('/home/sean/.hermes/hermes-agent')):         _early_recovery.relaunch_after_restore()     from hermes_constants import get_default_hermes_root     os.environ['HERMES_HOME'] = os.environ.get('HERMES_HOME') or str(get_default_hermes_root())     from hermes_cli._launchers import print_runtime_command     print_runtime_command(Path('/home/sean/.hermes/hermes-agent'), sys.argv[2:])     sys.exit(0) sys._hermes_pin_default_home = True try:     import hermes_bootstrap except Exception:     _hermes_closure_repair()     raise if not os.environ.get('HERMES_HOME'):     from hermes_constants import get_default_hermes_root     os.environ['HERMES_HOME'] = str(get_default_hermes_root()) if sys.argv[1:2] == ['--run-module']:     import runpy     if len(sys.argv) < 3: sys.exit('hermes: --run-module needs a module')     module = sys.argv.pop(2)     del sys.argv[1]     runpy.run_module(module, run_name='__main__', alter_sys=True)     sys.exit(0) from hermes_cli.main import main sys.argv[0] = re.sub(r'(-script\.pyw|\.exe)?$', '', sys.argv[0]) sys.exit(main())  gateway run
+   1350  22  0.7 80120  1-06:44:49 /usr/sbin/tailscaled --state=/var/lib/tailscale/tailscaled.state --socket=/run/tailscale/tailscaled.sock --port=41641
+   1199   4  0.6 10488  1-06:44:52 /usr/bin/ananicy-cpp start
+1751225   1  0.5 101260   23:01:22 node --dns-result-order=ipv4first --no-network-family-autoselection /app/server.js
+1345217   4  0.4 587448 1-00:41:55 /home/sean/.codex/packages/app-server-daemon/releases/0.166.0-x86_64-unknown-linux-musl/bin/codex app-server --listen unix:// -c features.api_key_model_discovery=false -c features.auth_elicitation=true -c features.code_mode_host=true -c features.mcp_oauth_refresh_coordination=false --managed-daemon
+   4773  12  0.3 44676  1-06:44:30 /usr/bin/cloudflared --no-autoupdate tunnel run --token-file /etc/cloudflared/token
+1909527   0  0.3 129380   22:27:45 /app/.venv/bin/python /app/.venv/bin/uvicorn drive_index.builder:app --host 0.0.0.0 --port 23242 --workers 1 --no-access-log
+1888864   4  0.3 132744   22:32:24 /app/.venv/bin/python -m rerank.worker --port 23239
+1887606   0  0.3 15244    22:32:36 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 6be893e16b32ba508ec2be7b0459922021b128567307b7a7f1564e39d04ecc1e -address /run/containerd/containerd.sock
+1918533  17  0.3 17620    22:26:15 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 1730aff59d22eebfd357115945345400da95e0f918d9dd804ee02c645a9a0934 -address /run/containerd/containerd.sock
+1919330  21  0.3 17344    22:26:10 /usr/bin/containerd-shim-runc-v2 -namespace moby -id ccf7459347d36a72130558f1f28b6d08bc4edcdc76bc9f7fde353ff368407c27 -address /run/containerd/containerd.sock
+1919545  15  0.3 17392    22:26:10 /usr/bin/containerd-shim-runc-v2 -namespace moby -id b3ab370a58f590d0346f712f1f8a3744d6878cc970ed3905795040d49099b5e5 -address /run/containerd/containerd.sock
+1887803  14  0.2 621952   22:32:36 python server.py
+1916916  33  0.2 74464    22:26:29 /app/.venv/bin/python /app/.venv/bin/uvicorn search:app --host 0.0.0.0 --port 23232 --no-access-log
+1751889   0  0.2  8924    23:01:15 redis-server *:6379
+1836223   6  0.2 125868   22:45:58 /usr/local/bin/gitea web
+   2914   0  0.2 15624  1-06:44:33 /usr/bin/ksystemstats
+1917189  17  0.1 193800   22:26:28 /app/.venv/bin/python /app/.venv/bin/uvicorn platform_svc.main:app --host 0.0.0.0 --port 23234
+1342297   5  0.1  6600  1-00:42:24 mosh-server new -c 256 -s -l LANG=en_US.UTF-8
+   1200   3  0.1 17528  1-06:44:52 /usr/bin/NetworkManager --no-daemon
+1751297   5  0.1 18212    23:01:21 /app/bin/collection-worker
+1917116  16  0.1 96344    22:26:28 /app/.venv/bin/python /app/.venv/bin/uvicorn app:app --host 0.0.0.0 --port 23237 --no-access-log
+1916996  15  0.1 52288    22:26:29 /app/.venv/bin/python /app/.venv/bin/uvicorn pinball:app --host 0.0.0.0 --port 23233
+   3987  15  0.1 17624  1-06:44:31 python /app/proxy_server.py
+   1324   2  0.1  5176  1-06:44:52 /usr/lib/systemd/systemd-oomd
+    613   4  0.1     0  1-06:45:00 [btrfs-transaction]
+   4000   3  0.1 119620 1-06:44:31 /w/bonsai2-grammar/build/bin/llama-server -m /w/models/Ternary-Bonsai-2-27B-Abliterated-PQ2_0.gguf -dev CUDA0 -ngl 99 -c 65536 -ctk q4_0 -ctv q4_0 -ub 256 -fa on -np 1 --backend-sampling --jinja --load-mode none --spec-type draft-mtp -md /w/models/mtp-bonsai2-native-v5b-dv64k.gguf -devd CUDA0 -ngld 99 -ctkd f16 -ctvd f16 --spec-draft-n-max 3 --spec-draft-p-min 0.4 --grammar-file /w/grammars/structured-cot-v4.gbnf --reasoning-format deepseek --temp 0.6 --top-p 0.95 --top-k 20 --min-p 0 --host 0.0.0.0 --port 8080
+   3874  22  0.1 13496  1-06:44:31 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 1e4852d2ddd378504395846f2216d0196f84dec6652ad9114b34e12e93c6e100 -address /run/containerd/containerd.sock
+1909501   4  0.1 17616    22:27:45 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 6f513fd8a2dcc610af09c8cb3576927153fba6aa9ec36ea0eb9124d4deb088fe -address /run/containerd/containerd.sock
+   3982  17  0.1 40872  1-06:44:31 tor -f /tmp/torrc.generated
+1887778   4  0.1 15164    22:32:36 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 5be0b3fdc7658893a472fa3c60f2bb74f1c696427d7c1a03551001cccb83b1b5 -address /run/containerd/containerd.sock
+1751864   3  0.1 15060    23:01:15 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 98c5443309933020b1926a238f4ee9fdb4034be1cc6b4c5b9e8c4b65890d79bc -address /run/containerd/containerd.sock
+    835  15  0.1  8280  1-06:44:59 /usr/lib/systemd/systemd-resolved
+    273  18  0.1     0  1-06:57:23 [kswapd0]
+   2212  14  0.1 29392  1-06:44:34 /usr/bin/kded6
+1724663   2  0.0 27124    23:06:19 glance
+1748809   7  0.0 25984    23:01:53 /agent
+1915681   0  0.0 679672   22:26:41 /app/llama-server --model /models/Qwen_Qwen3.5-4B-Q4_K_M.gguf --alias SemIf-Q4 --n-gpu-layers 999 --ctx-size 6144 --parallel 1 --cache-ram 0 --host 0.0.0.0 --port 8080 --jinja
+   1344   1  0.0  7704  1-06:44:50 /usr/bin/wpa_supplicant -u -s -O /run/wpa_supplicant
+    581   5  0.0     0  1-06:45:00 [dmcrypt_write/253:0]
+     16  32  0.0     0  1-06:57:25 [rcu_preempt]
+3386206   5  0.0     0       02:28 [kworker/u145:3-kcryptd-253:0-1]
+3348364  17  0.0     0       11:30 [kworker/u146:12-btrfs-endio-write]
+   3423   2  0.0 11516  1-06:44:31 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 8131468f5809e2d89bb3850c2af279e3c33981fbeb8484054b5e5cc2aaa5e17d -address /run/containerd/containerd.sock
+1915657   2  0.0 15136    22:26:41 /usr/bin/containerd-shim-runc-v2 -namespace moby -id af1915f616338560571775cb3ff701be4d236f1a677a7c30268ebb5f8ed58100 -address /run/containerd/containerd.sock
+3359989   1  0.0     0       08:43 [kworker/u144:1-leds]
+1751077  17  0.0 15452    23:01:22 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 9baa92c80fdc47f1503ea0012fd71e6ec3e9c61005ac12c28fcb64c2c7fd0cea -address /run/containerd/containerd.sock
+    454  16  0.0     0  1-06:57:20 [nvidia-modeset/kthread_q]
+3390643  20  0.0     0       01:24 [kworker/u145:12-kcryptd-253:0-1]
+   3839  17  0.0 11348  1-06:44:31 /usr/bin/containerd-shim-runc-v2 -namespace moby -id a539ff3c1379948fd4ba7cd8b776d14c57206dbea37be0a7ab24f2e5fa820bc4 -address /run/containerd/containerd.sock
+1724637   1  0.0 17288    23:06:19 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 91e5d398ce361f5a8417cba0b3708f857c336aea44b7fedac35543768b21e8be -address /run/containerd/containerd.sock
+   1198  14  0.0  5180  1-06:44:52 dbus-broker --log 10 --controller 9 --machine-id 526b72bb3c494c27b6ee80f37582b92c --max-bytes 536870912 --max-fds 4096 --max-matches 131072 --audit
+3384058  17  0.0     0       02:59 [kworker/u146:9-btrfs-endio-write]
+3384059   8  0.0     0       02:59 [kworker/u146:10-kcryptd-253:0-1]
+3348375  16  0.0     0       11:30 [kworker/u146:15-events_unbound]
+  14655  14  0.0  3176  1-06:42:09 /usr/lib/iwd/iwd
+   4023   1  0.0 100872 1-06:44:31 node server/dist/index.js
+3348374   3  0.0     0       11:30 [kworker/u146:14-btrfs-endio-write]
+3250312   0  0.0     0       34:51 [kworker/u144:0-rtw88_usb: tx wq]
+3384053  27  0.0     0       02:59 [kworker/u146:0-kcryptd-253:0-1]
+3385047  21  0.0     0       02:45 [kworker/u145:0-events_unbound]
+1344360  10  0.0 12532  1-00:42:00 zellij
+3386207   1  0.0     0       02:28 [kworker/u145:5-kcryptd-253:0-1]
+3384055  34  0.0     0       02:59 [kworker/u146:3-events_unbound]
+   2839  14  0.0 18196  1-06:44:33 /usr/lib/org_kde_powerdevil
+3296039   3  0.0     0       23:55 [kworker/u146:4-kcryptd-253:0-1]
+3296041  12  0.0     0       23:55 [kworker/u146:7-kcryptd-253:0-1]
+1759028   6  0.0 39852    22:59:44 /beszel serve --http=0.0.0.0:8090
+3348446  13  0.0     0       11:29 [kworker/u145:18-kcryptd-253:0-1]
+1916788   4  0.0 104148   22:26:29 python server.py
+2742060  11  0.0     0    02:35:48 [kworker/u146:6-kcryptd-253:0-1]
+3384060   5  0.0     0       02:59 [kworker/u146:11-btrfs-endio-write]
+3384056  17  0.0     0       02:59 [kworker/u146:5-kcryptd-253:0-1]
+3386212  17  0.0     0       02:28 [kworker/u145:11-btrfs-endio]
+      1   1  0.0 13576  1-06:57:25 /usr/lib/systemd/systemd --switched-root --system --deserialize=59 splash
+1836033   6  0.0 15588    22:45:58 /usr/bin/containerd-shim-runc-v2 -namespace moby -id b75dad7b2321702d410131c0ed81b5fb0be121b53351924d34b3936196310a17 -address /run/containerd/containerd.sock
+1748785  17  0.0 15644    23:01:53 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 3afabf88a7debe04f14d8f5c57a25a5f46083838e5fa4a7c83c6764e718525d7 -address /run/containerd/containerd.sock
+1916891  16  0.0 15584    22:26:29 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 7927ce1a27c9b33a2f51320a115facc3d52cf079f9d7ada188d3433413ee9d62 -address /run/containerd/containerd.sock
+1917164   6  0.0 13392    22:26:28 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 373383d69b22d9de31fac9023b95daebb167be1628c2784e08e7b8adc715098f -address /run/containerd/containerd.sock
+1916762   7  0.0 13304    22:26:29 /usr/bin/containerd-shim-runc-v2 -namespace moby -id f6e9e90178005f0abff0cf2f636e8332a1720c860851580355fb17d10c898264 -address /run/containerd/containerd.sock
+1759004   4  0.0 15392    22:59:44 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 86fe0323625be19590fb643072dd6df06b174dccf785c22ef37010b77f1c9f73 -address /run/containerd/containerd.sock
+   3117   8  0.0 11564  1-06:44:32 /usr/bin/containerd-shim-runc-v2 -namespace moby -id e1d7bd2110684f3fef1d0bfa8d1b16b766d463b7c847d4bfe34022b15192297f -address /run/containerd/containerd.sock
+1916971   6  0.0 15400    22:26:29 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 5c2e98a90d5f5a1d989f0868b5cb9ded27b4196c4304b81430d5f748718392e5 -address /run/containerd/containerd.sock
+1917090   6  0.0 15512    22:26:28 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 7bdb429b26c01f7d315dee7d387e0a4cbc8b49ad6a6184e7bf28d4cd0bc24eca -address /run/containerd/containerd.sock
+   3655  22  0.0  9432  1-06:44:31 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 725927c3372c97662898fff5873dd212a616f37a1dd5b7aea15af23a342e7dc6 -address /run/containerd/containerd.sock
+   3590  27  0.0 11480  1-06:44:31 /usr/bin/containerd-shim-runc-v2 -namespace moby -id 2e4bb6b74b6e032a407cc5803a40d6187cb3754036af4cf55c2a65eea6748c9b -address /run/containerd/containerd.sock
+3296042  20  0.0     0       23:55 [kworker/u146:13-kcryptd-253:0-1]
+3296046  16  0.0     0       23:55 [kworker/u146:17-kcryptd-253:0-1]
+3390644   4  0.0     0       01:24 [kworker/u145:13-kcryptd-253:0-1]
+    252   1  0.0     0  1-06:57:25 [khugepaged]
+3384054   9  0.0     0       02:59 [kworker/u146:1-kcryptd-253:0-1]
+3358737  10  0.0     0       09:01 [kworker/u145:19-kcryptd-253:0-1]
+   2125   5  0.0  3956  1-06:44:34 dbus-broker --log 11 --controller 10 --machine-id 526b72bb3c494c27b6ee80f37582b92c --max-bytes 100000000000000 --max-fds 25000000000000 --max-matches 5000000000
+3348373  13  0.0     0       11:30 [kworker/u145:17-kcryptd-253:0-1]
+3298191  20  0.0     0       23:24 [kworker/u145:14-kcryptd-253:0-1]
+3393174   2  0.0     0       00:48 [kworker/u145:15-btrfs-endio]
+3348366  24  0.0     0       11:30 [kworker/u145:2-kcryptd-253:0-1]
+    462  24  0.0     0  1-06:57:19 [irq/71-nvidia]
+3386205  23  0.0     0       02:28 [kworker/u145:1-events_unbound]
+3386209   5  0.0     0       02:28 [kworker/u145:7-kcryptd-253:0-1]
+   4032   3  0.0 14260  1-06:44:31 postgres
+3252437  15  0.0     0       34:21 [kworker/u145:8-btrfs-endio-write]
+3215222   5  0.0     0       43:10 [kworker/u148:2-rtw_tx_wq]
+3388523  33  0.0     0       01:55 [kworker/u146:20-kcryptd-253:0-1]
+3384057  29  0.0     0       02:59 [kworker/u146:8-btrfs-endio]
+3348359  14  0.0     0       11:30 [kworker/u146:2-kcryptd-253:0-1]
+     19   1  0.0     0  1-06:57:25 [rcu_exp_gp_kthread_worker]
+3223824   4  0.0     0       41:08 [kworker/u145:4-btrfs-endio-write]
+3337359  10  0.0     0       14:07 [kworker/u149:1-rtw_tx_wq]
+    714  16  0.0 53572  1-06:44:59 /usr/lib/systemd/systemd-journald
+3358738   1  0.0     0       09:01 [kworker/u145:20-btrfs-endio]
+   2850  14  0.0 10988  1-06:44:33 /usr/lib/udisks2/udisksd
+3348409   1  0.0     0       11:30 [kworker/u146:16-kcryptd-253:0-1]
+3314559  30  0.0     0       19:30 [kworker/u149:2-rtw_tx_wq]
+3386208  16  0.0     0       02:28 [kworker/u145:6-btrfs-endio]
+3358736   0  0.0     0       09:01 [kworker/u146:18-kcryptd-253:0-1]
+     18   9  0.0     0  1-06:57:25 [rcu_exp_par_gp_kthread_worker/1]
+     15   0  0.0     0  1-06:57:25 [ksoftirqd/0]
+3384061  28  0.0     0       02:59 [kworker/u146:19-kcryptd-253:0-1]
+     32   2  0.0     0  1-06:57:25 [migration/2]
+1929905   3  0.0 83680    05:40:42 /home/sean/.npm-global/lib/node_modules/@colbymchenry/codegraph/node_modules/@colbymchenry/codegraph-linux-x64/node --liftoff-only /home/sean/.npm-global/lib/node_modules/@colbymchenry/codegraph/node_modules/@colbymchenry/codegraph-linux-x64/lib/dist/bin/codegraph.js serve --mcp
+     97  18  0.0     0  1-06:57:25 [rcu_exp_par_gp_kthread_worker/2]
+     38   3  0.0     0  1-06:57:25 [migration/3]
+   3273  17  0.0 19300  1-06:44:32 python main.py
+     20   0  0.0     0  1-06:57:25 [migration/0]
+1929985   0  0.0 61180    05:40:41 /home/sean/.npm-global/lib/node_modules/@colbymchenry/codegraph/node_modules/@colbymchenry/codegraph-linux-x64/node -e  const fs = require('fs'); const parentPid = Number(process.argv[1]); const timeoutMs = Number(process.argv[2]); const secs = Math.round(timeoutMs / 1000); const MSG = Buffer.from('[CodeGraph] Main thread unresponsive for ~' + secs + 's — killing the wedged process so a fresh one can start (#850). Disable with CODEGRAPH_NO_WATCHDOG=1.\n'); function kill() {   try { fs.writeSync(2, MSG); } catch (e) {}   try { process.kill(parentPid, 'SIGKILL'); } catch (e) {}   process.exit(0); } let timer = setTimeout(kill, timeoutMs); process.stdin.on('data', () => { clearTimeout(timer); timer = setTimeout(kill, timeoutMs); }); process.stdin.on('end', () => process.exit(0));   // parent closed the pipe (exited) -> no orphan process.stdin.on('error', () => process.exit(0)); // pipe broke -> parent gone process.stdin.resume();  1929905 60000
+3922664   0  0.0     0    14:14:49 [kworker/0:1-events]
+     44   4  0.0     0  1-06:57:25 [migration/4]
+3327258  15  0.0     0       16:29 [kworker/u148:0-rtw_tx_wq]
+3386210   3  0.0     0       02:28 [kworker/u145:9-kcryptd-253:0-1]
+    839   4  0.0  9596  1-06:44:59 /usr/lib/systemd/systemd-udevd
+   1361   7  0.0  9744  1-06:44:49 /usr/lib/systemd/systemd --user
+   1212   0  0.0  6364  1-06:44:52 /usr/lib/systemd/systemd-logind
+     50   5  0.0     0  1-06:57:25 [migration/5]
+    646   9  0.0     0  1-06:45:00 [kworker/9:1H-kblockd]
+    436   4  0.0     0  1-06:57:21 [kworker/4:1H-kblockd]
+    655   5  0.0     0  1-06:45:00 [kworker/5:1H-kblockd]
+    656  21  0.0     0  1-06:45:00 [kworker/21:1H-kblockd]
+    628   7  0.0     0  1-06:45:00 [kworker/7:1H-kblockd]
+    692  13  0.0     0  1-06:45:00 [kworker/13:1H-kblockd]
+    636   8  0.0     0  1-06:45:00 [kworker/8:1H-kblockd]
+    433   3  0.0     0  1-06:57:21 [kworker/3:1H-kblockd]
+    657  10  0.0     0  1-06:45:00 [kworker/10:1H-kblockd]
+    671  11  0.0     0  1-06:45:00 [kworker/11:1H-kblockd]
+    639  24  0.0     0  1-06:45:00 [kworker/24:1H-kblockd]
+    690  27  0.0     0  1-06:45:00 [kworker/27:1H-kblockd]
+    727  30  0.0     0  1-06:44:59 [kworker/30:1H-kblockd]
+    712  14  0.0     0  1-06:44:59 [kworker/14:1H-kblockd]
+    450   6  0.0     0  1-06:57:21 [kworker/6:1H-kblockd]
+    957  29  0.0     0  1-06:44:58 [kworker/29:1H-kblockd]
+    583  12  0.0     0  1-06:45:00 [kworker/12:1H-kblockd]
+   1202   0  0.0  4292  1-06:44:52 avahi-daemon: running [hartmut-13.local]
+    999  32  0.0     0  1-06:44:58 [kworker/32:1H-kblockd]
+2497632  17  0.0     0    03:33:24 [kworker/17:1-events]
+    608  16  0.0     0  1-06:45:00 [kworker/16:1H-kblockd]
+    824  26  0.0     0  1-06:44:59 [kworker/26:1H-kblockd]
+    610  33  0.0     0  1-06:45:00 [kworker/33:1H-kblockd]
+    709  23  0.0     0  1-06:44:59 [kworker/23:1H-kblockd]
+    588  15  0.0     0  1-06:45:00 [kworker/15:1H-kblockd]
+     56   6  0.0     0  1-06:57:25 [migration/6]
+1345394  16  0.0 81412  1-00:41:55 /home/sean/.codex/packages/app-server-daemon/releases/0.166.0-x86_64-unknown-linux-musl/bin/codex app-server daemon pid-update-loop
+    660  22  0.0     0  1-06:45:00 [kworker/22:1H-kblockd]
+    609  17  0.0     0  1-06:45:00 [kworker/17:1H-kblockd]
+     62   7  0.0     0  1-06:57:25 [migration/7]
+    951  31  0.0     0  1-06:44:58 [kworker/31:1H-kblockd]
+    698  28  0.0     0  1-06:44:59 [kworker/28:1H-kblockd]
+    689  25  0.0     0  1-06:45:00 [kworker/25:1H-kblockd]
+2575959   8  0.0     0    19:36:52 [kworker/8:0-mm_percpu_wq]
+    611  34  0.0     0  1-06:45:00 [kworker/34:1H-kblockd]
+1772569  16  0.0     0    06:12:47 [kworker/16:0-events]
+   1005  35  0.0     0  1-06:44:58 [kworker/35:1H-kblockd]
+   1694  12  0.0  7360  1-06:44:46 /usr/lib/polkit-1/polkitd --no-debug --log-level=notice
+1840923  15  0.0     0    05:59:13 [kworker/15:0-mm_percpu_wq]
+2520700  12  0.0     0    19:51:06 [kworker/12:0-events]
+2902122   4  0.0     0    01:57:52 [kworker/4:1-events]
+     68   8  0.0     0  1-06:57:25 [migration/8]
+    446   0  0.0     0  1-06:57:21 [kworker/0:1H-kblockd]
+    342   2  0.0     0  1-06:57:22 [kworker/2:1H-kblockd]
+    603  18  0.0     0  1-06:45:00 [kworker/18:1H-kblockd]
+2496780  14  0.0     0    03:33:36 [kworker/14:1-events]
+2934550   2  0.0     0    01:50:08 [kworker/2:1-events]
+     74   9  0.0     0  1-06:57:25 [migration/9]
+2164952   5  0.0     0    04:49:49 [kworker/5:0-events]
+ 269713  13  0.0     0    12:07:44 [kworker/13:0-mm_percpu_wq]
+    118  16  0.0     0  1-06:57:25 [migration/16]
+1554966  10  0.0     0    07:01:54 [kworker/10:1-mm_percpu_wq]
+     33   2  0.0     0  1-06:57:25 [ksoftirqd/2]
+3062140   1  0.0     0    01:19:49 [kworker/1:1-events]
+2528800   3  0.0     0    03:25:59 [kworker/3:2-events]
+     80  10  0.0     0  1-06:57:25 [migration/10]
+   5174   4  0.0     0  1-06:44:29 [nvidia-drm/timeline-4f]
+ 253810   6  0.0     0    12:11:22 [kworker/6:1-mm_percpu_wq]
+1698800  25  0.0     0    06:29:35 [kworker/25:2-events]
+    106  14  0.0     0  1-06:57:25 [migration/14]
+    439   1  0.0     0  1-06:57:21 [kworker/1:1H-kblockd]
+    112  15  0.0     0  1-06:57:25 [migration/15]
+1358658   5  0.0 18672  1-00:38:11 /home/sean/.codex/packages/app-server-daemon/releases/0.166.0-x86_64-unknown-linux-musl/bin/codex-code-mode-host
+     86  11  0.0     0  1-06:57:25 [migration/11]
+    605  19  0.0     0  1-06:45:00 [kworker/19:1H-kblockd]
+   2724  14  0.0     0  1-06:44:33 [nvidia-drm/timeline-3c]
+     92  12  0.0     0  1-06:57:25 [migration/12]
+    606  20  0.0     0  1-06:45:00 [kworker/20:1H-kblockd]
+   1213   2  0.0  5524  1-06:44:52 /usr/lib/systemd/systemd-machined
+    100  13  0.0     0  1-06:57:25 [migration/13]
+2351802  27  0.0     0    04:07:40 [kworker/27:0-events]
+1428451  11  0.0     0    07:31:22 [kworker/11:1-events]
+1751113   1  0.0  1240    23:01:22 /sbin/tini -- /usr/local/bin/docker-entrypoint.sh
+1742143  14  0.0     0    06:19:14 [kworker/14:2-events]
+3549047  24  0.0     0    15:42:27 [kworker/24:1-events]
+   6232   2  0.0  9080  1-06:44:25 /usr/lib/xdg-desktop-portal
+    124  17  0.0     0  1-06:57:25 [migration/17]
+    142  20  0.0     0  1-06:57:25 [migration/20]
+     26   1  0.0     0  1-06:57:25 [migration/1]
+     39   3  0.0     0  1-06:57:25 [ksoftirqd/3]
+     81  10  0.0     0  1-06:57:25 [ksoftirqd/10]
+    262  19  0.0     0  1-06:57:25 [kworker/19:1-events]
+     27   1  0.0     0  1-06:57:25 [ksoftirqd/1]
+2554637   9  0.0     0    03:19:53 [kworker/9:0-mm_percpu_wq]
+2464160   7  0.0     0    03:41:19 [kworker/7:1-mm_percpu_wq]
+    699  21  0.0     0  1-06:44:59 [psimon]
+   1133   4  0.0     0  1-06:44:58 [irq/89-rtw_pci]
+   1760  15  0.0  6652  1-06:44:45 /usr/lib/upowerd
+    130  18  0.0     0  1-06:57:25 [migration/18]
+    148  21  0.0     0  1-06:57:25 [migration/21]
+     45   4  0.0     0  1-06:57:25 [ksoftirqd/4]
+ 275002  32  0.0     0    12:06:32 [kworker/32:2-mm_percpu_wq]
+2252759  30  0.0     0    20:59:52 [kworker/30:0-events]
+ 428237  31  0.0     0  1-04:44:26 [kworker/31:0-events]
+   2778   7  0.0 10692  1-06:44:33 /usr/bin/wireplumber
+2404769  35  0.0     0    03:55:25 [kworker/35:2-events]
+    154  22  0.0     0  1-06:57:25 [migration/22]
+     51   5  0.0     0  1-06:57:25 [ksoftirqd/5]
+   3003  16  0.0  4468  1-06:44:32 /usr/lib/at-spi2-registryd --use-gnome-session
+     57   6  0.0     0  1-06:57:25 [ksoftirqd/6]
+   4096  29  0.0     0  1-06:44:31 [kworker/29:2-events]
+    320  20  0.0     0  1-06:57:22 [kworker/20:1-events]
+    250   9  0.0     0  1-06:57:25 [kcompactd0]
+2967407  33  0.0     0    17:59:10 [kworker/33:2-mm_percpu_wq]
+    279   7  0.0     0  1-06:57:22 [hwrng]
+     63   7  0.0     0  1-06:57:25 [ksoftirqd/7]
+1887275  18  0.0     0    22:32:42 [kworker/18:1-mm_percpu_wq]
+1887575  34  0.0     0    22:32:37 [kworker/34:2-mm_percpu_wq]
+   5350  12  0.0  6144  1-06:44:28 postgres: autovacuum launcher 
+   2838   6  0.0 15092  1-06:44:33 /usr/lib/polkit-kde-authentication-agent-1
+   7062   9  0.0  5264  1-06:44:19 /usr/lib/power-profiles-daemon
+    160  23  0.0     0  1-06:57:25 [migration/23]
+   2945   3  0.0  2484  1-06:44:33 dbus-broker --log 10 --controller 9 --machine-id 526b72bb3c494c27b6ee80f37582b92c --max-bytes 100000000000000 --max-fds 6400000 --max-matches 5000000000
+1513106  22  0.0     0    23:58:53 [kworker/22:1-events]
+    182  26  0.0     0  1-06:57:25 [kworker/26:0-events]
+2718767  20  0.0     0    02:41:19 [kworker/20:0-events]
+    194  28  0.0     0  1-06:57:25 [kworker/28:0-events]
+1918703   1  0.0  3848    22:26:15 nginx: worker process
+1918728  17  0.0  3848    22:26:15 nginx: worker process
+1918732  14  0.0  3852    22:26:15 nginx: worker process
+1918704  11  0.0  3852    22:26:15 nginx: worker process
+1918705   4  0.0  3840    22:26:15 nginx: worker process
+1918706   1  0.0  3656    22:26:15 nginx: worker process
+1918708   1  0.0  3656    22:26:15 nginx: worker process
+1918721  14  0.0  3656    22:26:15 nginx: worker process
+1918722  17  0.0  3656    22:26:15 nginx: worker process
+1918723  16  0.0  3656    22:26:15 nginx: worker process
+1918724   5  0.0  3660    22:26:15 nginx: worker process
+1918729   0  0.0  3848    22:26:15 nginx: worker process
+1918730   2  0.0  3656    22:26:15 nginx: worker process
+1834505  23  0.0     0    22:46:16 [kworker/23:1-mm_percpu_wq]
+1918731   2  0.0  3848    22:26:15 nginx: worker process
+1918733  14  0.0  3664    22:26:15 nginx: worker process
+1918734  33  0.0  3656    22:26:15 nginx: worker process
+1918736  16  0.0  3656    22:26:15 nginx: worker process
+1918737   5  0.0  3848    22:26:15 nginx: worker process
+1918738   0  0.0  3660    22:26:15 nginx: worker process
+1918707   2  0.0  3656    22:26:15 nginx: worker process
+1918709  14  0.0  3656    22:26:15 nginx: worker process
+1918710  14  0.0  3656    22:26:15 nginx: worker process
+1918711   2  0.0  3840    22:26:15 nginx: worker process
+1918712   6  0.0  3848    22:26:15 nginx: worker process
+1918713  15  0.0  3656    22:26:15 nginx: worker process
+1918714   0  0.0  3848    22:26:15 nginx: worker process
+1918715   3  0.0  3656    22:26:15 nginx: worker process
+1918716  15  0.0  3656    22:26:15 nginx: worker process
+1918717   3  0.0  3656    22:26:15 nginx: worker process
+1918718   5  0.0  3656    22:26:15 nginx: worker process
+1918719  23  0.0  3656    22:26:15 nginx: worker process
+1918720   0  0.0  3660    22:26:15 nginx: worker process
+1918725   4  0.0  3660    22:26:15 nginx: worker process
+1918727  12  0.0  3656    22:26:15 nginx: worker process
+1918735   3  0.0  3660    22:26:15 nginx: worker process
+1918726   2  0.0  3656    22:26:15 nginx: worker process
+    125  17  0.0     0  1-06:57:25 [ksoftirqd/17]
+    119  16  0.0     0  1-06:57:25 [ksoftirqd/16]
+     69   8  0.0     0  1-06:57:25 [ksoftirqd/8]
+1836550   0  0.0 17756    22:45:54 postgres: gitea gitea 192.168.80.2(57890) idle
+    166  24  0.0     0  1-06:57:25 [migration/24]
+   4308   1  0.0  5844  1-06:44:31 /usr/lib/bluetooth/obexd
+1952622  16  0.0 19048    22:17:46 postgres: gitea gitea 192.168.80.2(40140) idle
+   1722  14  0.0  2872  1-06:44:46 /usr/lib/rtkit-daemon
+     75   9  0.0     0  1-06:57:25 [ksoftirqd/9]
+    107  14  0.0     0  1-06:57:25 [ksoftirqd/14]
+    174  25  0.0     0  1-06:57:25 [migration/25]
+    113  15  0.0     0  1-06:57:25 [ksoftirqd/15]
+1897895  21  0.0     0    22:30:38 [kworker/21:2-events]
+   6272   5  0.0  7780  1-06:44:25 /usr/lib/xdg-desktop-portal-gtk
+     87  11  0.0     0  1-06:57:25 [ksoftirqd/11]
+     93  12  0.0     0  1-06:57:25 [ksoftirqd/12]
+   5349   5  0.0  4048  1-06:44:28 postgres: walwriter 
+    101  13  0.0     0  1-06:57:25 [ksoftirqd/13]
+    228  34  0.0     0  1-06:57:25 [migration/34]
+    186  27  0.0     0  1-06:57:25 [migration/27]
+1920041   5  0.0  3312    22:26:06 nginx: worker process
+    180  26  0.0     0  1-06:57:25 [migration/26]
+   2837   9  0.0 16248  1-06:44:33 /usr/bin/kaccess
+    192  28  0.0     0  1-06:57:25 [migration/28]
+    216  32  0.0     0  1-06:57:25 [migration/32]
+    222  33  0.0     0  1-06:57:25 [migration/33]
+    812  35  0.0  4300  1-06:44:59 /usr/lib/systemd/systemd-userdbd
+    198  29  0.0     0  1-06:57:25 [migration/29]
+1920040   3  0.0  3312    22:26:06 nginx: worker process
+1342298   4  0.0  4776  1-00:42:24 -zsh
+   5346  14  0.0  4856  1-06:44:28 postgres: background writer 
+   2836  11  0.0 10176  1-06:44:33 /usr/bin/gmenudbusmenuproxy
+1920368  15  0.0  3488    22:26:06 nginx: worker process
+   2840   5  0.0  9884  1-06:44:33 /usr/bin/xembedsniproxy
+    612  14  0.0     0  1-06:45:00 [btrfs-cleaner]
+    204  30  0.0     0  1-06:57:25 [migration/30]
+1920367  17  0.0  3488    22:26:06 nginx: worker process
+1920370  15  0.0  3488    22:26:06 nginx: worker process
+1920375   1  0.0  3488    22:26:06 nginx: worker process
+1920356  15  0.0  3488    22:26:06 nginx: worker process
+1920361  15  0.0  3488    22:26:06 nginx: worker process
+1920362   3  0.0  3488    22:26:06 nginx: worker process
+1920339   1  0.0  3488    22:26:06 nginx: worker process
+1920349   8  0.0  3488    22:26:06 nginx: worker process
+1920042  17  0.0  3312    22:26:06 nginx: worker process
+1920043   0  0.0  3312    22:26:06 nginx: worker process
+    210  31  0.0     0  1-06:57:25 [migration/31]
+1920378   4  0.0  3488    22:26:06 nginx: worker process
+1920364  15  0.0  3488    22:26:06 nginx: worker process
+1920365   0  0.0  3488    22:26:06 nginx: worker process
+1920366  15  0.0  3488    22:26:06 nginx: worker process
+1920369  15  0.0  3488    22:26:06 nginx: worker process
+1920371  15  0.0  3488    22:26:06 nginx: worker process
+1920372   2  0.0  3488    22:26:06 nginx: worker process
+1920373   3  0.0  3488    22:26:06 nginx: worker process
+1920351   3  0.0  3488    22:26:06 nginx: worker process
+1920352  12  0.0  3488    22:26:06 nginx: worker process
+1920357   0  0.0  3488    22:26:06 nginx: worker process
+1920358  10  0.0  3488    22:26:06 nginx: worker process
+1920359   1  0.0  3488    22:26:06 nginx: worker process
+1920360   4  0.0  3488    22:26:06 nginx: worker process
+1920363   1  0.0  3488    22:26:06 nginx: worker process
+1920341  16  0.0  3488    22:26:06 nginx: worker process
+1920342  34  0.0  3488    22:26:06 nginx: worker process
+1920343  15  0.0  3488    22:26:06 nginx: worker process
+1920346  17  0.0  3488    22:26:06 nginx: worker process
+1920347   0  0.0  3488    22:26:06 nginx: worker process
+1920348   0  0.0  3488    22:26:06 nginx: worker process
+1920062   3  0.0  3308    22:26:06 nginx: worker process
+1920052   3  0.0  3308    22:26:06 nginx: worker process
+1920053   0  0.0  3308    22:26:06 nginx: worker process
+1920054  13  0.0  3308    22:26:06 nginx: worker process
+1920055   0  0.0  3308    22:26:06 nginx: worker process
+1920056  12  0.0  3308    22:26:06 nginx: worker process
+1920057  16  0.0  3308    22:26:06 nginx: worker process
+1920058   4  0.0  3308    22:26:06 nginx: worker process
+1920059  14  0.0  3308    22:26:06 nginx: worker process
+1920060   0  0.0  3308    22:26:06 nginx: worker process
+1920061   3  0.0  3308    22:26:06 nginx: worker process
+1920032   2  0.0  3308    22:26:06 nginx: worker process
+1920033  18  0.0  3308    22:26:06 nginx: worker process
+1920034   1  0.0  3308    22:26:06 nginx: worker process
+1920036  19  0.0  3308    22:26:06 nginx: worker process
+1920037  20  0.0  3308    22:26:06 nginx: worker process
+1920038  18  0.0  3308    22:26:06 nginx: worker process
+1920039   3  0.0  3308    22:26:06 nginx: worker process
+1920044   3  0.0  3308    22:26:06 nginx: worker process
+1920047   5  0.0  3308    22:26:06 nginx: worker process
+    234  35  0.0     0  1-06:57:25 [migration/35]
+1920377  10  0.0  3488    22:26:06 nginx: worker process
+1920374   7  0.0  3488    22:26:06 nginx: worker process
+1920376  14  0.0  3488    22:26:06 nginx: worker process
+1920353   4  0.0  3488    22:26:06 nginx: worker process
+1920354  14  0.0  3488    22:26:06 nginx: worker process
+1920355   0  0.0  3488    22:26:06 nginx: worker process
+1920063   6  0.0  3308    22:26:06 nginx: worker process
+1920064   1  0.0  3308    22:26:06 nginx: worker process
+1920065  22  0.0  3308    22:26:06 nginx: worker process
+1920066   3  0.0  3308    22:26:06 nginx: worker process
+1920067   4  0.0  3308    22:26:06 nginx: worker process
+1920068  13  0.0  3308    22:26:06 nginx: worker process
+1920048   4  0.0  3308    22:26:06 nginx: worker process
+1920049   4  0.0  3308    22:26:06 nginx: worker process
+1920050  16  0.0  3308    22:26:06 nginx: worker process
+1920051   1  0.0  3308    22:26:06 nginx: worker process
+1920045   4  0.0  3308    22:26:06 nginx: worker process
+1920046  16  0.0  3308    22:26:06 nginx: worker process
+    136  19  0.0     0  1-06:57:25 [migration/19]
+1344389   1  0.0  6428  1-00:42:00 /usr/bin/zsh
+   4149   4  0.0 15196  1-06:44:31 /usr/bin/kdeconnectd
+2953680  21  0.0     0    18:02:09 [kworker/21:1-events]
+    245  15  0.0     0  1-06:57:25 [khungtaskd]
+2942195   3  0.0  6704    18:04:41 -zsh
+    840  16  0.0  5828  1-06:44:59 /usr/lib/systemd/systemd-timesyncd
+1391708  15  0.0  4460  1-00:29:25 -zsh
+1929865   5  0.0 50128    05:40:42 node /home/sean/.npm-global/bin/codegraph serve --mcp
+   2846  20  0.0 30952  1-06:44:33 /usr/bin/Xwayland :0 -auth /run/user/1000/xauth_rdQRhV -listenfd 8 -listenfd 9 -displayfd 168 -wm 172 -initfd 11 -rootless
+1919470  16  0.0  9948    22:26:10 /usr/bin/docker-proxy -proto tcp -host-ip 127.0.0.1 -host-port 3000 -container-ip 172.27.0.3 -container-port 80 -use-listen-fd
+1724803  22  0.0  9964    23:06:18 /usr/bin/docker-proxy -proto tcp -host-ip :: -host-port 8082 -container-ip 172.29.0.2 -container-port 8080 -use-listen-fd
+2035979  16  0.0  4000    05:17:11 bash /home/sean/experiments/TieredQ-issue4-current-20261105/source/benchmark/experiments/issue4_current/job.sh
+    336  26  0.0     0  1-06:57:22 [kworker/26:1-events]
+   5183   4  0.0  9104  1-06:44:29 /usr/bin/docker-proxy -proto tcp -host-ip 127.0.0.1 -host-port 8000 -container-ip 192.168.96.2 -container-port 8080 -use-listen-fd
+    235  35  0.0     0  1-06:57:25 [ksoftirqd/35]
+1919569   4  0.0  6580    22:26:09 nginx: master process nginx -g daemon off;
+    131  18  0.0     0  1-06:57:25 [ksoftirqd/18]
+    175  25  0.0     0  1-06:57:25 [ksoftirqd/25]
+2520768   1  0.0     0    03:27:54 [kworker/1:0-events]
+    137  19  0.0     0  1-06:57:25 [ksoftirqd/19]
+1919355   5  0.0  6340    22:26:10 nginx: master process nginx -g daemon off;
+   2934  16  0.0  4844  1-06:44:33 /usr/lib/gvfsd-fuse /run/user/1000/gvfs -f
+   2041  22  0.0 18008  1-06:44:35 /usr/bin/ksecretd --pam-login 8 9
+    229  34  0.0     0  1-06:57:25 [ksoftirqd/34]
+    223  33  0.0     0  1-06:57:25 [ksoftirqd/33]
+      2   7  0.0     0  1-06:57:25 [kthreadd]
+1918558   1  0.0  6744    22:26:15 nginx: master process nginx -g daemon off;
+   6331   1  0.0 14280  1-06:44:25 /usr/lib/xdg-desktop-portal-kde
+1919615   8  0.0  9816    22:26:09 /usr/bin/docker-proxy -proto tcp -host-ip 127.0.0.1 -host-port 3010 -container-ip 172.27.0.5 -container-port 3010 -use-listen-fd
+   1027  10  0.0     0  1-06:44:58 [jbd2/sda1-8]
+    143  20  0.0     0  1-06:57:25 [ksoftirqd/20]
+    217  32  0.0     0  1-06:57:25 [ksoftirqd/32]
+   4312  17  0.0 12700  1-06:44:31 /usr/bin/kwalletd6
+   1990   4  0.0 10528  1-06:44:35 /usr/lib/plasmalogin-helper --socket /tmp/plasmalogin-auth-cb36a5c6-3b31-4689-9515-4c6902e91d16 --id 1 --start /usr/lib/plasma-dbus-run-session-if-needed /usr/bin/startplasma-wayland --user sean
+    149  21  0.0     0  1-06:57:25 [ksoftirqd/21]
+    155  22  0.0     0  1-06:57:25 [ksoftirqd/22]
+   2823  17  0.0 13004  1-06:44:33 /usr/lib/kactivitymanagerd
+   1564   7  0.0 10676  1-06:44:48 /usr/bin/virtlogd
+   1203  12  0.0  3752  1-06:44:52 /usr/lib/bluetooth/bluetoothd
+   1196   4  0.0  2952  1-06:44:52 /usr/bin/dbus-broker-launch --scope system --audit
+    167  24  0.0     0  1-06:57:25 [ksoftirqd/24]
+    187  27  0.0     0  1-06:57:25 [ksoftirqd/27]
+   5195   7  0.0  4648  1-06:44:29 /usr/bin/docker-proxy -proto tcp -host-ip 172.17.0.1 -host-port 8000 -container-ip 192.168.96.2 -container-port 8080 -use-listen-fd
+   4851  30  0.0  6700  1-06:44:29 /usr/bin/docker-proxy -proto tcp -host-ip 127.0.0.1 -host-port 8080 -container-ip 172.21.0.3 -container-port 8080 -use-listen-fd
+   2776   5  0.0  4152  1-06:44:33 /usr/bin/pipewire
+    161  23  0.0     0  1-06:57:25 [ksoftirqd/23]
+     17  11  0.0     0  1-06:57:25 [rcub/1]
+1918656  23  0.0  7744    22:26:15 /usr/bin/docker-proxy -proto tcp -host-ip 127.0.0.1 -host-port 3101 -container-ip 192.168.0.6 -container-port 80 -use-listen-fd
+1836192  17  0.0  7700    22:45:58 /usr/bin/docker-proxy -proto tcp -host-ip :: -host-port 3005 -container-ip 192.168.80.2 -container-port 3000 -use-listen-fd
+1836179  25  0.0  7732    22:45:58 /usr/bin/docker-proxy -proto tcp -host-ip 0.0.0.0 -host-port 3005 -container-ip 192.168.80.2 -container-port 3000 -use-listen-fd
+1836159   5  0.0  7676    22:45:58 /usr/bin/docker-proxy -proto tcp -host-ip :: -host-port 2222 -container-ip 192.168.80.2 -container-port 22 -use-listen-fd
+1836057  21  0.0   620    22:45:58 /usr/bin/s6-svscan /etc/s6
+1759073   1  0.0  7648    22:59:44 /usr/bin/docker-proxy -proto tcp -host-ip 0.0.0.0 -host-port 3004 -container-ip 192.168.32.2 -container-port 8090 -use-listen-fd
+1751213   6  0.0  7660    23:01:22 /usr/bin/docker-proxy -proto tcp -host-ip :: -host-port 3003 -container-ip 172.20.0.2 -container-port 3000 -use-listen-fd
+1751207   6  0.0  7728    23:01:22 /usr/bin/docker-proxy -proto tcp -host-ip 0.0.0.0 -host-port 3003 -container-ip 172.20.0.2 -container-port 3000 -use-listen-fd
+   5109  25  0.0  6664  1-06:44:29 /usr/bin/docker-proxy -proto tcp -host-ip 172.17.0.1 -host-port 3001 -container-ip 172.26.0.2 -container-port 3001 -use-listen-fd
+   4820  35  0.0  6696  1-06:44:29 /usr/bin/docker-proxy -proto tcp -host-ip 172.17.0.1 -host-port 1080 -container-ip 172.21.0.3 -container-port 1080 -use-listen-fd
+    199  29  0.0     0  1-06:57:25 [ksoftirqd/29]
+    205  30  0.0     0  1-06:57:25 [ksoftirqd/30]
+    211  31  0.0     0  1-06:57:25 [ksoftirqd/31]
+1887947   8  0.0  7700    22:32:36 /usr/bin/docker-proxy -proto tcp -host-ip 127.0.0.1 -host-port 8081 -container-ip 172.28.0.2 -container-port 8081 -use-listen-fd
+1836152  17  0.0  7636    22:45:58 /usr/bin/docker-proxy -proto tcp -host-ip 0.0.0.0 -host-port 2222 -container-ip 192.168.80.2 -container-port 22 -use-listen-fd
+1759081  30  0.0  7688    22:59:44 /usr/bin/docker-proxy -proto tcp -host-ip :: -host-port 3004 -container-ip 192.168.32.2 -container-port 8090 -use-listen-fd
+1724797   7  0.0  7748    23:06:18 /usr/bin/docker-proxy -proto tcp -host-ip 0.0.0.0 -host-port 8082 -container-ip 172.29.0.2 -container-port 8080 -use-listen-fd
+   2045  13  0.0 11860  1-06:44:35 /usr/bin/startplasma-wayland
+    181  26  0.0     0  1-06:57:25 [ksoftirqd/26]
+    193  28  0.0     0  1-06:57:25 [ksoftirqd/28]
+   6262  13  0.0  4996  1-06:44:25 /usr/lib/xdg-document-portal
+   2206  13  0.0 11048  1-06:44:34 /usr/bin/ksmserver
+   1399   4  0.0 10796  1-06:44:49 /usr/bin/plasmalogin
+     96  12  0.0     0  1-06:57:25 [rcub/2]
+   5351  16  0.0  5408  1-06:44:28 postgres: logical replication launcher 
+   3065  20  0.0  5308  1-06:44:32 /usr/bin/pipewire-pulse
+   2920   8  0.0  5896  1-06:44:33 /usr/lib/gvfsd
+   2119  16  0.0  2388  1-06:44:34 /usr/bin/dbus-broker-launch --scope user
+    170  28  0.0     0  1-06:57:25 [rcub/3]
+1800389  18  0.0     0    22:50:02 [kworker/18:2-inode_switch_wbs]
+   6256   6  0.0  4896  1-06:44:25 /usr/lib/xdg-permission-store
+   5345   5  0.0  6904  1-06:44:28 postgres: checkpointer 
+   2910   8  0.0  4476  1-06:44:33 /usr/lib/at-spi-bus-launcher
+   1348  16  0.0  6544  1-06:44:49 sshd: /usr/bin/sshd -D [listener] 0 of 10-100 startups
+1836224  18  0.0  3340    22:45:58 sshd: /usr/sbin/sshd -D -e [listener] 0 of 10-100 startups
+   5342  10  0.0  7024  1-06:44:28 postgres: io worker 0
+   2195  16  0.0  9304  1-06:44:34 /usr/bin/kwin_wayland_wrapper --xwayland
+      3  18  0.0     0  1-06:57:25 [pool_workqueue_release]
+      4   0  0.0     0  1-06:57:25 [kworker/R-rcu_gp]
+      5   0  0.0     0  1-06:57:25 [kworker/R-sync_wq]
+      6   0  0.0     0  1-06:57:25 [kworker/R-kvfree_rcu_reclaim]
+      7   0  0.0     0  1-06:57:25 [kworker/R-slub_flushwq]
+      8   0  0.0     0  1-06:57:25 [kworker/R-netns]
+     10   0  0.0     0  1-06:57:25 [kworker/0:0H-kblockd]
+     13   0  0.0     0  1-06:57:25 [kworker/R-mm_percpu_wq]
+     21   0  0.0     0  1-06:57:25 [kprobe-optimizer]
+     22   0  0.0     0  1-06:57:25 [idle_inject/0]
+     23   0  0.0     0  1-06:57:25 [cpuhp/0]
+     24   1  0.0     0  1-06:57:25 [cpuhp/1]
+     25   1  0.0     0  1-06:57:25 [idle_inject/1]
+     29   1  0.0     0  1-06:57:25 [kworker/1:0H-kblockd]
+     30   2  0.0     0  1-06:57:25 [cpuhp/2]
+     31   2  0.0     0  1-06:57:25 [idle_inject/2]
+     35   2  0.0     0  1-06:57:25 [kworker/2:0H-kblockd]
+     36   3  0.0     0  1-06:57:25 [cpuhp/3]
+     37   3  0.0     0  1-06:57:25 [idle_inject/3]
+     41   3  0.0     0  1-06:57:25 [kworker/3:0H-kblockd]
+     42   4  0.0     0  1-06:57:25 [cpuhp/4]
+     43   4  0.0     0  1-06:57:25 [idle_inject/4]
+     47   4  0.0     0  1-06:57:25 [kworker/4:0H-kblockd]
+     48   5  0.0     0  1-06:57:25 [cpuhp/5]
+     49   5  0.0     0  1-06:57:25 [idle_inject/5]
+     53   5  0.0     0  1-06:57:25 [kworker/5:0H-kblockd]
+     54   6  0.0     0  1-06:57:25 [cpuhp/6]
+     55   6  0.0     0  1-06:57:25 [idle_inject/6]
+     59   6  0.0     0  1-06:57:25 [kworker/6:0H-kblockd]
+     60   7  0.0     0  1-06:57:25 [cpuhp/7]
+     61   7  0.0     0  1-06:57:25 [idle_inject/7]
+     65   7  0.0     0  1-06:57:25 [kworker/7:0H-kblockd]
+     66   8  0.0     0  1-06:57:25 [cpuhp/8]
+     67   8  0.0     0  1-06:57:25 [idle_inject/8]
+     71   8  0.0     0  1-06:57:25 [kworker/8:0H-kblockd]
+     72   9  0.0     0  1-06:57:25 [cpuhp/9]
+     73   9  0.0     0  1-06:57:25 [idle_inject/9]
+     77   9  0.0     0  1-06:57:25 [kworker/9:0H-kblockd]
+     78  10  0.0     0  1-06:57:25 [cpuhp/10]
+     79  10  0.0     0  1-06:57:25 [idle_inject/10]
+     83  10  0.0     0  1-06:57:25 [kworker/10:0H-kblockd]
+     84  11  0.0     0  1-06:57:25 [cpuhp/11]
+     85  11  0.0     0  1-06:57:25 [idle_inject/11]
+     89  11  0.0     0  1-06:57:25 [kworker/11:0H-kblockd]
+     90  12  0.0     0  1-06:57:25 [cpuhp/12]
+     91  12  0.0     0  1-06:57:25 [idle_inject/12]
+     95  12  0.0     0  1-06:57:25 [kworker/12:0H-kblockd]
+     98  13  0.0     0  1-06:57:25 [cpuhp/13]
+     99  13  0.0     0  1-06:57:25 [idle_inject/13]
+    103  13  0.0     0  1-06:57:25 [kworker/13:0H-kblockd]
+    104  14  0.0     0  1-06:57:25 [cpuhp/14]
+    105  14  0.0     0  1-06:57:25 [idle_inject/14]
+    109  14  0.0     0  1-06:57:25 [kworker/14:0H-kblockd]
+    110  15  0.0     0  1-06:57:25 [cpuhp/15]
+    111  15  0.0     0  1-06:57:25 [idle_inject/15]
+    115  15  0.0     0  1-06:57:25 [kworker/15:0H-kblockd]
+    116  16  0.0     0  1-06:57:25 [cpuhp/16]
+    117  16  0.0     0  1-06:57:25 [idle_inject/16]
+    121  16  0.0     0  1-06:57:25 [kworker/16:0H-kblockd]
+    122  17  0.0     0  1-06:57:25 [cpuhp/17]
+    123  17  0.0     0  1-06:57:25 [idle_inject/17]
+    127  17  0.0     0  1-06:57:25 [kworker/17:0H-kblockd]
+    128  18  0.0     0  1-06:57:25 [cpuhp/18]
+    129  18  0.0     0  1-06:57:25 [idle_inject/18]
+    133  18  0.0     0  1-06:57:25 [kworker/18:0H-kblockd]
+    134  19  0.0     0  1-06:57:25 [cpuhp/19]
+    135  19  0.0     0  1-06:57:25 [idle_inject/19]
+    139  19  0.0     0  1-06:57:25 [kworker/19:0H-kblockd]
+    140  20  0.0     0  1-06:57:25 [cpuhp/20]
+    141  20  0.0     0  1-06:57:25 [idle_inject/20]
+    145  20  0.0     0  1-06:57:25 [kworker/20:0H-kblockd]
+    146  21  0.0     0  1-06:57:25 [cpuhp/21]
+    147  21  0.0     0  1-06:57:25 [idle_inject/21]
+    151  21  0.0     0  1-06:57:25 [kworker/21:0H-kblockd]
+    152  22  0.0     0  1-06:57:25 [cpuhp/22]
+    153  22  0.0     0  1-06:57:25 [idle_inject/22]
+    157  22  0.0     0  1-06:57:25 [kworker/22:0H-kblockd]
+    158  23  0.0     0  1-06:57:25 [cpuhp/23]
+    159  23  0.0     0  1-06:57:25 [idle_inject/23]
+    163  23  0.0     0  1-06:57:25 [kworker/23:0H-kblockd]
+    164  24  0.0     0  1-06:57:25 [cpuhp/24]
+    165  24  0.0     0  1-06:57:25 [idle_inject/24]
+    169  24  0.0     0  1-06:57:25 [kworker/24:0H-kblockd]
+    171   0  0.0     0  1-06:57:25 [rcu_exp_par_gp_kthread_worker/3]
+    172  25  0.0     0  1-06:57:25 [cpuhp/25]
+    173  25  0.0     0  1-06:57:25 [idle_inject/25]
+    177  25  0.0     0  1-06:57:25 [kworker/25:0H-kblockd]
+    178  26  0.0     0  1-06:57:25 [cpuhp/26]
+    179  26  0.0     0  1-06:57:25 [idle_inject/26]
+    183  26  0.0     0  1-06:57:25 [kworker/26:0H-kblockd]
+    184  27  0.0     0  1-06:57:25 [cpuhp/27]
+    185  27  0.0     0  1-06:57:25 [idle_inject/27]
+    189  27  0.0     0  1-06:57:25 [kworker/27:0H-kblockd]
+    190  28  0.0     0  1-06:57:25 [cpuhp/28]
+    191  28  0.0     0  1-06:57:25 [idle_inject/28]
+    195  28  0.0     0  1-06:57:25 [kworker/28:0H-kblockd]
+    196  29  0.0     0  1-06:57:25 [cpuhp/29]
+    197  29  0.0     0  1-06:57:25 [idle_inject/29]
+    201  29  0.0     0  1-06:57:25 [kworker/29:0H-kblockd]
+    202  30  0.0     0  1-06:57:25 [cpuhp/30]
+    203  30  0.0     0  1-06:57:25 [idle_inject/30]
+    207  30  0.0     0  1-06:57:25 [kworker/30:0H-kblockd]
+    208  31  0.0     0  1-06:57:25 [cpuhp/31]
+    209  31  0.0     0  1-06:57:25 [idle_inject/31]
+    213  31  0.0     0  1-06:57:25 [kworker/31:0H-kblockd]
+    214  32  0.0     0  1-06:57:25 [cpuhp/32]
+    215  32  0.0     0  1-06:57:25 [idle_inject/32]
+    219  32  0.0     0  1-06:57:25 [kworker/32:0H-kblockd]
+    220  33  0.0     0  1-06:57:25 [cpuhp/33]
+    221  33  0.0     0  1-06:57:25 [idle_inject/33]
+    225  33  0.0     0  1-06:57:25 [kworker/33:0H-kblockd]
+    226  34  0.0     0  1-06:57:25 [cpuhp/34]
+    227  34  0.0     0  1-06:57:25 [idle_inject/34]
+    231  34  0.0     0  1-06:57:25 [kworker/34:0H-kblockd]
+    232  35  0.0     0  1-06:57:25 [cpuhp/35]
+    233  35  0.0     0  1-06:57:25 [idle_inject/35]
+    237  35  0.0     0  1-06:57:25 [kworker/35:0H-kblockd]
+    240  10  0.0     0  1-06:57:25 [kdevtmpfs]
+    241  19  0.0     0  1-06:57:25 [kworker/R-inet_frag_wq]
+    242  19  0.0     0  1-06:57:25 [rcu_tasks_kthread]
+    243   3  0.0     0  1-06:57:25 [rcu_tasks_rude_kthread]
+    244  19  0.0     0  1-06:57:25 [kauditd]
+    247   3  0.0     0  1-06:57:25 [oom_reaper]
+    249   3  0.0     0  1-06:57:25 [kworker/R-writeback]
+    251   3  0.0     0  1-06:57:25 [ksmd]
+    254   3  0.0     0  1-06:57:25 [kworker/R-bio_complete]
+    255  12  0.0     0  1-06:57:25 [kworker/R-kblockd]
+    256   3  0.0     0  1-06:57:25 [kworker/R-blkcg_punt_bio]
+    257  12  0.0     0  1-06:57:25 [kworker/R-kintegrityd]
+    258   1  0.0     0  1-06:57:25 [irq/9-acpi]
+    265   9  0.0     0  1-06:57:23 [kworker/R-tpm_dev_wq]
+    266  12  0.0     0  1-06:57:23 [kworker/R-ata_sff]
+    267   9  0.0     0  1-06:57:23 [kworker/R-edac-poller]
+    268  12  0.0     0  1-06:57:23 [kworker/R-devfreq_wq]
+    269   9  0.0     0  1-06:57:23 [watchdogd]
+    270  12  0.0     0  1-06:57:23 [kworker/R-quota_events_unbound]
+    274  12  0.0     0  1-06:57:23 [kworker/R-kthrotld]
+    275  12  0.0     0  1-06:57:23 [kworker/R-acpi_thermal_pm]
+    280   4  0.0     0  1-06:57:22 [scsi_eh_0]
+    281  12  0.0     0  1-06:57:22 [kworker/R-scsi_tmf_0]
+    282  25  0.0     0  1-06:57:22 [scsi_eh_1]
+    283  12  0.0     0  1-06:57:22 [kworker/R-scsi_tmf_1]
+    284  26  0.0     0  1-06:57:22 [scsi_eh_2]
+    285  12  0.0     0  1-06:57:22 [kworker/R-scsi_tmf_2]
+    286  30  0.0     0  1-06:57:22 [scsi_eh_3]
+    287  12  0.0     0  1-06:57:22 [kworker/R-scsi_tmf_3]
+    288   7  0.0     0  1-06:57:22 [scsi_eh_4]
+    289  12  0.0     0  1-06:57:22 [kworker/R-scsi_tmf_4]
+    290  10  0.0     0  1-06:57:22 [scsi_eh_5]
+    291  12  0.0     0  1-06:57:22 [kworker/R-scsi_tmf_5]
+    292  14  0.0     0  1-06:57:22 [scsi_eh_6]
+    293  12  0.0     0  1-06:57:22 [kworker/R-scsi_tmf_6]
+    294   2  0.0     0  1-06:57:22 [scsi_eh_7]
+    295  12  0.0     0  1-06:57:22 [kworker/R-scsi_tmf_7]
+    307  31  0.0     0  1-06:57:22 [kworker/R-mld]
+    309  31  0.0     0  1-06:57:22 [kworker/R-ipv6_addrconf]
+    310  12  0.0     0  1-06:57:22 [kworker/R-kstrp]
+    327   4  0.0     0  1-06:57:22 [kworker/R-zswap-shrink]
+    328   4  0.0     0  1-06:57:22 [kworker/u147:0-hci0]
+    419  11  0.0     0  1-06:57:21 [kworker/R-nvme-wq]
+    420  11  0.0     0  1-06:57:21 [kworker/R-nvme-reset-wq]
+    421  11  0.0     0  1-06:57:21 [kworker/R-nvme-delete-wq]
+    422  11  0.0     0  1-06:57:21 [kworker/R-nvme-auth-wq]
+    447   4  0.0     0  1-06:57:21 [nv_queue]
+    448  11  0.0     0  1-06:57:21 [nv_queue]
+    449   3  0.0     0  1-06:57:21 [nv_open_q]
+    453   1  0.0     0  1-06:57:21 [nv_open_q]
+    455  12  0.0     0  1-06:57:20 [nvidia-modeset/deferred_close_kthread_q]
+    456  23  0.0     0  1-06:57:20 [UVM global queue]
+    457  12  0.0     0  1-06:57:20 [UVM deferred release queue]
+    458  23  0.0     0  1-06:57:20 [UVM Tools Event Queue]
+    459  23  0.0     0  1-06:57:20 [irq/70-nvidia]
+    460  11  0.0     0  1-06:57:20 [nvidia]
+    461  12  0.0     0  1-06:57:20 [nv_queue]
+    463   9  0.0     0  1-06:57:19 [nvidia]
+    578   5  0.0     0  1-06:45:00 [kworker/R-kdmflush/253:0]
+    579  12  0.0     0  1-06:45:00 [kworker/R-kcryptd_io-253:0-1]
+    580  12  0.0     0  1-06:45:00 [kworker/R-kcryptd-253:0-1]
+    589  12  0.0     0  1-06:45:00 [kworker/R-btrfs-worker]
+    590  12  0.0     0  1-06:45:00 [kworker/R-btrfs-delalloc]
+    591  12  0.0     0  1-06:45:00 [kworker/R-btrfs-flush_delalloc]
+    592  12  0.0     0  1-06:45:00 [kworker/R-btrfs-cache]
+    593  16  0.0     0  1-06:45:00 [kworker/R-btrfs-fixup]
+    594  12  0.0     0  1-06:45:00 [kworker/R-btrfs-endio]
+    595  16  0.0     0  1-06:45:00 [kworker/R-btrfs-endio-meta]
+    596  12  0.0     0  1-06:45:00 [kworker/R-btrfs-rmw]
+    597  16  0.0     0  1-06:45:00 [kworker/R-btrfs-endio-write]
+    598  12  0.0     0  1-06:45:00 [kworker/R-btrfs-freespace-write]
+    599  16  0.0     0  1-06:45:00 [kworker/R-btrfs-delayed-meta]
+    600  12  0.0     0  1-06:45:00 [kworker/R-btrfs-qgroup-rescan]
+    800  13  0.0     0  1-06:44:59 [kworker/R-usbip_event]
+    828  10  0.0     0  1-06:44:59 [psimon]
+    843  31  0.0     0  1-06:44:58 [psimon]
+    952  28  0.0     0  1-06:44:58 [kworker/28:2-cgroup_release]
+    966  28  0.0     0  1-06:44:58 [irq/78-mei_me]
+    998  23  0.0     0  1-06:44:58 [kworker/R-cfg80211]
+   1003  16  0.0     0  1-06:44:58 [kworker/R-led_workqueue]
+   1007   8  0.0     0  1-06:44:58 [kworker/u147:1-hci0]
+   1025  26  0.0     0  1-06:44:58 [irq/75-14-0008]
+   1028   3  0.0     0  1-06:44:58 [kworker/R-ext4-rsv-conversion]
+   1033   9  0.0     0  1-06:44:58 [kworker/R-14-0008-con1]
+   1038   3  0.0     0  1-06:44:58 [kworker/R-rtw88_usb: tx wq]
+   1134   3  0.0     0  1-06:44:58 [kworker/R-nfit]
+   1240   2  0.0  1228  1-06:44:52 avahi-daemon: chroot helper
+   1384  13  0.0  2100  1-06:44:49 (sd-pam)
+   1758   1  0.0     0  1-06:44:45 [krfcommd]
+   2360   2  0.0     0  1-06:44:34 [nvidia-drm/timeline-2c]
+   2489  20  0.0     0  1-06:44:34 [nvidia-drm/timeline-2d]
+   2507  20  0.0     0  1-06:44:34 [nvidia-drm/timeline-2e]
+   2515  20  0.0     0  1-06:44:34 [nvidia-drm/timeline-2f]
+   2532  32  0.0     0  1-06:44:34 [nvidia-drm/timeline-30]
+   2536  20  0.0     0  1-06:44:34 [nvidia-drm/timeline-31]
+   2549  20  0.0     0  1-06:44:34 [nvidia-drm/timeline-32]
+   2555   4  0.0     0  1-06:44:34 [nvidia-drm/timeline-33]
+   2569  20  0.0     0  1-06:44:34 [nvidia-drm/timeline-34]
+   2574   1  0.0     0  1-06:44:34 [nvidia-drm/timeline-35]
+   2579  20  0.0     0  1-06:44:34 [nvidia-drm/timeline-36]
+   2584   1  0.0     0  1-06:44:34 [nvidia-drm/timeline-37]
+   2586  20  0.0     0  1-06:44:34 [nvidia-drm/timeline-38]
+   2589  20  0.0     0  1-06:44:34 [nvidia-drm/timeline-39]
+   2594  20  0.0     0  1-06:44:34 [nvidia-drm/timeline-3a]
+   2689  10  0.0     0  1-06:44:33 [nvidia-drm/timeline-3b]
+   2797   7  0.0     0  1-06:44:33 [nvidia-drm/timeline-3d]
+   2880   6  0.0     0  1-06:44:33 [nvidia-drm/timeline-3e]
+   2938  11  0.0  2488  1-06:44:33 /usr/bin/dbus-broker-launch --config-file=/usr/share/defaults/at-spi2/accessibility.conf --scope user
+   2946   0  0.0  4252  1-06:44:33 /usr/lib/dconf-service
+   3174  20  0.0     0  1-06:44:32 [nvidia-drm/timeline-47]
+   3176   3  0.0     0  1-06:44:32 [nvidia-drm/timeline-48]
+   3179  20  0.0     0  1-06:44:32 [nvidia-drm/timeline-49]
+   4307  27  0.0  3704  1-06:44:31 /usr/bin/xsettingsd
+   5343   2  0.0  3948  1-06:44:28 postgres: io worker 1
+   5344   9  0.0  3564  1-06:44:28 postgres: io worker 2
+   5373  24  0.0     0  1-06:44:28 [nvidia-drm/timeline-52]
+   5646   7  0.0     0  1-06:44:27 [vidmem lazy free]
+   5647  24  0.0     0  1-06:44:27 [UVM GPU1 BH]
+   6268  13  0.0  2168  1-06:44:25 fusermount3 -o rw,nosuid,nodev,fsname=portal,auto_unmount,subtype=portal -- /run/user/1000/doc
+ 190085  24  0.0     0    12:26:06 [kworker/24:2]
+ 426827  14  0.0     0  1-04:44:48 [kworker/R-dio/dm-0]
+1037231   6  0.0     0  1-01:52:22 [kworker/R-dio/sda1]
+1834609  30  0.0     0    06:00:43 [kworker/30:2]
+1836221   5  0.0   528    22:45:58 s6-supervise gitea
+1836222   0  0.0   548    22:45:58 s6-supervise openssh
+1888623   6  0.0     0    22:32:27 [vidmem lazy free]
+1888624   6  0.0     0    22:32:27 [UVM GPU2 BH]
+1888625   2  0.0     0    22:32:27 [UVM GPU2 KC]
+1911887  22  0.0     0    22:27:24 [kworker/22:2-events]
+1927707  29  0.0     0    05:41:04 [kworker/29:1]
+1928420  12  0.0     0    05:40:58 [kworker/12:1]
+2043147  16  0.0     0    05:16:06 [kworker/16:2]
+2043161  11  0.0     0    05:16:06 [kworker/11:0-events]
+2043182  33  0.0     0    05:16:05 [kworker/33:1]
+2150110  27  0.0     0    04:52:48 [kworker/27:1]
+2186430  35  0.0     0    04:45:31 [kworker/35:0]
+2215010  13  0.0     0    04:38:49 [kworker/13:2]
+2318583   7  0.0     0    04:15:29 [kworker/7:0-events]
+2318622   4  0.0     0    04:15:29 [kworker/4:2]
+2430008  10  0.0     0    03:49:26 [kworker/10:0]
+2462098   6  0.0     0    03:41:48 [kworker/6:0-cgroup_release]
+2519313  34  0.0     0    03:28:14 [kworker/34:0]
+2581973  19  0.0     0    19:35:24 [kworker/19:0]
+2595712  15  0.0     0    03:10:14 [kworker/15:1]
+2598430   8  0.0     0    03:09:40 [kworker/8:2-cgroup_free]
+2728728  31  0.0     0    18:56:33 [kworker/31:1]
+2799752  32  0.0     0    18:39:02 [kworker/32:0]
+2863385   9  0.0     0    02:06:54 [kworker/9:1]
+2865782   0  0.0     0    02:06:24 [kworker/0:2]
+2868201  23  0.0     0    02:05:53 [kworker/23:0]
+2994585   5  0.0     0    01:35:51 [kworker/5:1]
+3109477   2  0.0     0    01:08:29 [kworker/2:0]
+3220991  17  0.0     0       41:48 [kworker/17:2-cgroup_free]
+3264160   3  0.0     0       31:34 [kworker/3:0]
+3360224   1  0.0     0       08:40 [kworker/u144:3-rtw88_usb: tx wq]
+3384063   0  0.0  5672       02:59 systemd-userwork: waiting...
+3386211   7  0.0     0       02:28 [kworker/u145:10-kcryptd-253:0-1]
+3388396   8  0.0  5672       01:57 systemd-userwork: waiting...
+3388829  15  0.0     0       01:50 [kworker/u144:2]
+3392336   1  0.0  5656       01:01 systemd-userwork: waiting...
+3394039  14  0.0     0       00:36 [kworker/u149:0-rtw_tx_wq]
+3586472  25  0.0     0    15:33:41 [kworker/25:1]

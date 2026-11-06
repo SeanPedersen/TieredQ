@@ -1,0 +1,8 @@
+{
+  "sources": {
+    "/home/sean/experiments/TieredQ-issue31-results-20261105/TieredQ-decision-matrix/matrix-100k-4.md": "2e668fbe9524f3500e5657de8ea29cf9f81885eec54fca38cd0158a633a388bf",
+    "/home/sean/experiments/TieredQ-issue31-results-20261105/TieredQ-decision-matrix/matrix-1m-2.md": "4130df6bc02e4fe70f100c5ff5f3f14f31b1723c3009ed36d09ce123c4c8198f",
+    "/home/sean/experiments/TieredQ-issue31-results-20261105/TieredQ-decision-matrix/matrix-1m-4.md": "eea68e0884f4d51ab7f642eec11ed32cd0dd2072183fa08f40c5ab8767dafe4d"
+  },
+  "note": "Reviewed archived fine-on/off nominal-budget results. No timings or TieredQ measurements reused; the present run rematches measured resources on c74b4e3."
+}

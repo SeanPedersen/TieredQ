@@ -1,0 +1,88 @@
+{
+  "dataset": "gemini",
+  "codec": "tieredq",
+  "base_n": 99000,
+  "queries": 1000,
+  "index_diagnostics": {
+    "tiers": [
+      {
+        "start": 0,
+        "dimensions": 56,
+        "bits": 7
+      },
+      {
+        "start": 56,
+        "dimensions": 112,
+        "bits": 6
+      },
+      {
+        "start": 168,
+        "dimensions": 136,
+        "bits": 5
+      },
+      {
+        "start": 304,
+        "dimensions": 128,
+        "bits": 4
+      },
+      {
+        "start": 432,
+        "dimensions": 120,
+        "bits": 3
+      },
+      {
+        "start": 552,
+        "dimensions": 110,
+        "bits": 2
+      },
+      {
+        "start": 662,
+        "dimensions": 76,
+        "bits": 1
+      }
+    ],
+    "coded_dimensions": 738,
+    "packed_code_bytes": 364,
+    "vector_bytes": 369,
+    "allocated_vector_bytes": 36727132,
+    "model_serialized_bytes": 1958980,
+    "model_memory_bytes": 6682440,
+    "model_serving_memory_bytes": 2010904,
+    "scalar_fast_scan": false
+  },
+  "target_bits": 4,
+  "code_bits": 2917,
+  "available": true,
+  "search_ids_equal": true,
+  "method": "Separate native preparation-only diagnostic, including call overhead; three warmups and repeats",
+  "schedules": [
+    {
+      "threads": 1,
+      "batch": 1,
+      "preparation_ms_per_query": 0.10930888433358632,
+      "fraction_of_end_to_end": 0.04037597306495559,
+      "end_to_end_mean_ms_per_query": 2.7072755412664264
+    },
+    {
+      "threads": 1,
+      "batch": 32,
+      "preparation_ms_per_query": 0.046475235372781754,
+      "fraction_of_end_to_end": 0.028026936344645172,
+      "end_to_end_mean_ms_per_query": 1.6582345926532678
+    },
+    {
+      "threads": 8,
+      "batch": 1,
+      "preparation_ms_per_query": 0.10695189531543292,
+      "fraction_of_end_to_end": 0.14858119527171681,
+      "end_to_end_mean_ms_per_query": 0.7198212069827908
+    },
+    {
+      "threads": 8,
+      "batch": 32,
+      "preparation_ms_per_query": 0.011048797721741721,
+      "fraction_of_end_to_end": 0.04190960820248479,
+      "end_to_end_mean_ms_per_query": 0.2636340017391679
+    }
+  ]
+}

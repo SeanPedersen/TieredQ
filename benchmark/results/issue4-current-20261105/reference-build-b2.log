@@ -1,0 +1,36 @@
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-sift-rabitq-2-0: disk 416.0, peak RAM 420.9 bits/vector
+sift rabitq 2 cached seed-0 recall and disk verified
+cell-sift-qdrant-2-0: disk 352.0, peak RAM 358.9 bits/vector
+sift qdrant 2 cached seed-0 recall and disk verified
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-glove-rabitq-2-0: disk 672.1, peak RAM 720.2 bits/vector
+glove rabitq 2 cached seed-0 recall and disk verified
+cell-glove-qdrant-2-0: disk 464.4, peak RAM 535.1 bits/vector
+glove qdrant 2 cached seed-0 recall and disk verified
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-openai-rabitq-2-0: disk 3232.6, peak RAM 3311.9 bits/vector
+openai rabitq 2 cached seed-0 recall and disk verified
+cell-openai-qdrant-2-0: disk 3138.6, peak RAM 3237.5 bits/vector
+openai qdrant 2 cached seed-0 recall and disk verified
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-gemini-rabitq-2-0: disk 1696.4, peak RAM 1744.0 bits/vector
+gemini rabitq 2 cached seed-0 recall and disk verified
+cell-gemini-qdrant-2-0: disk 1601.3, peak RAM 1675.8 bits/vector
+gemini qdrant 2 cached seed-0 recall and disk verified
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-openai1m-rabitq-2-0: disk 3232.1, peak RAM 3238.3 bits/vector
+openai1m rabitq 2 cached seed-0 recall and disk verified
+cell-openai1m-qdrant-2-0: disk 3136.3, peak RAM 3144.3 bits/vector
+openai1m qdrant 2 cached seed-0 recall and disk verified
+FhtKacRotator is selected
+FhtKacRotator is selected
+cell-msmarco1m-rabitq-2-0: disk 2208.0, peak RAM 2214.2 bits/vector
+msmarco1m rabitq 2 cached seed-0 recall and disk verified
+cell-msmarco1m-qdrant-2-0: disk 2112.2, peak RAM 2120.1 bits/vector
+msmarco1m qdrant 2 cached seed-0 recall and disk verified

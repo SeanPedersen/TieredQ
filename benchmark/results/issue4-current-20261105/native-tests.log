@@ -1,0 +1,9 @@
+Test project /home/sean/experiments/TieredQ-issue4-current-20261105/build
+    Start 1: tieredq
+1/2 Test #1: tieredq ..........................   Passed   40.65 sec
+    Start 2: training_rng
+2/2 Test #2: training_rng .....................   Passed    0.01 sec
+
+100% tests passed out of 2
+
+Total Test time (real) =  40.66 sec
