@@ -5,6 +5,10 @@
 // - PCA ranks the prefix leaves uncoded take a finer model's basis (same sample and seed), rotated in runs of equal
 //   bits, with their own Lloyd levels and a per-row least-squares scale.
 // - The suffix stores its own centroid correction for the refined reconstruction.
+// Additive refinements (#41) instead share one set of 2^gain offsets per tier across its prefix cells, fitted by 1-D
+// Lloyd on the rows' residuals from their prefix level: a refined level is its prefix level plus a suffix-only
+// offset, so a prefix scan's scores plus the suffix rows rescore candidates without reading their prefix codes.
+// Shared offsets track per-cell levels closely at a gain of one bit and lose more as gains grow.
 // A suffix row is suffix_code_bytes() of packed codes, then binary16 scale and correction.
 #pragma once
 #include "tieredq/tieredq.h"
@@ -27,10 +31,12 @@ class TieredQRefinement {
   // total_code_bits sizes the finer model (prefix plus suffix). sample, rows and seed must be the prefix's training
   // inputs: the finer model has to share its centroids and PCA basis, which training checks.
   // fine_tiers enables wider IP/cosine allocation for the suffix (max_tier_bits in [8, 12]);
-  // the prefix must have fine tiers disabled.
+  // the prefix must have fine tiers disabled. additive trains shared per-tier offsets (see above).
   static TieredQRefinement train(const TieredQ& prefix, uint32_t total_code_bits, const float* sample, size_t rows,
-                                 uint64_t seed = 0, bool fine_tiers = false, uint32_t max_tier_bits = 12);
+                                 uint64_t seed = 0, bool fine_tiers = false, uint32_t max_tier_bits = 12,
+                                 bool additive = false);
   const TieredQ& prefix() const { return prefix_; }
+  bool additive() const { return additive_; }
   // Widest combined prefix/suffix code; fine_tiers allows up to max_tier_bits (at most 12).
   uint32_t max_code_bits() const;
   size_t suffix_bits() const { return suffix_bits_; }
@@ -53,6 +59,13 @@ class TieredQRefinement {
   // kernel: automatic, scalar or avx512 (AVX-512F/BW); others are rejected.
   void score(const uint8_t* prefix_rows, const uint8_t* suffix_rows, size_t count, const TieredQRefinementQuery& query,
              float* scores, TieredQKernel kernel = TieredQKernel::automatic) const;
+  // Additive refinements only: score() of the same rows from their prefix model-space scores (e.g. a fast scan's
+  // estimates of prefix().score), prefix centroid ids, factors and corrections, and their suffix rows. Exact
+  // prefix scores reproduce score() up to FP32 rounding.
+  void score_from_prefix(const float* prefix_scores, const uint8_t* centroids, const float* factors,
+                         const float* corrections, const uint8_t* suffix_rows, size_t count,
+                         const TieredQRefinementQuery& query, float* scores,
+                         TieredQKernel kernel = TieredQKernel::automatic) const;
   // The prefix is persisted separately; deserialize checks it is the model the suffix was trained on.
   std::vector<uint8_t> serialize() const;
   static TieredQRefinement deserialize(const std::vector<uint8_t>& data, TieredQ prefix);
@@ -60,7 +73,11 @@ class TieredQRefinement {
 
  private:
   // One prefix tier: its prefix bits stay where the prefix stores them; gain bits per coordinate go to the suffix.
-  struct Block { uint32_t start, dimensions, bits, prefix_offset, gain, suffix_offset; std::vector<float> levels; };
+  // offsets: the shared 2^gain sub-level offsets of additive refinements (empty otherwise or without gain).
+  struct Block {
+    uint32_t start, dimensions, bits, prefix_offset, gain, suffix_offset;
+    std::vector<float> levels, offsets;
+  };
   // A rotated run of ranks only the suffix codes, with its Lloyd levels.
   struct Run { uint32_t start, dimensions, bits, suffix_offset; std::vector<float> levels; };
   TieredQRefinement() = default;
@@ -71,6 +88,7 @@ class TieredQRefinement {
   std::vector<uint16_t> extra_basis_;
   std::vector<float> extra_mean_, extra_sigma_;
   size_t suffix_bits_ = 0;
+  bool additive_ = false;
   // Derived serving state (not serialized): the extra basis times sigma as int8 rank panels with a scale per rank,
   // and mean / sigma per rank.
   std::vector<int8_t> extra_panels_;
@@ -80,7 +98,8 @@ class TieredQRefinement {
   // holds none) and the offset of its levels in level_table_, indexed by (prefix code << shift) | suffix code.
   struct Segment { uint32_t position, count, prefix_bit, prefix_bits, suffix_bit, suffix_bits, shift, table, table_size; };
   std::vector<Segment> segments_;
-  size_t extra_segment_ = 0;  // first segment of the ranks only the suffix codes
+  size_t extra_segment_ = 0;   // first segment of the ranks only the suffix codes
+  size_t offset_segment_ = 0;  // first segment of additive offsets (suffix codes only), past the extra ranks
   std::vector<float> level_table_;
   // Encoder-only state (every position's basis as FP32 panels, centroid projections), built on first use.
   std::shared_ptr<tieredq_detail::RefinementEncoder> encoder_;

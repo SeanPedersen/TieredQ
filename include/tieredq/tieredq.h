@@ -359,6 +359,10 @@ class TieredQIVFIndex {
   // codec().encode() rows (bytes_per_vector() each) of stored documents, recovered exactly from the list storage, so
   // an index keeps no row-major copy of its codes (e.g. for TieredQRefinement rescoring of its hits).
   void document_rows(const uint32_t* documents, size_t count, uint8_t* rows) const;
+  // The per-document terms of those rows' scores (centroid id, factor, correction), one cache line each instead of
+  // a row's codes, e.g. for additive TieredQRefinement::score_from_prefix of this index's hits.
+  void document_terms(const uint32_t* documents, size_t count, uint8_t* centroids, float* factors,
+                      float* corrections) const;
   // Self-contained bytes (model, lists and fast payload) for an engine's own storage container.
   std::vector<uint8_t> serialize() const;
   static TieredQIVFIndex deserialize(const std::vector<uint8_t>& bytes);

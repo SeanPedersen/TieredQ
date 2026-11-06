@@ -297,16 +297,37 @@ const uint8_t* TieredQNestedIVFIndex::candidate_rows(const uint32_t* candidates,
   return suffix_rows;
 }
 
-size_t TieredQNestedIVFIndex::rescore(const float* query,const TieredQRefinementQuery& refined_query,const uint32_t* candidates,
-                                      size_t found,const uint8_t* tier_rows,size_t k,float* scores,uint32_t* ids) const {
-  if (!found) return 0;
-  thread_local std::vector<uint32_t> order;
+void TieredQNestedIVFIndex::refined_scores(const float* query,const TieredQRefinementQuery& refined_query,
+                                           const uint32_t* candidates,const float* found_scores,size_t found,
+                                           const uint8_t* tier_rows,float* out) const {
+  if (found_scores && refinement_.additive() && tier_rows_==TieredQTierRows::suffix) {
+    thread_local std::vector<uint32_t> documents;
+    thread_local std::vector<uint8_t> centroids;
+    thread_local std::vector<float> prefix_scores,factors,corrections;
+    documents.resize(found); centroids.resize(found); prefix_scores.resize(found); factors.resize(found); corrections.resize(found);
+    for (size_t i=0;i<found;++i) documents[i]=documents_[candidates[i]];
+    index_.document_terms(documents.data(),found,centroids.data(),factors.data(),corrections.data());
+    // The scan reports metric scores; the refinement works in model space.
+    const auto [scale,offset]=index_.codec().score_map(query);
+    for (size_t i=0;i<found;++i) prefix_scores[i]=float((double(found_scores[i])-offset)/scale);
+    refinement_.score_from_prefix(prefix_scores.data(),centroids.data(),factors.data(),corrections.data(),tier_rows,found,
+                                  refined_query,out);
+    return;
+  }
   thread_local std::vector<uint8_t> prefix_rows,suffix_rows;
-  thread_local std::vector<float> refined;
-  order.resize(found); refined.resize(found);
   prefix_rows.resize(found*index_.codec().bytes_per_vector()); suffix_rows.resize(found*refinement_.bytes_per_vector());
   const uint8_t* suffix=candidate_rows(candidates,found,tier_rows,prefix_rows.data(),suffix_rows.data());
-  refinement_.score(prefix_rows.data(),suffix,found,refined_query,refined.data());
+  refinement_.score(prefix_rows.data(),suffix,found,refined_query,out);
+}
+
+size_t TieredQNestedIVFIndex::rescore(const float* query,const TieredQRefinementQuery& refined_query,const uint32_t* candidates,
+                                      const float* found_scores,size_t found,const uint8_t* tier_rows,size_t k,float* scores,
+                                      uint32_t* ids) const {
+  if (!found) return 0;
+  thread_local std::vector<uint32_t> order;
+  thread_local std::vector<float> refined;
+  order.resize(found); refined.resize(found);
+  refined_scores(query,refined_query,candidates,found_scores,found,tier_rows,refined.data());
   const size_t kept=std::min(k,found);
   std::iota(order.begin(),order.end(),uint32_t(0));
   std::partial_sort(order.begin(),order.begin()+kept,order.end(),[&](uint32_t a,uint32_t b) {
@@ -326,10 +347,11 @@ std::vector<TieredQHit> TieredQNestedIVFIndex::search(const float* query,size_t 
   auto weights=index_.codec().query_weights(query);
   const auto hits=index_.search(query,weights,candidates,nprobe,pruning);
   std::vector<uint32_t> found(hits.size());
-  for (size_t i=0;i<hits.size();++i) found[i]=hits[i].id;
+  std::vector<float> found_scores(hits.size());
+  for (size_t i=0;i<hits.size();++i) { found[i]=hits[i].id; found_scores[i]=hits[i].score; }
   std::vector<float> scores(std::min(k,found.size()));
   std::vector<uint32_t> ids(scores.size());
-  const size_t kept=rescore(query,refinement_.query(query,std::move(weights)),found.data(),found.size(),
+  const size_t kept=rescore(query,refinement_.query(query,std::move(weights)),found.data(),found_scores.data(),found.size(),
                             read_tier(found.data(),found.size()),k,scores.data(),ids.data());
   std::vector<TieredQHit> out(kept);
   for (size_t i=0;i<kept;++i) out[i]={scores[i],ids[i]};
@@ -347,7 +369,7 @@ void TieredQNestedIVFIndex::search_batch(const float* queries,size_t rows,size_t
   std::vector<float> found_scores(product(rows,depth));
   std::vector<uint32_t> found_ids(product(rows,depth));
   index_.search_batch(queries,weights.data(),rows,candidates,nprobe,found_scores.data(),found_ids.data(),pruning);
-  rescore_rows(queries,rows,std::move(weights),found_ids.data(),depth,nullptr,k,scores,ids);
+  rescore_rows(queries,rows,std::move(weights),found_ids.data(),found_scores.data(),depth,nullptr,k,scores,ids);
 }
 
 void TieredQNestedIVFIndex::rescore_batch(const float* queries,size_t rows,const uint32_t* candidates,size_t depth,
@@ -355,13 +377,13 @@ void TieredQNestedIVFIndex::rescore_batch(const float* queries,size_t rows,const
   if (!rows || !k || !size() || !depth) return;
   if (!queries || !candidates || !tier_rows || !scores || !ids) bad("null rescore buffer");
   for (size_t i=0;i<product(rows,depth);++i) if (candidates[i]!=padding_id) check_row_id(candidates[i],size());
-  rescore_rows(queries,rows,index_.codec().query_weights(queries,rows),candidates,depth,tier_rows,k,scores,ids);
+  rescore_rows(queries,rows,index_.codec().query_weights(queries,rows),candidates,nullptr,depth,tier_rows,k,scores,ids);
 }
 
 // tier_rows null reads each query's candidates from the attached tier.
 void TieredQNestedIVFIndex::rescore_rows(const float* queries,size_t rows,std::vector<TieredQQuery> weights,
-                                         const uint32_t* candidates,size_t depth,const uint8_t* tier_rows,size_t k,
-                                         float* scores,uint32_t* ids) const {
+                                         const uint32_t* candidates,const float* found_scores,size_t depth,
+                                         const uint8_t* tier_rows,size_t k,float* scores,uint32_t* ids) const {
   const size_t d=index_.codec().config().dimensions,width=std::min(k,size()),tier_stride=tier_bytes_per_vector();
   // Projected together, the queries share each pass over the suffix basis.
   const auto refined_queries=refinement_.query(queries,rows,std::move(weights));
@@ -371,7 +393,8 @@ void TieredQNestedIVFIndex::rescore_rows(const float* queries,size_t rows,std::v
     const size_t found=size_t(std::find(row_ids,row_ids+depth,padding_id)-row_ids);
     const uint8_t* row_tier=tier_rows ? tier_rows+q*depth*tier_stride : read_tier(row_ids,found);
     float* out_scores=scores+q*width; uint32_t* out_ids=ids+q*width;
-    const size_t kept=rescore(queries+q*d,refined_queries[q],row_ids,found,row_tier,k,out_scores,out_ids);
+    const size_t kept=rescore(queries+q*d,refined_queries[q],row_ids,found_scores ? found_scores+q*depth : nullptr,found,
+                              row_tier,k,out_scores,out_ids);
     std::fill(out_scores+kept,out_scores+width,-std::numeric_limits<float>::infinity());
     std::fill(out_ids+kept,out_ids+width,padding_id);
   }

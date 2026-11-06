@@ -124,11 +124,19 @@ class TieredQNestedIVFIndex {
   const uint8_t* candidate_rows(const uint32_t* candidates, size_t found, const uint8_t* tier_rows,
                                 uint8_t* prefix_rows, uint8_t* suffix_rows) const;
   // Rescores one query's found candidates (best first, with their tier rows) to its top k; returns how many it kept.
-  size_t rescore(const float* query, const TieredQRefinementQuery& refined_query, const uint32_t* candidates, size_t found,
-                 const uint8_t* tier_rows, size_t k, float* scores, uint32_t* ids) const;
-  // Rescores row-major candidate lists (depth per query, UINT32_MAX-terminated) into rows x min(k, size()) results.
+  // found_scores, the scan's metric scores of the candidates when known, let additive refinements over suffix-only
+  // tiers skip reading the candidates' prefix codes.
+  size_t rescore(const float* query, const TieredQRefinementQuery& refined_query, const uint32_t* candidates,
+                 const float* found_scores, size_t found, const uint8_t* tier_rows, size_t k, float* scores,
+                 uint32_t* ids) const;
+  // The candidates' refined model-space scores, from the scan's scores or else from their prefix rows.
+  void refined_scores(const float* query, const TieredQRefinementQuery& refined_query, const uint32_t* candidates,
+                      const float* found_scores, size_t found, const uint8_t* tier_rows, float* out) const;
+  // Rescores row-major candidate lists (depth per query, UINT32_MAX-terminated; found_scores alongside, or null)
+  // into rows x min(k, size()) results.
   void rescore_rows(const float* queries, size_t rows, std::vector<TieredQQuery> weights, const uint32_t* candidates,
-                    size_t depth, const uint8_t* tier_rows, size_t k, float* scores, uint32_t* ids) const;
+                    const float* found_scores, size_t depth, const uint8_t* tier_rows, size_t k, float* scores,
+                    uint32_t* ids) const;
   TieredQIVFIndex index_;
   TieredQRefinement refinement_;
   TieredQTierRows tier_rows_;

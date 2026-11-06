@@ -1,5 +1,6 @@
 // Exact payload rows of an IVF index's stored documents (#23), recovered from its fast list storage
-// (tieredq_fast_rows.h), so rescoring tiers such as TieredQRefinement need no row-major copy of the codes.
+// (tieredq_fast_rows.h), so rescoring tiers such as TieredQRefinement need no row-major copy of the codes; or only
+// their per-document score terms, which additive refinements rescore from (#41).
 #include "tieredq/tieredq.h"
 #include "tieredq_fast_rows.h"
 
@@ -23,5 +24,19 @@ void TieredQIVFIndex::document_rows(const uint32_t* documents,size_t count,uint8
     if (!live(documents[i])) bad("invalid stored document");
   tieredq_detail::read_fast_rows(*documents_.fast_,model.levels_,model.tiers_,model.coded_dimensions(),model.code_bytes(),
                                  model.bytes_per_vector(),documents,count,rows);
+}
+
+void TieredQIVFIndex::document_terms(const uint32_t* documents,size_t count,uint8_t* centroids,float* factors,
+                                     float* corrections) const {
+  if (!count) return;
+  if (!documents || !centroids || !factors || !corrections) bad("null document buffer");
+  const auto& cache=*documents_.fast_;
+  for (size_t i=0;i<count;++i) {
+    const uint32_t doc=documents[i];
+    if (!live(doc)) bad("invalid stored document");
+    centroids[i]=cache.centroid.data()[doc];
+    factors[i]=tieredq_detail::half_decode(cache.factor.data()[doc]);
+    corrections[i]=tieredq_detail::half_decode(cache.correction.data()[doc]);
+  }
 }
 } // namespace dv

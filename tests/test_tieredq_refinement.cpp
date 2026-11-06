@@ -1,7 +1,9 @@
 // Nested refinement (#23): prefix plus suffix ranks like a flat model of the total budget and clearly better than
 // the prefix alone, in every metric and for prefixes below and at 1 bit/dim; serialization round-trips bit for bit;
-// mismatched training inputs and prefixes are rejected.
+// mismatched training inputs and prefixes are rejected. Additive refinements (#41) score from exact prefix scores as
+// from prefix rows and keep most of the per-cell refinement's gain.
 #include "tieredq/tieredq_refinement.h"
+#include "tieredq_layout.h"
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -208,6 +210,57 @@ void persistence_test() {
   try { TieredQRefinement::train(prefix,4*dimensions,sample.data(),rows,seed+1); } catch (const std::exception&) { rejected=true; }
   require(rejected,"refinement accepted a different training seed");
 }
+// Additive refinement: score_from_prefix with exact prefix scores and the rows' score terms equals score() up to FP32
+// rounding, rescoring a doubled budget ranks about as well as per-cell levels (gains of about a bit per coordinate:
+// shared offsets fall further behind as gains grow), and the offsets-only format round-trips.
+void additive_test(TieredQMetric metric,uint32_t prefix_bits,uint32_t total_bits) {
+  const auto sample=clustered_rows(rows,3),data=clustered_rows(rows,11),probes=clustered_rows(queries,13);
+  const auto prefix=train(sample,metric,prefix_bits);
+  const auto cells=TieredQRefinement::train(prefix,total_bits,sample.data(),rows,seed);
+  const auto refinement=TieredQRefinement::train(prefix,total_bits,sample.data(),rows,seed,false,12,true);
+  require(refinement.additive() && !cells.additive(),"additive flag");
+  const auto prefix_codes=prefix.encode(data.data(),rows);
+  std::vector<uint8_t> suffix_codes(rows*refinement.bytes_per_vector()),cell_codes(suffix_codes.size());
+  refinement.encode(data.data(),rows,prefix_codes.data(),suffix_codes.data());
+  cells.encode(data.data(),rows,prefix_codes.data(),cell_codes.data());
+  const tieredq_detail::Layout layout{prefix.code_bytes()};
+  const size_t stride=prefix.bytes_per_vector();
+  std::vector<uint8_t> centroid_ids(rows);
+  std::vector<float> factors(rows),corrections(rows),prefix_scores(rows),from_prefix(rows),from_rows(rows);
+  for (size_t i=0;i<rows;++i) {
+    const uint8_t* row=prefix_codes.data()+i*stride;
+    centroid_ids[i]=row[prefix.code_bytes()]; factors[i]=float(layout.factor(row)); corrections[i]=float(layout.correction(row));
+  }
+  constexpr double tolerance=1e-4;
+  for (size_t q=0;q<queries;++q) {
+    const auto query=refinement.query(probes.data()+q*dimensions);
+    prefix.score(prefix_codes.data(),rows,prefix.query(probes.data()+q*dimensions),prefix_scores.data());
+    refinement.score_from_prefix(prefix_scores.data(),centroid_ids.data(),factors.data(),corrections.data(),
+                                 suffix_codes.data(),rows,query,from_prefix.data());
+    refinement.score(prefix_codes.data(),suffix_codes.data(),rows,query,from_rows.data());
+    for (size_t i=0;i<rows;++i)
+      require(std::fabs(from_prefix[i]-from_rows[i])<=tolerance*(1+std::fabs(from_rows[i])),
+              "additive scores from the prefix differ from scores from its rows");
+  }
+  const double alone=recall(metric,data,probes,flat_scores(prefix,data,probes));
+  const double additive=recall(metric,data,probes,refined_scores(refinement,prefix_codes,suffix_codes,probes));
+  const double per_cell=recall(metric,data,probes,refined_scores(cells,prefix_codes,cell_codes,probes));
+  std::cout<<"additive refinement metric "<<int(metric)<<" "<<prefix_bits<<"->"<<total_bits<<": prefix "<<alone
+           <<" additive "<<additive<<" per-cell "<<per_cell<<"\n";
+  constexpr double per_cell_margin=0.02;
+  require(additive>alone && additive>=per_cell-per_cell_margin,"additive refinement ranks clearly worse than per-cell levels");
+  const auto bytes=refinement.serialize();
+  const auto restored=TieredQRefinement::deserialize(bytes,TieredQ::deserialize(prefix.serialize()));
+  require(restored.additive() && restored.serialize()==bytes,"additive refinement serialization does not round-trip");
+  require(refined_scores(restored,prefix_codes,suffix_codes,probes)==refined_scores(refinement,prefix_codes,suffix_codes,probes),
+          "restored additive refinement scores differently");
+  bool rejected=false;
+  try {
+    cells.score_from_prefix(prefix_scores.data(),centroid_ids.data(),factors.data(),corrections.data(),cell_codes.data(),
+                            rows,cells.query(probes.data()),from_prefix.data());
+  } catch (const std::exception&) { rejected=true; }
+  require(rejected,"per-cell refinement scored from prefix scores");
+}
 } // namespace
 
 void tieredq_refinement_tests() {
@@ -215,6 +268,8 @@ void tieredq_refinement_tests() {
     quality_test(metric,dimensions,4*dimensions);
     quality_test(metric,dimensions/2,3*dimensions);
   }
+  for (auto metric:{TieredQMetric::inner_product,TieredQMetric::cosine,TieredQMetric::l2})
+    for (uint32_t prefix_bits:{dimensions/2,dimensions}) additive_test(metric,prefix_bits,2*prefix_bits);
   fine_suffix_test();
   persistence_test();
   wide_batch_test();

@@ -31,6 +31,8 @@ namespace {
 using tieredq_detail::bad;
 using tieredq_detail::product;
 constexpr uint32_t refinement_magic=0x46525154,refinement_format=1,wide_refinement_format=2;  // "TQRF"
+// Additive refinements store each block's offsets instead of its cell-major levels.
+constexpr uint32_t additive_refinement_format=3,wide_additive_refinement_format=4;
 constexpr uint32_t max_bits=8;
 constexpr uint32_t max_fine_bits=tieredq_detail::widest_fine_code_bits;
 constexpr size_t lloyd_iterations=60,level_rows=20000,encode_block_rows=256;
@@ -68,6 +70,13 @@ std::vector<float> lloyd(std::vector<double>& samples,size_t count,float fallbac
     std::sort(levels.begin(),levels.end());
   }
   return {levels.begin(),levels.end()};
+}
+// Cell-major levels of an additive block: prefix level plus offset, sorted within each cell as offsets are.
+std::vector<float> additive_levels(const std::vector<float>& prefix_levels,const std::vector<float>& offsets) {
+  std::vector<float> levels;
+  levels.reserve(prefix_levels.size()*offsets.size());
+  for (float level:prefix_levels) for (float offset:offsets) levels.push_back(level+offset);
+  return levels;
 }
 // Rows are copied into buffers padded for 16-byte field windows past their last code byte.
 constexpr size_t read_padding=16;
@@ -310,7 +319,7 @@ TieredQKernel resolve_kernel(TieredQKernel kernel) {
 size_t TieredQRefinement::positions() const { return prefix_.coded_dimensions()+extra_mean_.size(); }
 
 TieredQRefinement TieredQRefinement::train(const TieredQ& prefix,uint32_t total_code_bits,const float* sample,size_t rows,
-                                           uint64_t seed,bool fine_tiers,uint32_t max_tier_bits) {
+                                           uint64_t seed,bool fine_tiers,uint32_t max_tier_bits,bool additive) {
   if (max_tier_bits<max_bits || max_tier_bits>max_fine_bits) bad("refinement max tier bits must be in [8, 12]");
   if (total_code_bits<=prefix.config().code_bits) bad("refinement needs a larger budget than its prefix");
   if (prefix.fast_prefix_bits()) bad("refinement does not extend fine-tier models; train the prefix with fine_tiers off");
@@ -322,6 +331,7 @@ TieredQRefinement TieredQRefinement::train(const TieredQ& prefix,uint32_t total_
   const auto finer=TieredQ::train(config,sample,rows,seed);
   TieredQRefinement out;
   out.prefix_=prefix;
+  out.additive_=additive;
   out.initialize_layout(finer,seed,fine_tiers ? max_tier_bits : max_bits);
   out.prepare();
   const size_t fitted=std::min(rows,level_rows);
@@ -364,7 +374,7 @@ void TieredQRefinement::initialize_layout(const TieredQ& finer,uint64_t seed,uin
     for (uint32_t a=0;a<tier.dimensions;++a) bits+=finer_bits[tier.start+a];
     const double target=std::round(bits/tier.dimensions)-double(tier.bits);
     const uint32_t gain=uint32_t(std::clamp(target,0.0,double(bit_cap-tier.bits)));
-    blocks_.push_back({tier.start,tier.dimensions,tier.bits,tier.bit_offset,gain,offset,{}});
+    blocks_.push_back({tier.start,tier.dimensions,tier.bits,tier.bit_offset,gain,offset,{},{}});
     offset+=gain*tier.dimensions;
   }
   // Ranks only the suffix codes: runs of equal finer bits, each rotated as training rotates a tier.
@@ -423,6 +433,8 @@ void TieredQRefinement::prepare() {
   for (const auto& b:blocks_) add(b.levels,b.start,b.dimensions,b.prefix_offset,b.bits,b.suffix_offset,b.gain);
   extra_segment_=segments_.size();
   for (const auto& run:runs_) add(run.levels,run.start,run.dimensions,0,0,run.suffix_offset,run.bits);
+  offset_segment_=segments_.size();
+  for (const auto& b:blocks_) if (!b.offsets.empty()) add(b.offsets,b.start,b.dimensions,0,0,b.suffix_offset,b.gain);
   level_table_.resize(level_table_.size()+level_padding,0.0f);
   encoder_=std::make_shared<tieredq_detail::RefinementEncoder>();
 }
@@ -489,6 +501,14 @@ void TieredQRefinement::fit_levels(const float* model_rows,size_t rows,const std
         const size_t r=block.start+j;
         cells[tieredq_detail::read_wide_code(doc,block.prefix_offset+j*block.bits,block.bits)].push_back(v[i*p+r]/(factor*prefix_.sigma_[r]));
       }
+    }
+    if (additive_) {
+      // With offsets shared by every cell, nearest-offset assignment of the pooled residuals is 1-D Lloyd on them.
+      std::vector<double> residuals;
+      for (size_t cell=0;cell<cells.size();++cell) for (double x:cells[cell]) residuals.push_back(x-prefix_levels[cell]);
+      block.offsets=lloyd(residuals,size_t(1)<<block.gain,0.0f);
+      block.levels=additive_levels(prefix_levels,block.offsets);
+      continue;
     }
     block.levels.clear();
     for (size_t cell=0;cell<cells.size();++cell) {
@@ -627,7 +647,7 @@ void TieredQRefinement::score(const uint8_t* prefix_rows,const uint8_t* suffix_r
 #endif
   const Segment* segments=segments_.data();
   const Segment* extra=segments+extra_segment_;
-  const Segment* end=segments+segments_.size();
+  const Segment* end=segments+offset_segment_;
   thread_local std::vector<uint8_t> prefix_doc,doc;
   prefix_doc.assign(prefix_stride+read_padding,0); doc.assign(stride+read_padding,0);
   for (size_t i=0;i<count;++i) {
@@ -644,14 +664,52 @@ void TieredQRefinement::score(const uint8_t* prefix_rows,const uint8_t* suffix_r
   }
 }
 
+// score() with sum_r w_r L[p_r][s_r] = sum_r w_r Lp[p_r] + sum_r w_r D[s_r]: the prefix score already holds the
+// first sum (with the prefix correction, replaced here by the suffix's), the offset segments the second.
+void TieredQRefinement::score_from_prefix(const float* prefix_scores,const uint8_t* centroids,const float* factors,
+                                          const float* corrections,const uint8_t* suffix_rows,size_t count,
+                                          const TieredQRefinementQuery& query,float* scores,TieredQKernel kernel) const {
+  if (!additive_) bad("score_from_prefix needs an additive refinement");
+  if (count && (!prefix_scores || !centroids || !factors || !corrections || !suffix_rows || !scores))
+    bad("null refinement buffer");
+  if (query.weights.size()!=positions()) bad("refinement query shape mismatch");
+  const size_t stride=bytes_per_vector(),code_bytes=suffix_code_bytes();
+  auto sum=segment_sum_scalar<Segment>;
+#ifdef DV_TIEREDQ_REFINEMENT_X86
+  if (resolve_kernel(kernel)==TieredQKernel::avx512) sum=segment_sum_avx512<Segment>;
+#else
+  resolve_kernel(kernel);
+#endif
+  const Segment* segments=segments_.data();
+  const Segment *extra=segments+extra_segment_,*offsets=segments+offset_segment_,*end=segments+segments_.size();
+  // Offset and extra segments read no prefix fields; a zero row stands in for the prefix.
+  thread_local std::vector<uint8_t> no_prefix,doc;
+  no_prefix.assign(read_padding,0); doc.assign(stride+read_padding,0);
+  for (size_t i=0;i<count;++i) {
+    std::copy_n(suffix_rows+i*stride,stride,doc.data());
+    const uint8_t cid=centroids[i];
+    if (cid>=query.prefix.centroid_scores.size()) bad("invalid centroid id");
+    const float offset=sum(no_prefix.data(),doc.data(),offsets,end,level_table_.data(),query.weights.data());
+    const float rest=sum(no_prefix.data(),doc.data(),extra,offsets,level_table_.data(),query.weights.data());
+    const float scale=tieredq_detail::half_decode(read_half(doc.data()+code_bytes));
+    const float correction=tieredq_detail::half_decode(read_half(doc.data()+code_bytes+2));
+    const float weight=query.prefix.correction_weights[cid];
+    scores[i]=prefix_scores[i]-weight*corrections[i]+query.extra_mean+factors[i]*offset+scale*rest+weight*correction;
+  }
+}
+
 std::vector<uint8_t> TieredQRefinement::serialize() const {
   tieredq_detail::Writer w;
-  w.u32(refinement_magic); w.u32(max_code_bits()>max_bits ? wide_refinement_format : refinement_format); w.u32(prefix_.model_id());
+  const bool wide=max_code_bits()>max_bits;
+  w.u32(refinement_magic);
+  w.u32(additive_ ? (wide ? wide_additive_refinement_format : additive_refinement_format)
+                  : (wide ? wide_refinement_format : refinement_format));
+  w.u32(prefix_.model_id());
   w.u64(suffix_bits_);
   w.u32(uint32_t(blocks_.size()));
   for (const auto& b:blocks_) {
     w.u32(b.start); w.u32(b.dimensions); w.u32(b.bits); w.u32(b.prefix_offset); w.u32(b.gain); w.u32(b.suffix_offset);
-    w.floats(b.levels);
+    w.floats(additive_ ? b.offsets : b.levels);
   }
   w.u32(uint32_t(runs_.size()));
   for (const auto& r:runs_) { w.u32(r.start); w.u32(r.dimensions); w.u32(r.bits); w.u32(r.suffix_offset); w.floats(r.levels); }
@@ -663,22 +721,32 @@ TieredQRefinement TieredQRefinement::deserialize(const std::vector<uint8_t>& dat
   tieredq_detail::Reader r{data};
   if (r.u32()!=refinement_magic) bad("not a TieredQ refinement");
   const uint32_t format=r.u32();
-  if (format!=refinement_format && format!=wide_refinement_format) bad("unsupported refinement format");
-  const uint32_t bit_cap=format==refinement_format ? max_bits : max_fine_bits;
+  if (format<refinement_format || format>wide_additive_refinement_format) bad("unsupported refinement format");
+  const bool additive=format==additive_refinement_format || format==wide_additive_refinement_format;
+  const uint32_t bit_cap=format==refinement_format || format==additive_refinement_format ? max_bits : max_fine_bits;
   if (r.u32()!=prefix.model_id()) bad("refinement belongs to a different prefix model");
   TieredQRefinement out;
   out.prefix_=std::move(prefix);
+  out.additive_=additive;
   out.suffix_bits_=size_t(r.u64());
   const size_t m1=out.prefix_.coded_dimensions(),d=out.prefix_.model_dimensions();
   uint64_t bits=0;
   const uint32_t blocks=r.u32();
   if (blocks!=out.prefix_.tiers().size()) bad("refinement blocks do not match the prefix tiers");
   for (uint32_t i=0;i<blocks;++i) {
-    Block b{r.u32(),r.u32(),r.u32(),r.u32(),r.u32(),r.u32(),r.floats()};
+    Block b{r.u32(),r.u32(),r.u32(),r.u32(),r.u32(),r.u32(),r.floats(),{}};
     const auto& tier=out.prefix_.tiers()[i];
     if (b.start!=tier.start || b.dimensions!=tier.dimensions || b.bits!=tier.bits || b.prefix_offset!=tier.bit_offset ||
-        b.bits>bit_cap || b.gain>bit_cap-b.bits || b.suffix_offset!=bits || b.levels.size()!=size_t(1)<<(b.bits+b.gain))
+        b.bits>bit_cap || b.gain>bit_cap-b.bits || b.suffix_offset!=bits)
       bad("invalid refinement block");
+    if (additive) {
+      b.offsets=std::move(b.levels);
+      if (b.offsets.size()!=(b.gain ? size_t(1)<<b.gain : 0) || !std::is_sorted(b.offsets.begin(),b.offsets.end()))
+        bad("invalid additive refinement offsets");
+      const auto& prefix_levels=out.prefix_.levels_[b.bits];
+      b.levels=b.gain ? additive_levels(prefix_levels,b.offsets) : prefix_levels;
+    }
+    if (b.levels.size()!=size_t(1)<<(b.bits+b.gain)) bad("invalid refinement block");
     bits+=uint64_t(b.gain)*b.dimensions;
     out.blocks_.push_back(std::move(b));
   }
