@@ -5,6 +5,7 @@
 #include "tieredq_fast_scan.h"
 #include "tieredq_index_read.h"
 #include "tieredq_ivf_coarse.h"
+#include "tieredq_heap.h"
 #include "tieredq_fast_fine.h"
 #include <bit>
 #include <numeric>
@@ -145,6 +146,7 @@ void TieredQIVFIndex::build(const float* rows,size_t count) {
   documents_=std::move(documents);
   ids_=tieredq_detail::EliasFanoLists::encode(list_of,lists);
   list_begin_=std::move(list_begin);list_rows_=std::move(list_rows);size_=count;
+  tieredq_detail::release_freed_heap();
 }
 
 std::vector<uint32_t> TieredQIVFIndex::list_assignment() const {

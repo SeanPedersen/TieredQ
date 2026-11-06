@@ -1,4 +1,5 @@
-// Independent FP32 matrix references, fused centroid ties, projected correction, and overflow fallback.
+// Independent FP32 and binary16 panel matrix references, fused centroid ties, projected correction, and overflow
+// fallback.
 #include "tieredq_encode.h"
 #include <bit>
 #include <random>
@@ -13,28 +14,37 @@ float accumulate(float sum,float a,float b,TieredQKernel kernel) {
   return kernel==TieredQKernel::scalar ? sum+a*b : std::fma(a,b,sum);
 }
 
-void matrix_reference() {
+// Every kernel equals an independent per-element reference bit for bit, at row counts covering empty input, short
+// tiles and full tiles; panel elements are stored through encode and widen through decode (FP32 or binary16).
+template<class Panels,class Encode,class Decode,class Multiply>
+void matrix_reference(Panels panels,Encode encode,Decode decode,Multiply multiply) {
   constexpr size_t depth=67,columns=65,guard=16;
   std::mt19937 rng(912); std::normal_distribution<float> normal;
-  TieredQPanels panels; panels.depth=depth; panels.columns=columns;
+  panels.depth=depth; panels.columns=columns;
   panels.data.resize(depth*panels.padded_columns());
-  for (auto& value:panels.data) value=normal(rng);
-  for (size_t count:{size_t(0),size_t(1),size_t(7),size_t(65)}) {
+  for (auto& value:panels.data) value=encode(normal(rng));
+  for (size_t count:{size_t(0),size_t(1),size_t(3),size_t(7),size_t(65)}) {
     std::vector<float> input(count*depth); for (auto& value:input) value=normal(rng);
     for (auto kernel:{TieredQKernel::scalar,TieredQKernel::avx2,TieredQKernel::avx512,TieredQKernel::neon}) {
       if (!TieredQ::kernel_available(kernel)) continue;
       const size_t stride=panels.padded_columns();
       std::vector<float> output(count*stride+guard,123);
-      float_matrix(input.data(),count,depth,panels,output.data(),stride,kernel);
+      multiply(input.data(),count,depth,panels,output.data(),stride,kernel);
       for (size_t i=0;i<count;++i) for (size_t c=0;c<stride;++c) {
         float expected=0;
         for (size_t j=0;j<depth;++j)
-          expected=accumulate(expected,input[i*depth+j],panels.data[(c/TieredQPanels::PANEL*depth+j)*TieredQPanels::PANEL+c%TieredQPanels::PANEL],kernel);
-        require(std::bit_cast<uint32_t>(output[i*stride+c])==std::bit_cast<uint32_t>(expected),"FP32 fused matrix reference");
+          expected=accumulate(expected,input[i*depth+j],decode(panels.data[(c/TieredQPanels::PANEL*depth+j)*TieredQPanels::PANEL+c%TieredQPanels::PANEL]),kernel);
+        require(std::bit_cast<uint32_t>(output[i*stride+c])==std::bit_cast<uint32_t>(expected),"panel matrix reference");
       }
-      for (size_t j=count*stride;j<output.size();++j) require(output[j]==123,"FP32 matrix tail overwrite");
+      for (size_t j=count*stride;j<output.size();++j) require(output[j]==123,"panel matrix tail overwrite");
     }
   }
+}
+void matrix_references() {
+  const auto same=[](float value) { return value; };
+  matrix_reference(TieredQPanels(),same,same,[](auto... args) { float_matrix(args...); });
+  matrix_reference(HalfPanels(),[](float value) { return half_encode(value); },[](uint16_t value) { return half_decode(value); },
+      [](auto... args) { half_matrix(args...); });
 }
 
 void centroid_ties_and_correction() {
@@ -97,5 +107,5 @@ void overflowing_centroid_dot() {
 }
 
 void tieredq_encoder_tests() {
-  matrix_reference(); centroid_ties_and_correction(); overflowing_centroid_dot();
+  matrix_references(); centroid_ties_and_correction(); overflowing_centroid_dot();
 }

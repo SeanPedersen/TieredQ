@@ -1,8 +1,12 @@
 // IVF coarse quantizer for list counts beyond the codec's centroids: k-means in model space, with assignment and
 // query ranking through the encoder's SIMD GEMM. Lists rank by q.c - |c|^2/2, the squared-distance order.
+// Centroids are held as binary16 panels of c / scale(c), scale(c) = max |c_k|: a single query streams every
+// centroid from L3 (#41: 6 MiB of FP32 at 2048 x 768 was ~0.2 ms per query), and the per-centroid scale keeps any
+// data range inside binary16. Assignment, ranking and saved centroids all use these rounded centroids.
 #pragma once
 #include "tieredq_encode_float.h"
 #include "tieredq_io.h"
+#include "tieredq_layout.h"
 #include "tieredq_train_kmeans.h"
 #include "training_rng.h"
 #include <cmath>
@@ -11,24 +15,33 @@ namespace dv::tieredq_detail {
 struct CoarseQuantizer {
   static constexpr size_t block_rows = 64;
   size_t lists = 0, dimensions = 0;
-  TieredQPanels panels;           // the centroids, held only as GEMM panels
-  std::vector<float> half_norms;  // |c|^2 / 2
+  HalfPanels panels;              // the centroids over their scale, held only as GEMM panels
+  std::vector<float> scales;      // scale(c)
+  std::vector<float> half_norms;  // |c|^2 / 2 of the rounded centroid
 
   static CoarseQuantizer from(const std::vector<float>& centroids,size_t lists,size_t dimensions) {
     CoarseQuantizer q; q.lists=lists; q.dimensions=dimensions;
-    q.panels=pack_panels(dimensions,lists,[&](size_t k,size_t c) { return centroids[c*dimensions+k]; });
+    q.scales.assign(lists,1.0f);
+    for (size_t c=0;c<lists;++c) {
+      const float* centroid=centroids.data()+c*dimensions;
+      const float peak=std::fabs(*std::max_element(centroid,centroid+dimensions,[](float a,float b) { return std::fabs(a)<std::fabs(b); }));
+      if (peak>0) q.scales[c]=peak;
+    }
+    q.panels.depth=dimensions; q.panels.columns=lists;
+    q.panels.data=pack_panel_values<uint16_t>(dimensions,lists,[&](size_t k,size_t c) {
+      return half_encode(double(centroids[c*dimensions+k])/q.scales[c]);
+    });
     q.half_norms.resize(lists);
     for (size_t c=0;c<lists;++c) {
       double sum=0;
-      for (size_t k=0;k<dimensions;++k) sum+=double(centroids[c*dimensions+k])*centroids[c*dimensions+k];
+      for (size_t k=0;k<dimensions;++k) { const double value=q.centroid(c,k); sum+=value*value; }
       q.half_norms[c]=float(sum/2);
     }
     return q;
   }
   std::vector<float> centroids() const {
     std::vector<float> out(product(lists,dimensions));
-    for (size_t c=0;c<lists;++c) for (size_t k=0;k<dimensions;++k)
-      out[c*dimensions+k]=panels.data[(c/TieredQPanels::PANEL*dimensions+k)*TieredQPanels::PANEL+c%TieredQPanels::PANEL];
+    for (size_t c=0;c<lists;++c) for (size_t k=0;k<dimensions;++k) out[c*dimensions+k]=centroid(c,k);
     return out;
   }
   // out[r * lists + c] = rows[r].c - |c|^2 / 2, parallel over row blocks.
@@ -38,8 +51,8 @@ struct CoarseQuantizer {
     for (size_t block=0;block<blocks;++block) {
       const size_t first=block*block_rows,n=std::min(block_rows,count-first);
       std::vector<float> dots(n*width);
-      float_matrix(rows+first*dimensions,n,dimensions,panels,dots.data(),width);
-      for (size_t r=0;r<n;++r) for (size_t c=0;c<lists;++c) out[(first+r)*lists+c]=dots[r*width+c]-half_norms[c];
+      half_matrix(rows+first*dimensions,n,dimensions,panels,dots.data(),width);
+      for (size_t r=0;r<n;++r) for (size_t c=0;c<lists;++c) out[(first+r)*lists+c]=dots[r*width+c]*scales[c]-half_norms[c];
     }
   }
   // Nearest list per row; ties keep the lowest list id.
@@ -54,9 +67,15 @@ struct CoarseQuantizer {
       }
     }
   }
-  size_t allocated_bytes() const { return sizeof(*this)+panels.data.capacity()*sizeof(float)+half_norms.capacity()*sizeof(float); }
+  size_t allocated_bytes() const {
+    return sizeof(*this)+panels.data.capacity()*sizeof(uint16_t)+(scales.capacity()+half_norms.capacity())*sizeof(float);
+  }
  private:
   static constexpr size_t assign_chunk_rows = 4096;
+  float centroid(size_t c,size_t k) const {
+    constexpr size_t PANEL=TieredQPanels::PANEL;
+    return half_decode(panels.data[(c/PANEL*dimensions+k)*PANEL+c%PANEL])*scales[c];
+  }
 };
 
 // Lloyd k-means from lists distinct seeded sample rows, as the codec's centroid training.
