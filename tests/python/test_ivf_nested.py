@@ -61,6 +61,20 @@ def test_ivf_scanning_every_list_matches_the_flat_index(data):
     np.testing.assert_allclose(scores, flat_scores, rtol=1e-5, atol=1e-5)
 
 
+@pytest.mark.parametrize("options", [{"exact_fast_scores": True}, {"max_scan_bits": 3}])
+def test_ivf_codec_options_match_the_flat_index(data, options):
+    """exact_fast_scores and max_scan_bits configure the IVF codec as they configure TieredQIndex."""
+    vectors, queries = data
+    ivf = TieredQIVFIndex(DIMENSIONS, CODE_BITS, **options)
+    ivf.build(vectors)
+    flat = TieredQIndex(DIMENSIONS, CODE_BITS, fine_tiers=False, **options)
+    flat.add(vectors)
+    scores, ids = ivf.search(queries, k=K, nprobe=ivf.lists)
+    flat_scores, flat_ids = flat.search(queries, k=K)
+    np.testing.assert_array_equal(ids, flat_ids)
+    np.testing.assert_allclose(scores, flat_scores, rtol=1e-5, atol=1e-5)
+
+
 def test_ivf_fine_tiers_match_the_flat_index_and_round_trip(tmp_path):
     rng = np.random.default_rng(3)
     steep = 0.85 ** np.arange(DIMENSIONS)  # steep enough that 8 bits/dim allocates codes past the 8-bit prefix
