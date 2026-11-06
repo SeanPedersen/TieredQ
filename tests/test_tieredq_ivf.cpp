@@ -1,8 +1,9 @@
 // IVF over the codec's centroids or a coarse quantizer (beyond the codec's 256-centroid limit): a full probe returns
 // the flat fast index's hits bit for bit in every fast layout and metric, partial probes stay inside the probed
 // lists, unfilled slots are marked, and both persistence paths round-trip. Ids are Elias-Fano lists; version 2 files
-// with raw ids still load.
+// with raw ids still load. Coarse probes through the principal-axes shortlist keep the exact probe lists.
 #include "tieredq/tieredq.h"
+#include "tieredq_ivf_coarse.h"
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
@@ -254,8 +255,49 @@ void raw_ids_file_test() {
   require(reloaded.id_documents()==documents,"version 3 IVF resave moves ids");
   require(saved_bytes<std::filesystem::file_size(fixture),"Elias-Fano ids do not shrink the file");
 }
+// The coarse shortlist (dimensions and lists beyond shortlist_axes) keeps nearly every exact probe list, equals the
+// exact probe once the shortlist would cover every list, and never probes empty lists; the exact probe is the
+// closeness order with ties to the lower list id.
+void coarse_shortlist_test() {
+  using tieredq_detail::CoarseQuantizer;
+  constexpr size_t width=192,lists=512,rows=8192,queries=64;
+  constexpr float spread=6;
+  std::mt19937 random(31); std::normal_distribution<float> normal;
+  std::vector<float> data(rows*width),probes(queries*width);
+  for (size_t i=0;i<rows+queries;++i) for (size_t j=0;j<width;++j) {
+    const float value=normal(random)*std::exp(-spread*float(j)/width);
+    (i<rows ? data[i*width+j] : probes[(i-rows)*width+j])=value;
+  }
+  const auto shortlisted=tieredq_detail::train_coarse(data.data(),rows,width,lists,7);
+  require(!shortlisted.axes.data.empty(),"coarse quantizer lacks its shortlist");
+  const auto exact=CoarseQuantizer::from(shortlisted.centroids(),lists,width,false);
+  std::vector<uint32_t> list_rows(lists,1);
+  std::vector<float> closeness(lists);
+  size_t kept=0,total=0;
+  for (size_t q=0;q<queries;++q) {
+    const float* query=probes.data()+q*width;
+    exact.closeness(query,1,closeness.data());
+    for (size_t nprobe:{size_t(4),size_t(16),size_t(40),size_t(200)}) {
+      const auto reference=exact.probe(query,list_rows,nprobe),found=shortlisted.probe(query,list_rows,nprobe);
+      std::vector<uint32_t> order(lists); std::iota(order.begin(),order.end(),0u);
+      std::partial_sort(order.begin(),order.begin()+nprobe,order.end(),[&](uint32_t a,uint32_t b) {
+        return closeness[a]>closeness[b] || (closeness[a]==closeness[b] && a<b);
+      });
+      order.resize(nprobe);
+      require(reference==order,"exact coarse probe is not the closeness order");
+      if (CoarseQuantizer::shortlist_multiple*nprobe>=lists) require(found==reference,"covering shortlist changed the probe");
+      for (uint32_t list:found) kept+=std::count(reference.begin(),reference.end(),list);
+      total+=nprobe;
+    }
+  }
+  constexpr double minimum_kept=0.99;
+  require(double(kept)>=minimum_kept*double(total),"coarse shortlist drops exact probe lists");
+  for (size_t list=0;list<lists;list+=2) list_rows[list]=0;
+  for (uint32_t list:shortlisted.probe(probes.data(),list_rows,16)) require(list_rows[list],"coarse probe chose an empty list");
+}
 } // namespace
 void tieredq_ivf_tests() {
+  coarse_shortlist_test();
   elias_fano_test();
   raw_ids_file_test();
   // 1 bit/dim takes the nibble lookup layout on x86, 4 bits int8 levels or codes, 6 bits wide code lookups.

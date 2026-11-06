@@ -241,9 +241,6 @@ void TieredQIVFIndex::search_rows(const float* queries,const TieredQQuery* weigh
     model.lift_queries(queries,rows,lifted.data());
     model_queries=lifted.data();
   }
-  // Coarse closeness for all queries at once through the GEMM; codec lists use the prepared centroid scores.
-  std::vector<float> coarse_closeness;
-  if (coarse_) { coarse_closeness.resize(product(rows,lists())); coarse_->closeness(model_queries,rows,coarse_closeness.data()); }
   const auto& cache=*documents_.fast_;
   // Fine-tier models scan their prefix view, which shares the model's projection, so one set of query weights serves
   // the list scans and the rescoring of their candidates.
@@ -280,21 +277,20 @@ void TieredQIVFIndex::search_rows(const float* queries,const TieredQQuery* weigh
 #pragma omp parallel for schedule(dynamic) num_threads(workers) if(workers>1 && !omp_in_parallel())
     for (size_t row=0;row<rows;++row) {
       try {
-        std::vector<float> codec_closeness;
-        const float* closeness=coarse_closeness.data()+row*lists();
-        if (!coarse_) {
+        // Coarse lists rank through their quantizer's shortlist; codec lists use the prepared centroid scores.
+        std::vector<uint32_t> probed;
+        if (coarse_) probed=coarse_->probe(model_queries+row*model.model_dimensions(),list_rows_,probes);
+        else {
           const auto& centroid=tieredq_detail::prepared_centroid_scores(prepared[row]);
-          codec_closeness.resize(lists());
-          for (size_t list=0;list<lists();++list) codec_closeness[list]=centroid[list]-model.centroid_half_norms_[list];
-          closeness=codec_closeness.data();
+          std::vector<float> closeness(lists());
+          for (size_t list=0;list<lists();++list) closeness[list]=centroid[list]-model.centroid_half_norms_[list];
+          probed=probe_order(closeness.data(),list_rows_,probes);
         }
         TopK top(depth);
         std::vector<float> chunk(ivf_scan_chunk);
-        // Rebound inside the OpenMP region: Clang rejects the nested generic lambda naming the enclosing local.
-        const size_t probed_lists=probes;
         // Lists in probe order, nearest first, so the running top-k threshold tightens early for pruned scans.
         auto scan_lists=[&](auto score) {
-          for (const uint32_t list:probe_order(closeness,list_rows_,probed_lists)) {
+          for (const uint32_t list:probed) {
             const size_t first=list_begin_[list],live=list_rows_[list];
             // Chunks end on absolute chunk boundaries, so block kernels never rescan a block across calls.
             for (size_t doc=first,end=first+live;doc<end;) {
