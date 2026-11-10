@@ -190,8 +190,8 @@ void bind_ivf(nb::module_& module) {
       }, "queries"_a.noconvert(), "k"_a = 10, nb::kw_only(), "nprobe"_a, "pruning"_a = nb::none(),
          "routing"_a = "auto", "super_probes"_a = 0,
          "Scans the nearest nprobe lists; slots past the probed rows hold id 2**32 - 1 and score -inf.\n"
-         "routing 'auto' ranks lists through the router (if built) for fewer than 64 queries and exactly otherwise;\n"
-         "'router' and 'exact' force either; super_probes > 0 overrides the router's probed supers.")
+         "routing 'auto' ranks lists through the router when one is built and exactly otherwise; 'router' and\n"
+         "'exact' force either; super_probes > 0 overrides the router's probed supers.")
       .def("set_coarse_training", [](PythonIVFIndex& self, uint32_t iterations, uint32_t assignment_supers,
                                      uint32_t assignment_probes) {
         self.set_coarse_training({iterations, assignment_supers, assignment_probes});
@@ -208,7 +208,7 @@ void bind_ivf(nb::module_& module) {
          "bits_per_dimension"_a = dv::TieredQRouterConfig{}.bits_per_dimension, "rerank"_a = dv::TieredQRouterConfig{}.rerank,
          "expansion"_a = dv::TieredQRouterConfig{}.expansion, "min_super_probes"_a = dv::TieredQRouterConfig{}.min_super_probes,
          "seed"_a = dv::TieredQRouterConfig{}.seed,
-         "Builds the two-level compressed coarse router (coarse lists only) for single-query searches over many\n"
+         "Builds the two-level compressed coarse router (coarse lists only) for searches over many\n"
          "lists; rebuilt by every later build() and saved with the index.",
          nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro("has_router", &PythonIVFIndex::has_router, nb::call_guard<nb::gil_scoped_release>())

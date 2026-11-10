@@ -348,7 +348,7 @@ struct TieredQCoarseTraining {
 struct TieredQBuildStats {
   double train_s = 0, assign_s = 0, encode_s = 0, router_s = 0;
 };
-// Two-level compressed coarse router (#47) for single-query searches over many coarse lists, where ranking every
+// Two-level compressed coarse router (#47) for searches over many coarse lists, where ranking every
 // centroid exactly is memory-bound (about 9 ms per query at 64K x 1024). The nonempty lists' centroids are grouped
 // into supers (k-means, about one per lists_per_super centroids), stored as codes of a small L2 TieredQ IVF index
 // (bits_per_dimension, 4-bit scan cap): a search ranks the supers exactly, scores the codes of the probed supers'
@@ -359,17 +359,17 @@ struct TieredQRouterConfig {
   uint32_t lists_per_super = 128;
   double bits_per_dimension = 2;
   uint32_t rerank = 256;
-  double expansion = 32;
-  uint32_t min_super_probes = 64;
+  double expansion = 64;          // tuned on Qwen 8.84M x 1024 at 64K-128K lists (#47): more costs time, not recall
+  uint32_t min_super_probes = 32;
   uint64_t seed = 0;
   void validate() const;
 };
-// Per-search choice of coarse ranking. automatic uses the router (when built) for calls of fewer than
-// batch_queries queries and the exact GEMM ranking, which amortizes the centroids across queries, for larger batches.
-// router forces the router; exact ignores it. super_probes > 0 overrides the router's probed supers.
+// Per-search choice of coarse ranking. automatic uses the router whenever one is built, for single queries and batches
+// alike: on Qwen 8.84M x 1024 at 64K lists, 32-thread batches through the router reached 1.4x the QPS of the exact GEMM
+// ranking at equal nprobe (#51). router forces the router; exact ranks every centroid through the GEMM. super_probes > 0
+// overrides the router's probed supers.
 struct TieredQRouting {
   enum class Mode { automatic, router, exact };
-  static constexpr size_t batch_queries = 64;
   Mode mode = Mode::automatic;
   uint32_t super_probes = 0;
 };

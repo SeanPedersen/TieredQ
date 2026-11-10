@@ -353,10 +353,9 @@ void TieredQIVFIndex::search_rows(const float* queries,const TieredQQuery* weigh
     model.lift_queries(queries,rows,lifted.data());
     model_queries=lifted.data();
   }
-  // Few queries route through the router; larger batches rank every centroid for all queries at once through the
-  // GEMM, which amortizes streaming the centroids. Codec lists use the prepared centroid scores.
-  const bool routed=router_ && (routing.mode==TieredQRouting::Mode::router ||
-      (routing.mode==TieredQRouting::Mode::automatic && rows<TieredQRouting::batch_queries));
+  // The router serves every query when built (unless exact ranking is asked for); otherwise every centroid is ranked
+  // for all queries at once through the GEMM. Codec lists use the prepared centroid scores.
+  const bool routed=router_ && routing.mode!=TieredQRouting::Mode::exact;
   const float* coarse_queries=input_space_coarse_ ? queries : model_queries;
   std::vector<float> coarse_closeness;
   if (coarse_ && !routed) {

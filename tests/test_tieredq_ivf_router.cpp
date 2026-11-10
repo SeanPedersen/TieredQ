@@ -1,6 +1,6 @@
 // Two-level coarse router of TieredQIVFIndex (#47): probing every super with a head as large as the lists re-ranks
 // every list exactly, so router searches equal exact-ranking searches bit for bit; the automatic probe count keeps
-// recall; batches of at least TieredQRouting::batch_queries take the exact GEMM path; the router is rebuilt with the
+// recall; automatic batches route like single queries; the router is rebuilt with the
 // lists, persists in payload version 5 through both paths, and is rejected where it cannot apply.
 #include "tieredq/tieredq.h"
 #include <algorithm>
@@ -105,10 +105,11 @@ void automatic_router_test() {
   require(one<automatic,"probing one super does not lose recall");
 }
 
-// Automatic mode: single searches route, batches of batch_queries rows take the exact GEMM ranking.
-void batch_threshold_test() {
+// Automatic mode routes batches too: a batch equals its queries routed one at a time, and the router (two probed supers)
+// changes some hits against the exact ranking.
+void batch_routing_test() {
   const auto data=gaussian_rows(rows,23);
-  const size_t batch=TieredQRouting::batch_queries;
+  constexpr size_t batch=64;
   const auto queries=gaussian_rows(batch,29);
   auto ivf=built(TieredQMetric::inner_product,data);
   TieredQRouterConfig config; config.lists_per_super=lists_per_super; config.min_super_probes=1; config.expansion=1; config.rerank=0;
@@ -116,11 +117,12 @@ void batch_threshold_test() {
   std::vector<float> scores(batch*k),exact_scores(batch*k); std::vector<uint32_t> ids(batch*k),exact_ids(batch*k);
   ivf.search_batch(queries.data(),batch,k,nprobe,scores.data(),ids.data());
   ivf.search_batch(queries.data(),batch,k,nprobe,exact_scores.data(),exact_ids.data(),{},{TieredQRouting::Mode::exact});
-  require(ids==exact_ids && scores==exact_scores,"large automatic batches do not take the exact ranking");
-  bool differs=false;
-  for (size_t q=0;q<batch && !differs;++q)
-    differs=!same_hits(ivf.search(queries.data()+q*dimensions,k,nprobe),routed(ivf,queries.data()+q*dimensions,TieredQRouting::Mode::exact));
-  require(differs,"two-super routing never changes a single search");
+  for (size_t q=0;q<batch;++q) {
+    const auto single=ivf.search(queries.data()+q*dimensions,k,nprobe);
+    for (size_t hit=0;hit<single.size();++hit)
+      require(ids[q*k+hit]==single[hit].id && scores[q*k+hit]==single[hit].score,"automatic batch differs from routed single searches");
+  }
+  require(ids!=exact_ids,"two-super routing never changes a batch"); 
 }
 
 // build_router before build defers; set_lists drops the router until the next build; persistence keeps it.
@@ -172,7 +174,7 @@ void tieredq_ivf_router_tests() {
   for (auto metric:{TieredQMetric::inner_product,TieredQMetric::cosine,TieredQMetric::l2}) exhaustive_router_test(metric);
   for (auto metric:{TieredQMetric::inner_product,TieredQMetric::l2}) for (uint32_t list_count:{0u,lists}) probe_lists_test(metric,list_count);
   automatic_router_test();
-  batch_threshold_test();
+  batch_routing_test();
   lifecycle_test();
   std::cout<<"PASS IVF router\n";
 }

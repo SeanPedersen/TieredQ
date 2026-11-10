@@ -226,9 +226,10 @@ auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*p
   Faiss; query ranking keeps the binary16 panels. On Qwen 1024-D (500K rows, 32K lists), 256 supers and 16 probes kept 99.0%
   of exact labels and ran 8.5× faster.
   Exact coarse ranking streams every centroid per query: about 9 ms at 64K × 1024. `build_router()` adds a two-level
-  compressed router (#47) for single queries. It ranks about lists/128 supers exactly, scans the 2-bit TieredQ codes of
+  compressed router (#47). It ranks about lists/128 supers exactly, scans the 2-bit TieredQ codes of
   the probed supers' member centroids, and re-ranks the first 256 lists exactly. The probed supers grow with `nprobe`.
-  Batches of 64 or more queries keep the exact GEMM ranking. `TieredQRouting{mode, super_probes}` forces either path
+  Batches route too: at 64K lists, 32-thread batches through the router reached 1.4× the QPS of the exact GEMM ranking.
+  `TieredQRouting{mode, super_probes}` forces either path
   or the number of probed supers per search. The router persists with the index (payload version 5).
 
   ```cpp
