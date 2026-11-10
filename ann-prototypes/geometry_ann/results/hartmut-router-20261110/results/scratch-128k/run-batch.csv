@@ -1,0 +1,10 @@
+queries,mode,expansion,lists,nprobe,candidates,threads,recall10,qps
+heldout,exact,0.0,131072,128,40,32,0.9576,2215.6
+heldout,router,16.0,131072,128,40,32,0.9271,5355.3
+heldout,router,32.0,131072,128,40,32,0.9412,4923.2
+heldout,exact,0.0,131072,512,40,32,0.9797,1301.4
+heldout,router,16.0,131072,512,40,32,0.9673,1820.5
+heldout,router,32.0,131072,512,40,32,0.9753,1732.3
+heldout,exact,0.0,131072,2048,40,32,0.9887,485.3
+heldout,router,16.0,131072,2048,40,32,0.9875,505.3
+heldout,router,32.0,131072,2048,40,32,0.9877,483.3
