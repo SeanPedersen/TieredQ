@@ -45,7 +45,7 @@ GraphObservation graph_measure(const Index& index, const Dataset& data, const Be
     return result;
 }
 void graph_csv_header(std::ostream& out) {
-    out << "routing,bounds,weight,metadata_cap,vector_cap,recall10,p50_us,p99_us,mean_vectors,max_vectors,mean_metadata,max_metadata,mean_leaves,mean_pruned,mean_skipped,mean_projection_components,mean_radius_evaluations,mean_graph_expansions,mean_positive_bounds,mean_projection_improvements,mean_routing_us,mean_scanning_us,metadata_exhaustion_rate,mean_scan_fraction,leaves,raw_bytes,full_overhead_bytes,graph_bytes,active_bounds_payload_bytes,build_s,clustering_s,centroids_s,radius_s,projections_s,packing_s,graph_s,graph_build_distances,nq,build_peak_rss_bytes,shared_basis_s,shared_ranges_s,mean_shared_query_projections,mean_shared_interval_checks,scan_order\n";
+    out << "routing,bounds,weight,metadata_cap,vector_cap,recall10,p50_us,p99_us,mean_vectors,max_vectors,mean_metadata,max_metadata,mean_leaves,mean_pruned,mean_skipped,mean_projection_components,mean_radius_evaluations,mean_graph_expansions,mean_positive_bounds,mean_projection_improvements,mean_routing_us,mean_scanning_us,metadata_exhaustion_rate,mean_scan_fraction,leaves,raw_bytes,full_overhead_bytes,graph_bytes,active_bounds_payload_bytes,build_s,clustering_s,centroids_s,radius_s,projections_s,packing_s,graph_s,graph_build_distances,nq,build_peak_rss_bytes,shared_basis_s,shared_ranges_s,mean_shared_query_projections,mean_shared_interval_checks,scan_order,vector_storage,original_fp32_bytes,support_build_s\n";
 }
 void graph_csv_row(std::ostream& out, const Index& index, const Dataset& data, const GraphSetting& s,
                    const GraphObservation& o, double build_seconds, std::size_t peak_rss) {
@@ -54,11 +54,12 @@ void graph_csv_row(std::ostream& out, const Index& index, const Dataset& data, c
         << o.recall << ',' << o.p50 << ',' << o.p99 << ',' << o.vectors << ',' << o.max_vectors << ',' << o.metadata << ','
         << o.max_metadata << ',' << o.leaves << ',' << o.pruned << ',' << o.skipped << ',' << o.projections << ',' << o.radius << ','
         << o.expansions << ',' << o.positive << ',' << o.improved << ',' << o.routing_us << ',' << o.scanning_us << ',' << o.exhausted << ','
-        << o.vectors / double(data.base.size() / data.dimension) << ',' << index.leaf_count() << ',' << index.raw_bytes() << ','
+        << o.vectors / double(data.count()) << ',' << index.leaf_count() << ',' << index.raw_bytes() << ','
         << index.overhead_bytes() << ',' << index.graph_bytes() << ',' << index.bounds_bytes(s.bounds) << ',' << build_seconds << ','
         << b.clustering_s << ',' << b.centroids_s << ',' << b.radius_s << ',' << b.projections_s << ',' << b.packing_s << ','
         << b.graph_s << ',' << b.graph_distance_evaluations << ',' << data.truth.size() << ',' << peak_rss << ',' << b.shared_basis_s << ',' << b.shared_ranges_s << ','
         << o.shared_query_projections << ',' << o.shared_intervals << ','
-        << (s.scan_order == GraphScanOrder::centroid ? "centroid" : "routing") << '\n';
+        << (s.scan_order == GraphScanOrder::centroid ? "centroid" : "routing") << ','
+        << (index.quantized() ? "int8_sq_per_dim" : "fp32") << ',' << data.count()*data.dimension*sizeof(float) << ',' << b.support_s << '\n';
 }
 }

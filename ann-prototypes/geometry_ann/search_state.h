@@ -16,7 +16,7 @@ using VisitQueue = std::priority_queue<Visit, std::vector<Visit>, VisitGreater>;
 class SearchState {
 public:
     SearchState(std::span<const float> query, const SearchOptions& options, Variant variant,
-                std::span<const float> vectors, std::span<const Id> ids, std::span<const Leaf> leaves, const Envelope* shared_geometry = nullptr);
+                std::span<const float> vectors, std::span<const Id> ids, std::span<const Leaf> leaves, const Envelope* shared_geometry = nullptr, QuantizedInput quantized = {});
     std::optional<Visit> evaluate(const Envelope& geometry, std::size_t index, bool parent,
                                   BoundsMode override_mode = BoundsMode::automatic);
     bool discard_if_bounded(const Visit& visit);
@@ -26,6 +26,7 @@ public:
     SearchResult result;
 private:
     std::span<const float> query_, vectors_;
+    QuantizedInput quantized_;
     std::span<const Id> ids_;
     std::span<const Leaf> leaves_;
     const SearchOptions& options_;

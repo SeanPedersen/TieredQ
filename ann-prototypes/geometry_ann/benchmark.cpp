@@ -64,7 +64,7 @@ void run_sweeps(const Index& index, const Dataset& data, const BenchmarkOptions&
         budgets.push_back(index.leaf_count());
     }
     std::string routing = flat_routing ? "flat" : "hierarchy";
-    double count = double(data.base.size() / data.dimension);
+    double count = double(data.count());
     for (auto ordering : {Ordering::centroid, Ordering::bound, Ordering::variance}) {
         if (name == "V0" && ordering != Ordering::centroid) continue;
         if (config.ordering && ordering != *config.ordering) continue;
@@ -93,9 +93,10 @@ void run_sweeps(const Index& index, const Dataset& data, const BenchmarkOptions&
 int main(int argc, char** argv) {
     try {
         auto config = parse_options(argc, argv);
+        if (!config.int8_base.empty() || !config.evaluation_output.empty()) throw std::invalid_argument("SQ8 and held-out replay require graph_bench");
         auto data = config.base.empty() ? synthetic(config.count, config.query_count, config.dimension, config.build.seed)
             : load_dataset(config.base, config.queries, config.truth, config.query_count);
-        std::cerr << "dataset n=" << data.base.size() / data.dimension << " nq=" << data.truth.size() << " d=" << data.dimension
+        std::cerr << "dataset n=" << data.count() << " nq=" << data.truth.size() << " d=" << data.dimension
                   << " seed=" << config.build.seed << " split=" << config.split << '\n';
         std::cout << "variant,ordering,leaf_budget,metadata_cap,leaves,build_s,raw_bytes,overhead_bytes,process_peak_rss_bytes,recall10,p50_us,p99_us,mean_vectors,mean_metadata,mean_pruned,metadata_exhaustion_rate,routing,vector_cap,mean_scan_fraction,mean_skipped_leaves\n";
         const std::vector<std::pair<Variant, std::string>> variants = {{Variant::fixed,"V0"},{Variant::radius,"V1"},{Variant::pca,"V2"}};

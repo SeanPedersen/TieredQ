@@ -1,0 +1,13 @@
+{
+  "stage": "complete",
+  "utc": "2026-11-08T02:55:48.756733+00:00",
+  "exit_codes": {
+    "fp32_oracle": 0,
+    "sq8_oracle": 0,
+    "adaptive4": 0,
+    "fixed4": 0,
+    "fixed12": 0,
+    "faiss-sq8": 0,
+    "faiss-fp32": 0
+  }
+}

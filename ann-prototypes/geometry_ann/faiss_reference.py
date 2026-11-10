@@ -19,6 +19,15 @@ def build_reference(base: np.ndarray, args) -> tuple:
     """Include all training, assignment and insertion work in wall time."""
     start = time.perf_counter()
     dimension = base.shape[1]
+    sq8 = bool(getattr(args,"int8_base",None))
+    if sq8:
+        scales = np.fromfile(args.int8_scales,dtype='<f4')
+        if scales.shape != (dimension,) or not np.isfinite(scales).all() or np.any(scales<=0):
+            raise ValueError("Invalid shared SQ8 scales")
+        codes = np.memmap(args.int8_base,dtype='int8',mode='r',shape=base.shape)
+        if args.int8_base.stat().st_size != base.size: raise ValueError("SQ8 shape mismatch")
+        offsets = np.fromfile(args.int8_offsets,dtype='<f4') if getattr(args,'int8_offsets',None) else np.zeros(dimension,dtype='float32')
+        if offsets.shape!=(dimension,) or not np.isfinite(offsets).all(): raise ValueError("Invalid shared SQ8 offsets")
     if args.variant == "hnsw":
         index = faiss.IndexHNSWFlat(dimension, HNSW_NEIGHBORS)
         index.hnsw.efConstruction = HNSW_CONSTRUCTION_EF
@@ -28,17 +37,42 @@ def build_reference(base: np.ndarray, args) -> tuple:
         if args.variant == "ivf-hnsw":
             quantizer.hnsw.efConstruction = HNSW_CONSTRUCTION_EF
             quantizer.hnsw.efSearch = QUANTIZER_SEARCH_EF
-        index = faiss.IndexIVFFlat(quantizer, dimension, args.nlist, faiss.METRIC_L2)
+        sq8 = bool(getattr(args,"int8_base",None))
+        index = (faiss.IndexIVFScalarQuantizer(quantizer,dimension,args.nlist,faiss.ScalarQuantizer.QT_8bit,faiss.METRIC_L2,False)
+                 if sq8 else faiss.IndexIVFFlat(quantizer, dimension, args.nlist, faiss.METRIC_L2))
         index.cp.niter = LLOYD_ITERATIONS
         index.cp.seed = args.seed
         sample = np.random.default_rng(args.seed).choice(len(base), min(args.sample, len(base)), replace=False)
         print(f"Training {args.variant}: {len(sample)} vectors, {args.nlist} lists", file=sys.stderr, flush=True)
-        index.train(np.ascontiguousarray(base[sample]))
+        training = codes[sample].astype(np.float32) if sq8 else np.ascontiguousarray(base[sample])
+        if sq8:
+            training *= scales
+            training += offsets
+        index.train(training)
+        del training
         budgets = sorted({min(args.nlist, 2**power) for power in range(args.nlist.bit_length() + 1)})
+    sq8 = bool(getattr(args,"int8_base",None))
+    if sq8:
+        faiss.copy_array_to_vector(np.concatenate([offsets-np.float32(128.5)*scales,np.float32(255)*scales]),index.sq.trained)
+        prefix=index.coarse_code_size()
+        if index.sa_code_size()!=prefix+dimension: raise ValueError("Unexpected SQ8 code size")
     for offset in range(0, len(base), ADD_BATCH):
-        index.add(base[offset : offset + ADD_BATCH])
+        if sq8:
+            end=min(offset+ADD_BATCH,len(base))
+            decoded=codes[offset:end].astype(np.float32)
+            decoded *= scales
+            decoded += offsets
+            _, assignments=index.quantizer.search(decoded,1)
+            del decoded
+            packed=np.empty((end-offset,prefix+dimension),dtype='uint8')
+            for byte in range(prefix): packed[:,byte]=(assignments[:,0]>>(8*byte))&255
+            packed[:,prefix:]=np.bitwise_xor(codes[offset:end].view('uint8'),np.uint8(128))
+            index.add_sa_codes(packed)
+        else:
+            index.add(base[offset : offset + ADD_BATCH])
         print(f"Added {min(offset + ADD_BATCH, len(base))}/{len(base)} ({time.perf_counter() - start:.1f}s)",
               file=sys.stderr, flush=True)
+    if sq8: codes._mmap.close()
     elapsed = time.perf_counter() - start
     print(f"Built {args.variant} in {elapsed:.3f}s", file=sys.stderr, flush=True)
     return index, budgets, elapsed
@@ -70,7 +104,7 @@ def measure(index, variant: str, queries: np.ndarray, truth: np.ndarray, budget:
     return result
 
 
-def select_targets(observations: list[dict]) -> dict:
+def select_targets(observations: list[dict], targets=TARGETS) -> dict:
     """Select using calibration measurements only; a missing target remains explicit."""
     return {str(target): min((row for row in observations if row["recall10"] >= target),
-                             key=lambda row: row["p50_us"], default=None) for target in TARGETS}
+                             key=lambda row: row["p50_us"], default=None) for target in targets}

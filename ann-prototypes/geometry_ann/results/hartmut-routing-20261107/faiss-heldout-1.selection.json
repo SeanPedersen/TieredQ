@@ -1,0 +1,26 @@
+{
+  "faiss_version": "1.15.1",
+  "selection": {
+    "0.95": {
+      "budget": 96,
+      "recall10": 0.9724,
+      "p50_us": 721.727,
+      "p99_us": 1088.322,
+      "mean_distance_evaluations": 14096.488,
+      "max_distance_evaluations": 25445
+    },
+    "0.99": {
+      "budget": 192,
+      "recall10": 0.9936,
+      "p50_us": 1234.481,
+      "p99_us": 1741.454,
+      "mean_distance_evaluations": 27331.544,
+      "max_distance_evaluations": 45494
+    }
+  },
+  "nlist": 8192,
+  "sample": 327680,
+  "seed": 42,
+  "calibration_queries": "data/calibration_queries.fvecs",
+  "test_queries": "data/test_queries.fvecs"
+}

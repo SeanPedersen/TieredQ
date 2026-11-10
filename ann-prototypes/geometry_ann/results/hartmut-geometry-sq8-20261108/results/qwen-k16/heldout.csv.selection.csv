@@ -1,0 +1,7 @@
+target,routing,status,bounds,weight,metadata_cap,vector_cap,scan_order,calibration_recall,calibration_p50_us
+0.95,graph,SELECTED,none,0,4096,176816,centroid,0.9508,25871.2
+0.95,flat,SELECTED,none,0,8256,176816,centroid,0.9596,27534.4
+0.99,graph,NOT_REACHED_DIAGNOSTIC,none,0,4096,442041,centroid,0.9736,60386.7
+0.99,flat,NOT_REACHED_DIAGNOSTIC,none,0,8256,442041,centroid,0.9828,61712.5
+0.995,graph,NOT_REACHED_DIAGNOSTIC,none,0,4096,442041,centroid,0.9736,60386.7
+0.995,flat,NOT_REACHED_DIAGNOSTIC,none,0,8256,442041,centroid,0.9828,61712.5

@@ -40,23 +40,23 @@ double l2(std::span<const float> a, std::span<const float> b) {
 std::span<const float> row(std::span<const float> data, std::size_t d, Id id) {
     return data.subspan(std::size_t(id) * d, d);
 }
-Envelope centroid_envelope(std::span<const float> data, std::size_t d, const Group& ids) {
+Envelope centroid_envelope(Matrix data, std::size_t d, const Group& ids) {
     Envelope result;
     std::vector<double> sum(d, 0);
-    for (Id id : ids) for (std::size_t j = 0; j < d; ++j) sum[j] += data[id * d + j];
+    for (Id id : ids) for (std::size_t j = 0; j < d; ++j) sum[j] += data.value(id,j,d);
     for (double value : sum) result.centroid.push_back(float(value / ids.size()));
     return result;
 }
-void add_radius(Envelope& result, std::span<const float> data, std::size_t d, const Group& ids) {
+void add_radius(Envelope& result, Matrix data, std::size_t d, const Group& ids) {
     for (Id id : ids) {
-        double distance = l2(row(data, d, id), result.centroid);
+        double distance = data.distance(result.centroid,id,d);
         result.radius = std::max(result.radius, distance); result.variance += distance;
     }
     result.variance /= ids.size();
     result.radius = std::nextafter(std::sqrt(result.radius * (1 + rounding_margin(d))),
                                    std::numeric_limits<double>::infinity());
 }
-void add_projections(Envelope& result, std::span<const float> data, std::size_t d, const Group& ids,
+void add_projections(Envelope& result, Matrix data, std::size_t d, const Group& ids,
                      std::size_t count, std::size_t sample_size, std::mt19937& rng) {
     if (!count) return;
     result.directions.reserve(std::min(count, d) * d);
@@ -86,9 +86,9 @@ void add_projections(Envelope& result, std::span<const float> data, std::size_t 
             for (Id id : sample) {
                 double projection = 0;
                 for (std::size_t j = 0; j < d; ++j)
-                    projection += (double(data[id * d + j]) - result.centroid[j]) * direction[j];
+                    projection += (double(data.value(id,j,d)) - result.centroid[j]) * direction[j];
                 for (std::size_t j = 0; j < d; ++j)
-                    next[j] += projection * (double(data[id * d + j]) - result.centroid[j]);
+                    next[j] += projection * (double(data.value(id,j,d)) - result.centroid[j]);
             }
             double scale = 0;
             for (double value : next) scale = std::max(scale, std::abs(value));
@@ -100,8 +100,8 @@ void add_projections(Envelope& result, std::span<const float> data, std::size_t 
         double low = std::numeric_limits<double>::infinity(), high = -low;
         // Extrema use the final stored direction over ALL members, not just the PCA sample.
         for (Id id : ids) {
-            double projection = dot(row(data, d, id), direction);
-            double error = projection_error(row(data, d, id), direction);
+            double projection = dot(decoded_row(data,d,id), direction);
+            double error = projection_error(decoded_row(data,d,id), direction);
             low = std::min(low, projection - error); high = std::max(high, projection + error);
         }
         result.low.push_back(low); result.high.push_back(high);
@@ -121,7 +121,7 @@ void add_projections(Envelope& result, std::span<const float> data, std::size_t 
                                                        std::numeric_limits<double>::infinity());
 
 }
-Envelope envelope(std::span<const float> data, std::size_t d, const Group& ids,
+Envelope envelope(Matrix data, std::size_t d, const Group& ids,
                   std::size_t count, std::size_t sample_size, std::mt19937& rng, bool statistics) {
     auto result = centroid_envelope(data, d, ids);
     if (!statistics) return result;
@@ -159,16 +159,49 @@ BoundValues distance_bounds(std::span<const float> q, const Envelope& g, bool pr
 double lower_bound(std::span<const float> q, const Envelope& g, bool projections, double centroid_distance) {
     return distance_bounds(q, g, projections, centroid_distance).joint;
 }
-void add_shared_ranges(Envelope& leaf, const Envelope& basis, std::span<const float> data, std::size_t d, const Group& ids) {
-    for (std::size_t axis = 0; axis < basis.norm.size(); ++axis) {
-        auto direction = std::span(basis.directions).subspan(axis * d, d);
-        double low = std::numeric_limits<double>::infinity(), high = -low;
-        for (Id id : ids) {
-            auto point = row(data, d, id);
-            double projection = dot(point, direction), error = projection_error(point, direction);
-            low = std::min(low, projection - error); high = std::max(high, projection + error);
+namespace {
+// U/sqrt(L) is a contraction when L >= ||U||^2. Thus
+// B^T B = I-U^T U/L is positive semidefinite. Store the interval of
+// ||B(x-c)||; no explicit dense residual matrix or exact orthogonality is needed.
+std::pair<double,double> residual_interval(double norm_sq, const SharedQuery& projected,
+                                          const Envelope& basis, const Envelope& leaf) {
+    double lower_projection = 0, upper_projection = 0;
+    for (std::size_t a=0; a<projected.low.size(); ++a) {
+        double low=projected.low[a]-leaf.shared_center_high[a];
+        double high=projected.high[a]-leaf.shared_center_low[a];
+        double min_abs=std::max({0.0,low,-high});
+        double max_abs=std::max(std::abs(low),std::abs(high));
+        lower_projection+=min_abs*min_abs; upper_projection+=max_abs*max_abs;
+    }
+    double eps=rounding_margin(basis.centroid.size()+projected.low.size());
+    double op=basis.projection_operator_norm_sq;
+    // Expand both endpoints, including norm accumulation and cancellation.
+    double slack=eps*(norm_sq+upper_projection/op+std::numeric_limits<double>::min());
+    double low=std::max(0.0,norm_sq-upper_projection/op-slack);
+    double high=std::max(0.0,norm_sq-lower_projection/op+slack);
+    return {std::nextafter(std::sqrt(low),0.0),
+            std::nextafter(std::sqrt(high),std::numeric_limits<double>::infinity())};
+}
+}
+void add_shared_ranges(Envelope& leaf, const Envelope& basis, Matrix data, std::size_t d, const Group& ids) {
+    auto center=shared_query(leaf.centroid,basis);
+    leaf.shared_center_low=center.low; leaf.shared_center_high=center.high;
+    leaf.shared_low.assign(basis.norm.size(),std::numeric_limits<double>::infinity());
+    leaf.shared_high.assign(basis.norm.size(),-std::numeric_limits<double>::infinity());
+    leaf.residual_low=std::numeric_limits<double>::infinity(); leaf.residual_high=0;
+    // Decode each member once and reuse it across all directions.
+    for (Id id : ids) {
+        auto point=decoded_row(data,d,id);
+        auto projected=shared_query(point,basis);
+        for (std::size_t axis=0; axis<basis.norm.size(); ++axis) {
+            leaf.shared_low[axis]=std::min(leaf.shared_low[axis],projected.low[axis]);
+            leaf.shared_high[axis]=std::max(leaf.shared_high[axis],projected.high[axis]);
         }
-        leaf.shared_low.push_back(low); leaf.shared_high.push_back(high);
+        if (!basis.norm.empty()) {
+            auto [low,high]=residual_interval(l2(point,leaf.centroid),projected,basis,leaf);
+            leaf.residual_low=std::min(leaf.residual_low,low);
+            leaf.residual_high=std::max(leaf.residual_high,high);
+        }
     }
 }
 SharedQuery shared_query(std::span<const float> query, const Envelope& basis) {
@@ -194,6 +227,24 @@ double shared_lower_bound(const SharedQuery& query, const Envelope& basis, const
     if (basis.projection_operator_norm_sq > 0)
         bound = std::max(bound, sum / (basis.projection_operator_norm_sq * (1 + rounding_margin(basis.centroid.size()))));
     return bound;
+}
+
+double shared_residual_lower_bound(const SharedQuery& query, const Envelope& basis,
+                                   const Envelope& leaf, double centroid_distance) {
+    // Coarse parents have radii only; their absent shared intervals contribute zero.
+    if (leaf.shared_low.empty()) return 0;
+    double sum=0;
+    for (std::size_t a=0; a<leaf.shared_low.size(); ++a) {
+        double slack=rounding_margin(basis.centroid.size())*(1+std::abs(query.low[a])+std::abs(query.high[a])+
+                            std::abs(leaf.shared_low[a])+std::abs(leaf.shared_high[a]));
+        double gap=std::max({0.0,leaf.shared_low[a]-query.high[a]-slack,
+                                query.low[a]-leaf.shared_high[a]-slack});
+        sum+=gap*gap;
+    }
+    auto [low,high]=residual_interval(centroid_distance,query,basis,leaf);
+    double gap=std::max({0.0,leaf.residual_low-high,low-leaf.residual_high});
+    return (sum/basis.projection_operator_norm_sq+gap*gap)/
+           (1+rounding_margin(basis.centroid.size()+query.low.size()));
 }
 
 }

@@ -1,0 +1,2 @@
+variant,ordering,leaf_budget,metadata_cap,leaves,build_s,raw_bytes,overhead_bytes,process_peak_rss_bytes,recall10,p50_us,p99_us,mean_vectors,mean_metadata,mean_pruned,metadata_exhaustion_rate,routing,vector_cap,mean_scan_fraction,mean_skipped_leaves
+V1,centroid,256,272,256,0.144329,10240000,279312,25534464,1,70.209,78.663,833,125.72,112.27,0,hierarchy,1000,0.04165,0

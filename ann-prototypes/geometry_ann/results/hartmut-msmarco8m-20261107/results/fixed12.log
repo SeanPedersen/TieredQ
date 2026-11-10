@@ -1,0 +1,39 @@
+Storage=SQ8
+Building shared graph: n=8840823 d=1024 queries=250 degree=8
+Built 8192 leaves in 1087.2s; graph=10.7916s PCA=0s; graph bytes=262400
+graph/none weight=0 metadata=512 vectors=35000 recall=0.8356 p50_us=4967.76
+graph/none weight=0 metadata=1024 vectors=35000 recall=0.8564 p50_us=5339.84
+graph/none weight=0 metadata=2048 vectors=35000 recall=0.858 p50_us=5971.86
+graph/none weight=0 metadata=4096 vectors=35000 recall=0.8624 p50_us=7364.11
+graph/none weight=0 metadata=8256 vectors=35000 recall=0.8696 p50_us=11131.1
+flat/none weight=0 metadata=8256 vectors=35000 recall=0.8696 p50_us=8757.77
+graph/none weight=0 metadata=512 vectors=50000 recall=0.854 p50_us=6912.05
+graph/none weight=0 metadata=1024 vectors=50000 recall=0.8812 p50_us=7271.23
+graph/none weight=0 metadata=2048 vectors=50000 recall=0.884 p50_us=7919.05
+graph/none weight=0 metadata=4096 vectors=50000 recall=0.8888 p50_us=9291.85
+graph/none weight=0 metadata=8256 vectors=50000 recall=0.8988 p50_us=12889.1
+flat/none weight=0 metadata=8256 vectors=50000 recall=0.8988 p50_us=10558.1
+graph/none weight=0 metadata=512 vectors=88408 recall=0.8836 p50_us=11622.3
+graph/none weight=0 metadata=1024 vectors=88408 recall=0.9116 p50_us=12035.9
+graph/none weight=0 metadata=2048 vectors=88408 recall=0.916 p50_us=12809
+graph/none weight=0 metadata=4096 vectors=88408 recall=0.9212 p50_us=14256.9
+graph/none weight=0 metadata=8256 vectors=88408 recall=0.9308 p50_us=18063.8
+flat/none weight=0 metadata=8256 vectors=88408 recall=0.9308 p50_us=15722.3
+graph/none weight=0 metadata=512 vectors=176816 recall=0.9004 p50_us=23122.7
+graph/none weight=0 metadata=1024 vectors=176816 recall=0.9328 p50_us=23521.3
+graph/none weight=0 metadata=2048 vectors=176816 recall=0.9364 p50_us=24250.1
+graph/none weight=0 metadata=4096 vectors=176816 recall=0.9428 p50_us=25719.6
+graph/none weight=0 metadata=8256 vectors=176816 recall=0.9532 p50_us=29448.1
+flat/none weight=0 metadata=8256 vectors=176816 recall=0.9532 p50_us=27089.6
+graph/none weight=0 metadata=512 vectors=309428 recall=0.912 p50_us=39597.4
+graph/none weight=0 metadata=1024 vectors=309428 recall=0.9484 p50_us=40512.7
+graph/none weight=0 metadata=2048 vectors=309428 recall=0.9536 p50_us=41300.8
+graph/none weight=0 metadata=4096 vectors=309428 recall=0.96 p50_us=42784.1
+graph/none weight=0 metadata=8256 vectors=309428 recall=0.9704 p50_us=45946.9
+flat/none weight=0 metadata=8256 vectors=309428 recall=0.9704 p50_us=43523.1
+graph/none weight=0 metadata=512 vectors=442041 recall=0.9148 p50_us=57032.1
+graph/none weight=0 metadata=1024 vectors=442041 recall=0.9536 p50_us=57468.1
+graph/none weight=0 metadata=2048 vectors=442041 recall=0.96 p50_us=58270.4
+graph/none weight=0 metadata=4096 vectors=442041 recall=0.966 p50_us=59584.6
+graph/none weight=0 metadata=8256 vectors=442041 recall=0.976 p50_us=63603.8
+flat/none weight=0 metadata=8256 vectors=442041 recall=0.976 p50_us=61224.7

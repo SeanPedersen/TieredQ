@@ -1,0 +1,27 @@
+Installed 2 packages in 121ms
+Installed 2 packages in 72ms
+Storage=SQ8
+Building shared graph: n=257 d=17 queries=6 degree=8
+Built 16 leaves in 0.00397965s; graph=0.000386525s PCA=0s; graph bytes=528
+flat/none weight=0 metadata=64 vectors=257 recall=0.983333 p50_us=28.609
+flat/radius weight=0.5 metadata=64 vectors=257 recall=0.983333 p50_us=28.135
+flat/radius weight=1 metadata=64 vectors=257 recall=0.983333 p50_us=31.899
+flat/shared weight=0.5 metadata=64 vectors=257 recall=0.983333 p50_us=27.782
+flat/shared weight=1 metadata=64 vectors=257 recall=0.983333 p50_us=27.578
+flat/shared-residual weight=0.5 metadata=64 vectors=257 recall=0.983333 p50_us=26.833
+flat/shared-residual weight=1 metadata=64 vectors=257 recall=0.983333 p50_us=28.586
+graph/none weight=0 metadata=64 vectors=257 recall=0.983333 p50_us=26.512
+graph/radius weight=0.5 metadata=64 vectors=257 recall=0.983333 p50_us=27.097
+graph/radius weight=1 metadata=64 vectors=257 recall=0.983333 p50_us=28.686
+graph/shared weight=0.5 metadata=64 vectors=257 recall=0.983333 p50_us=29.776
+graph/shared weight=1 metadata=64 vectors=257 recall=0.983333 p50_us=29.617
+graph/shared-residual weight=0.5 metadata=64 vectors=257 recall=0.983333 p50_us=29.527
+graph/shared-residual weight=1 metadata=64 vectors=257 recall=0.983333 p50_us=31.048
+hierarchy/none weight=0 metadata=64 vectors=257 recall=0.983333 p50_us=25.109
+hierarchy/radius weight=0.5 metadata=64 vectors=257 recall=0.983333 p50_us=25.546
+hierarchy/radius weight=1 metadata=64 vectors=257 recall=0.983333 p50_us=28.035
+hierarchy/shared weight=0.5 metadata=64 vectors=257 recall=0.983333 p50_us=28.282
+hierarchy/shared weight=1 metadata=64 vectors=257 recall=0.983333 p50_us=28.696
+hierarchy/shared-residual weight=0.5 metadata=64 vectors=257 recall=0.983333 p50_us=30.104
+hierarchy/shared-residual weight=1 metadata=64 vectors=257 recall=0.983333 p50_us=29.558
+GEOMETRY INT8 PREFLIGHT PASSED /tmp/geometry-sq8-preflight-kpum0koo

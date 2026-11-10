@@ -1,0 +1,22 @@
+[
+  {
+    "budget": 96,
+    "recall10": 0.9688,
+    "p50_us": 701.751,
+    "p99_us": 1086.488,
+    "build_s": 40.49387157801539,
+    "mean_distance_evaluations": 14142.054,
+    "serialized_overhead_bytes": 12259979.0,
+    "process_peak_rss_bytes": 1416552448.0
+  },
+  {
+    "budget": 192,
+    "recall10": 0.9915,
+    "p50_us": 1196.958,
+    "p99_us": 1786.973,
+    "build_s": 40.49387157801539,
+    "mean_distance_evaluations": 27410.259,
+    "serialized_overhead_bytes": 12259979.0,
+    "process_peak_rss_bytes": 1416552448.0
+  }
+]

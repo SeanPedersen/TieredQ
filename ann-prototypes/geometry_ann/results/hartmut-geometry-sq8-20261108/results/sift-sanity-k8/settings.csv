@@ -1,0 +1,8 @@
+routing,bounds,weight,metadata_cap,vector_cap,scan_order
+flat,none,0,8256,35000,centroid
+flat,radius,0.5,8256,35000,routing
+flat,radius,1,8256,35000,routing
+flat,shared,0.5,8256,35000,routing
+flat,shared,1,8256,35000,routing
+flat,shared-residual,0.5,8256,35000,routing
+flat,shared-residual,1,8256,35000,routing

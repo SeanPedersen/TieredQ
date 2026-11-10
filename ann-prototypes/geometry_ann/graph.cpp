@@ -46,7 +46,7 @@ private:
         return std::span(graph_.edges).subspan(std::size_t(node) * graph_.degree, graph_.degree);
     }
     double distance(std::span<const float> a, std::span<const float> b) {
-        ++graph_.distance_evaluations; return l2(a, b);
+        ++graph_.distance_evaluations; return centroid_l2(a, b);
     }
     double distance(Id a, Id b) { return distance(leaves_[a].geometry.centroid, leaves_[b].geometry.centroid); }
     void make_ring() {

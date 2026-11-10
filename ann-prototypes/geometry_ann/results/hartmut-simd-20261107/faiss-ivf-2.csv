@@ -1,0 +1,3 @@
+variant,build_s,raw_bytes,serialized_overhead_bytes,process_peak_rss_bytes,budget,recall10,p50_us,p99_us,mean_distance_evaluations,max_distance_evaluations
+ivf,40.69615270901704,512000000,12259979,1412022272,128,0.9815,858.091,1342.233,18608.127,33621
+ivf,40.69615270901704,512000000,12259979,1412022272,256,0.9952,1523.034,2231.15,35993.07,58133

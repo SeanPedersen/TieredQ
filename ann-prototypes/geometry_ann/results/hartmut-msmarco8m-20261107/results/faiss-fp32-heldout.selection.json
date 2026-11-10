@@ -1,0 +1,40 @@
+{
+  "faiss_version": "1.15.1",
+  "selection": {
+    "0.95": {
+      "budget": 96,
+      "recall10": 0.9768,
+      "p50_us": 44996.202,
+      "p99_us": 118846.273,
+      "mean_distance_evaluations": 120941.596,
+      "max_distance_evaluations": 159360
+    },
+    "0.99": {
+      "budget": 192,
+      "recall10": 0.9908,
+      "p50_us": 73076.123,
+      "p99_us": 129535.074,
+      "mean_distance_evaluations": 238462.724,
+      "max_distance_evaluations": 291339
+    },
+    "0.995": {
+      "budget": 512,
+      "recall10": 0.9976,
+      "p50_us": 183059.885,
+      "p99_us": 226097.2,
+      "mean_distance_evaluations": 628228.18,
+      "max_distance_evaluations": 697100
+    }
+  },
+  "targets": [
+    0.95,
+    0.99,
+    0.995
+  ],
+  "nlist": 8192,
+  "sample": 327680,
+  "seed": 42,
+  "diagnostic_budgets": [],
+  "calibration_queries": "data/calibration_queries.fvecs",
+  "test_queries": "data/test_queries.fvecs"
+}

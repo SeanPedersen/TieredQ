@@ -1,0 +1,9 @@
+Building shared graph: n=1000000 d=128 queries=1000 degree=8
+Built 8192 leaves in 24.1015s; graph=2.07198s PCA=0s; graph bytes=262400
+graph/none weight=0 metadata=512 vectors=20000 recall=0.9531 p50_us=991.756
+flat/none weight=0 metadata=8256 vectors=20000 recall=0.9797 p50_us=1974.18
+hierarchy/none weight=0 metadata=8256 vectors=35000 recall=0.9798 p50_us=1759.77
+graph/none weight=0 metadata=2048 vectors=35000 recall=0.994 p50_us=1981.06
+flat/none weight=0 metadata=8256 vectors=35000 recall=0.9946 p50_us=2609.45
+graph/none weight=0 metadata=2048 vectors=50000 recall=0.9969 p50_us=2643.08
+flat/none weight=0 metadata=8256 vectors=50000 recall=0.9976 p50_us=3249.08

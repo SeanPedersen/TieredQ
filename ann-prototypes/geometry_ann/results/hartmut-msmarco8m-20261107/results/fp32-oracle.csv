@@ -1,0 +1,2 @@
+n,dimension,nq,recall10,elapsed_s,codes_bytes,vector_storage
+8840823,1024,50,1,98.0519,0,fp32

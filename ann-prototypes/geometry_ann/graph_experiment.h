@@ -3,6 +3,7 @@
 #include "benchmark_options.h"
 #include "dataset.h"
 #include <iosfwd>
+#include <utility>
 namespace geometry_ann {
 struct GraphSetting {
     std::string routing;
@@ -18,8 +19,12 @@ struct GraphObservation {
     std::size_t max_vectors = 0, max_metadata = 0;
 };
 const char* bounds_name(BoundsMode mode);
+BuildOptions graph_build_options(const BenchmarkOptions& options);
 std::vector<GraphSetting> graph_settings(const BenchmarkOptions& options, const Index& index);
 GraphObservation graph_measure(const Index& index, const Dataset& data, const BenchmarkOptions& config, const GraphSetting& setting);
+void graph_evaluate(const Index& index, const BenchmarkOptions& config,
+                    const std::vector<std::pair<GraphSetting, GraphObservation>>& calibration,
+                    double build_seconds, std::size_t peak_rss);
 void graph_csv_header(std::ostream& output);
 void graph_csv_row(std::ostream& output, const Index& index, const Dataset& data, const GraphSetting& setting,
                    const GraphObservation& observation, double build_seconds, std::size_t peak_rss);

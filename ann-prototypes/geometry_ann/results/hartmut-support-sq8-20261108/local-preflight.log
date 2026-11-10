@@ -1,0 +1,27 @@
+Storage=SQ8
+Building shared graph: n=257 d=17 queries=6 degree=8
+Built 16 leaves in 0.00133246s; graph=0.000134498s PCA=0s; graph bytes=528
+flat/none weight=0 metadata=64 vectors=257 recall=0.983333 p50_us=6.694
+flat/radius weight=0.5 metadata=64 vectors=257 recall=0.983333 p50_us=6.482
+flat/radius weight=1 metadata=64 vectors=257 recall=0.983333 p50_us=7.37
+flat/shared weight=0.5 metadata=64 vectors=257 recall=0.983333 p50_us=7.286
+flat/shared weight=1 metadata=64 vectors=257 recall=0.983333 p50_us=7.211
+flat/shared-residual weight=0.5 metadata=64 vectors=257 recall=0.983333 p50_us=7.311
+flat/shared-residual weight=1 metadata=64 vectors=257 recall=0.983333 p50_us=8.147
+flat/support weight=0.5 metadata=64 vectors=257 recall=0.983333 p50_us=7.083
+flat/support weight=1 metadata=64 vectors=257 recall=0.983333 p50_us=6.991
+graph/none weight=0 metadata=64 vectors=257 recall=0.983333 p50_us=7.314
+graph/radius weight=0.5 metadata=64 vectors=257 recall=0.983333 p50_us=7.453
+graph/radius weight=1 metadata=64 vectors=257 recall=0.983333 p50_us=8.319
+graph/shared weight=0.5 metadata=64 vectors=257 recall=0.983333 p50_us=8.324
+graph/shared weight=1 metadata=64 vectors=257 recall=0.983333 p50_us=8.351
+graph/shared-residual weight=0.5 metadata=64 vectors=257 recall=0.983333 p50_us=8.473
+graph/shared-residual weight=1 metadata=64 vectors=257 recall=0.983333 p50_us=9.431
+hierarchy/none weight=0 metadata=64 vectors=257 recall=0.983333 p50_us=6.72
+hierarchy/radius weight=0.5 metadata=64 vectors=257 recall=0.983333 p50_us=6.915
+hierarchy/radius weight=1 metadata=64 vectors=257 recall=0.983333 p50_us=7.9
+hierarchy/shared weight=0.5 metadata=64 vectors=257 recall=0.983333 p50_us=7.66
+hierarchy/shared weight=1 metadata=64 vectors=257 recall=0.983333 p50_us=7.685
+hierarchy/shared-residual weight=0.5 metadata=64 vectors=257 recall=0.983333 p50_us=7.806
+hierarchy/shared-residual weight=1 metadata=64 vectors=257 recall=0.983333 p50_us=8.578
+EDGE SUPPORT + ORACLE PREFLIGHT PASSED /tmp/geometry-sq8-preflight-4q6s_gjz

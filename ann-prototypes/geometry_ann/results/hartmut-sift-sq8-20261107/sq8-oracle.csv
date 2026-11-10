@@ -1,0 +1,2 @@
+n,dimension,nq,recall10,p50_us,p99_us,codes_bytes
+1000000,128,50,0.986,31103.6,34876,128000000

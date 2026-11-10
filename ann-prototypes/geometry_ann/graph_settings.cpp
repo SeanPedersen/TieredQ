@@ -12,12 +12,14 @@ const char* bounds_name(BoundsMode mode) {
         case BoundsMode::pca_max: return "pca-max";
         case BoundsMode::pca: return "pca";
         case BoundsMode::shared: return "shared";
+        case BoundsMode::shared_residual: return "shared-residual";
+        case BoundsMode::support: return "support";
         default: return "automatic";
     }
 }
 namespace {
 BoundsMode parse_mode(const std::string& text) {
-    for (auto mode : {BoundsMode::none, BoundsMode::radius, BoundsMode::pca_max, BoundsMode::pca, BoundsMode::shared})
+    for (auto mode : {BoundsMode::none, BoundsMode::radius, BoundsMode::pca_max, BoundsMode::pca, BoundsMode::shared, BoundsMode::shared_residual, BoundsMode::support})
         if (text == bounds_name(mode)) return mode;
     throw std::invalid_argument("invalid bounds mode in settings file");
 }
@@ -50,10 +52,37 @@ std::vector<GraphSetting> load_settings(const std::string& filename) {
     return result;
 }
 }
+BuildOptions graph_build_options(const BenchmarkOptions& config) {
+    // Keep partitions identical, but build only metadata the requested ablation uses.
+    bool pca = false, shared = false, geometry = false, support = false;
+    auto include = [&](BoundsMode mode) {
+        geometry |= mode != BoundsMode::none;
+        support |= mode == BoundsMode::support;
+        if (config.variant == "V0" && (mode == BoundsMode::pca || mode == BoundsMode::pca_max || mode == BoundsMode::automatic))
+            throw std::invalid_argument("V0 geometry experiments support radius/shared/support bounds");
+        pca |= mode == BoundsMode::automatic || mode == BoundsMode::pca || mode == BoundsMode::pca_max;
+        shared |= mode == BoundsMode::automatic || mode == BoundsMode::shared || mode == BoundsMode::shared_residual;
+    };
+    if (config.settings_file.empty()) include(config.selected_bounds);
+    else for (const auto& setting : load_settings(config.settings_file)) include(setting.bounds);
+    auto build = config.build;
+    build.geometry_metadata = geometry;
+    build.neighbor_support = support;
+    build.variant = config.variant == "V0" ? Variant::fixed : Variant::pca;
+    if (!build.graph_degree) build.graph_degree = 8;
+    if (!pca) build.directions = 0;
+    build.shared_directions = shared ? (build.shared_directions ? build.shared_directions : 8) : 0;
+    return build;
+}
 std::vector<GraphSetting> graph_settings(const BenchmarkOptions& config, const Index& index) {
     if (!config.settings_file.empty()) return load_settings(config.settings_file);
     std::vector<GraphSetting> result;
-    for (auto mode : {BoundsMode::none, BoundsMode::radius, BoundsMode::pca_max, BoundsMode::pca, BoundsMode::shared}) {
+    if (config.selected_bounds==BoundsMode::support) {
+        for (double weight:config.geometry_weights) for (auto cap:config.vector_caps)
+            result.push_back({"flat",BoundsMode::support,weight,config.metadata_cap.value_or(index.leaf_count()),cap,GraphScanOrder::routing});
+        return result;
+    }
+    for (auto mode : {BoundsMode::none, BoundsMode::radius, BoundsMode::pca_max, BoundsMode::pca, BoundsMode::shared, BoundsMode::shared_residual}) {
         if (config.selected_bounds != BoundsMode::automatic && config.selected_bounds != mode) continue;
         auto weights = mode == BoundsMode::none ? std::vector<double>{0} : config.geometry_weights;
         for (double weight : weights) for (auto vectors : config.vector_caps) {

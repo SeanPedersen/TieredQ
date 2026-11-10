@@ -6,7 +6,7 @@
 #include <numeric>
 #include <queue>
 namespace geometry_ann {
-std::vector<Group> cluster(std::span<const float> data, std::size_t d, const Group& ids,
+std::vector<Group> cluster(Matrix data, std::size_t d, const Group& ids,
                            std::size_t count, const BuildOptions& o, std::mt19937& rng) {
     if (ids.empty()) return {};
     count = std::min(count, ids.size());
@@ -15,12 +15,12 @@ std::vector<Group> cluster(std::span<const float> data, std::size_t d, const Gro
     sample.resize(std::min(sample.size(), std::max(count, o.training_sample)));
     std::vector<float> centers(count * d);
     for (std::size_t c = 0; c < count; ++c)
-        std::copy_n(row(data, d, sample[c]).begin(), d, centers.begin() + c * d);
+        std::copy_n(decoded_row(data,d,sample[c]).begin(), d, centers.begin() + c * d);
     auto nearest = [&](Id id) {
         std::size_t best = 0;
         double distance = std::numeric_limits<double>::infinity();
         for (std::size_t c = 0; c < count; ++c) {
-            double candidate = l2(row(data, d, id), std::span(centers).subspan(c * d, d));
+            double candidate = data.distance(std::span(centers).subspan(c*d,d),id,d);
             if (candidate < distance) { distance = candidate; best = c; }
         }
         return best;
@@ -30,7 +30,7 @@ std::vector<Group> cluster(std::span<const float> data, std::size_t d, const Gro
         std::vector<std::size_t> sizes(count, 0);
         for (Id id : sample) {
             auto c = nearest(id); ++sizes[c];
-            for (std::size_t j = 0; j < d; ++j) sums[c * d + j] += data[id * d + j];
+            for (std::size_t j = 0; j < d; ++j) sums[c * d + j] += data.value(id,j,d);
         }
         for (std::size_t c = 0; c < count; ++c) {
             if (!sizes[c]) continue;
@@ -44,13 +44,13 @@ std::vector<Group> cluster(std::span<const float> data, std::size_t d, const Gro
 }
 namespace {
 struct Split { double score; std::size_t axis; };
-Split split_score(std::span<const float> data, std::size_t d, const Group& ids, std::size_t target) {
+Split split_score(Matrix data, std::size_t d, const Group& ids, std::size_t target) {
     if (ids.size() <= target) return {0, 0};
     std::vector<double> mean(d, 0), variance(d, 0);
-    for (Id id : ids) for (std::size_t j = 0; j < d; ++j) mean[j] += data[id * d + j];
+    for (Id id : ids) for (std::size_t j = 0; j < d; ++j) mean[j] += data.value(id,j,d);
     for (auto& value : mean) value /= ids.size();
     for (Id id : ids) for (std::size_t j = 0; j < d; ++j) {
-        double delta = data[id * d + j] - mean[j]; variance[j] += delta * delta;
+        double delta = data.value(id,j,d) - mean[j]; variance[j] += delta * delta;
     }
     auto axis = std::size_t(std::max_element(variance.begin(), variance.end()) - variance.begin());
     double total = std::accumulate(variance.begin(), variance.end(), 0.0);
@@ -59,7 +59,7 @@ Split split_score(std::span<const float> data, std::size_t d, const Group& ids, 
     return {total * (1 + variance[axis] / total), axis};
 }
 }
-std::vector<Group> adaptive(std::span<const float> data, std::size_t d, std::vector<Group> groups,
+std::vector<Group> adaptive(Matrix data, std::size_t d, std::vector<Group> groups,
                             const BuildOptions& o, std::vector<std::size_t>& owners, std::mt19937& rng) {
     using Candidate = std::pair<double, std::size_t>;
     std::priority_queue<Candidate> queue;
@@ -76,7 +76,7 @@ std::vector<Group> adaptive(std::span<const float> data, std::size_t d, std::vec
             Group ids = std::move(groups[index]);
             auto middle = ids.begin() + ids.size() / 2;
             std::nth_element(ids.begin(), middle, ids.end(), [&](Id a, Id b) {
-                return data[a * d + axis] < data[b * d + axis];
+                return data.value(a,axis,d) < data.value(b,axis,d);
             });
             children = {Group(ids.begin(), middle), Group(middle, ids.end())};
         }

@@ -1,0 +1,2 @@
+n,dimension,nq,recall10,p50_us,p99_us,codes_bytes,vector_storage
+1000000,128,50,1,38521.1,41646.7,0,fp32

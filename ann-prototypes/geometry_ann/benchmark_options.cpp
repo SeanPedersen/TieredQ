@@ -18,7 +18,7 @@ std::size_t number(const std::string& text) {
 BenchmarkOptions parse_options(int argc, char** argv) {
     const std::vector<std::string> known = {"--base", "--queries", "--truth", "--n", "--nq", "--dim", "--seed",
         "--coarse", "--children", "--leaves", "--target-size", "--sample", "--iterations", "--directions",
-        "--pca-sample", "--metadata", "--variant", "--split", "--vectors", "--leaf-scans", "--routing", "--ordering", "--graph-degree", "--graph-parents", "--graph-refinements", "--graph-seeds", "--metadata-budgets", "--weights", "--bounds", "--controls", "--settings", "--shared-directions", "--shared-sample"};
+        "--pca-sample", "--metadata", "--variant", "--split", "--vectors", "--leaf-scans", "--routing", "--ordering", "--graph-degree", "--graph-parents", "--graph-refinements", "--graph-seeds", "--metadata-budgets", "--weights", "--bounds", "--controls", "--settings", "--shared-directions", "--shared-sample", "--evaluation-queries", "--evaluation-truth", "--evaluation-output", "--evaluation-nq", "--repeats", "--evaluation-fixed-settings", "--int8-base", "--int8-scales", "--int8-offsets", "--geometry-diagnostics", "--evaluation-group-bounds"};
     std::map<std::string, std::string> args;
     for (int i = 1; i < argc; i += 2) {
         if (i + 1 == argc) throw std::invalid_argument("options require a value; see README.md");
@@ -28,6 +28,21 @@ BenchmarkOptions parse_options(int argc, char** argv) {
     }
     auto get = [&](const std::string& key, std::size_t fallback) { return args.contains(key) ? number(args.at(key)) : fallback; };
     BenchmarkOptions options;
+    if (args.contains("--evaluation-queries")) options.evaluation_queries = args.at("--evaluation-queries");
+    if (args.contains("--evaluation-truth")) options.evaluation_truth = args.at("--evaluation-truth");
+    if (args.contains("--evaluation-output")) options.evaluation_output = args.at("--evaluation-output");
+    if (args.contains("--evaluation-fixed-settings")) options.evaluation_fixed_settings = args.at("--evaluation-fixed-settings");
+    if (args.contains("--int8-base")) options.int8_base = args.at("--int8-base");
+    if (args.contains("--int8-scales")) options.int8_scales = args.at("--int8-scales");
+    if (args.contains("--int8-offsets")) options.int8_offsets = args.at("--int8-offsets");
+    if (!options.int8_offsets.empty() && options.int8_base.empty()) throw std::invalid_argument("SQ8 offsets require codes");
+    if (options.int8_base.empty() != options.int8_scales.empty()) throw std::invalid_argument("SQ8 requires codes and scales");
+    bool any_evaluation = !options.evaluation_queries.empty() || !options.evaluation_truth.empty() || !options.evaluation_output.empty();
+    if (any_evaluation && (options.evaluation_queries.empty() || options.evaluation_truth.empty() || options.evaluation_output.empty()))
+        throw std::invalid_argument("evaluation requires queries, truth and output");
+    options.evaluation_nq = get("--evaluation-nq", options.evaluation_nq);
+    options.repeats = get("--repeats", options.repeats);
+    if (!options.evaluation_nq || !options.repeats) throw std::invalid_argument("evaluation counts must be positive");
     auto& build = options.build;
     build.coarse = get("--coarse", build.coarse); build.children = get("--children", build.children);
     build.leaf_budget = get("--leaves", build.coarse * build.children);
@@ -73,6 +88,10 @@ BenchmarkOptions parse_options(int argc, char** argv) {
         while (std::getline(input, token, ',')) options.vector_caps.push_back(number(token));
         if (options.vector_caps.empty()) throw std::invalid_argument("vectors needs at least one integer cap");
     }
+    auto group_bounds=get("--evaluation-group-bounds",0);
+    if (group_bounds>1) throw std::invalid_argument("evaluation-group-bounds must be 0 or 1");
+    options.evaluation_group_bounds=group_bounds;
+    if (args.contains("--geometry-diagnostics")) options.geometry_diagnostics = args.at("--geometry-diagnostics");
     build.shared_directions = get("--shared-directions", build.shared_directions);
     build.shared_sample = get("--shared-sample", build.shared_sample);
     build.graph_degree = get("--graph-degree", build.graph_degree); build.graph_parent_probes = get("--graph-parents", build.graph_parent_probes);
@@ -97,6 +116,8 @@ BenchmarkOptions parse_options(int argc, char** argv) {
         if (mode == "none") options.selected_bounds = BoundsMode::none;
         else if (mode == "radius") options.selected_bounds = BoundsMode::radius;
         else if (mode == "pca-max") options.selected_bounds = BoundsMode::pca_max;
+        else if (mode == "support") options.selected_bounds = BoundsMode::support;
+        else if (mode == "shared-residual") options.selected_bounds = BoundsMode::shared_residual;
         else if (mode == "shared") options.selected_bounds = BoundsMode::shared;
         else if (mode == "pca") options.selected_bounds = BoundsMode::pca;
         else if (mode != "all") throw std::invalid_argument("bounds must be all, none, radius, pca-max, or pca");

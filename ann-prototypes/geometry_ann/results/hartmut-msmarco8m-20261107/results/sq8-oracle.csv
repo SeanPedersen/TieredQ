@@ -1,0 +1,2 @@
+n,dimension,nq,recall10,elapsed_s,codes_bytes,vector_storage
+8840823,1024,50,0.996,70.5978,9053002752,int8_sq_per_dim

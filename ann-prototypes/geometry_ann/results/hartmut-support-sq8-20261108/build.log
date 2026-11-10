@@ -1,0 +1,40 @@
+[  2%] Building CXX object CMakeFiles/geometry_ann.dir/training.cpp.o
+[  5%] Building CXX object CMakeFiles/geometry_ann.dir/index.cpp.o
+[  8%] Building CXX object CMakeFiles/geometry_ann.dir/search_state.cpp.o
+[ 11%] Building CXX object CMakeFiles/geometry_ann.dir/geometry.cpp.o
+[ 14%] Building CXX object CMakeFiles/geometry_ann.dir/search_hierarchy.cpp.o
+[ 17%] Building CXX object CMakeFiles/geometry_ann.dir/graph.cpp.o
+[ 20%] Building CXX object CMakeFiles/geometry_ann.dir/search_graph.cpp.o
+[ 23%] Building CXX object CMakeFiles/geometry_ann.dir/scan_distance.cpp.o
+[ 26%] Building CXX object CMakeFiles/geometry_ann.dir/sq8_distance.cpp.o
+[ 29%] Building CXX object CMakeFiles/geometry_ann.dir/geometry_diagnostics.cpp.o
+[ 32%] Building CXX object CMakeFiles/geometry_ann.dir/support_geometry.cpp.o
+[ 35%] Linking CXX static library libgeometry_ann.a
+[ 35%] Built target geometry_ann
+[ 38%] Building CXX object CMakeFiles/sq8_oracle.dir/sq8_oracle.cpp.o
+[ 41%] Building CXX object CMakeFiles/sq8_oracle.dir/benchmark_options.cpp.o
+[ 44%] Building CXX object CMakeFiles/geometry_tests.dir/tests.cpp.o
+[ 47%] Building CXX object CMakeFiles/geometry_bench.dir/benchmark.cpp.o
+[ 50%] Building CXX object CMakeFiles/dataset_tests.dir/dataset_tests.cpp.o
+[ 52%] Building CXX object CMakeFiles/graph_bench.dir/graph_benchmark.cpp.o
+[ 55%] Building CXX object CMakeFiles/dataset_tests.dir/dataset.cpp.o
+[ 58%] Building CXX object CMakeFiles/graph_bench.dir/graph_evaluation.cpp.o
+[ 61%] Building CXX object CMakeFiles/graph_bench.dir/graph_settings.cpp.o
+[ 64%] Building CXX object CMakeFiles/sq8_oracle.dir/dataset.cpp.o
+[ 67%] Building CXX object CMakeFiles/geometry_bench.dir/benchmark_options.cpp.o
+[ 70%] Building CXX object CMakeFiles/geometry_tests.dir/graph_tests.cpp.o
+[ 73%] Building CXX object CMakeFiles/graph_bench.dir/graph_measurement.cpp.o
+[ 76%] Building CXX object CMakeFiles/graph_bench.dir/benchmark_options.cpp.o
+[ 79%] Linking CXX executable dataset_tests
+[ 79%] Built target dataset_tests
+[ 82%] Building CXX object CMakeFiles/graph_bench.dir/dataset.cpp.o
+[ 85%] Linking CXX executable sq8_oracle
+[ 88%] Building CXX object CMakeFiles/geometry_bench.dir/dataset.cpp.o
+[ 88%] Built target sq8_oracle
+[ 91%] Building CXX object CMakeFiles/geometry_tests.dir/graph_settings.cpp.o
+[ 94%] Linking CXX executable geometry_tests
+[ 94%] Built target geometry_tests
+[ 97%] Linking CXX executable graph_bench
+[100%] Linking CXX executable geometry_bench
+[100%] Built target graph_bench
+[100%] Built target geometry_bench

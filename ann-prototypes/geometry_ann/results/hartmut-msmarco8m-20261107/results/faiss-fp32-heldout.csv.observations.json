@@ -1,0 +1,180 @@
+{
+  "calibration": [
+    {
+      "budget": 32,
+      "recall10": 0.9392,
+      "p50_us": 133647.12,
+      "p99_us": 334370.625,
+      "mean_distance_evaluations": 41955.548,
+      "max_distance_evaluations": 57712
+    },
+    {
+      "budget": 64,
+      "recall10": 0.966,
+      "p50_us": 53759.896,
+      "p99_us": 142046.015,
+      "mean_distance_evaluations": 81886.524,
+      "max_distance_evaluations": 102752
+    },
+    {
+      "budget": 96,
+      "recall10": 0.9768,
+      "p50_us": 44996.202,
+      "p99_us": 118846.273,
+      "mean_distance_evaluations": 120941.596,
+      "max_distance_evaluations": 159360
+    },
+    {
+      "budget": 128,
+      "recall10": 0.982,
+      "p50_us": 50877.125,
+      "p99_us": 94949.834,
+      "mean_distance_evaluations": 159895.108,
+      "max_distance_evaluations": 199287
+    },
+    {
+      "budget": 192,
+      "recall10": 0.9908,
+      "p50_us": 73076.123,
+      "p99_us": 129535.074,
+      "mean_distance_evaluations": 238462.724,
+      "max_distance_evaluations": 291339
+    },
+    {
+      "budget": 256,
+      "recall10": 0.9944,
+      "p50_us": 93607.088,
+      "p99_us": 130719.142,
+      "mean_distance_evaluations": 316537.784,
+      "max_distance_evaluations": 374454
+    },
+    {
+      "budget": 512,
+      "recall10": 0.9976,
+      "p50_us": 183059.885,
+      "p99_us": 226097.2,
+      "mean_distance_evaluations": 628228.18,
+      "max_distance_evaluations": 697100
+    },
+    {
+      "budget": 1024,
+      "recall10": 0.9996,
+      "p50_us": 356116.199,
+      "p99_us": 381811.57,
+      "mean_distance_evaluations": 1244455.272,
+      "max_distance_evaluations": 1332614
+    }
+  ],
+  "heldout": [
+    {
+      "repeat": 0,
+      "budget": 96,
+      "recall10": 0.9734666666666667,
+      "p50_us": 36298.629,
+      "p99_us": 44494.293,
+      "mean_distance_evaluations": 121070.47733333333,
+      "max_distance_evaluations": 153690,
+      "major_faults": 1792,
+      "serving_rss_bytes": 45743259648,
+      "swap_bytes": 4891238400
+    },
+    {
+      "repeat": 0,
+      "budget": 192,
+      "recall10": 0.9857333333333334,
+      "p50_us": 69979.348,
+      "p99_us": 79432.674,
+      "mean_distance_evaluations": 238312.548,
+      "max_distance_evaluations": 287136,
+      "major_faults": 900,
+      "serving_rss_bytes": 45748162560,
+      "swap_bytes": 4886306816
+    },
+    {
+      "repeat": 0,
+      "budget": 512,
+      "recall10": 0.9949333333333333,
+      "p50_us": 180472.999,
+      "p99_us": 196251.235,
+      "mean_distance_evaluations": 626068.9,
+      "max_distance_evaluations": 689799,
+      "major_faults": 645,
+      "serving_rss_bytes": 45752619008,
+      "swap_bytes": 4881850368
+    },
+    {
+      "repeat": 1,
+      "budget": 96,
+      "recall10": 0.9734666666666667,
+      "p50_us": 36369.154,
+      "p99_us": 44488.946,
+      "mean_distance_evaluations": 121070.47733333333,
+      "max_distance_evaluations": 153690,
+      "major_faults": 0,
+      "serving_rss_bytes": 45753520128,
+      "swap_bytes": 4880949248
+    },
+    {
+      "repeat": 1,
+      "budget": 192,
+      "recall10": 0.9857333333333334,
+      "p50_us": 69961.346,
+      "p99_us": 79400.327,
+      "mean_distance_evaluations": 238312.548,
+      "max_distance_evaluations": 287136,
+      "major_faults": 0,
+      "serving_rss_bytes": 45753954304,
+      "swap_bytes": 4880519168
+    },
+    {
+      "repeat": 1,
+      "budget": 512,
+      "recall10": 0.9949333333333333,
+      "p50_us": 180374.652,
+      "p99_us": 196118.096,
+      "mean_distance_evaluations": 626068.9,
+      "max_distance_evaluations": 689799,
+      "major_faults": 0,
+      "serving_rss_bytes": 45755265024,
+      "swap_bytes": 4879208448
+    },
+    {
+      "repeat": 2,
+      "budget": 96,
+      "recall10": 0.9734666666666667,
+      "p50_us": 36369.267,
+      "p99_us": 44603.522,
+      "mean_distance_evaluations": 121070.47733333333,
+      "max_distance_evaluations": 153690,
+      "major_faults": 0,
+      "serving_rss_bytes": 45756010496,
+      "swap_bytes": 4878462976
+    },
+    {
+      "repeat": 2,
+      "budget": 192,
+      "recall10": 0.9857333333333334,
+      "p50_us": 69916.312,
+      "p99_us": 79149.283,
+      "mean_distance_evaluations": 238312.548,
+      "max_distance_evaluations": 287136,
+      "major_faults": 0,
+      "serving_rss_bytes": 45756641280,
+      "swap_bytes": 4877832192
+    },
+    {
+      "repeat": 2,
+      "budget": 512,
+      "recall10": 0.9949333333333333,
+      "p50_us": 180240.659,
+      "p99_us": 196278.074,
+      "mean_distance_evaluations": 626068.9,
+      "max_distance_evaluations": 689799,
+      "major_faults": 0,
+      "serving_rss_bytes": 45757775872,
+      "swap_bytes": 4876697600
+    }
+  ],
+  "build_s": 1839.8613422309863,
+  "peak_build_rss_bytes": 50891862016
+}

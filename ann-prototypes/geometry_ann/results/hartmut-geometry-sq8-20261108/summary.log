@@ -1,0 +1,92 @@
+qwen-k16
+ calibration none 0 35000 0.88 9125.7
+ calibration radius 0.5 35000 0.8796 9276.16
+ calibration radius 1 35000 0.8732 9348.42
+ calibration shared 0.5 35000 0.8796 10083.4
+ calibration shared 1 35000 0.8296 10069.3
+ calibration shared-residual 0.5 35000 0.8796 10377.3
+ calibration shared-residual 1 35000 0.8244 10509.8
+ calibration none 0 176816 0.9596 27534.4
+ calibration radius 0.5 176816 0.9592 27662.3
+ calibration radius 1 176816 0.9432 27631.1
+ calibration shared 0.5 176816 0.9596 28490.5
+ calibration shared 1 176816 0.9112 28444.9
+ calibration shared-residual 0.5 176816 0.9596 28877.5
+ calibration shared-residual 1 176816 0.9076 28824.7
+ calibration none 0 442041 0.9828 61712.5
+ calibration radius 0.5 442041 0.9828 61963.6
+ calibration radius 1 442041 0.9644 61812.7
+ calibration shared 0.5 442041 0.9828 62739.2
+ calibration shared 1 442041 0.9476 62607.2
+ calibration shared-residual 0.5 442041 0.9828 62992
+ calibration shared-residual 1 442041 0.9468 62979.6
+ heldout 0.95 graph none 0 0.9504 25828.7 SELECTED
+ heldout 0.95 flat none 0 0.955733 27465.1 SELECTED
+ heldout 0.99 graph none 0 0.972133 59956.8 NOT_REACHED_DIAGNOSTIC
+ heldout 0.99 flat none 0 0.976533 61697.3 NOT_REACHED_DIAGNOSTIC
+ heldout 0.995 graph none 0 0.972133 59956.8 NOT_REACHED_DIAGNOSTIC
+ heldout 0.995 flat none 0 0.976533 61697.3 NOT_REACHED_DIAGNOSTIC
+qwen-k32
+ calibration none 0 35000 0.88 9410.93
+ calibration radius 0.5 35000 0.8796 9523.16
+ calibration radius 1 35000 0.8732 9522.83
+ calibration shared 0.5 35000 0.8796 11060.7
+ calibration shared 1 35000 0.812 11034.1
+ calibration shared-residual 0.5 35000 0.8788 11426.6
+ calibration shared-residual 1 35000 0.81 11428.1
+ calibration none 0 176816 0.9596 27805.7
+ calibration radius 0.5 176816 0.9592 27906.1
+ calibration radius 1 176816 0.9432 27904.4
+ calibration shared 0.5 176816 0.9596 29407.1
+ calibration shared 1 176816 0.9028 29550
+ calibration shared-residual 0.5 176816 0.9596 29855.6
+ calibration shared-residual 1 176816 0.898 29842.5
+ calibration none 0 442041 0.9828 62087.3
+ calibration radius 0.5 442041 0.9828 62166.6
+ calibration radius 1 442041 0.9644 62214.9
+ calibration shared 0.5 442041 0.9828 63733.4
+ calibration shared 1 442041 0.9428 63672.8
+ calibration shared-residual 0.5 442041 0.9828 64172.2
+ calibration shared-residual 1 442041 0.9428 64101.5
+ heldout 0.95 graph none 0 0.9504 25822.2 SELECTED
+ heldout 0.95 flat none 0 0.955733 27758.4 SELECTED
+ heldout 0.99 graph shared-residual 0.5 0.970533 61997.8 NOT_REACHED_DIAGNOSTIC
+ heldout 0.99 flat none 0 0.976533 61981.6 NOT_REACHED_DIAGNOSTIC
+ heldout 0.995 graph shared-residual 0.5 0.970533 61997.8 NOT_REACHED_DIAGNOSTIC
+ heldout 0.995 flat none 0 0.976533 61981.6 NOT_REACHED_DIAGNOSTIC
+qwen-k8
+ calibration none 0 35000 0.88 9017.82
+ calibration radius 0.5 35000 0.8796 9153.69
+ calibration radius 1 35000 0.8732 9155.77
+ calibration shared 0.5 35000 0.8796 9529.3
+ calibration shared 1 35000 0.8452 9551.48
+ calibration shared-residual 0.5 35000 0.8796 9816.05
+ calibration shared-residual 1 35000 0.8432 9912.44
+ calibration none 0 176816 0.9596 27310.1
+ calibration radius 0.5 176816 0.9592 27479.1
+ calibration radius 1 176816 0.9432 27543.4
+ calibration shared 0.5 176816 0.9592 27893.1
+ calibration shared 1 176816 0.9204 27882.6
+ calibration shared-residual 0.5 176816 0.9592 28183.1
+ calibration shared-residual 1 176816 0.918 28206.8
+ calibration none 0 442041 0.9828 61600.3
+ calibration radius 0.5 442041 0.9828 61810.6
+ calibration radius 1 442041 0.9644 61670.8
+ calibration shared 0.5 442041 0.9828 62176
+ calibration shared 1 442041 0.9544 62105
+ calibration shared-residual 0.5 442041 0.9828 62365.7
+ calibration shared-residual 1 442041 0.9528 62409.7
+ heldout 0.95 graph none 0 0.9504 25779.8 SELECTED
+ heldout 0.95 flat none 0 0.955733 27371.9 SELECTED
+ heldout 0.99 graph none 0 0.972133 60036.4 NOT_REACHED_DIAGNOSTIC
+ heldout 0.99 flat none 0 0.976533 61626.7 NOT_REACHED_DIAGNOSTIC
+ heldout 0.995 graph none 0 0.972133 60036.4 NOT_REACHED_DIAGNOSTIC
+ heldout 0.995 flat none 0 0.976533 61626.7 NOT_REACHED_DIAGNOSTIC
+sift-sanity-k8
+ calibration none 0 35000 0.982 1870.85
+ calibration radius 0.5 35000 0.982 2530.6
+ calibration radius 1 35000 0.924 2274.11
+ calibration shared 0.5 35000 0.982 2309.25
+ calibration shared 1 35000 0.92 2535.92
+ calibration shared-residual 0.5 35000 0.984 2744.08
+ calibration shared-residual 1 35000 0.922 2849.62

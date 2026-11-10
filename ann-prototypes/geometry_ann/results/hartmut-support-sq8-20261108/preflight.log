@@ -1,0 +1,29 @@
+Installed 2 packages in 83ms
+Installed 2 packages in 94ms
+Storage=SQ8
+Building shared graph: n=257 d=17 queries=6 degree=8
+Built 16 leaves in 0.00437498s; graph=0.000391195s PCA=0s; graph bytes=528
+flat/none weight=0 metadata=64 vectors=257 recall=0.983333 p50_us=24.794
+flat/radius weight=0.5 metadata=64 vectors=257 recall=0.983333 p50_us=26.371
+flat/radius weight=1 metadata=64 vectors=257 recall=0.983333 p50_us=27.902
+flat/shared weight=0.5 metadata=64 vectors=257 recall=0.983333 p50_us=27.547
+flat/shared weight=1 metadata=64 vectors=257 recall=0.983333 p50_us=28.469
+flat/shared-residual weight=0.5 metadata=64 vectors=257 recall=0.983333 p50_us=26.719
+flat/shared-residual weight=1 metadata=64 vectors=257 recall=0.983333 p50_us=28.453
+flat/support weight=0.5 metadata=64 vectors=257 recall=0.983333 p50_us=26.638
+flat/support weight=1 metadata=64 vectors=257 recall=0.983333 p50_us=26.861
+graph/none weight=0 metadata=64 vectors=257 recall=0.983333 p50_us=26.167
+graph/radius weight=0.5 metadata=64 vectors=257 recall=0.983333 p50_us=27.021
+graph/radius weight=1 metadata=64 vectors=257 recall=0.983333 p50_us=28.414
+graph/shared weight=0.5 metadata=64 vectors=257 recall=0.983333 p50_us=30.198
+graph/shared weight=1 metadata=64 vectors=257 recall=0.983333 p50_us=29.98
+graph/shared-residual weight=0.5 metadata=64 vectors=257 recall=0.983333 p50_us=30.705
+graph/shared-residual weight=1 metadata=64 vectors=257 recall=0.983333 p50_us=30.966
+hierarchy/none weight=0 metadata=64 vectors=257 recall=0.983333 p50_us=25.208
+hierarchy/radius weight=0.5 metadata=64 vectors=257 recall=0.983333 p50_us=27.978
+hierarchy/radius weight=1 metadata=64 vectors=257 recall=0.983333 p50_us=29.129
+hierarchy/shared weight=0.5 metadata=64 vectors=257 recall=0.983333 p50_us=30.476
+hierarchy/shared weight=1 metadata=64 vectors=257 recall=0.983333 p50_us=32.141
+hierarchy/shared-residual weight=0.5 metadata=64 vectors=257 recall=0.983333 p50_us=29.534
+hierarchy/shared-residual weight=1 metadata=64 vectors=257 recall=0.983333 p50_us=31.353
+EDGE SUPPORT + ORACLE PREFLIGHT PASSED /tmp/geometry-sq8-preflight-ed7tkvmz

@@ -1,0 +1,28 @@
+{
+  "faiss_version": "1.15.1",
+  "selection": {
+    "0.95": {
+      "budget": 96,
+      "recall10": 0.9632,
+      "p50_us": 506.773,
+      "p99_us": 692.803,
+      "mean_distance_evaluations": 14096.488,
+      "max_distance_evaluations": 25445
+    },
+    "0.99": null,
+    "0.995": null
+  },
+  "targets": [
+    0.95,
+    0.99,
+    0.995
+  ],
+  "nlist": 8192,
+  "sample": 327680,
+  "seed": 42,
+  "diagnostic_budgets": [
+    256
+  ],
+  "calibration_queries": "data/calibration_queries.fvecs",
+  "test_queries": "data/test_queries.fvecs"
+}

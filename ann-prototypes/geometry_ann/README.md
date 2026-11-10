@@ -21,7 +21,7 @@ The deterministic synthetic smoke dataset defaults to 10,000 clustered/elongated
 | V1 | Same coarse training; global best-score adaptive bisection | Centroid, maximum radius, total variance |
 | V2 | Identical adaptive partitioning to V1 | V1 plus up to four approximate principal directions and full-population projection extrema |
 
-Training uses four Lloyd iterations and at most 4,096 sampled vectors per clustering call by default; all members receive a final nearest-centroid assignment. Empty clusters disappear. Coarse and fine samples use a reproducible seeded generator. Packed leaf rows retain original base IDs. L2 distances use FP32 coordinates with double accumulation and independent accumulation lanes; no fast-math build flag is used.
+Training uses four Lloyd iterations and at most 4,096 sampled vectors per clustering call by default; all members receive a final nearest-centroid assignment. Empty clusters disappear. Coarse and fine samples use a reproducible seeded generator. Packed leaf rows retain original base IDs. Training, metadata, and returned L2 distances use FP32 coordinates with double accumulation and independent accumulation lanes; no fast-math build flag is used. Leaf scans first use a SIMD FP32 distance filter (runtime AVX-512/AVX2 on GCC/Clang x86, NEON on AArch64, scalar elsewhere). A conservative error allowance rejects only candidates strictly above the current double threshold; competitive candidates are scored again in double, preserving ID ties and geometric pruning. Overflow or excessive error disables filtering. Build with `-DGEOMETRY_FAST_SCAN=OFF` to reproduce the original scan. Do not enable fast-math. See `results/simd-scan-20261107/` for a synthetic control; see also `results/hartmut-simd-20261107/` for the SIFT1M comparison on AVX-512.
 
 Adaptive splitting prioritizes total scatter times `(1 + largest_axis_scatter / total_scatter)`. Total scatter combines population and dispersion. Axis anisotropy is a deliberately cheap proxy for dominant-eigenvalue anisotropy; it does not detect every rotated elongation. The default split is a median cut on the highest-variance coordinate, balanced in population. `--split kmeans` instead tries sampled two-means at each beneficial split, with median fallback if it degenerates. Splitting stops at the global leaf budget, when every leaf meets target size, or when remaining scatter is zero. Coarse groups remain the leaf owners; no point crosses its coarse parent during refinement. No speculative graph stage is implemented.
 
@@ -112,3 +112,38 @@ Faiss query latency includes Python API overhead, whereas the C++ prototype is t
 - Only consider partition shortcuts after examining V2 routing misses under practical budgets. No graph construction or compression is hidden in this baseline.
 
 Source layout follows the research concerns: `training.cpp` partitions, `geometry.cpp` constructs and evaluates bounds, `index.cpp` assembles/searches packed storage, `dataset.cpp` handles benchmark I/O, `benchmark_options.cpp` validates configuration, and `benchmark.cpp` measures/selects settings. `index.h` is the small public API; `internal.h` exposes only internal training/geometry contracts.
+
+Graph ablations now build only the PCA/shared projection metadata required by `--bounds` or the rows of `--settings`. Partitioning and graph topology stay the same; centroid-only/radius runs therefore avoid unused projection build time and persistent storage. Default all-mode ablations still build all metadata.
+
+## Controlled routing and partition study
+
+`graph_bench --variant V0 --bounds none --children 128 --coarse 64` now builds
+fixed hierarchical k-means partitions with a graph over the same leaves. V0
+requires centroid-only settings because it does not store geometric bounds.
+V2 retains adaptive splitting. `--iterations` applies to coarse and fine/local
+training, so increasing it changes both levels. Both flat and graph routing use
+an exact SIMD double centroid kernel on AVX2 hosts; its four accumulation lanes
+match the reference metric. Flat routing heapifies evaluated descriptors in bulk and pops only the candidates needed by the scan budget.
+
+The held-out study and its calibration-first runner are in
+`results/hartmut-routing-20261107/`. It uses the same partitions, packed vectors,
+and scan kernel for routing comparisons. Flat and graph phase timers separate
+navigation from scanning; hierarchy interleaves those operations, so its phase
+columns are only initial-parent setup versus remaining search, not a pure split.
+
+## Cell-ceiling study (hyperplane / convex bounds)
+
+`cell_ceiling` builds fixed V0 leaves and, offline, measures how many leaves each lower
+bound certifies against the 10th true-neighbour distance (`cell_bounds.{h,cpp}`,
+`cell_diagnostics.cpp`). Slabs use member extremes along directions toward the K nearest
+centroids. Bisectors of stored centroids are not valid boundaries, because the stored centroids are member means. The
+joint bound is the exact distance to the intersection of K slabs (K×K Gram, safe at
+every iterate). `hull` is the convex-hull ceiling for any convex metadata. `nearest-member`
+is the oracle. `cell_tests` covers the closed-form polytope corner, hull convergence, and
+bound monotonicity on FP32/SQ8 fixtures.
+
+Result (`results/hartmut-cells-20261110/`): on SIFT1M the slab bounds keep about 4,300 of 8,192 leaves, while the
+hull keeps 163. On Qwen 8.84M×1024 the slabs keep about 8,130, the hull 888, and the oracle 4.3. Cheap convex
+metadata cannot approach the hull in high dimension, and the hull costs more than a scan.
+Geometric pruning is therefore dropped. The remaining gap is ranking: 130K centroid-ordered
+vectors versus 8.6K oracle vectors for 10/10 on Qwen.

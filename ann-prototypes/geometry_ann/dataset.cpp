@@ -3,10 +3,17 @@
 #include "internal.h"
 #include <algorithm>
 #include <bit>
+#include <cmath>
 #include <fstream>
 #include <limits>
 #include <random>
 #include <stdexcept>
+#include <filesystem>
+#include <iomanip>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 namespace geometry_ann {
 namespace {
 template<class T> std::vector<T> read_records(const std::string& path, std::size_t& dimension,
@@ -42,6 +49,34 @@ std::vector<Neighbor> exact(std::span<const float> base, std::span<const float> 
     std::partial_sort(neighbors.begin(), neighbors.begin() + k, neighbors.end()); neighbors.resize(k);
     return neighbors;
 }
+QuantizedDataset load_quantized(const std::string& path, const std::string& scale_path, std::size_t count, std::size_t d, const std::string& offset_path) {
+    if (!count || !d || count > std::numeric_limits<std::size_t>::max() / d)
+        throw std::runtime_error("invalid SQ8 shape");
+    QuantizedDataset result;
+    result.scales.resize(d); std::ifstream scales(scale_path,std::ios::binary);
+    scales.read(reinterpret_cast<char*>(result.scales.data()),std::streamsize(d*sizeof(float)));
+    if (!scales || scales.peek() != std::char_traits<char>::eof()) throw std::runtime_error("invalid SQ8 scales file");
+    if (!offset_path.empty()) {
+        result.offsets.resize(d); std::ifstream offsets(offset_path,std::ios::binary);
+        offsets.read(reinterpret_cast<char*>(result.offsets.data()),std::streamsize(d*sizeof(float)));
+        if (!offsets || offsets.peek() != std::char_traits<char>::eof()) throw std::runtime_error("invalid SQ8 offsets file");
+    }
+    for (std::size_t j=0;j<d;++j) {
+        double offset=result.offsets.empty()?0:result.offsets[j];
+        if (!std::isfinite(result.scales[j]) || result.scales[j]<=0 || !std::isfinite(offset) ||
+            std::abs(offset)+128*double(result.scales[j])>std::numeric_limits<float>::max())
+            throw std::runtime_error("invalid SQ8 parameter range");
+    }
+    int fd = open(path.c_str(),O_RDONLY); if (fd < 0) throw std::runtime_error("cannot open SQ8 codes");
+    struct stat info{}; auto bytes=count*d;
+    if (fstat(fd,&info) || info.st_size < 0 || std::size_t(info.st_size) != bytes) {
+        close(fd); throw std::runtime_error("SQ8 code size mismatch");
+    }
+    void* mapping=mmap(nullptr,bytes,PROT_READ,MAP_PRIVATE,fd,0);close(fd);
+    if (mapping==MAP_FAILED) throw std::runtime_error("cannot map SQ8 codes");
+    result.mapping=std::shared_ptr<void>(mapping,[bytes](void* p){munmap(p,bytes);});
+    result.codes={static_cast<const std::int8_t*>(mapping),bytes};return result;
+}
 Dataset synthetic(std::size_t count, std::size_t query_count, std::size_t d, std::uint32_t seed) {
     constexpr std::size_t clusters = 24;
     constexpr float center_scale = 4, elongated_scale = 5;
@@ -60,7 +95,7 @@ Dataset synthetic(std::size_t count, std::size_t query_count, std::size_t d, std
                     (j == cluster_id % d ? elongated_scale : 1);
         }
     };
-    generate(count, data.base); generate(query_count, data.queries);
+    generate(count, data.base_storage); data.base = data.base_storage; data.base_rows = count; generate(query_count, data.queries);
     for (std::size_t i = 0; i < query_count; ++i) {
         std::vector<Id> ids;
         for (auto neighbor : exact(data.base, std::span(data.queries).subspan(i * d, d), 10)) ids.push_back(neighbor.id);
@@ -70,7 +105,39 @@ Dataset synthetic(std::size_t count, std::size_t query_count, std::size_t d, std
 }
 Dataset load_dataset(const std::string& base, const std::string& queries, const std::string& truth, std::size_t limit) {
     Dataset data;
-    data.base = read_records<float>(base, data.dimension);
+    if (std::filesystem::path(base).extension() == ".rawview") {
+        // A small descriptor allows mapping contiguous HDF5 payloads without a
+        // second 30+ GB export. The preparation script validates dtype/layout.
+        std::ifstream descriptor(base);
+        std::string magic, filename, extra; std::size_t rows = 0, offset = 0;
+        if (!(descriptor >> magic >> rows >> data.dimension >> offset >> std::quoted(filename)) ||
+            magic != "geometry_raw_f32_v1" || !rows || !data.dimension || offset % alignof(float) ||
+            rows > std::numeric_limits<std::size_t>::max() / data.dimension / sizeof(float) ||
+            (descriptor >> extra)) throw std::runtime_error("invalid rawview descriptor");
+        auto path = std::filesystem::path(filename);
+        if (path.is_relative()) path = std::filesystem::path(base).parent_path() / path;
+        int fd = open(path.c_str(), O_RDONLY);
+        if (fd < 0) throw std::runtime_error("cannot open mapped base");
+        struct stat statbuf{};
+        std::size_t bytes = rows * data.dimension * sizeof(float);
+        if (fstat(fd, &statbuf) || statbuf.st_size < 0 || offset > std::size_t(statbuf.st_size) ||
+            bytes > std::size_t(statbuf.st_size) - offset) {
+            close(fd); throw std::runtime_error("rawview exceeds backing file");
+        }
+        long page_size = sysconf(_SC_PAGESIZE);
+        if (page_size <= 0) { close(fd); throw std::runtime_error("invalid page size"); }
+        std::size_t aligned = offset / std::size_t(page_size) * std::size_t(page_size);
+        std::size_t length = offset - aligned + bytes;
+        void* mapping = mmap(nullptr, length, PROT_READ, MAP_PRIVATE, fd, off_t(aligned));
+        close(fd);
+        if (mapping == MAP_FAILED) throw std::runtime_error("cannot map base");
+        data.base_mapping = std::shared_ptr<void>(mapping, [length](void* p) { munmap(p, length); });
+        data.base = {reinterpret_cast<const float*>(static_cast<const char*>(mapping) + offset - aligned), rows * data.dimension};
+    } else {
+        data.base_storage = read_records<float>(base, data.dimension);
+        data.base = data.base_storage;
+    }
+    data.base_rows = data.base.size() / data.dimension;
     data.queries = read_records<float>(queries, data.dimension, limit);
     std::size_t width = 0;
     auto ids = read_records<Id>(truth, width, limit);

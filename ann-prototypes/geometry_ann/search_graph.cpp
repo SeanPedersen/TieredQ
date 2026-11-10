@@ -35,7 +35,7 @@ std::vector<Visit> discover_graph(SearchState& state, std::span<const Parent> pa
 }
 SearchResult Index::search_graph(std::span<const float> query, const SearchOptions& options) const {
     auto start = std::chrono::steady_clock::now();
-    SearchState state(query, options, variant_, vectors_, ids_, leaves_, &shared_geometry_);
+    SearchState state(query, options, variant_, vectors_, ids_, leaves_, &shared_geometry_, {codes_,code_scales_,code_offsets_});
     auto discovered = discover_graph(state, parents_, leaves_, {graph_edges_, graph_entries_, graph_degree_}, options.graph_seeds);
     std::sort(discovered.begin(), discovered.end(), [&](const Visit& a, const Visit& b) {
         if (options.graph_scan_order == GraphScanOrder::routing) return VisitGreater{}(b, a);

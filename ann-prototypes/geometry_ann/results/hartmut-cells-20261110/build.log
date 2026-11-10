@@ -1,0 +1,50 @@
+[  2%] Building CXX object CMakeFiles/geometry_ann.dir/index.cpp.o
+[  4%] Building CXX object CMakeFiles/geometry_ann.dir/training.cpp.o
+[  7%] Building CXX object CMakeFiles/geometry_ann.dir/geometry.cpp.o
+[  9%] Building CXX object CMakeFiles/geometry_ann.dir/search_state.cpp.o
+[ 11%] Building CXX object CMakeFiles/geometry_ann.dir/search_hierarchy.cpp.o
+[ 16%] Building CXX object CMakeFiles/geometry_ann.dir/graph.cpp.o
+[ 16%] Building CXX object CMakeFiles/geometry_ann.dir/search_graph.cpp.o
+[ 19%] Building CXX object CMakeFiles/geometry_ann.dir/cell_bounds.cpp.o
+[ 23%] Building CXX object CMakeFiles/geometry_ann.dir/scan_distance.cpp.o
+[ 23%] Building CXX object CMakeFiles/geometry_ann.dir/sq8_distance.cpp.o
+[ 26%] Building CXX object CMakeFiles/geometry_ann.dir/geometry_diagnostics.cpp.o
+[ 28%] Building CXX object CMakeFiles/geometry_ann.dir/cell_diagnostics.cpp.o
+[ 30%] Building CXX object CMakeFiles/geometry_ann.dir/support_geometry.cpp.o
+[ 33%] Linking CXX static library libgeometry_ann.a
+[ 33%] Built target geometry_ann
+[ 35%] Building CXX object CMakeFiles/dataset_tests.dir/dataset_tests.cpp.o
+[ 38%] Building CXX object CMakeFiles/dataset_tests.dir/dataset.cpp.o
+[ 40%] Building CXX object CMakeFiles/geometry_bench.dir/dataset.cpp.o
+[ 42%] Building CXX object CMakeFiles/graph_bench.dir/graph_settings.cpp.o
+[ 45%] Building CXX object CMakeFiles/geometry_bench.dir/benchmark.cpp.o
+[ 47%] Building CXX object CMakeFiles/graph_bench.dir/graph_measurement.cpp.o
+[ 50%] Building CXX object CMakeFiles/cell_ceiling.dir/cell_ceiling.cpp.o
+[ 52%] Building CXX object CMakeFiles/graph_bench.dir/graph_benchmark.cpp.o
+[ 57%] Building CXX object CMakeFiles/geometry_bench.dir/benchmark_options.cpp.o
+[ 59%] Building CXX object CMakeFiles/graph_bench.dir/graph_evaluation.cpp.o
+[ 59%] Building CXX object CMakeFiles/geometry_tests.dir/tests.cpp.o
+[ 61%] Building CXX object CMakeFiles/sq8_oracle.dir/sq8_oracle.cpp.o
+[ 64%] Building CXX object CMakeFiles/geometry_tests.dir/graph_tests.cpp.o
+[ 66%] Building CXX object CMakeFiles/geometry_tests.dir/graph_settings.cpp.o
+[ 69%] Building CXX object CMakeFiles/cell_tests.dir/cell_tests.cpp.o
+[ 71%] Building CXX object CMakeFiles/graph_bench.dir/benchmark_options.cpp.o
+[ 73%] Building CXX object CMakeFiles/graph_bench.dir/dataset.cpp.o
+[ 76%] Building CXX object CMakeFiles/sq8_oracle.dir/benchmark_options.cpp.o
+[ 78%] Building CXX object CMakeFiles/sq8_oracle.dir/dataset.cpp.o
+[ 80%] Building CXX object CMakeFiles/cell_ceiling.dir/benchmark_options.cpp.o
+[ 83%] Building CXX object CMakeFiles/cell_ceiling.dir/dataset.cpp.o
+[ 85%] Linking CXX executable cell_tests
+[ 85%] Built target cell_tests
+[ 88%] Linking CXX executable dataset_tests
+[ 88%] Built target dataset_tests
+[ 90%] Linking CXX executable geometry_bench
+[ 90%] Built target geometry_bench
+[ 92%] Linking CXX executable geometry_tests
+[ 92%] Built target geometry_tests
+[ 95%] Linking CXX executable graph_bench
+[ 95%] Built target graph_bench
+[ 97%] Linking CXX executable sq8_oracle
+[100%] Linking CXX executable cell_ceiling
+[100%] Built target sq8_oracle
+[100%] Built target cell_ceiling

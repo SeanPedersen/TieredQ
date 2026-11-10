@@ -10,11 +10,11 @@ bool VisitGreater::operator()(const Visit& a, const Visit& b) const {
     return a.index > b.index;
 }
 SearchState::SearchState(std::span<const float> query, const SearchOptions& options, Variant variant,
-                         std::span<const float> vectors, std::span<const Id> ids, std::span<const Leaf> leaves, const Envelope* shared_geometry)
-    : query_(query), vectors_(vectors), ids_(ids), leaves_(leaves), options_(options), mode_(options.bounds), shared_geometry_(shared_geometry) {
+                         std::span<const float> vectors, std::span<const Id> ids, std::span<const Leaf> leaves, const Envelope* shared_geometry, QuantizedInput quantized)
+    : query_(query), vectors_(vectors), quantized_(quantized), ids_(ids), leaves_(leaves), options_(options), mode_(options.bounds), shared_geometry_(shared_geometry) {
     if (mode_ == BoundsMode::automatic)
         mode_ = variant == Variant::fixed ? BoundsMode::none : variant == Variant::radius ? BoundsMode::radius : BoundsMode::pca;
-    if (mode_ == BoundsMode::shared && shared_geometry_) {
+    if ((mode_ == BoundsMode::shared || mode_ == BoundsMode::shared_residual) && shared_geometry_) {
         shared_query_ = shared_query(query, *shared_geometry_);
         result.shared_query_projections = shared_query_.low.size();
     }
@@ -25,7 +25,7 @@ std::optional<Visit> SearchState::evaluate(const Envelope& g, std::size_t index,
     }
     ++result.metadata_evaluations;
     if (parent) ++result.parents_evaluated;
-    double distance = l2(query_, g.centroid);
+    double distance = centroid_l2(query_, g.centroid);
     auto mode = override_mode == BoundsMode::automatic ? mode_ : override_mode;
     double bound = 0;
     if (mode != BoundsMode::none) {
@@ -34,8 +34,11 @@ std::optional<Visit> SearchState::evaluate(const Envelope& g, std::size_t index,
         if (projections) result.projection_evaluations += g.norm.size();
         auto bounds = distance_bounds(query_, g, projections, distance);
         bound = mode == BoundsMode::pca_max ? bounds.max_slab : bounds.joint;
-        if (mode == BoundsMode::shared && shared_geometry_) {
-            bound = std::max(bound, shared_lower_bound(shared_query_, *shared_geometry_, g));
+        if ((mode == BoundsMode::shared || mode == BoundsMode::shared_residual) && shared_geometry_) {
+            double shape = mode == BoundsMode::shared_residual
+                ? shared_residual_lower_bound(shared_query_, *shared_geometry_, g, distance)
+                : shared_lower_bound(shared_query_, *shared_geometry_, g);
+            bound = std::max(bound, shape);
             result.shared_interval_evaluations += g.shared_low.size();
         }
         result.projection_improvements += bound > bounds.radius;
@@ -67,7 +70,21 @@ void SearchState::scan(const Visit& visit) {
     }
     ++result.leaves_scanned; result.vectors_scanned += leaf.size;
     for (std::size_t i = leaf.offset; i < leaf.offset + leaf.size; ++i) {
-        Neighbor candidate{l2(query_, vectors_.subspan(i * query_.size(), query_.size())), ids_[i]};
+        if (!quantized_.codes.empty()) {
+            auto code = quantized_.codes.subspan(i * query_.size(), query_.size());
+#ifdef GEOMETRY_FAST_SCAN
+            if (best_.size() == options_.k && sq8_lower_bound(query_, code, quantized_.scales, quantized_.offsets) > best_.top().distance) continue;
+#endif
+            Neighbor candidate{sq8_l2(query_, code, quantized_.scales, quantized_.offsets),ids_[i]};
+            if (best_.size() < options_.k) best_.push(candidate);
+            else if (candidate < best_.top()) { best_.pop(); best_.push(candidate); }
+            continue;
+        }
+        auto vector = vectors_.subspan(i * query_.size(), query_.size());
+#ifdef GEOMETRY_FAST_SCAN
+        if (best_.size() == options_.k && scan_lower_bound(query_, vector) > best_.top().distance) continue;
+#endif
+        Neighbor candidate{l2(query_, vector), ids_[i]};
         if (best_.size() < options_.k) best_.push(candidate);
         else if (candidate < best_.top()) { best_.pop(); best_.push(candidate); }
     }
