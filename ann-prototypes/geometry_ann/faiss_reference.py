@@ -1,4 +1,5 @@
 """Faiss reference construction and measurement, shared by calibration and held-out replay."""
+import os
 import sys
 import time
 
@@ -117,6 +118,27 @@ def measure(index, variant: str, queries: np.ndarray, truth: np.ndarray, budget:
     result = dict(budget=budget, recall10=hits / (K * len(queries)), p50_us=p50, p99_us=p99,
                   mean_distance_evaluations=evaluations / len(queries), max_distance_evaluations=maximum)
     print(f"{variant} budget={budget} recall={result['recall10']:.4f} p50_us={p50:.1f}", file=sys.stderr, flush=True)
+    return result
+
+
+def measure_batch(index, variant: str, queries: np.ndarray, truth: np.ndarray, budget: int, threads: int) -> dict:
+    """All queries in one search call on `threads` OpenMP threads, unpinned (#51): one warm call, then one timed call."""
+    os.sched_setaffinity(0, range(os.cpu_count()))
+    faiss.omp_set_num_threads(threads)
+    if variant == "hnsw":
+        index.hnsw.efSearch = budget
+    else:
+        index.nprobe = budget
+        if variant == "ivf-hnsw":
+            faiss.downcast_index(index.quantizer).hnsw.efSearch = max(QUANTIZER_SEARCH_EF, budget)
+    index.search(queries, K)
+    start = time.perf_counter()
+    _, found = index.search(queries, K)
+    elapsed = time.perf_counter() - start
+    hits = sum(len(set(row) & set(expected)) for row, expected in zip(found, truth, strict=True))
+    result = dict(budget=budget, threads=threads, recall10=hits / (K * len(queries)), qps=len(queries) / elapsed)
+    print(f"{variant} batch budget={budget} threads={threads} recall={result['recall10']:.4f} qps={result['qps']:.0f}",
+          file=sys.stderr, flush=True)
     return result
 
 

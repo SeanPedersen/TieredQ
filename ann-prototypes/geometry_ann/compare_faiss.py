@@ -32,7 +32,7 @@ for thread_variable in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THRE
 
 import faiss
 import numpy as np
-from faiss_reference import K, build_reference, measure, select_targets
+from faiss_reference import K, build_reference, measure, measure_batch, select_targets
 from memory_probe import MemorySampler, read_memory
 
 
@@ -91,6 +91,10 @@ def main() -> None:
     parser.add_argument("--evaluation-output", type=Path)
     parser.add_argument("--evaluation-nq", type=int, default=1000)
     parser.add_argument("--evaluation-repeats", type=int, default=1)
+    parser.add_argument("--heldout-all-budgets", action="store_true",
+                        help="replay every budget on the held-out queries (the full curve), not only the selected ones")
+    parser.add_argument("--batch-threads", type=int, default=0,
+                        help="also time all held-out queries in one search call on this many threads, per budget (#51)")
     parser.add_argument("--targets", default="0.95,0.99")
     parser.add_argument("--int8-base",type=Path)
     parser.add_argument("--int8-scales",type=Path)
@@ -157,7 +161,7 @@ def main() -> None:
     selection = select_targets(calibration, targets)
     test_results = []
     if all(evaluation):
-        frozen = {row["budget"] for row in selection.values() if row}
+        frozen = set(budgets) if args.heldout_all_budgets else {row["budget"] for row in selection.values() if row}
         diagnostics = []
         if any(row is None for row in selection.values()):
             diagnostic=max(calibration,key=lambda row:(row["recall10"],-row["p50_us"]))["budget"]
@@ -185,6 +189,12 @@ def main() -> None:
                     row["serving_rss_bytes"] = memory.get("VmRSS",0)
                     row["swap_bytes"] = memory.get("VmSwap",0)
                 test_results.append(row)
+        if args.batch_threads:
+            batch_rows = [measure_batch(index, args.variant, *test, budget, args.batch_threads) for budget in frozen]
+            with Path(str(args.evaluation_output) + ".batch.json").open("x") as output:
+                json.dump(dict(threads=args.batch_threads, nq=len(test[0]), rows=batch_rows), output, indent=2)
+            faiss.omp_set_num_threads(1)
+            if args.search_cpu is not None: os.sched_setaffinity(0, {args.search_cpu})
     if args.evaluation_output:
         with Path(str(args.evaluation_output)+".observations.json").open("x") as checkpoint:
             json.dump(dict(calibration=calibration,heldout=test_results,build_s=build_seconds,peak_build_rss_bytes=peak),checkpoint,indent=2)
