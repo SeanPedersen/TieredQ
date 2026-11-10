@@ -25,9 +25,10 @@ DUEL = EXPERIMENTS / 'TieredQ-issue44-routerduel-20261110/results'
 GIVEN = dict(candidates='40,100', expansions='8,16,32,64')
 SCRATCH = dict(candidates='40', expansions='16,32', train_iterations=4, rows_per_list=40, assignment_supers=256,
                assignment_probes=16)
-MODELS = ([dict(name=f'router-{lists // 1024}k', lists=lists, centroids=DUEL / f'{lists // 1024}k/centroids.f32', **GIVEN)
-           for lists in (65536, 131072)] +
-          [dict(name=f'scratch-{lists // 1024}k', lists=lists, **SCRATCH) for lists in (65536, 131072)])
+# Scratch builds first: they answer the build-time question (#48) and need no given partition.
+MODELS = ([dict(name=f'scratch-{lists // 1024}k', lists=lists, **SCRATCH) for lists in (65536, 131072)] +
+          [dict(name=f'router-{lists // 1024}k', lists=lists, centroids=DUEL / f'{lists // 1024}k/centroids.f32', **GIVEN)
+           for lists in (65536, 131072)])
 
 
 def status(stage, **extra):
