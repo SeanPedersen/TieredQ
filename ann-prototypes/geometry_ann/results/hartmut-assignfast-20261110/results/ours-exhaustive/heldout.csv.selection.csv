@@ -1,0 +1,15 @@
+target,routing,status,bounds,weight,metadata_cap,vector_cap,scan_order,calibration_recall,calibration_p50_us,patience,policy,calibration_mean_vectors
+0.95,compressed,SELECTED,none,0,256,35000,centroid,0.9608,15063.1,0,fixed,34998.6
+0.95,compressed,SELECTED,none,0,256,600000,centroid,0.956,3925.14,48,patience,20187.2
+0.99,compressed,SELECTED,none,0,256,250000,centroid,0.9908,43959.2,0,fixed,249999
+0.99,compressed,SELECTED,none,0,256,600000,centroid,0.9912,36092.7,768,patience,251281
+0.995,compressed,NOT_REACHED_DIAGNOSTIC,none,0,256,250000,centroid,0.9908,43959.2,0,fixed,249999
+0.995,compressed,NOT_REACHED_DIAGNOSTIC,none,0,256,600000,centroid,0.9912,36092.7,768,patience,251281
+REPLAY,compressed,FIXED,none,0,256,35000,centroid,,,0,fixed,
+REPLAY,compressed,FIXED,none,0,256,88408,centroid,,,0,fixed,
+REPLAY,compressed,FIXED,none,0,256,250000,centroid,,,0,fixed,
+REPLAY,compressed,FIXED,none,0,256,600000,centroid,,,48,patience,
+REPLAY,compressed,FIXED,none,0,256,600000,centroid,,,96,patience,
+REPLAY,compressed,FIXED,none,0,256,600000,centroid,,,192,patience,
+REPLAY,compressed,FIXED,none,0,256,600000,centroid,,,768,patience,
+REPLAY,compressed,FIXED,none,0,256,350000,centroid,,,768,patience,

@@ -1,0 +1,4 @@
+Clustering 1310720 points in 1024D to 32768 clusters, redo 1 times, 4 iterations
+  Preprocessing in 0.66 s
+  Iteration 0 (55.23 s, search 54.94 s): objective=1.0611e+06 imbalance=1.797 nsplit=0         Iteration 1 (110.45 s, search 109.92 s): objective=653569 imbalance=1.478 nsplit=0         Iteration 2 (166.21 s, search 165.44 s): objective=630332 imbalance=1.418 nsplit=0         Iteration 3 (220.94 s, search 219.94 s): objective=621135 imbalance=1.389 nsplit=0       {"method": "lloyd", "train_s": 224.08320330095012}
+

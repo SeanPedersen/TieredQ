@@ -1,0 +1,25 @@
+{
+  "method": "lloyd",
+  "k": 32768,
+  "rows": 8840823,
+  "threads": 32,
+  "seed": 42,
+  "train_s": 224.08320330095012,
+  "assign_s": null,
+  "total_s": 224.08320330095012,
+  "faiss_version": "1.16.0",
+  "details": {
+    "sample": 1310720,
+    "iterations": 4,
+    "objective": [
+      1061096.75,
+      653569.4375,
+      630331.5625,
+      621134.875
+    ]
+  },
+  "build_peak_rss": 15681859584,
+  "build_peak_anon": 6598815744,
+  "build_peak_file": 9084194816,
+  "build_hwm": 15854034944
+}

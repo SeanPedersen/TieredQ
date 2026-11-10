@@ -1,0 +1,1 @@
+{"rows": 8840823, "k": 32768, "supers": 256, "probes": 16, "threads": 32, "total_s": 81.1139, "supers_s": 0.284474, "assign_s": 80.7038, "mean_candidates": 2397.09, "check_rows": 50000, "same_label": 0.9889, "worse_distance": 0.0111, "mean_excess_when_worse": 0.111332, "max_excess": 1.02163, "objective_ratio": 1.00134, "brute_force_sample_s": 2.60547}
