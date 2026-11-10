@@ -34,6 +34,8 @@ private:
     const Envelope* shared_geometry_;
     SharedQuery shared_query_;
     std::priority_queue<Neighbor> best_;
+    std::size_t idle_leaves_ = 0;
+    bool patience_exhausted() const;
 };
 std::vector<Visit> discover_graph(SearchState& state, std::span<const Parent> parents,
                                   std::span<const Leaf> leaves, GraphView graph, std::size_t seeds);

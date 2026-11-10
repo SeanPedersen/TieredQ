@@ -1,0 +1,11 @@
+Storage=SQ8
+Building shared graph: n=8840823 d=1024 queries=250 degree=0
+Built 131072 leaves in 21.4189s; graph=0s reassigned=0 reassign_s=0 build_threads=32 PCA=0s; graph bytes=0
+compressed/none weight=0 metadata=512 vectors=35000 patience=0 recall=0.9812 p50_us=21908.6
+compressed/none weight=0 metadata=512 vectors=88408 patience=0 recall=0.9912 p50_us=29682.7
+compressed/none weight=0 metadata=512 vectors=250000 patience=0 recall=0.9948 p50_us=73379.8
+compressed/none weight=0 metadata=512 vectors=600000 patience=192 recall=0.978 p50_us=7406.44
+compressed/none weight=0 metadata=512 vectors=600000 patience=384 recall=0.9848 p50_us=9374.92
+compressed/none weight=0 metadata=512 vectors=600000 patience=768 recall=0.9896 p50_us=13920.3
+compressed/none weight=0 metadata=512 vectors=600000 patience=3072 recall=0.9948 p50_us=48431.1
+compressed/none weight=0 metadata=512 vectors=350000 patience=3072 recall=0.9948 p50_us=48527.5

@@ -1,0 +1,21 @@
+Storage=SQ8
+Building shared graph: n=8840823 d=1024 queries=250 degree=0
+Built 32768 leaves in 15.555s; graph=0s reassigned=0 reassign_s=0 build_threads=32 PCA=0s; graph bytes=0
+compressed/none weight=0 metadata=256 vectors=35000 patience=0 recall=0.9608 p50_us=7318.24
+compressed/none weight=0 metadata=256 vectors=88408 patience=0 recall=0.9796 p50_us=14212.6
+compressed/none weight=0 metadata=256 vectors=250000 patience=0 recall=0.99 p50_us=34973.5
+compressed/none weight=0 metadata=256 vectors=600000 patience=48 recall=0.956 p50_us=4943.03
+compressed/none weight=0 metadata=256 vectors=600000 patience=96 recall=0.97 p50_us=7165.86
+compressed/none weight=0 metadata=256 vectors=600000 patience=192 recall=0.9804 p50_us=11284.6
+compressed/none weight=0 metadata=256 vectors=600000 patience=768 recall=0.9908 p50_us=35455.8
+compressed/none weight=0 metadata=512 vectors=35000 patience=0 recall=0.9608 p50_us=7713.58
+compressed/none weight=0 metadata=512 vectors=88408 patience=0 recall=0.98 p50_us=14873.3
+compressed/none weight=0 metadata=512 vectors=250000 patience=0 recall=0.99 p50_us=36681.2
+compressed/none weight=0 metadata=512 vectors=600000 patience=48 recall=0.956 p50_us=5200.54
+compressed/none weight=0 metadata=512 vectors=600000 patience=96 recall=0.9704 p50_us=7378.73
+compressed/none weight=0 metadata=512 vectors=600000 patience=192 recall=0.98 p50_us=11418.6
+compressed/none weight=0 metadata=512 vectors=600000 patience=768 recall=0.9908 p50_us=34950.2
+flat/none weight=0 metadata=32896 vectors=35000 patience=0 recall=0.9608 p50_us=21211.7
+flat/none weight=0 metadata=32896 vectors=250000 patience=0 recall=0.9904 p50_us=50900.5
+flat/none weight=0 metadata=32896 vectors=600000 patience=64 recall=0.9628 p50_us=17551.9
+flat/none weight=0 metadata=32896 vectors=600000 patience=768 recall=0.9912 p50_us=46648.2

@@ -1,0 +1,28 @@
+{
+  "method": "lloyd",
+  "k": 65536,
+  "rows": 8840823,
+  "threads": 32,
+  "seed": 42,
+  "train_s": 893.5730296300026,
+  "assign_s": 741.6687159910216,
+  "total_s": 1635.2417456210242,
+  "assignment_objective": 4040088.1798018813,
+  "empty_clusters": 0,
+  "largest_cluster": 1346,
+  "faiss_version": "1.15.1",
+  "details": {
+    "sample": 2621440,
+    "iterations": 4,
+    "objective": [
+      1978681.375,
+      1223463.375,
+      1177870.875,
+      1159978.875
+    ]
+  },
+  "build_peak_rss": 22251347968,
+  "build_peak_anon": 13471866880,
+  "build_peak_file": 9084420096,
+  "build_hwm": 22263197696
+}

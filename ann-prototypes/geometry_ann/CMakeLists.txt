@@ -1,9 +1,19 @@
 # Isolated geometry-aware ANN research prototype.
 cmake_minimum_required(VERSION 3.18)
 project(geometry_ann LANGUAGES CXX)
-add_library(geometry_ann index.cpp training.cpp geometry.cpp search_state.cpp search_hierarchy.cpp graph.cpp search_graph.cpp scan_distance.cpp sq8_distance.cpp geometry_diagnostics.cpp support_geometry.cpp cell_bounds.cpp cell_diagnostics.cpp rank_scores.cpp scan_policies.cpp)
+# The TieredQ codec from this repository (or a study snapshot of it) compresses leaf centroids for routing.
+set(TIEREDQ_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../.." CACHE PATH "TieredQ library source tree")
+add_subdirectory(${TIEREDQ_SOURCE_DIR} tieredq EXCLUDE_FROM_ALL)
+# Restricted assignment computes grouped centroid distances with CBLAS (OpenBLAS preferred, as for TieredQ).
+if(NOT BLA_VENDOR)
+  set(BLA_VENDOR OpenBLAS)
+endif()
+find_package(BLAS REQUIRED)
+find_path(CBLAS_INCLUDE_DIR cblas.h PATH_SUFFIXES openblas REQUIRED)
+add_library(geometry_ann restricted_assignment.cpp compressed_routing.cpp search_compressed.cpp index.cpp training.cpp geometry.cpp search_state.cpp search_hierarchy.cpp graph.cpp search_graph.cpp scan_distance.cpp sq8_distance.cpp geometry_diagnostics.cpp support_geometry.cpp cell_bounds.cpp cell_diagnostics.cpp rank_scores.cpp scan_policies.cpp)
 find_package(Threads REQUIRED)
-target_link_libraries(geometry_ann PUBLIC Threads::Threads)
+target_link_libraries(geometry_ann PUBLIC Threads::Threads BLAS::BLAS PRIVATE TieredQ::TieredQ)
+target_include_directories(geometry_ann PRIVATE ${CBLAS_INCLUDE_DIR})
 target_compile_features(geometry_ann PUBLIC cxx_std_20)
 target_include_directories(geometry_ann PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_options(geometry_ann PRIVATE -Wall -Wextra -Wpedantic -ffp-contract=off)
@@ -29,6 +39,9 @@ add_test(NAME dataset_tests COMMAND dataset_tests)
 
 add_executable(sq8_oracle sq8_oracle.cpp benchmark_options.cpp dataset.cpp)
 target_link_libraries(sq8_oracle PRIVATE geometry_ann)
+
+add_executable(fast_assign fast_assign.cpp dataset.cpp)
+target_link_libraries(fast_assign PRIVATE geometry_ann)
 
 add_executable(cell_ceiling cell_ceiling.cpp benchmark_options.cpp dataset.cpp)
 target_link_libraries(cell_ceiling PRIVATE geometry_ann)

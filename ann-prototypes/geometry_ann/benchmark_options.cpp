@@ -18,7 +18,7 @@ std::size_t number(const std::string& text) {
 BenchmarkOptions parse_options(int argc, char** argv) {
     const std::vector<std::string> known = {"--base", "--queries", "--truth", "--n", "--nq", "--dim", "--seed",
         "--coarse", "--children", "--leaves", "--target-size", "--sample", "--iterations", "--directions",
-        "--pca-sample", "--metadata", "--variant", "--split", "--vectors", "--leaf-scans", "--routing", "--ordering", "--graph-degree", "--graph-parents", "--graph-refinements", "--graph-seeds", "--metadata-budgets", "--weights", "--bounds", "--controls", "--settings", "--shared-directions", "--shared-sample", "--evaluation-queries", "--evaluation-truth", "--evaluation-output", "--evaluation-nq", "--repeats", "--evaluation-fixed-settings", "--int8-base", "--int8-scales", "--int8-offsets", "--geometry-diagnostics", "--evaluation-group-bounds", "--build-threads", "--search-cpu", "--reassign-parents", "--reassign-iterations", "--memory-output", "--assignments"};
+        "--pca-sample", "--metadata", "--variant", "--split", "--vectors", "--leaf-scans", "--routing", "--ordering", "--graph-degree", "--graph-parents", "--graph-refinements", "--graph-seeds", "--metadata-budgets", "--weights", "--bounds", "--controls", "--settings", "--shared-directions", "--shared-sample", "--evaluation-queries", "--evaluation-truth", "--evaluation-output", "--evaluation-nq", "--repeats", "--evaluation-fixed-settings", "--int8-base", "--int8-scales", "--int8-offsets", "--geometry-diagnostics", "--evaluation-group-bounds", "--build-threads", "--search-cpu", "--reassign-parents", "--reassign-iterations", "--memory-output", "--assignments", "--select-by", "--routing-bits", "--routing-candidates", "--routing-scan-bits", "--routing-initial", "--float-routing"};
     std::map<std::string, std::string> args;
     for (int i = 1; i < argc; i += 2) {
         if (i + 1 == argc) throw std::invalid_argument("options require a value; see README.md");
@@ -57,6 +57,21 @@ BenchmarkOptions parse_options(int argc, char** argv) {
     build.reassign_iterations = get("--reassign-iterations", build.reassign_iterations);
     if (args.contains("--memory-output")) options.memory_output = args.at("--memory-output");
     if (args.contains("--assignments")) options.assignments_file = args.at("--assignments");
+    build.routing_bits = get("--routing-bits", build.routing_bits);
+    if (build.routing_bits > 8) throw std::invalid_argument("routing bits must be 0..8 per dimension");
+    build.routing_scan_bits = get("--routing-scan-bits", build.routing_scan_bits);
+    if (build.routing_scan_bits > 8) throw std::invalid_argument("routing scan bits must be 0..8");
+    options.routing_candidates = get("--routing-candidates", options.routing_candidates);
+    if (!options.routing_candidates) throw std::invalid_argument("routing candidates must be positive");
+    options.routing_initial = get("--routing-initial", options.routing_initial);
+    auto float_routing = get("--float-routing", 0);
+    if (float_routing > 1) throw std::invalid_argument("float-routing must be 0 or 1");
+    options.float_routing = build.float_graph_build = float_routing == 1;
+    if (args.contains("--select-by")) {
+        const auto& criterion = args.at("--select-by");
+        if (criterion != "p50" && criterion != "vectors") throw std::invalid_argument("select-by must be p50 or vectors");
+        options.select_by_vectors = criterion == "vectors";
+    }
     if (args.contains("--split")) options.split = args.at("--split");
     if (options.split != "variance" && options.split != "kmeans") throw std::invalid_argument("split must be variance or kmeans");
     build.local_kmeans_split = options.split == "kmeans";

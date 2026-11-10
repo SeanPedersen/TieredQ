@@ -1,6 +1,10 @@
 // Sparse centroid graph: nearby-parent candidate pools, neighbor refinement, and connected ring.
+// Nodes are built in parallel; each refinement round reads only the previous round's edges, so the
+// graph is identical for any thread count.
 #include "internal.h"
+#include "parallel.h"
 #include <algorithm>
+#include <atomic>
 #include <numeric>
 #include <utility>
 namespace geometry_ann {
@@ -18,20 +22,21 @@ public:
     GraphTopology run() {
         make_ring(); make_entries(); make_pools();
         for (std::size_t round = 0; round <= options_.graph_refinements; ++round) {
-            std::vector<Id> edges; edges.reserve(leaves_.size() * graph_.degree);
-            for (Id node = 0; node < leaves_.size(); ++node) {
+            std::vector<Id> edges(leaves_.size() * graph_.degree);
+            parallel_for(leaves_.size(), options_.build_threads, [&](std::size_t node, std::size_t) {
                 auto candidates = pools_[node];
                 if (round) {
-                    for (auto neighbor : neighbors(node)) {
+                    for (auto neighbor : neighbors(Id(node))) {
                         candidates.push_back(neighbor);
                         for (auto next : neighbors(neighbor)) candidates.push_back(next);
                     }
                 }
-                auto selected = select(node, std::move(candidates));
-                edges.insert(edges.end(), selected.begin(), selected.end());
-            }
+                auto selected = select(Id(node), std::move(candidates));
+                std::copy(selected.begin(), selected.end(), edges.begin() + node * graph_.degree);
+            });
             graph_.edges = std::move(edges);
         }
+        graph_.distance_evaluations = evaluations_.load();
         return std::move(graph_);
     }
 private:
@@ -42,11 +47,13 @@ private:
     std::vector<std::size_t> owners_;
     std::vector<Group> pools_;
     std::vector<Id> previous_, following_;
+    std::atomic<std::size_t> evaluations_ = 0;
     std::span<const Id> neighbors(Id node) const {
         return std::span(graph_.edges).subspan(std::size_t(node) * graph_.degree, graph_.degree);
     }
     double distance(std::span<const float> a, std::span<const float> b) {
-        ++graph_.distance_evaluations; return centroid_l2(a, b);
+        evaluations_.fetch_add(1, std::memory_order_relaxed);
+        return options_.float_graph_build ? double(float_l2(a, b)) : centroid_l2(a, b);
     }
     double distance(Id a, Id b) { return distance(leaves_[a].geometry.centroid, leaves_[b].geometry.centroid); }
     void make_ring() {
@@ -80,7 +87,7 @@ private:
         }
     }
     void make_pools() {
-        for (Id node = 0; node < leaves_.size(); ++node) {
+        parallel_for(leaves_.size(), options_.build_threads, [&](std::size_t node, std::size_t) {
             std::vector<Candidate> ranked;
             for (std::size_t p = 0; p < parents_.size(); ++p)
                 ranked.emplace_back(distance(leaves_[node].geometry.centroid, parents_[p].geometry.centroid), Id(p));
@@ -91,7 +98,7 @@ private:
             };
             add(owners_[node]);
             for (std::size_t i = 0; i < count; ++i) if (ranked[i].second != owners_[node]) add(ranked[i].second);
-        }
+        });
     }
     Group select(Id node, Group candidates) {
         std::sort(candidates.begin(), candidates.end());

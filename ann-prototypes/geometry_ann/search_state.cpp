@@ -25,7 +25,7 @@ std::optional<Visit> SearchState::evaluate(const Envelope& g, std::size_t index,
     }
     ++result.metadata_evaluations;
     if (parent) ++result.parents_evaluated;
-    double distance = centroid_l2(query_, g.centroid);
+    double distance = options_.float_routing ? double(float_l2(query_, g.centroid)) : centroid_l2(query_, g.centroid);
     auto mode = override_mode == BoundsMode::automatic ? mode_ : override_mode;
     double bound = 0;
     if (mode != BoundsMode::none) {
@@ -54,8 +54,11 @@ std::optional<Visit> SearchState::evaluate(const Envelope& g, std::size_t index,
     }
     return Visit{priority, bound, distance, index, parent};
 }
+bool SearchState::patience_exhausted() const {
+    return options_.patience && best_.size() == options_.k && idle_leaves_ >= options_.patience;
+}
 bool SearchState::can_scan() const {
-    return result.leaves_scanned < options_.leaf_scans && result.vectors_scanned < options_.vector_scans;
+    return result.leaves_scanned < options_.leaf_scans && result.vectors_scanned < options_.vector_scans && !patience_exhausted();
 }
 bool SearchState::discard_if_bounded(const Visit& visit) {
     double threshold = best_.size() < options_.k ? std::numeric_limits<double>::infinity() : best_.top().distance;
@@ -69,27 +72,31 @@ void SearchState::scan(const Visit& visit) {
         ++result.leaves_skipped_for_vector_budget; return;
     }
     ++result.leaves_scanned; result.vectors_scanned += leaf.size;
+    auto admit = [&](Neighbor candidate) {
+        if (best_.size() < options_.k) { best_.push(candidate); return true; }
+        if (!(candidate < best_.top())) return false;
+        best_.pop(); best_.push(candidate); return true;
+    };
+    bool improved = false;
     for (std::size_t i = leaf.offset; i < leaf.offset + leaf.size; ++i) {
         if (!quantized_.codes.empty()) {
             auto code = quantized_.codes.subspan(i * query_.size(), query_.size());
 #ifdef GEOMETRY_FAST_SCAN
             if (best_.size() == options_.k && sq8_lower_bound(query_, code, quantized_.scales, quantized_.offsets) > best_.top().distance) continue;
 #endif
-            Neighbor candidate{sq8_l2(query_, code, quantized_.scales, quantized_.offsets),ids_[i]};
-            if (best_.size() < options_.k) best_.push(candidate);
-            else if (candidate < best_.top()) { best_.pop(); best_.push(candidate); }
+            improved |= admit({sq8_l2(query_, code, quantized_.scales, quantized_.offsets), ids_[i]});
             continue;
         }
         auto vector = vectors_.subspan(i * query_.size(), query_.size());
 #ifdef GEOMETRY_FAST_SCAN
         if (best_.size() == options_.k && scan_lower_bound(query_, vector) > best_.top().distance) continue;
 #endif
-        Neighbor candidate{l2(query_, vector), ids_[i]};
-        if (best_.size() < options_.k) best_.push(candidate);
-        else if (candidate < best_.top()) { best_.pop(); best_.push(candidate); }
+        improved |= admit({l2(query_, vector), ids_[i]});
     }
+    idle_leaves_ = improved ? 0 : idle_leaves_ + 1;
 }
 SearchResult SearchState::finish() {
+    result.stopped_by_patience = patience_exhausted();
     while (!best_.empty()) { result.neighbors.push_back(best_.top()); best_.pop(); }
     std::reverse(result.neighbors.begin(), result.neighbors.end()); return std::move(result);
 }

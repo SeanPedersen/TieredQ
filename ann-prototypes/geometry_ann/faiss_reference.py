@@ -42,28 +42,41 @@ def build_reference(base: np.ndarray, args) -> tuple:
                  if sq8 else faiss.IndexIVFFlat(quantizer, dimension, args.nlist, faiss.METRIC_L2))
         index.cp.niter = LLOYD_ITERATIONS
         index.cp.seed = args.seed
-        sample = np.random.default_rng(args.seed).choice(len(base), min(args.sample, len(base)), replace=False)
-        print(f"Training {args.variant}: {len(sample)} vectors, {args.nlist} lists", file=sys.stderr, flush=True)
-        training = codes[sample].astype(np.float32) if sq8 else np.ascontiguousarray(base[sample])
-        if sq8:
-            training *= scales
-            training += offsets
-        index.train(training)
-        del training
+        given = getattr(args, "centroids", None)
+        if given:
+            # External partition: the quantizer holds the given centroids; nothing is trained.
+            centroids = np.fromfile(given, dtype="<f4").reshape(args.nlist, dimension)
+            quantizer.add(centroids)
+            index.is_trained = True
+            print(f"Using {args.nlist} given centroids from {given}", file=sys.stderr, flush=True)
+        else:
+            sample = np.random.default_rng(args.seed).choice(len(base), min(args.sample, len(base)), replace=False)
+            print(f"Training {args.variant}: {len(sample)} vectors, {args.nlist} lists", file=sys.stderr, flush=True)
+            training = codes[sample].astype(np.float32) if sq8 else np.ascontiguousarray(base[sample])
+            if sq8:
+                training *= scales
+                training += offsets
+            index.train(training)
+            del training
         budgets = sorted({min(args.nlist, 2**power) for power in range(args.nlist.bit_length() + 1)})
     sq8 = bool(getattr(args,"int8_base",None))
     if sq8:
         faiss.copy_array_to_vector(np.concatenate([offsets-np.float32(128.5)*scales,np.float32(255)*scales]),index.sq.trained)
         prefix=index.coarse_code_size()
         if index.sa_code_size()!=prefix+dimension: raise ValueError("Unexpected SQ8 code size")
+    labels = np.fromfile(args.assignments, dtype="<u4") if getattr(args, "assignments", None) else None
+    if labels is not None and len(labels) != len(base): raise ValueError("one assignment label per row required")
     for offset in range(0, len(base), ADD_BATCH):
         if sq8:
             end=min(offset+ADD_BATCH,len(base))
-            decoded=codes[offset:end].astype(np.float32)
-            decoded *= scales
-            decoded += offsets
-            _, assignments=index.quantizer.search(decoded,1)
-            del decoded
+            if labels is not None:
+                assignments = labels[offset:end].astype(np.int64).reshape(-1, 1)
+            else:
+                decoded=codes[offset:end].astype(np.float32)
+                decoded *= scales
+                decoded += offsets
+                _, assignments=index.quantizer.search(decoded,1)
+                del decoded
             packed=np.empty((end-offset,prefix+dimension),dtype='uint8')
             for byte in range(prefix): packed[:,byte]=(assignments[:,0]>>(8*byte))&255
             packed[:,prefix:]=np.bitwise_xor(codes[offset:end].view('uint8'),np.uint8(128))
@@ -84,6 +97,9 @@ def measure(index, variant: str, queries: np.ndarray, truth: np.ndarray, budget:
         index.hnsw.efSearch = budget
     else:
         index.nprobe = budget
+        if variant == "ivf-hnsw":
+            # The coarse graph must return at least nprobe lists; the IVF probes exactly that many.
+            faiss.downcast_index(index.quantizer).hnsw.efSearch = max(QUANTIZER_SEARCH_EF, budget)
     for query in queries[:20]:
         index.search(query.reshape(1, -1), K)
     latency, hits, evaluations, maximum = [], 0, 0, 0

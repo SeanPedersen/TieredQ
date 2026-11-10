@@ -1,0 +1,1 @@
+{"build_s": 316.828, "clustering_s": 0.958404, "reassign_s": 0, "reassigned_vectors": 0, "graph_s": 303.911, "leaves": 32768, "index_bytes": 9236641572, "build_peak_rss": 18776023040, "build_peak_anon": 9718059008, "build_peak_file": 9057964032, "build_hwm": 18776023040, "serving_rss": 9642102784, "serving_anon": 9637142528, "serving_file": 4960256}

@@ -1,0 +1,35 @@
+{
+  "faiss_version": "1.15.1",
+  "selection": {
+    "0.95": {
+      "budget": 128,
+      "recall10": 0.9504,
+      "p50_us": 3282.331,
+      "p99_us": 4331.154,
+      "mean_distance_evaluations": 21242.896,
+      "max_distance_evaluations": 28760
+    },
+    "0.99": {
+      "budget": 1024,
+      "recall10": 0.9908,
+      "p50_us": 24580.983,
+      "p99_us": 28530.697,
+      "mean_distance_evaluations": 162451.156,
+      "max_distance_evaluations": 190923
+    },
+    "0.995": null
+  },
+  "targets": [
+    0.95,
+    0.99,
+    0.995
+  ],
+  "nlist": 65536,
+  "sample": 2621440,
+  "seed": 42,
+  "diagnostic_budgets": [
+    3072
+  ],
+  "calibration_queries": "/home/sean/experiments/TieredQ-issue44-msmarco8m-20261107/data/calibration_queries.fvecs",
+  "test_queries": "/home/sean/experiments/TieredQ-issue44-msmarco8m-20261107/data/test_queries.fvecs"
+}

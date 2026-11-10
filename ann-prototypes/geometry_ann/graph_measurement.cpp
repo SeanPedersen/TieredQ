@@ -9,13 +9,17 @@ namespace geometry_ann {
 GraphObservation graph_measure(const Index& index, const Dataset& data, const BenchmarkOptions& config, const GraphSetting& setting) {
     SearchOptions options; options.graph_scan_order = setting.scan_order; options.bounds = setting.bounds; options.bound_weight = setting.weight;
     options.ordering = setting.weight == 0 ? Ordering::centroid : setting.weight == 1 ? Ordering::bound : Ordering::hybrid;
-    options.routing = setting.routing == "graph" ? Routing::graph : setting.routing == "flat" ? Routing::flat : Routing::hierarchy;
+    options.routing = setting.routing == "graph" ? Routing::graph : setting.routing == "flat" ? Routing::flat
+        : setting.routing == "compressed" ? Routing::compressed : Routing::hierarchy;
+    options.routing_candidates = config.routing_candidates; options.routing_initial = config.routing_initial;
+    options.float_routing = config.float_routing;
     options.graph_seeds = config.graph_seeds; options.metadata_evaluations = setting.metadata_cap;
     options.vector_scans = setting.vector_cap; options.leaf_scans = config.leaf_scans.value_or(index.leaf_count());
+    options.patience = setting.patience;
     constexpr std::size_t warmup_queries = 20;
     for (std::size_t i = 0; i < std::min(warmup_queries, data.truth.size()); ++i)
         index.search(std::span(data.queries).subspan(i * data.dimension, data.dimension), options);
-    GraphObservation result; std::vector<double> latency; std::size_t hits = 0;
+    GraphObservation result; std::vector<double> latency; std::vector<std::size_t> vectors, leaves; std::size_t hits = 0;
     for (std::size_t q = 0; q < data.truth.size(); ++q) {
         auto start = std::chrono::steady_clock::now();
         auto found = index.search(std::span(data.queries).subspan(q * data.dimension, data.dimension), options);
@@ -33,19 +37,24 @@ GraphObservation graph_measure(const Index& index, const Dataset& data, const Be
         result.shared_query_projections += found.shared_query_projections; result.shared_intervals += found.shared_interval_evaluations;
         result.max_vectors = std::max(result.max_vectors, found.vectors_scanned);
         result.max_metadata = std::max(result.max_metadata, found.metadata_evaluations);
+        result.patience_stops += found.stopped_by_patience; result.routing_rounds += found.routing_rounds;
+        vectors.push_back(found.vectors_scanned); leaves.push_back(found.leaves_scanned);
     }
     double count = double(data.truth.size()); result.recall = double(hits) / (10 * count);
     for (auto field : {&GraphObservation::vectors, &GraphObservation::metadata, &GraphObservation::leaves,
                       &GraphObservation::pruned, &GraphObservation::skipped, &GraphObservation::projections,
                       &GraphObservation::radius, &GraphObservation::expansions, &GraphObservation::positive,
                       &GraphObservation::improved, &GraphObservation::routing_us, &GraphObservation::scanning_us,
-                      &GraphObservation::exhausted, &GraphObservation::shared_query_projections, &GraphObservation::shared_intervals}) result.*field /= count;
-    std::sort(latency.begin(), latency.end());
-    result.p50 = latency[std::size_t(std::ceil(.50 * count)) - 1]; result.p99 = latency[std::size_t(std::ceil(.99 * count)) - 1];
+                      &GraphObservation::exhausted, &GraphObservation::shared_query_projections, &GraphObservation::shared_intervals,
+                      &GraphObservation::patience_stops, &GraphObservation::routing_rounds}) result.*field /= count;
+    auto rank = [&](double quantile) { return std::size_t(std::ceil(quantile * count)) - 1; };
+    std::sort(latency.begin(), latency.end()); std::sort(vectors.begin(), vectors.end()); std::sort(leaves.begin(), leaves.end());
+    result.p50 = latency[rank(.50)]; result.p99 = latency[rank(.99)];
+    result.p99_vectors = vectors[rank(.99)]; result.p99_leaves = leaves[rank(.99)]; result.max_leaves = leaves.back();
     return result;
 }
 void graph_csv_header(std::ostream& out) {
-    out << "routing,bounds,weight,metadata_cap,vector_cap,recall10,p50_us,p99_us,mean_vectors,max_vectors,mean_metadata,max_metadata,mean_leaves,mean_pruned,mean_skipped,mean_projection_components,mean_radius_evaluations,mean_graph_expansions,mean_positive_bounds,mean_projection_improvements,mean_routing_us,mean_scanning_us,metadata_exhaustion_rate,mean_scan_fraction,leaves,raw_bytes,full_overhead_bytes,graph_bytes,active_bounds_payload_bytes,build_s,clustering_s,centroids_s,radius_s,projections_s,packing_s,graph_s,graph_build_distances,nq,build_peak_rss_bytes,shared_basis_s,shared_ranges_s,mean_shared_query_projections,mean_shared_interval_checks,scan_order,vector_storage,original_fp32_bytes,support_build_s\n";
+    out << "routing,bounds,weight,metadata_cap,vector_cap,recall10,p50_us,p99_us,mean_vectors,max_vectors,mean_metadata,max_metadata,mean_leaves,mean_pruned,mean_skipped,mean_projection_components,mean_radius_evaluations,mean_graph_expansions,mean_positive_bounds,mean_projection_improvements,mean_routing_us,mean_scanning_us,metadata_exhaustion_rate,mean_scan_fraction,leaves,raw_bytes,full_overhead_bytes,graph_bytes,active_bounds_payload_bytes,build_s,clustering_s,centroids_s,radius_s,projections_s,packing_s,graph_s,graph_build_distances,nq,build_peak_rss_bytes,shared_basis_s,shared_ranges_s,mean_shared_query_projections,mean_shared_interval_checks,scan_order,vector_storage,original_fp32_bytes,support_build_s,patience,p99_vectors,p99_leaves,max_leaves,patience_stop_rate,mean_routing_rounds\n";
 }
 void graph_csv_row(std::ostream& out, const Index& index, const Dataset& data, const GraphSetting& s,
                    const GraphObservation& o, double build_seconds, std::size_t peak_rss) {
@@ -60,6 +69,7 @@ void graph_csv_row(std::ostream& out, const Index& index, const Dataset& data, c
         << b.graph_s << ',' << b.graph_distance_evaluations << ',' << data.truth.size() << ',' << peak_rss << ',' << b.shared_basis_s << ',' << b.shared_ranges_s << ','
         << o.shared_query_projections << ',' << o.shared_intervals << ','
         << (s.scan_order == GraphScanOrder::centroid ? "centroid" : "routing") << ','
-        << (index.quantized() ? "int8_sq_per_dim" : "fp32") << ',' << data.count()*data.dimension*sizeof(float) << ',' << b.support_s << '\n';
+        << (index.quantized() ? "int8_sq_per_dim" : "fp32") << ',' << data.count()*data.dimension*sizeof(float) << ',' << b.support_s << ','
+        << s.patience << ',' << o.p99_vectors << ',' << o.p99_leaves << ',' << o.max_leaves << ',' << o.patience_stops << ',' << o.routing_rounds << '\n';
 }
 }

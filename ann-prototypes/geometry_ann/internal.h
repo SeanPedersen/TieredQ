@@ -9,6 +9,7 @@ double sq8_l2(std::span<const float> query, std::span<const std::int8_t> code, s
 double sq8_lower_bound(std::span<const float> query, std::span<const std::int8_t> code, std::span<const float> scales, std::span<const float> offsets = {});
 double centroid_l2(std::span<const float> a, std::span<const float> b);
 double scan_lower_bound(std::span<const float> a, std::span<const float> b);
+float float_l2(std::span<const float> a, std::span<const float> b);
 double l2(std::span<const float> a, std::span<const float> b);
 std::span<const float> row(std::span<const float> data, std::size_t d, Id id);
 std::vector<Group> cluster(Matrix data, std::size_t d, const Group& ids,

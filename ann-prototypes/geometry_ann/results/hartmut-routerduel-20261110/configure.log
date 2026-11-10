@@ -1,0 +1,5 @@
+-- TieredQ LAPACK: OpenBLAS /usr/lib/libopenblas.so;/usr/lib/libopenblas.so
+-- TieredQ io_uring tier reads: 1
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue44-routerduel-20261110/build

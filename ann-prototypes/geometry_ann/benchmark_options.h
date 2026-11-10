@@ -13,8 +13,9 @@ struct BenchmarkOptions {
     std::vector<std::size_t> graph_metadata_budgets = {256, 512, 1024, 2048};
     std::vector<double> geometry_weights = {0, 0.5, 1};
     BoundsMode selected_bounds = BoundsMode::automatic;
-    std::size_t graph_seeds = 4;
+    std::size_t graph_seeds = 4, routing_candidates = 4096, routing_initial = 0;
     bool graph_controls = true, evaluation_group_bounds = false;
+    bool select_by_vectors = false, float_routing = false;  // calibration picks minimise mean scanned vectors instead of p50 latency
     std::string geometry_diagnostics, settings_file, int8_base, int8_scales, int8_offsets, memory_output, assignments_file;
     std::string evaluation_queries, evaluation_truth, evaluation_output, evaluation_fixed_settings;
     std::size_t evaluation_nq = 750, repeats = 3;

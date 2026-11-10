@@ -1,5 +1,6 @@
 // Build one immutable topology and compare geometry-only navigation changes on identical data.
 #include "graph_experiment.h"
+#include "compressed_routing.h"
 #include "memory_sampler.h"
 #include <chrono>
 #include <iostream>
@@ -19,6 +20,7 @@ void write_memory(const std::string& path, const Index& index, double build_seco
     const auto& stats = index.build_statistics();
     out << "{\"build_s\": " << build_seconds << ", \"clustering_s\": " << stats.clustering_s << ", \"reassign_s\": " << stats.reassign_s
         << ", \"reassigned_vectors\": " << stats.reassigned_vectors << ", \"graph_s\": " << stats.graph_s
+        << ", \"router_s\": " << stats.router_s << ", \"router_bytes\": " << index.router_bytes()
         << ", \"leaves\": " << index.leaf_count() << ", \"index_bytes\": " << index.raw_bytes() + index.overhead_bytes()
         << ", \"build_peak_rss\": " << peak.rss << ", \"build_peak_anon\": " << peak.anon << ", \"build_peak_file\": " << peak.file
         << ", \"build_hwm\": " << peak.hwm << ", \"serving_rss\": " << serving.rss << ", \"serving_anon\": " << serving.anon
@@ -26,6 +28,7 @@ void write_memory(const std::string& path, const Index& index, double build_seco
 }
 // Build threads have joined by now; every later measurement runs on one fixed core.
 void pin_search(const BenchmarkOptions& config) {
+    set_router_threads(1);
     if (!config.search_cpu) return;
 #ifdef __linux__
     cpu_set_t set; CPU_ZERO(&set); CPU_SET(int(*config.search_cpu), &set);
@@ -74,7 +77,7 @@ int main(int argc, char** argv) {
             calibration.push_back({setting, observation});
             graph_csv_row(std::cout, index, data, setting, observation, build_seconds, peak); std::cout.flush();
             std::cerr << setting.routing << '/' << bounds_name(setting.bounds) << " weight=" << setting.weight
-                      << " metadata=" << setting.metadata_cap << " vectors=" << setting.vector_cap
+                      << " metadata=" << setting.metadata_cap << " vectors=" << setting.vector_cap << " patience=" << setting.patience
                       << " recall=" << observation.recall << " p50_us=" << observation.p50 << '\n';
         }
         if (!config.evaluation_output.empty()) graph_evaluate(index, config, calibration, build_seconds, peak);

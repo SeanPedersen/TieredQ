@@ -1,0 +1,4 @@
+[ 84%] Built target dv_tieredq
+[ 92%] Building CXX object CMakeFiles/duel.dir/duel.cpp.o
+[100%] Linking CXX executable duel
+[100%] Built target duel

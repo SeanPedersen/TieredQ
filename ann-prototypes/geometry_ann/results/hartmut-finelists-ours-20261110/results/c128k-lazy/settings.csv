@@ -1,0 +1,9 @@
+routing,bounds,weight,metadata_cap,vector_cap,scan_order,patience
+compressed,none,0,512,35000,centroid,0
+compressed,none,0,512,88408,centroid,0
+compressed,none,0,512,250000,centroid,0
+compressed,none,0,512,600000,centroid,192
+compressed,none,0,512,600000,centroid,384
+compressed,none,0,512,600000,centroid,768
+compressed,none,0,512,600000,centroid,3072
+compressed,none,0,512,350000,centroid,3072

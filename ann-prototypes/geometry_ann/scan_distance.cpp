@@ -95,6 +95,10 @@ double centroid_l2(std::span<const float> a, std::span<const float> b) {
 #endif
     return l2(a, b);
 }
+float float_l2(std::span<const float> a, std::span<const float> b) {
+    static const Kernel kernel = select_kernel();
+    return kernel(a.data(), b.data(), a.size());
+}
 double scan_lower_bound(std::span<const float> a, std::span<const float> b) {
     static const Kernel kernel = select_kernel();
     double estimate = kernel(a.data(), b.data(), a.size());

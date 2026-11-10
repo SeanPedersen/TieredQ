@@ -1,0 +1,85 @@
+[  1%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_index.cpp.o
+[  3%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq.cpp.o
+[  4%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_index_io.cpp.o
+[  6%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_ivf.cpp.o
+[  8%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_elias_fano.cpp.o
+[  9%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_refinement.cpp.o
+[ 11%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_ivf_rows.cpp.o
+[ 14%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_nested_flat.cpp.o
+[ 14%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_nested.cpp.o
+[ 16%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_blocks.cpp.o
+/home/sean/experiments/TieredQ-issue44-finelists-ours-20261110/source/tieredq/src/tieredq.cpp: In static member function ‘static dv::TieredQ dv::TieredQ::train(dv::TieredQConfig, const float*, size_t, uint64_t)’:
+/home/sean/experiments/TieredQ-issue44-finelists-ours-20261110/source/tieredq/src/tieredq.cpp:351:60: warning: missing initializer for member ‘dv::tieredq_detail::TrainingRows::norms’ [-Wmissing-field-initializers]
+  351 |     auto model_sample=tieredq_detail::TrainingRows{sample,d}.normalized(rows);
+      |                                                            ^
+/home/sean/experiments/TieredQ-issue44-finelists-ours-20261110/source/tieredq/src/tieredq.cpp:356:92: warning: missing initializer for member ‘dv::tieredq_detail::TrainingRows::norms’ [-Wmissing-field-initializers]
+  356 |       model_sample=tieredq_detail::TrainingRows{model_rows.data(),lifted.model_dimensions()};
+      |                                                                                            ^
+/home/sean/experiments/TieredQ-issue44-finelists-ours-20261110/source/tieredq/src/tieredq.cpp:366:82: warning: missing initializer for member ‘dv::tieredq_detail::TrainingRows::norms’ [-Wmissing-field-initializers]
+  366 |   return train_model(config,tieredq_detail::TrainingRows{sample,config.dimensions},rows,true,seed);
+      |                                                                                  ^
+/home/sean/experiments/TieredQ-issue44-finelists-ours-20261110/source/tieredq/src/tieredq.cpp: In static member function ‘static dv::TieredQ dv::TieredQ::train_sampled(dv::TieredQConfig, const float*, size_t, const uint32_t*, size_t, uint64_t)’:
+/home/sean/experiments/TieredQ-issue44-finelists-ours-20261110/source/tieredq/src/tieredq.cpp:381:76: warning: missing initializer for member ‘dv::tieredq_detail::TrainingRows::norms’ [-Wmissing-field-initializers]
+  381 |   const tieredq_detail::TrainingRows rows{data,config.dimensions,sample_ids};
+      |                                                                            ^
+[ 18%] Linking CXX static library libdv_tieredq.a
+[ 18%] Built target dv_tieredq
+[ 19%] Building CXX object CMakeFiles/geometry_ann.dir/restricted_assignment.cpp.o
+[ 21%] Building CXX object CMakeFiles/geometry_ann.dir/compressed_routing.cpp.o
+[ 22%] Building CXX object CMakeFiles/geometry_ann.dir/index.cpp.o
+[ 24%] Building CXX object CMakeFiles/geometry_ann.dir/search_compressed.cpp.o
+[ 26%] Building CXX object CMakeFiles/geometry_ann.dir/training.cpp.o
+[ 27%] Building CXX object CMakeFiles/geometry_ann.dir/geometry.cpp.o
+[ 29%] Building CXX object CMakeFiles/geometry_ann.dir/search_state.cpp.o
+[ 31%] Building CXX object CMakeFiles/geometry_ann.dir/search_hierarchy.cpp.o
+[ 32%] Building CXX object CMakeFiles/geometry_ann.dir/graph.cpp.o
+[ 34%] Building CXX object CMakeFiles/geometry_ann.dir/search_graph.cpp.o
+[ 36%] Building CXX object CMakeFiles/geometry_ann.dir/scan_distance.cpp.o
+[ 37%] Building CXX object CMakeFiles/geometry_ann.dir/sq8_distance.cpp.o
+[ 39%] Building CXX object CMakeFiles/geometry_ann.dir/support_geometry.cpp.o
+[ 42%] Building CXX object CMakeFiles/geometry_ann.dir/cell_diagnostics.cpp.o
+[ 42%] Building CXX object CMakeFiles/geometry_ann.dir/cell_bounds.cpp.o
+[ 44%] Building CXX object CMakeFiles/geometry_ann.dir/geometry_diagnostics.cpp.o
+[ 45%] Building CXX object CMakeFiles/geometry_ann.dir/rank_scores.cpp.o
+[ 47%] Building CXX object CMakeFiles/geometry_ann.dir/scan_policies.cpp.o
+[ 49%] Linking CXX static library libgeometry_ann.a
+[ 49%] Built target geometry_ann
+[ 50%] Building CXX object CMakeFiles/graph_bench.dir/benchmark_options.cpp.o
+[ 52%] Building CXX object CMakeFiles/graph_bench.dir/dataset.cpp.o
+[ 54%] Building CXX object CMakeFiles/cell_ceiling.dir/cell_ceiling.cpp.o
+[ 55%] Building CXX object CMakeFiles/geometry_bench.dir/benchmark.cpp.o
+[ 57%] Building CXX object CMakeFiles/geometry_bench.dir/benchmark_options.cpp.o
+[ 59%] Building CXX object CMakeFiles/geometry_bench.dir/dataset.cpp.o
+[ 60%] Building CXX object CMakeFiles/cell_tests.dir/cell_tests.cpp.o
+[ 62%] Building CXX object CMakeFiles/geometry_tests.dir/tests.cpp.o
+[ 63%] Building CXX object CMakeFiles/graph_bench.dir/graph_evaluation.cpp.o
+[ 65%] Building CXX object CMakeFiles/fast_assign.dir/fast_assign.cpp.o
+[ 67%] Building CXX object CMakeFiles/graph_bench.dir/graph_measurement.cpp.o
+[ 68%] Building CXX object CMakeFiles/graph_bench.dir/graph_benchmark.cpp.o
+[ 70%] Building CXX object CMakeFiles/graph_bench.dir/graph_settings.cpp.o
+[ 72%] Building CXX object CMakeFiles/dataset_tests.dir/dataset_tests.cpp.o
+[ 73%] Building CXX object CMakeFiles/cell_ceiling.dir/benchmark_options.cpp.o
+[ 75%] Building CXX object CMakeFiles/sq8_oracle.dir/sq8_oracle.cpp.o
+[ 77%] Building CXX object CMakeFiles/dataset_tests.dir/dataset.cpp.o
+[ 78%] Building CXX object CMakeFiles/cell_ceiling.dir/dataset.cpp.o
+[ 80%] Building CXX object CMakeFiles/sq8_oracle.dir/benchmark_options.cpp.o
+[ 81%] Building CXX object CMakeFiles/sq8_oracle.dir/dataset.cpp.o
+[ 83%] Building CXX object CMakeFiles/geometry_tests.dir/graph_tests.cpp.o
+[ 85%] Building CXX object CMakeFiles/fast_assign.dir/dataset.cpp.o
+[ 86%] Building CXX object CMakeFiles/geometry_tests.dir/graph_settings.cpp.o
+[ 88%] Linking CXX executable graph_bench
+[ 90%] Linking CXX executable geometry_bench
+[ 90%] Built target graph_bench
+[ 91%] Linking CXX executable cell_tests
+[ 91%] Built target geometry_bench
+[ 91%] Built target cell_tests
+[ 93%] Linking CXX executable dataset_tests
+[ 93%] Built target dataset_tests
+[ 95%] Linking CXX executable cell_ceiling
+[ 96%] Linking CXX executable sq8_oracle
+[ 96%] Built target cell_ceiling
+[ 96%] Built target sq8_oracle
+[ 98%] Linking CXX executable fast_assign
+[ 98%] Built target fast_assign
+[100%] Linking CXX executable geometry_tests
+[100%] Built target geometry_tests

@@ -1,4 +1,5 @@
 // Index assembly, bounded best-first traversal, and logical persistent memory accounting.
+#include "compressed_routing.h"
 #include "internal.h"
 #include <algorithm>
 #include <chrono>
@@ -140,6 +141,13 @@ Index::Index(std::span<const float> input, std::size_t d, const BuildOptions& o,
             statistics_.support_s=elapsed(start);
         }
     }
+    if (o.routing_bits) {
+        start = Clock::now();
+        std::vector<float> centroids; centroids.reserve(leaves_.size() * d);
+        for (const auto& leaf : leaves_) centroids.insert(centroids.end(), leaf.geometry.centroid.begin(), leaf.geometry.centroid.end());
+        router_ = std::make_shared<const CompressedRouter>(centroids, d, o.routing_bits, o.routing_scan_bits, o.seed);
+        statistics_.router_s = elapsed(start);
+    }
 }
 SearchResult Index::search(std::span<const float> q, const SearchOptions& o) const {
 
@@ -154,12 +162,18 @@ SearchResult Index::search(std::span<const float> q, const SearchOptions& o) con
     if (!std::isfinite(o.bound_weight) || o.bound_weight < 0 || o.bound_weight > 1)
         throw std::invalid_argument("bound weight must be within [0,1]");
     if (!o.leaf_scans || !o.vector_scans) return {};
-    if (!o.metadata_evaluations) { SearchResult result; result.metadata_exhausted = true; return result; }
+    if (!o.metadata_evaluations && o.routing != Routing::compressed) { SearchResult result; result.metadata_exhausted = true; return result; }
     if ((o.bounds == BoundsMode::shared || o.bounds == BoundsMode::shared_residual) && (shared_geometry_.centroid.empty() || !geometry_metadata_))
         throw std::invalid_argument("shared envelope search requires built shared bounds and radii");
+    if (o.float_routing && o.bounds != BoundsMode::none) throw std::invalid_argument("float routing requires bounds none");
     if (o.routing == Routing::graph) {
         if (graph_entries_.empty() || !o.graph_seeds) throw std::invalid_argument("graph routing requires a graph and seed count");
         return search_graph(q, o);
+    }
+    if (o.routing == Routing::compressed) {
+        if (!router_ || !o.routing_candidates) throw std::invalid_argument("compressed routing requires a routing table and candidates");
+        if (o.bounds != BoundsMode::none) throw std::invalid_argument("compressed routing ranks by centroid distance only");
+        return search_compressed(q, o);
     }
     return search_hierarchy(q, o);
 }
@@ -171,8 +185,9 @@ std::size_t envelope_bytes(const Envelope& g) {
 }
 }
 std::size_t Index::raw_bytes() const { return vectors_.capacity() * sizeof(float) + codes_.capacity(); }
+std::size_t Index::router_bytes() const { return router_ ? router_->bytes() : 0; }
 std::size_t Index::overhead_bytes() const {
-    std::size_t bytes = edge_supports_.capacity()*sizeof(EdgeSupport) + sizeof(*this) + (code_scales_.capacity()+code_offsets_.capacity()) * sizeof(float) + envelope_bytes(shared_geometry_) + graph_bytes() + ids_.capacity() * sizeof(Id) + leaves_.capacity() * sizeof(Leaf) +
+    std::size_t bytes = router_bytes() + edge_supports_.capacity()*sizeof(EdgeSupport) + sizeof(*this) + (code_scales_.capacity()+code_offsets_.capacity()) * sizeof(float) + envelope_bytes(shared_geometry_) + graph_bytes() + ids_.capacity() * sizeof(Id) + leaves_.capacity() * sizeof(Leaf) +
                         parents_.capacity() * sizeof(Parent);
     for (const auto& parent : parents_) bytes += envelope_bytes(parent.geometry) + parent.leaves.capacity() * sizeof(std::size_t);
     for (const auto& leaf : leaves_) bytes += envelope_bytes(leaf.geometry);

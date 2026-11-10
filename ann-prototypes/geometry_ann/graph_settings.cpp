@@ -28,8 +28,10 @@ std::vector<GraphSetting> load_settings(const std::string& filename) {
     if (!input) throw std::runtime_error("cannot open settings file");
     std::string line; std::getline(input, line);
     if (!line.empty() && line.back() == '\r') line.pop_back();
-    bool scan_column = line == "routing,bounds,weight,metadata_cap,vector_cap,scan_order";
-    if (!scan_column && line != "routing,bounds,weight,metadata_cap,vector_cap") throw std::invalid_argument("invalid settings header");
+    const std::string base_header = "routing,bounds,weight,metadata_cap,vector_cap";
+    bool patience_column = line == base_header + ",scan_order,patience";
+    bool scan_column = patience_column || line == base_header + ",scan_order";
+    if (!scan_column && line != base_header) throw std::invalid_argument("invalid settings header");
     std::vector<GraphSetting> result;
     while (std::getline(input, line)) {
         if (line.empty()) continue;
@@ -43,8 +45,9 @@ std::vector<GraphSetting> load_settings(const std::string& filename) {
                 throw std::invalid_argument("invalid graph scan order");
             setting.scan_order = scan == "centroid" ? GraphScanOrder::centroid : GraphScanOrder::routing;
         }
+        if (patience_column && !(record >> setting.patience)) throw std::invalid_argument("invalid patience");
         if (record >> extra) throw std::invalid_argument("extra fields in settings record");
-        if (setting.routing != "graph" && setting.routing != "flat" && setting.routing != "hierarchy")
+        if (setting.routing != "graph" && setting.routing != "flat" && setting.routing != "hierarchy" && setting.routing != "compressed")
             throw std::invalid_argument("invalid routing in settings file");
         setting.bounds = parse_mode(mode); result.push_back(setting);
     }
@@ -63,13 +66,19 @@ BuildOptions graph_build_options(const BenchmarkOptions& config) {
         pca |= mode == BoundsMode::automatic || mode == BoundsMode::pca || mode == BoundsMode::pca_max;
         shared |= mode == BoundsMode::automatic || mode == BoundsMode::shared || mode == BoundsMode::shared_residual;
     };
+    // The centroid graph is built only when some setting routes through it.
+    bool graph = config.settings_file.empty();
     if (config.settings_file.empty()) include(config.selected_bounds);
-    else for (const auto& setting : load_settings(config.settings_file)) include(setting.bounds);
+    else for (const auto& setting : load_settings(config.settings_file)) {
+        include(setting.bounds); graph |= setting.routing == "graph";
+    }
     auto build = config.build;
     build.geometry_metadata = geometry;
     build.neighbor_support = support;
     build.variant = config.variant == "V0" ? Variant::fixed : Variant::pca;
-    if (!build.graph_degree) build.graph_degree = 8;
+    graph |= support;
+    if (!graph) build.graph_degree = 0;
+    else if (!build.graph_degree) build.graph_degree = 8;
     if (!pca) build.directions = 0;
     build.shared_directions = shared ? (build.shared_directions ? build.shared_directions : 8) : 0;
     return build;

@@ -185,5 +185,89 @@ Findings:
 - Convex/hyperplane pruning bounds and statistical ranking scores do not help at 1024-D. Boundary spill does not help either.
   Patience stopping is the one promising policy: in simulation it scans about 1.25–2× fewer mean vectors at equal coverage.
 
-Next: patience stopping in real search; a BLAS/float centroid and assignment kernel (routing about 14 ms → about 1–2 ms, and build); then
-graph routing only if more than 32K leaves are needed.
+## Patience stopping in real search (2026-11-10)
+
+`SearchOptions::patience = W` stops a query once W consecutive scanned leaves leave a full top-k unchanged. The leaf and
+vector caps stay hard ceilings, so W combines with a tail cap. Settings CSVs take an optional trailing `patience` column
+(header `...,scan_order,patience`). `graph_bench --select-by vectors` makes calibration pick the cheapest setting by mean
+scanned vectors instead of p50, and picks separately per policy (fixed vs patience). Output adds `p99_vectors`, `p99_leaves`,
+`max_leaves` and `patience_stop_rate`. Study: `results/hartmut-patience-20261110/`.
+
+Flat Lloyd 32K (same index, codes and evaluation path), held-out 750 queries. "Gain" is the fixed-cap vectors needed for the
+same held-out recall divided by patience mean vectors:
+
+| Setting | Recall | Mean vec | p99 vec | p50 / p99 ms | Gain |
+|---|---:|---:|---:|---:|---:|
+| Fixed cap 35K | 0.9580 | 35,000 | 35,000 | 20.8 / 25.1 | – |
+| Patience W=64 | 0.9581 | 26,884 | 73,637 | 17.6 / 24.7 | 1.31× |
+| Patience W=192 | 0.9759 | 69,844 | 145,375 | 23.4 / 35.8 | 1.37× |
+| Patience W=256, cap 120K | 0.9771 | 87,165 | 120,000 | 25.7 / 35.6 | 1.21× |
+| Fixed cap 250K | 0.9852 | 250,000 | 250,000 | 50.4 / 57.7 | – |
+| Patience W=768 | 0.9880 | 250,563 | 540,161 | 46.5 / 89.7 | 1.42× |
+| Faiss IVF-SQ8 32K nprobe 96 | 0.9557 | 31,301 | – | 12.7 / 14.1 | – |
+| Faiss IVF-SQ8 32K nprobe 1024 | 0.9880 | 315,461 | – | 49.9 / 55.0 | – |
+
+Findings:
+- Patience scans 1.3–1.4× fewer mean vectors than fixed caps across 95–99% recall (the success bar was ≥1.3×). Against Faiss 32K
+  it needs 1.16× fewer vectors near 95% and 1.26× fewer at 0.988.
+- On the 250 calibration queries the gain looked like it vanished near 99%. On held-out it does not; this is calibration noise.
+- The cost is the tail: p99 vectors are 2.2–2.4× the mean, so uncapped p99 latency at 0.988 is 90 ms (Faiss 55 ms). A tail cap
+  restores fixed-cap p99 latency and keeps about 1.2× fewer vectors.
+- Latency gains are small at low recall because about 14 ms of every query is flat centroid routing.
+- Of the 166 s index build, 154 s is the centroid graph, which flat routing does not use (`graph_build_options` forces degree 8).
+- Routing streams 128 MB of FP32 centroids per query, close to single-core memory bandwidth. A faster FP32 kernel alone cannot reach
+  1–2 ms; that needs compressed centroids (binary16 or int8) with an exact re-rank of the top candidates.
+
+## Graph routing and TieredQ-compressed routing (2026-11-10)
+
+New options:
+- `--routing-bits B` builds a TieredQ table (L2, fast mode) over the leaf centroids (`compressed_routing.{h,cpp}`), linking
+  `TieredQ::TieredQ` from this repository (CMake cache variable `TIEREDQ_SOURCE_DIR`; studies build their own source snapshot).
+  `--routing-scan-bits 4` keeps every tier inside the nibble-lookup kernel. Routing `compressed` (`search_compressed.cpp`)
+  ranks up to `--routing-candidates` leaves, re-ranks the first `metadata_cap` with exact distances, then scans.
+  `--routing-initial N` grows the ranking lazily (N, then ×4) whenever scanning exhausts it. The rankings are nested, so results equal one
+  ranking at the final depth. Search sets TieredQ's OpenMP to one thread.
+- The centroid graph is built only when a setting routes through it (it was always built at degree 8 and took 154 s at 32K).
+
+Held-out results at 32K leaves (`results/hartmut-graphpatience-20261110`, `hartmut-compressed4-20261110`):
+
+| Routing + scan | Recall | Routing ms | p50 / p99 ms | Extra build |
+|---|---:|---:|---:|---:|
+| FP32 flat, cap 35K | 0.9580 | 14.1 | 20.8 / 25.1 | – |
+| Graph degree 16/16 seeds, budget 4K, patience W=96 | 0.9633 | 2.9 | 7.5 / 15.8 | 240 s |
+| TieredQ 2 bits, 4-bit cap, 1,024 candidates, R=256, cap 35K | 0.9580 | 2.75 | 7.6 / 8.7 | 3 s |
+| Same, patience W=96 | 0.9665 | 2.74 | 7.4 / 15.9 | 3 s |
+| Same, patience W=768 | 0.9865 | 3.01 | 34.2 / 47.3 | 3 s |
+| Faiss IVF-SQ8 32K nprobe 96 / 1024 | 0.9557 / 0.9880 | – | 12.7 / 49.9 (p99 14.1 / 55.0) | – |
+
+Findings:
+- Degree-8 graph routing loses recall to missed leaves: 0.976 at the most. Degree 16 with 16 seeds fixes most of that. Degree 32 adds almost nothing.
+- PCA concentrates centroid variance more than the data's (top 128 components: 75% vs 60%). TieredQ at 2 bits/dim
+  with an exact re-rank of 256–512 leaves loses no recall. That matches or beats graph routing on latency, with no graph build.
+- TieredQ's default scan width for L2 (8 bits) sends single queries to the generic scan kernel, about 20× slower than the lookup kernel. This
+  is a finding for the library itself.
+- The remaining routing cost depends on depth (pruning loosens as k grows), not on sorting. Lazy expansion addresses it.
+
+## Experiment 3 outcome and conclusion (2026-11-10, closed in #44)
+
+Design measured: flat Lloyd partitions (4 iterations, 40 rows per centroid, exact assignment) at 32K/64K/128K, a
+TieredQ-compressed centroid table (2 bits/dim, 4-bit scan cap, lazy expansion, exact re-rank of the head), patience
+stopping, packed SQ8 lists. Studies: `hartmut-finelists-20261110` (64K/128K labels and Faiss baselines, flat and HNSW
+quantizers), `hartmut-finelists-ours-20261110` (this design, plus graph routing), `hartmut-routerduel-20261110`
+(coarse routers), `hartmut-tieredqivf-20261110` (TieredQ's own IVF on the same partitions).
+
+- **Vectors scanned:** at equal list count we match Faiss's full nprobe curve; patience does not beat a tuned nprobe.
+  At 128K lists, Faiss IVF-SQ8 with an HNSW quantizer reaches 0.970 (cal) at 3.8 ms; we reach 0.971 at 7.7 ms.
+- **Routing** is the bottleneck at 64K+ lists. The compressed table cuts 32K routing from 10 ms to 1.4 ms but grows
+  with the list count (5 ms at 128K). A two-level router (exact super-centroids, then SQ8 member codes, then exact
+  re-rank) is about 3× faster at 128K (1.6 ms). A degree-16 kNN graph on SQ4 codes ties it but caps coverage.
+- **Wins:** about 30% less serving RAM than Faiss (10.0 against 14.0 GB) and a better p50 at high recall (128K:
+  0.984 at 14.0 ms, against Faiss's 0.987 at 21.9 ms). **Losses:** p50 at 0.95–0.97, p99, and build time at 128K
+  (exact assignment: 5,081 s against 3,065 s).
+- **TieredQ IVF** (2-bit lists plus an SQ8 re-rank of the top 40) on the same 64K partition reaches 0.986 at 17.4 ms
+  p50 / 18.5 ms p99, beating Faiss with an HNSW quantizer at high recall. About 9 ms of each query is exact coarse
+  ranking, which the two-level router removes.
+
+The geometry-specific ideas are closed (bounds, hull metadata, graph-ordered scans, patience). The surviving pieces
+move into TieredQ's IVF: the two-level router (#47), fast builds via restricted assignment (#48), nested tiers instead
+of the SQ8 re-rank (#49), HNSW routing over compressed centroids (#50) and batch QPS (#51).

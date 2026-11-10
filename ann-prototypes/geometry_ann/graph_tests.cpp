@@ -1,6 +1,7 @@
 // Graph connectivity, bounded-search equivalence, and far-bridge safety regressions.
 #include "search_state.h"
 #include "graph_experiment.h"
+#include "restricted_assignment.h"
 #include <algorithm>
 #include <numeric>
 #include <random>
@@ -25,6 +26,107 @@ void bridge_test() {
     auto result = state.finish();
     require(result.neighbors.front().id == 2, "far bridge prevented discovery of nearer leaf");
     require(result.graph_expansions == 3, "leaf pruning cut a graph path");
+}
+// With every candidate re-ranked exactly, compressed routing reproduces flat routing; without re-ranking it
+// still honours every cap and returns a full top-k.
+// FP32 routing distances keep the exhaustive flat order on well-separated data and reject geometric bounds.
+void float_routing_test(const Index& index, std::span<const float> data, std::size_t dimension) {
+    for (std::size_t q = 0; q < 8; ++q) {
+        auto query = data.subspan(q * dimension, dimension);
+        SearchOptions exact; exact.routing = Routing::flat; exact.bounds = BoundsMode::none; exact.ordering = Ordering::centroid;
+        exact.leaf_scans = index.leaf_count();
+        auto fast = exact; fast.float_routing = true;
+        auto a = index.search(query, exact), b = index.search(query, fast);
+        for (std::size_t k = 0; k < a.neighbors.size(); ++k) require(a.neighbors[k].id == b.neighbors[k].id, "float routing changed exhaustive results");
+    }
+    SearchOptions bounded; bounded.float_routing = true; bounded.bounds = BoundsMode::radius;
+    bool rejected = false;
+    try { index.search(data.first(dimension), bounded); } catch (const std::invalid_argument&) { rejected = true; }
+    require(rejected, "float routing accepted geometric bounds");
+}
+void compressed_routing_test() {
+    // TieredQ trains on at least 2 x 256 rows, so the routing table needs that many leaves.
+    constexpr std::size_t population = 12000, dimension = 16;
+    std::mt19937 rng(23); std::normal_distribution<float> normal;
+    std::vector<float> data(population * dimension);
+    for (auto& value : data) value = normal(rng);
+    BuildOptions build; build.variant = Variant::fixed; build.coarse = 8; build.children = 80; build.leaf_budget = 640;
+    build.routing_bits = 2; build.routing_scan_bits = 4;
+    Index index(data, dimension, build);
+    require(index.router_bytes() > 0, "routing table missing");
+    for (std::size_t q = 0; q < 8; ++q) {
+        auto query = std::span(data).subspan(q * dimension, dimension);
+        SearchOptions flat; flat.routing = Routing::flat; flat.bounds = BoundsMode::none; flat.ordering = Ordering::centroid;
+        flat.leaf_scans = index.leaf_count(); flat.vector_scans = 700; flat.patience = 3;
+        auto compressed = flat; compressed.routing = Routing::compressed;
+        compressed.routing_candidates = index.leaf_count(); compressed.metadata_evaluations = index.leaf_count();
+        auto expected = index.search(query, flat), found = index.search(query, compressed);
+        require(found.vectors_scanned == expected.vectors_scanned && found.leaves_scanned == expected.leaves_scanned,
+                "fully re-ranked compressed routing changed scan work");
+        for (std::size_t k = 0; k < expected.neighbors.size(); ++k)
+            require(found.neighbors[k].id == expected.neighbors[k].id, "fully re-ranked compressed routing changed results");
+        auto lazy = compressed; lazy.routing_initial = 4; lazy.metadata_evaluations = 3;
+        auto single = lazy; single.routing_initial = 0;
+        auto grown = index.search(query, lazy), once = index.search(query, single);
+        require(grown.vectors_scanned == once.vectors_scanned && grown.leaves_scanned == once.leaves_scanned,
+                "lazy ranking changed scan work");
+        for (std::size_t k = 0; k < once.neighbors.size(); ++k)
+            require(grown.neighbors[k].id == once.neighbors[k].id, "lazy ranking changed results");
+        require(grown.routing_rounds > 1 && once.routing_rounds == 1, "lazy ranking did not grow");
+        compressed.metadata_evaluations = 0; compressed.routing_candidates = 20; compressed.patience = 0; compressed.vector_scans = 300;
+        found = index.search(query, compressed);
+        require(found.neighbors.size() == compressed.k && found.metadata_evaluations == 0, "unranked compressed routing failed");
+        require(found.vectors_scanned <= 300 && found.leaves_scanned <= 20, "compressed routing exceeded a cap");
+    }
+}
+// Probing every super-centroid is exhaustive; probing a few scores a fraction of the centroids and stays nearly exact.
+void restricted_assignment_test() {
+    constexpr std::size_t centroids = 300, rows = 6000, dimension = 16;
+    std::mt19937 rng(31); std::normal_distribution<float> normal;
+    std::vector<float> centers(centroids * dimension), data(rows * dimension);
+    for (auto& value : centers) value = normal(rng);
+    for (std::size_t r = 0; r < rows; ++r) for (std::size_t j = 0; j < dimension; ++j)
+        data[r * dimension + j] = centers[(r % centroids) * dimension + j] + 0.6f * normal(rng);
+    DecodeRows decode = [&](std::size_t first, std::size_t count, std::span<float> out) {
+        std::copy_n(data.begin() + std::ptrdiff_t(first * dimension), count * dimension, out.begin());
+    };
+    auto exact = brute_force_assign(data, centers, dimension, 2);
+    AssignmentOptions all; all.supers = 12; all.probes = 12; all.threads = 2; all.chunk_rows = 1000;
+    std::vector<std::uint32_t> labels(rows);
+    restricted_assign(rows, centers, dimension, all, decode, labels);
+    require(labels == exact, "probing every super-centroid differs from brute force");
+    AssignmentOptions few = all; few.probes = 4;
+    auto stats = restricted_assign(rows, centers, dimension, few, decode, labels);
+    std::size_t same = 0;
+    for (std::size_t r = 0; r < rows; ++r) same += labels[r] == exact[r];
+    require(double(same) / rows >= 0.97, "restricted assignment is not nearly exact");
+    require(stats.mean_candidates < 0.5 * centroids, "restricted assignment scored too many centroids");
+}
+// Patience only shortens scans: a window longer than the leaf count reproduces the exhaustive
+// result, scan work grows monotonically with the window, and caps still bound every query.
+void patience_test(const Index& index, std::span<const float> data, std::size_t dimension) {
+    for (std::size_t q = 0; q < 12; ++q) {
+        auto query = data.subspan(q * dimension, dimension);
+        SearchOptions exhaustive; exhaustive.routing = Routing::flat; exhaustive.bounds = BoundsMode::none;
+        exhaustive.ordering = Ordering::centroid; exhaustive.leaf_scans = index.leaf_count();
+        auto expected = index.search(query, exhaustive);
+        auto unlimited = exhaustive; unlimited.patience = index.leaf_count() + 1;
+        auto same = index.search(query, unlimited);
+        require(!same.stopped_by_patience && same.vectors_scanned == expected.vectors_scanned, "long patience changed scan work");
+        for (std::size_t k = 0; k < expected.neighbors.size(); ++k)
+            require(same.neighbors[k].id == expected.neighbors[k].id, "long patience changed results");
+        std::size_t previous = 0;
+        for (std::size_t window : {1, 2, 4, 8}) {
+            auto options = exhaustive; options.patience = window;
+            auto result = index.search(query, options);
+            require(result.neighbors.size() == options.k, "patience stopped before filling top-k");
+            require(result.vectors_scanned >= previous, "patience work is not monotone in its window");
+            require(result.stopped_by_patience || result.leaves_scanned == index.leaf_count(), "scan ended without a stop reason");
+            previous = result.vectors_scanned;
+            options.vector_scans = 9;
+            require(index.search(query, options).vectors_scanned <= 9, "patience bypassed the vector cap");
+        }
+    }
 }
 }
 void check_graph() {
@@ -105,6 +207,10 @@ void check_graph() {
         }
     }
     require(std::all_of(seen.begin(), seen.end(), [](bool value) { return value; }), "centroid graph disconnected");
+    auto threaded_build = build; threaded_build.build_threads = 4;
+    auto threaded = build_graph(leaves, parents, threaded_build);
+    require(threaded.edges == graph.edges && threaded.entries == graph.entries &&
+            threaded.distance_evaluations == graph.distance_evaluations, "threaded graph build differs");
     Envelope box; box.centroid = {0, 0}; box.radius = 100;
     box.directions = {1, 0, 0, 1}; box.norm = {1, 1}; box.low = {-1, -1}; box.high = {1, 1};
     box.projection_operator_norm_sq = 1;
@@ -187,5 +293,9 @@ void check_graph() {
                 "duplicate centroids produced an invalid support plane");
     }
     bridge_test();
+    patience_test(index, data, dimension);
+    float_routing_test(index, data, dimension);
+    compressed_routing_test();
+    restricted_assignment_test();
 }
 }

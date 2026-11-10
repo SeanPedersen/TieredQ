@@ -139,9 +139,14 @@ def main() -> None:
     parser.add_argument("--emeans-path", type=Path, help="directory containing the vendored e_means package")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--threads", type=int, default=1)
+    parser.add_argument("--centroids-output", type=Path, help="also write the trained centroids (k x dim float32)")
+    parser.add_argument("--assign", choices=("exact", "none"), default="exact",
+                        help="none skips the exact assignment pass (labels then come from fast_assign)")
     args = parser.parse_args()
-    if args.labels_output.exists() or args.report.exists():
+    if args.labels_output.exists() or args.report.exists() or (args.centroids_output and args.centroids_output.exists()):
         raise FileExistsError("refusing to overwrite partition outputs")
+    if args.assign == "none" and not args.centroids_output:
+        parser.error("--assign none requires --centroids-output")
     if args.method == "emeans" and not args.emeans_path:
         parser.error("--emeans-path is required for emeans")
     if args.method == "lloyd" and not args.sample_per_centroid:
@@ -157,6 +162,14 @@ def main() -> None:
     else:
         centroids, details = train_emeans(data, args.k, args.epochs, args.seed, args.emeans_path)
     trained = time.perf_counter()
+    if args.centroids_output:
+        np.ascontiguousarray(centroids, dtype="<f4").tofile(args.centroids_output)
+    if args.assign == "none":
+        report = dict(method=args.method, k=args.k, rows=args.rows, threads=args.threads, seed=args.seed, train_s=trained - start,
+                      assign_s=None, total_s=trained - start, faiss_version=faiss.__version__, details=details, **sampler.stop())
+        args.report.write_text(json.dumps(report, indent=2, default=str) + "\n")
+        print(json.dumps({key: report[key] for key in ("method", "train_s")}))
+        return
     labels, objective = assign_all(data, centroids)
     finished = time.perf_counter()
     labels.tofile(args.labels_output)

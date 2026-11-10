@@ -98,6 +98,8 @@ def main() -> None:
     parser.add_argument("--build-threads", type=int, default=1)
     parser.add_argument("--search-cpu", type=int)
     parser.add_argument("--memory-output", type=Path)
+    parser.add_argument("--centroids", type=Path, help="use these coarse centroids (nlist x dim float32) instead of training")
+    parser.add_argument("--assignments", type=Path, help="with --centroids: one uint32 list label per row instead of quantizer search")
     args = parser.parse_args()
     if min(args.nq, args.nlist, args.sample, args.evaluation_nq, args.evaluation_repeats, args.build_threads) <= 0:
         parser.error("counts must be positive")
@@ -105,8 +107,12 @@ def main() -> None:
     if not targets or any(not math.isfinite(t) or not 0 < t <= 1 for t in targets):
         parser.error("targets must be in (0,1]")
     if args.int8_offsets and not args.int8_base: parser.error("SQ8 offsets require codes")
-    if bool(args.int8_base) != bool(args.int8_scales) or (args.int8_base and args.variant != "ivf"):
-        parser.error("Shared SQ8 requires codes, scales, and variant ivf")
+    if args.assignments and not args.centroids:
+        parser.error("--assignments requires --centroids")
+    if args.centroids and (args.variant != "ivf" or not args.int8_base):
+        parser.error("--centroids requires the flat-quantizer IVF-SQ8 variant")
+    if bool(args.int8_base) != bool(args.int8_scales) or (args.int8_base and args.variant == "hnsw"):
+        parser.error("Shared SQ8 requires codes, scales, and an IVF variant")
     evaluation = (args.evaluation_queries, args.evaluation_truth, args.evaluation_output)
     if any(evaluation) and not all(evaluation):
         parser.error("evaluation requires queries, truth, and output")
