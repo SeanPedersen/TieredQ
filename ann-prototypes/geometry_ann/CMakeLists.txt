@@ -1,7 +1,7 @@
 # Isolated geometry-aware ANN research prototype.
 cmake_minimum_required(VERSION 3.18)
 project(geometry_ann LANGUAGES CXX)
-add_library(geometry_ann index.cpp training.cpp geometry.cpp search_state.cpp search_hierarchy.cpp graph.cpp search_graph.cpp scan_distance.cpp sq8_distance.cpp geometry_diagnostics.cpp support_geometry.cpp cell_bounds.cpp cell_diagnostics.cpp)
+add_library(geometry_ann index.cpp training.cpp geometry.cpp search_state.cpp search_hierarchy.cpp graph.cpp search_graph.cpp scan_distance.cpp sq8_distance.cpp geometry_diagnostics.cpp support_geometry.cpp cell_bounds.cpp cell_diagnostics.cpp rank_scores.cpp scan_policies.cpp)
 find_package(Threads REQUIRED)
 target_link_libraries(geometry_ann PUBLIC Threads::Threads)
 target_compile_features(geometry_ann PUBLIC cxx_std_20)

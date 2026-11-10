@@ -7,6 +7,7 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <sstream>
 #include <stdexcept>
 #include <thread>
 using namespace geometry_ann;
@@ -21,6 +22,14 @@ std::size_t parse_count(const std::string& text) {
     if (consumed != text.size() || text.front() == '-') throw std::invalid_argument("invalid integer: " + text);
     return value;
 }
+template<class Parse>
+auto parse_list(const std::string& text, Parse parse) {
+    std::vector<decltype(parse(std::string{}))> values;
+    std::istringstream input(text); std::string token;
+    while (std::getline(input, token, ',')) values.push_back(parse(token));
+    if (values.empty()) throw std::invalid_argument("empty list option");
+    return values;
+}
 // Consumes cell-specific flags; everything else is forwarded to the shared benchmark parser.
 CellCli split_arguments(int argc, char** argv, std::vector<char*>& forwarded) {
     CellCli cli; cli.diagnostic.threads = std::max(1u, std::thread::hardware_concurrency());
@@ -28,32 +37,51 @@ CellCli split_arguments(int argc, char** argv, std::vector<char*>& forwarded) {
         {"--cell-directions", &cli.diagnostic.directions}, {"--cell-small-directions", &cli.diagnostic.small_directions},
         {"--hull-iterations", &cli.diagnostic.hull_iterations}, {"--threads", &cli.diagnostic.threads},
         {"--cell-queries", &cli.queries}, {"--cheap-sweeps", &cli.diagnostic.cheap_sweeps},
-        {"--converged-sweeps", &cli.diagnostic.converged_sweeps}, {"--rank-iterations", &cli.diagnostic.rank_iterations}};
+        {"--converged-sweeps", &cli.diagnostic.converged_sweeps}, {"--rank-iterations", &cli.diagnostic.rank_iterations},
+        {"--spread-axes", &cli.diagnostic.spread_axes}, {"--spread-sample", &cli.diagnostic.spread_sample},
+        {"--policy-neighbors", &cli.diagnostic.policy_neighbors}};
+    std::map<std::string, bool*> switches = {
+        {"--slabs", &cli.diagnostic.slabs}, {"--hull", &cli.diagnostic.hull}, {"--policies", &cli.diagnostic.policies},
+        {"--hull-rank", &cli.diagnostic.hull_rank}, {"--statistical", &cli.diagnostic.statistical}};
     forwarded.push_back(argv[0]);
     for (int i = 1; i < argc; i += 2) {
         if (i + 1 == argc) throw std::invalid_argument("options require a value");
         std::string key = argv[i], value = argv[i + 1];
         if (auto found = numeric.find(key); found != numeric.end()) *found->second = parse_count(value);
         else if (key == "--cell-output") cli.output = value;
-        else if (key == "--hull") cli.diagnostic.hull = parse_count(value) != 0;
-        else if (key == "--hull-rank") cli.diagnostic.hull_rank = parse_count(value) != 0;
+        else if (auto flag = switches.find(key); flag != switches.end()) *flag->second = parse_count(value) != 0;
+        else if (key == "--coverage-budgets") cli.diagnostic.coverage_budgets = parse_list(value, parse_count);
+        else if (key == "--spill-taus") cli.diagnostic.spill_taus = parse_list(value, [](const std::string& token) { return std::stod(token); });
+        else if (key == "--patience") cli.diagnostic.patience_windows = parse_list(value, parse_count);
+        else if (key == "--betas") cli.diagnostic.betas = parse_list(value, [](const std::string& token) { return std::stod(token); });
         else { forwarded.push_back(argv[i]); forwarded.push_back(argv[i + 1]); }
     }
     if (cli.output.empty()) throw std::invalid_argument("--cell-output is required");
     if (!cli.queries || !cli.diagnostic.threads) throw std::invalid_argument("cell queries and threads must be positive");
+    if (cli.diagnostic.hull && !cli.diagnostic.slabs) throw std::invalid_argument("hull ceiling requires slabs for pre-filtering");
     return cli;
 }
-void write_csv(std::ostream& out, const CellStudy& study) {
+void write_csv(std::ostream& out, const CellStudy& study, std::span<const std::size_t> budgets) {
     out << "query,reference,truth_clusters,oracle_vectors_10,score,certified_clusters,certified_vectors,"
            "undecided_clusters,undecided_vectors,pure_vectors_10,hybrid_vectors_10,mean_truth_rank,"
-           "mean_truth_bound_ratio,unsafe,bound_ns_per_leaf,hull_iterations,ranked\n";
+           "mean_truth_bound_ratio,unsafe,bound_ns_per_leaf,hull_iterations,ranked,lower_bound,"
+           "adaptive_vectors,adaptive_leaves,adaptive_coverage,spill_fraction";
+    for (auto budget : budgets) out << ",coverage_" << budget;
+    out << '\n';
     out.precision(17);
-    for (const auto& row : study.queries) for (const auto& s : row.scores)
+    for (const auto& row : study.queries) for (const auto& s : row.scores) {
         out << row.query << ',' << row.reference << ',' << row.truth_clusters << ',' << row.oracle_vectors_10 << ','
             << s.name << ',' << s.certified_clusters << ',' << s.certified_vectors << ',' << s.undecided_clusters << ','
             << s.undecided_vectors << ',' << s.pure_vectors_10 << ',' << s.hybrid_vectors_10 << ',' << s.mean_truth_rank << ','
             << s.mean_truth_bound_ratio << ',' << s.unsafe << ',' << s.bound_ns_per_leaf << ',' << s.hull_iterations << ','
-            << s.ranked << '\n';
+            << s.ranked << ',' << s.lower_bound << ',' << s.adaptive_vectors << ',' << s.adaptive_leaves << ','
+            << s.adaptive_coverage << ',' << s.spill_fraction;
+        for (std::size_t b = 0; b < budgets.size(); ++b) {
+            out << ',';
+            if (b < s.coverage.size()) out << s.coverage[b];
+        }
+        out << '\n';
+    }
 }
 }
 int main(int argc, char** argv) {
@@ -71,6 +99,8 @@ int main(int argc, char** argv) {
         std::cerr << "Building fixed leaves: n=" << data.count() << " d=" << data.dimension
                   << " storage=" << (quantized.codes.empty() ? "FP32" : "SQ8") << '\n';
         auto start = std::chrono::steady_clock::now();
+        auto labels = config.assignments_file.empty() ? std::vector<std::uint32_t>{} : load_labels(config.assignments_file, data.count());
+        build.assignments = labels;
         Index index(data.base, data.dimension, build, quantized.view());
         double build_s = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
         data.release_base(); quantized.release_codes();
@@ -79,10 +109,11 @@ int main(int argc, char** argv) {
                                           std::span(data.truth).first(count), cli.diagnostic);
         std::ofstream out(cli.output);
         if (!out) throw std::runtime_error("cannot write " + cli.output);
-        write_csv(out, study);
+        write_csv(out, study, cli.diagnostic.coverage_budgets);
         std::ofstream meta(cli.output + ".meta.json");
         meta << "{\"leaves\": " << index.leaf_count() << ", \"build_s\": " << build_s
              << ", \"slab_build_s\": " << study.slab_build_s << ", \"slab_bytes\": " << study.slab_bytes
+             << ", \"spread_build_s\": " << study.spread_build_s << ", \"spread_bytes\": " << study.spread_bytes
              << ", \"directions\": " << cli.diagnostic.directions << ", \"small_directions\": " << cli.diagnostic.small_directions
              << ", \"hull_iterations\": " << cli.diagnostic.hull_iterations
              << ", \"cheap_sweeps\": " << cli.diagnostic.cheap_sweeps << ", \"converged_sweeps\": " << cli.diagnostic.converged_sweeps << ", \"threads\": " << cli.diagnostic.threads

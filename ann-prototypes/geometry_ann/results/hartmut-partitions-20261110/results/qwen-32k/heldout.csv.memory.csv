@@ -1,0 +1,3 @@
+repeat,routing,metadata_cap,vector_cap,rss_bytes_before,rss_bytes_after,swap_bytes_before,swap_bytes_after,major_faults
+0,graph,16384,88408,9472331776,9472331776,0,0,0
+0,flat,32896,88408,9472331776,9472331776,0,0,0

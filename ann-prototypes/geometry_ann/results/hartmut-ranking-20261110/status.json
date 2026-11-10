@@ -1,0 +1,5 @@
+{
+  "stage": "stopped_by_operator",
+  "utc": "2026-11-10T03:34:37Z",
+  "reason": "statistical phase complete; partition phase relaunched with multi-threaded k-means in TieredQ-issue44-partitions-20261110"
+}

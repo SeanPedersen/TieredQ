@@ -1,0 +1,120 @@
+{
+  "calibration": [
+    {
+      "budget": 16,
+      "recall10": 0.898,
+      "p50_us": 4549.541,
+      "p99_us": 5715.707,
+      "mean_distance_evaluations": 21667.54,
+      "max_distance_evaluations": 32222
+    },
+    {
+      "budget": 24,
+      "recall10": 0.9164,
+      "p50_us": 5905.071,
+      "p99_us": 7526.871,
+      "mean_distance_evaluations": 31963.884,
+      "max_distance_evaluations": 43661
+    },
+    {
+      "budget": 32,
+      "recall10": 0.9296,
+      "p50_us": 7236.087,
+      "p99_us": 8922.636,
+      "mean_distance_evaluations": 42043.588,
+      "max_distance_evaluations": 55445
+    },
+    {
+      "budget": 48,
+      "recall10": 0.9516,
+      "p50_us": 9759.642,
+      "p99_us": 12120.847,
+      "mean_distance_evaluations": 62098.724,
+      "max_distance_evaluations": 80282
+    },
+    {
+      "budget": 64,
+      "recall10": 0.96,
+      "p50_us": 12446.914,
+      "p99_us": 15343.03,
+      "mean_distance_evaluations": 81748.868,
+      "max_distance_evaluations": 106825
+    },
+    {
+      "budget": 96,
+      "recall10": 0.9728,
+      "p50_us": 17588.141,
+      "p99_us": 21507.7,
+      "mean_distance_evaluations": 120903.3,
+      "max_distance_evaluations": 153097
+    },
+    {
+      "budget": 128,
+      "recall10": 0.978,
+      "p50_us": 22480.518,
+      "p99_us": 27285.162,
+      "mean_distance_evaluations": 159993.204,
+      "max_distance_evaluations": 199945
+    },
+    {
+      "budget": 192,
+      "recall10": 0.9868,
+      "p50_us": 32803.506,
+      "p99_us": 37413.046,
+      "mean_distance_evaluations": 238363.404,
+      "max_distance_evaluations": 292370
+    },
+    {
+      "budget": 256,
+      "recall10": 0.9904,
+      "p50_us": 42978.944,
+      "p99_us": 48520.428,
+      "mean_distance_evaluations": 315844.976,
+      "max_distance_evaluations": 378176
+    },
+    {
+      "budget": 384,
+      "recall10": 0.9936,
+      "p50_us": 62895.516,
+      "p99_us": 69571.372,
+      "mean_distance_evaluations": 472156.016,
+      "max_distance_evaluations": 538278
+    },
+    {
+      "budget": 512,
+      "recall10": 0.994,
+      "p50_us": 83277.892,
+      "p99_us": 91080.921,
+      "mean_distance_evaluations": 627812.712,
+      "max_distance_evaluations": 701043
+    }
+  ],
+  "heldout": [
+    {
+      "budget": 48,
+      "recall10": 0.9450666666666667,
+      "p50_us": 9868.809,
+      "p99_us": 12512.565,
+      "mean_distance_evaluations": 62029.48,
+      "max_distance_evaluations": 88249
+    },
+    {
+      "budget": 256,
+      "recall10": 0.9833333333333333,
+      "p50_us": 42960.587,
+      "p99_us": 48123.207,
+      "mean_distance_evaluations": 315817.0906666667,
+      "max_distance_evaluations": 369807
+    },
+    {
+      "budget": 512,
+      "recall10": 0.9897333333333334,
+      "p50_us": 82869.527,
+      "p99_us": 91873.062,
+      "mean_distance_evaluations": 625698.76,
+      "max_distance_evaluations": 686894
+    }
+  ],
+  "build_s": 137.21236373501597,
+  "peak_build_rss_bytes": 23248957440
+}

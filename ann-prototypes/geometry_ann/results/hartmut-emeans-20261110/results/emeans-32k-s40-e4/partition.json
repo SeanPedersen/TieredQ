@@ -1,0 +1,61 @@
+{
+  "method": "emeans",
+  "k": 32768,
+  "rows": 8840823,
+  "threads": 32,
+  "seed": 42,
+  "train_s": 278.4901343740057,
+  "assign_s": 378.9635679370258,
+  "total_s": 657.4537023110315,
+  "assignment_objective": 4272658.297526509,
+  "empty_clusters": 0,
+  "largest_cluster": 1767,
+  "faiss_version": "1.15.1",
+  "details": {
+    "sample": 1310720,
+    "recipe": {
+      "name": "canonical_v1",
+      "batch_law": "throughput",
+      "batch_law_requested": "auto",
+      "batch_law_reason": "d > 16",
+      "batch_size": 131072,
+      "alpha0": 0.4201024640585372,
+      "alpha0_source": "step_law",
+      "nepochs": 4,
+      "steps_per_pass": 10,
+      "total_steps": 40,
+      "epoch_rows": [
+        1310720,
+        1310720,
+        1310720,
+        1310720
+      ],
+      "epoch_steps": [
+        10,
+        10,
+        10,
+        10
+      ],
+      "tail_policy": "keep",
+      "alpha_min_factor": 0.1,
+      "check_unused_every": 5,
+      "unused_threshold": 0.1,
+      "split_epsilon": 0.0001,
+      "init_usage": 1.52587890625e-05,
+      "seed": 42,
+      "backend": "faiss",
+      "assignment_chunk_size": 65536
+    },
+    "splits": 16664,
+    "objective": [
+      732118.6838045418,
+      648981.7073867023,
+      627810.6805744469,
+      611519.0221542418
+    ]
+  },
+  "build_peak_rss": 15774842880,
+  "build_peak_anon": 6692163584,
+  "build_peak_file": 9086234624,
+  "build_hwm": 15826214912
+}

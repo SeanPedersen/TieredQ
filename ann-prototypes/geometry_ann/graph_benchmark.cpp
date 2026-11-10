@@ -1,12 +1,40 @@
 // Build one immutable topology and compare geometry-only navigation changes on identical data.
 #include "graph_experiment.h"
+#include "memory_sampler.h"
 #include <chrono>
 #include <iostream>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
 #include <sys/resource.h>
+#ifdef __linux__
+#include <sched.h>
+#endif
 using namespace geometry_ann;
+namespace {
+void write_memory(const std::string& path, const Index& index, double build_seconds, MemoryUsage peak, MemoryUsage serving) {
+    if (std::filesystem::exists(path)) throw std::runtime_error("memory output exists: " + path);
+    std::ofstream out(path);
+    if (!out) throw std::runtime_error("cannot write " + path);
+    const auto& stats = index.build_statistics();
+    out << "{\"build_s\": " << build_seconds << ", \"clustering_s\": " << stats.clustering_s << ", \"reassign_s\": " << stats.reassign_s
+        << ", \"reassigned_vectors\": " << stats.reassigned_vectors << ", \"graph_s\": " << stats.graph_s
+        << ", \"leaves\": " << index.leaf_count() << ", \"index_bytes\": " << index.raw_bytes() + index.overhead_bytes()
+        << ", \"build_peak_rss\": " << peak.rss << ", \"build_peak_anon\": " << peak.anon << ", \"build_peak_file\": " << peak.file
+        << ", \"build_hwm\": " << peak.hwm << ", \"serving_rss\": " << serving.rss << ", \"serving_anon\": " << serving.anon
+        << ", \"serving_file\": " << serving.file << "}\n";
+}
+// Build threads have joined by now; every later measurement runs on one fixed core.
+void pin_search(const BenchmarkOptions& config) {
+    if (!config.search_cpu) return;
+#ifdef __linux__
+    cpu_set_t set; CPU_ZERO(&set); CPU_SET(int(*config.search_cpu), &set);
+    if (sched_setaffinity(0, sizeof(set), &set)) throw std::runtime_error("cannot pin search CPU");
+#else
+    throw std::invalid_argument("--search-cpu requires Linux");
+#endif
+}
+}
 int main(int argc, char** argv) {
     try {
         auto config = parse_options(argc, argv);
@@ -18,10 +46,15 @@ int main(int argc, char** argv) {
             : load_dataset(config.base, config.queries, config.truth, config.query_count);
         auto quantized = config.int8_base.empty() ? QuantizedDataset{} : load_quantized(config.int8_base,config.int8_scales,data.count(),data.dimension,config.int8_offsets);
         std::cerr << "Storage=" << (quantized.codes.empty() ? "FP32" : "SQ8") << '\n';
+        auto labels = config.assignments_file.empty() ? std::vector<std::uint32_t>{} : load_labels(config.assignments_file, data.count());
+        config.build.assignments = labels;
         std::cerr << "Building shared graph: n=" << data.count() << " d=" << data.dimension
                   << " queries=" << data.truth.size() << " degree=" << config.build.graph_degree << '\n';
+        MemorySampler sampler;
         auto start = std::chrono::steady_clock::now(); Index index(data.base, data.dimension, config.build, quantized.view());
         double build_seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+        auto build_peak = sampler.stop();
+        pin_search(config);
         rusage usage{}; getrusage(RUSAGE_SELF, &usage);
 #ifdef __APPLE__
         std::size_t peak = std::size_t(usage.ru_maxrss);
@@ -30,8 +63,10 @@ int main(int argc, char** argv) {
 #endif
         const auto& stats = index.build_statistics();
         std::cerr << "Built " << index.leaf_count() << " leaves in " << build_seconds << "s; graph=" << stats.graph_s
-                  << "s PCA=" << stats.projections_s << "s; graph bytes=" << index.graph_bytes() << '\n';
+                  << "s reassigned=" << stats.reassigned_vectors << " reassign_s=" << stats.reassign_s
+                  << " build_threads=" << config.build.build_threads << " PCA=" << stats.projections_s << "s; graph bytes=" << index.graph_bytes() << '\n';
         if (!config.evaluation_output.empty()) { data.release_base(); quantized.release_codes(); }
+        if (!config.memory_output.empty()) write_memory(config.memory_output, index, build_seconds, build_peak, read_memory());
         std::vector<std::pair<GraphSetting, GraphObservation>> calibration;
         graph_csv_header(std::cout);
         for (const auto& setting : graph_settings(config, index)) {

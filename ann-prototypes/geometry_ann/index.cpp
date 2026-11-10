@@ -13,7 +13,8 @@ Index::Index(std::span<const float> input, std::size_t d, const BuildOptions& o,
     Matrix data(input,quantized);
     if (!d || !data.size() || data.size() % d || data.size() / d > std::numeric_limits<Id>::max())
         throw std::invalid_argument("invalid vector shape or ID capacity");
-    if (!o.coarse || !o.children || !o.iterations || !o.training_sample || !o.target_leaf_size ||
+    if (!o.coarse || !o.children || !o.iterations || !o.training_sample || !o.target_leaf_size || !o.build_threads ||
+        (o.reassign_parents && !o.reassign_iterations) ||
         !o.pca_sample || o.directions > 4 || o.leaf_budget < std::min(o.coarse, data.size() / d))
         throw std::invalid_argument("invalid build options (PCA directions must be 0..4)");
     if (quantized.codes.empty()) for (float value : input) if (!std::isfinite(value)) throw std::invalid_argument("nonfinite vector");
@@ -40,7 +41,14 @@ Index::Index(std::span<const float> input, std::size_t d, const BuildOptions& o,
     auto start = Clock::now();
     Group ids(data.size() / d); std::iota(ids.begin(), ids.end(), Id(0));
     std::mt19937 rng(o.seed);
-    auto coarse = cluster(data, d, ids, o.coarse, o, rng);
+    std::vector<Group> groups, coarse;
+    std::vector<std::size_t> owners;
+    const bool external = !o.assignments.empty();
+    if (external) {
+        if (o.variant != Variant::fixed || o.reassign_parents) throw std::invalid_argument("external assignments require fixed partitions without reassignment");
+        if (o.assignments.size() != ids.size()) throw std::invalid_argument("one assignment label per vector required");
+        coarse = external_leaves(data, d, o, rng, groups, owners);
+    } else coarse = cluster(data, d, ids, o.coarse, o, rng);
     statistics_.clustering_s = elapsed(start);
     auto measure_geometry = [&](const Group& group) {
         auto stage = Clock::now(); auto result = centroid_envelope(data, d, group);
@@ -51,16 +59,32 @@ Index::Index(std::span<const float> input, std::size_t d, const BuildOptions& o,
         return result;
     };
     for (const auto& group : coarse) parents_.push_back({measure_geometry(group), {}});
-    std::vector<Group> groups;
-    std::vector<std::size_t> owners;
     start = Clock::now();
-    if (o.variant == Variant::fixed) {
+    if (!external && o.variant == Variant::fixed) {
         for (std::size_t parent = 0; parent < coarse.size(); ++parent) {
             auto children = cluster(data, d, coarse[parent], o.children, o, rng);
             for (auto& child : children) { owners.push_back(parent); groups.push_back(std::move(child)); }
         }
-    } else groups = adaptive(data, d, std::move(coarse), o, owners, rng);
+    } else if (!external) groups = adaptive(data, d, std::move(coarse), o, owners, rng);
     statistics_.clustering_s += elapsed(start);
+    if (o.reassign_parents) {
+        if (o.variant != Variant::fixed) throw std::invalid_argument("leaf reassignment requires fixed partitions");
+        auto stage = Clock::now();
+        std::vector<float> parent_centroids;
+        for (const auto& parent : parents_) parent_centroids.insert(parent_centroids.end(), parent.geometry.centroid.begin(), parent.geometry.centroid.end());
+        statistics_.reassigned_vectors = refine_leaves(data, d, groups, owners, parent_centroids, o);
+        // Leaves may now hold members from other coarse cells: parent envelopes must enclose
+        // their leaves, and parents left without leaves are removed.
+        std::vector<Group> members(parents_.size());
+        for (std::size_t i = 0; i < groups.size(); ++i) members[owners[i]].insert(members[owners[i]].end(), groups[i].begin(), groups[i].end());
+        std::vector<Parent> kept; std::vector<std::size_t> remap(parents_.size());
+        for (std::size_t p = 0; p < parents_.size(); ++p) if (!members[p].empty()) {
+            remap[p] = kept.size(); kept.push_back({measure_geometry(members[p]), {}});
+        }
+        parents_ = std::move(kept);
+        for (auto& owner : owners) owner = remap[owner];
+        statistics_.reassign_s = elapsed(stage);
+    }
     if (o.shared_directions) {
         auto stage = Clock::now();
         constexpr std::uint32_t shared_seed_salt = 0x53484152;

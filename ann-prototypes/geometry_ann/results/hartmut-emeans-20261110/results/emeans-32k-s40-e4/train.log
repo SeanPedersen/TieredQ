@@ -1,0 +1,8 @@
+This is e-means. If you use our work or find it useful, please cite the e-means paper (Bessa et al., see faiss/contrib/e_means/README.md).
+Clustering 1310720 points in 1024D to 32768 clusters, 4 epochs (batch 131072, alpha0 0.42, throughput batch law, auto for d > 16)
+  Preprocessing in 0.08 s (random initialization from the data, seed 42; assignment: faiss on CPU)
+  Epoch 1 / 4, iteration 10 / 40 (70.68 s): objective=732119
+  Epoch 2 / 4, iteration 20 / 40 (138.52 s): objective=648982
+  Epoch 3 / 4, iteration 30 / 40 (208.11 s): objective=627811
+  Epoch 4 / 4, iteration 40 / 40 (275.98 s): objective=611519
+{"method": "emeans", "train_s": 278.4901343740057, "assign_s": 378.9635679370258, "assignment_objective": 4272658.297526509, "empty_clusters": 0}

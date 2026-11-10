@@ -147,3 +147,43 @@ hull keeps 163. On Qwen 8.84M×1024 the slabs keep about 8,130, the hull 888, an
 metadata cannot approach the hull in high dimension, and the hull costs more than a scan.
 Geometric pruning is therefore dropped. The remaining gap is ranking: 130K centroid-ordered
 vectors versus 8.6K oracle vectors for 10/10 on Qwen.
+
+## Partition quality, build threads and scan policies (2026-11-10)
+
+New tools and options:
+- `--build-threads N` parallelizes k-means assignment. Centroid sums and grouping stay serial, so partitions are bit-identical for
+  any thread count (CTest plus a SIFT1M gate). `--search-cpu C` pins the process after the build, so search stays single-core.
+- `--reassign-parents P` (fixed variant) moves each vector to the nearest leaf among the leaves of its P nearest
+  coarse parents, then recomputes means (`refine_leaves`). Parent envelopes are recomputed so they still enclose their leaves.
+- `--assignments labels.u32` builds the index from an external flat partition. Parents come from clustering the leaf
+  centroids. `train_partitions.py` (uv, faiss-cpu) writes such labels with Faiss Lloyd or E-means, training on decoded SQ8 rows.
+- `--memory-output` (graph_bench) and `--memory-output` (compare_faiss.py) sample peak anonymous and file-backed RSS
+  (`memory_sampler.h`, `memory_probe.py`). The earlier "peak build RSS" included the mapped input file.
+- `cell_ceiling --statistical 1` adds extreme-value ranking scores (`rank_scores.{h,cpp}`). `--policies 1` simulates boundary
+  spill by bisector margin and patience stopping (`scan_policies.{h,cpp}`).
+
+Results on Qwen/MS MARCO 8.84M×1024 SQ8 (held-out 750 queries, 32 build threads, single-core search):
+
+| Index | Recall @ vectors (95% target) | Recall @ vectors (99% target) | Build | Serving anon RSS |
+|---|---:|---:|---:|---:|
+| Ours hierarchical 8K (P=0) | 0.9557 @ 177K | 0.9835 @ 600K | 77 s | 9.22 GB |
+| Ours hierarchical 8K + reassign P=4 | 0.9503 @ 70K | 0.9864 @ 442K | 390 s | 9.23 GB |
+| Ours hierarchical 32K + reassign P=8 | 0.9520 @ 35K | 0.9883 @ 350K | 1,540 s | 9.49 GB |
+| Ours, flat Lloyd 32K labels | **0.9580 @ 35K** | 0.9852 @ 250K | 767 s | 9.64 GB |
+| Ours, flat E-means 32K labels (4 epochs) | 0.9496 @ 35K | 0.9831 @ 250K | 830 s | 9.63 GB |
+| Faiss IVF-SQ8 8K | 0.9451 @ 62K | 0.9833 @ 316K | 137 s | 14.15 GB |
+| Faiss IVF-SQ8 32K | 0.9557 @ 31K | 0.9880 @ 315K | 610 s | 14.31 GB |
+
+Findings:
+- The hierarchical restriction (assignment only within the coarse parent) was the scan-count bottleneck. Reassignment
+  fixes most of it, but flat k-means is better and faster to build. At equal leaf counts, Faiss's partition matches ours or is better.
+- Our remaining advantage is serving RAM (about 34% less allocated memory at the same SQ8 payload, because the index is packed).
+  Latency still loses because flat routing over 32K centroids costs about 14 ms with the exact double kernel. Graph routing costs
+  about 6 ms but loses 1–1.5 recall points at the same cap.
+- E-means vs Lloyd on identical training rows: E-means reaches lower k-means objectives at 2–4 epochs but lower held-out recall per
+  scanned vector on asymmetric MS MARCO queries. Its clusters near queries are larger. Not adopted.
+- Convex/hyperplane pruning bounds and statistical ranking scores do not help at 1024-D. Boundary spill does not help either.
+  Patience stopping is the one promising policy: in simulation it scans about 1.25–2× fewer mean vectors at equal coverage.
+
+Next: patience stopping in real search; a BLAS/float centroid and assignment kernel (routing about 14 ms → about 1–2 ms, and build); then
+graph routing only if more than 32K leaves are needed.

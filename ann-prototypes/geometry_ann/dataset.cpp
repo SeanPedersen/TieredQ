@@ -151,4 +151,14 @@ Dataset load_dataset(const std::string& base, const std::string& queries, const 
     }
     return data;
 }
+std::vector<std::uint32_t> load_labels(const std::string& path, std::size_t rows) {
+    std::ifstream input(path, std::ios::binary | std::ios::ate);
+    if (!input) throw std::runtime_error("cannot open labels " + path);
+    if (std::size_t(input.tellg()) != rows * sizeof(std::uint32_t)) throw std::runtime_error("labels do not match base rows: " + path);
+    std::vector<std::uint32_t> labels(rows);
+    input.seekg(0);
+    if (!input.read(reinterpret_cast<char*>(labels.data()), std::streamsize(rows * sizeof(std::uint32_t))))
+        throw std::runtime_error("cannot read labels " + path);
+    return labels;
+}
 }

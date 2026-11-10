@@ -63,7 +63,9 @@ void check_diagnostic(std::span<const float> base, std::span<const float> querie
         for (std::size_t i = 0; i < quantized.codes.size() / d; ++i) for (std::size_t j = 0; j < d; ++j) decoded.push_back(codes.value(Id(i), j, d));
     }
     auto truth = brute_truth(decoded.empty() ? base : std::span<const float>(decoded), queries, d);
-    CellDiagnosticOptions options; options.directions = 12; options.small_directions = 4; options.threads = 3; options.hull_iterations = 200;
+    CellDiagnosticOptions options; options.coverage_budgets = {100, 400, 1600}; options.spread_axes = 4; options.spread_sample = 512;
+    options.policies = true; options.policy_neighbors = 6; options.spill_taus = {-1e9, .1, 1e9}; options.patience_windows = {1, 1000};
+    options.directions = 12; options.small_directions = 4; options.threads = 3; options.hull_iterations = 200;
     auto study = index.diagnose_cells(queries, truth, options);
     require(study.queries.size() == truth.size(), "missing diagnostic queries");
     for (const auto& row : study.queries) {
@@ -86,6 +88,18 @@ void check_diagnostic(std::span<const float> base, std::span<const float> querie
         require(hull.certified_clusters + hull.undecided_clusters <= joint.certified_clusters, "hull must refine the slab polytope");
         require(nearest.certified_clusters <= hull.certified_clusters + hull.undecided_clusters, "nearest member must refine the hull");
         require(nearest.certified_clusters >= row.truth_clusters, "every truth cluster has a member within the reference");
+        auto isotropic = find("evt-iso-b0"), directional = find("evt-pca4-b1");
+        require(!isotropic.lower_bound && isotropic.unsafe == 0 && isotropic.certified_clusters == 0, "estimates are not certified bounds");
+        require(directional.pure_vectors_10 >= row.oracle_vectors_10, "statistical ranking beats the oracle");
+        require(centroid.coverage.size() == 3 && centroid.coverage.back() <= 1, "coverage budgets missing");
+        auto no_spill = find("spill--1e+09"), full_spill = find("spill-1e+09");
+        require(no_spill.spill_fraction == 0, "minus-infinite tau must not spill");
+        for (std::size_t b = 0; b < centroid.coverage.size(); ++b)
+            require(std::abs(no_spill.coverage[b] - centroid.coverage[b]) < 1e-12, "zero spill must equal centroid coverage");
+        require(full_spill.spill_fraction > .99, "unbounded tau must spill every vector");
+        auto eager = find("patience-1"), exhaustive = find("patience-1000");
+        require(eager.adaptive_vectors <= exhaustive.adaptive_vectors && eager.adaptive_coverage <= exhaustive.adaptive_coverage, "patience must be monotone");
+        require(exhaustive.adaptive_vectors <= 1600, "patience scan exceeded its vector cap");
     }
 }
 }

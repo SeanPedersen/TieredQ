@@ -1,0 +1,518 @@
+{
+  "emeans-32k-s40-e1": {
+    "memory": {
+      "build_s": 190.169,
+      "clustering_s": 0.970158,
+      "reassign_s": 0,
+      "reassigned_vectors": 0,
+      "graph_s": 176.405,
+      "leaves": 32698,
+      "index_bytes": 9233166964,
+      "build_peak_rss": 18793648128,
+      "build_peak_anon": 9735659520,
+      "build_peak_file": 9057988608,
+      "build_hwm": 18793648128,
+      "serving_rss": 9660833792,
+      "serving_anon": 9655848960,
+      "serving_file": 4984832
+    },
+    "partition": {
+      "method": "emeans",
+      "k": 32768,
+      "rows": 8840823,
+      "threads": 32,
+      "seed": 42,
+      "train_s": 78.01785527495667,
+      "assign_s": 377.70619675703347,
+      "total_s": 455.72405203199014,
+      "assignment_objective": 4430214.269927263,
+      "empty_clusters": 70,
+      "largest_cluster": 2106,
+      "faiss_version": "1.15.1",
+      "details": {
+        "sample": 1310720,
+        "recipe": {
+          "name": "canonical_v1",
+          "batch_law": "throughput",
+          "batch_law_requested": "auto",
+          "batch_law_reason": "d > 16",
+          "batch_size": 32768,
+          "alpha0": 0.13962344833259863,
+          "alpha0_source": "step_law",
+          "nepochs": 1,
+          "steps_per_pass": 40,
+          "total_steps": 40,
+          "epoch_rows": [
+            1310720
+          ],
+          "epoch_steps": [
+            40
+          ],
+          "tail_policy": "keep",
+          "alpha_min_factor": 0.1,
+          "check_unused_every": 5,
+          "unused_threshold": 0.1,
+          "split_epsilon": 0.0001,
+          "init_usage": 1.52587890625e-05,
+          "seed": 42,
+          "backend": "faiss",
+          "assignment_chunk_size": 65536
+        },
+        "splits": 31195,
+        "objective": [
+          707337.3127541542
+        ]
+      },
+      "build_peak_rss": 15811342336,
+      "build_peak_anon": 6736588800,
+      "build_peak_file": 9086222336,
+      "build_hwm": 15817773056
+    },
+    "selections": [
+      {
+        "target": "0.95",
+        "status": "SELECTED",
+        "setting": "graph m8192 cap35000",
+        "recall": 0.935867,
+        "clusters": 98.424,
+        "vectors": 35000.0,
+        "p50_ms": 11.645100000000001,
+        "routing_ms": 6.73791
+      },
+      {
+        "target": "0.95",
+        "status": "SELECTED",
+        "setting": "flat m32896 cap35000",
+        "recall": 0.943333,
+        "clusters": 98.8413,
+        "vectors": 35000.0,
+        "p50_ms": 19.9497,
+        "routing_ms": 14.1633
+      },
+      {
+        "target": "0.99",
+        "status": "NOT_REACHED_DIAGNOSTIC",
+        "setting": "graph m8192 cap600000",
+        "recall": 0.980533,
+        "clusters": 1491.79,
+        "vectors": 600000.0,
+        "p50_ms": 87.8934,
+        "routing_ms": 7.17135
+      },
+      {
+        "target": "0.99",
+        "status": "SELECTED",
+        "setting": "flat m32896 cap350000",
+        "recall": 0.985333,
+        "clusters": 899.651,
+        "vectors": 350000.0,
+        "p50_ms": 64.5408,
+        "routing_ms": 14.197700000000001
+      },
+      {
+        "target": "0.995",
+        "status": "NOT_REACHED_DIAGNOSTIC",
+        "setting": "graph m8192 cap600000",
+        "recall": 0.980533,
+        "clusters": 1491.79,
+        "vectors": 600000.0,
+        "p50_ms": 87.8934,
+        "routing_ms": 7.17135
+      },
+      {
+        "target": "0.995",
+        "status": "NOT_REACHED_DIAGNOSTIC",
+        "setting": "flat m32896 cap600000",
+        "recall": 0.989467,
+        "clusters": 1516.81,
+        "vectors": 600000.0,
+        "p50_ms": 98.787,
+        "routing_ms": 14.2166
+      }
+    ]
+  },
+  "emeans-32k-s40-e2": {
+    "memory": {
+      "build_s": 171.965,
+      "clustering_s": 0.939962,
+      "reassign_s": 0,
+      "reassigned_vectors": 0,
+      "graph_s": 158.451,
+      "leaves": 32766,
+      "index_bytes": 9233487788,
+      "build_peak_rss": 18761277440,
+      "build_peak_anon": 9703325696,
+      "build_peak_file": 9057951744,
+      "build_hwm": 18761277440,
+      "serving_rss": 9631793152,
+      "serving_anon": 9626845184,
+      "serving_file": 4947968
+    },
+    "partition": {
+      "method": "emeans",
+      "k": 32768,
+      "rows": 8840823,
+      "threads": 32,
+      "seed": 42,
+      "train_s": 148.43324969598325,
+      "assign_s": 374.38983426900813,
+      "total_s": 522.8230839649914,
+      "assignment_objective": 4310277.569458604,
+      "empty_clusters": 2,
+      "largest_cluster": 1797,
+      "faiss_version": "1.15.1",
+      "details": {
+        "sample": 1310720,
+        "recipe": {
+          "name": "canonical_v1",
+          "batch_law": "throughput",
+          "batch_law_requested": "auto",
+          "batch_law_reason": "d > 16",
+          "batch_size": 65536,
+          "alpha0": 0.2421903273974304,
+          "alpha0_source": "step_law",
+          "nepochs": 2,
+          "steps_per_pass": 20,
+          "total_steps": 40,
+          "epoch_rows": [
+            1310720,
+            1310720
+          ],
+          "epoch_steps": [
+            20,
+            20
+          ],
+          "tail_policy": "keep",
+          "alpha_min_factor": 0.1,
+          "check_unused_every": 5,
+          "unused_threshold": 0.1,
+          "split_epsilon": 0.0001,
+          "init_usage": 1.52587890625e-05,
+          "seed": 42,
+          "backend": "faiss",
+          "assignment_chunk_size": 65536
+        },
+        "splits": 23441,
+        "objective": [
+          715913.5800733268,
+          636172.0033213794
+        ]
+      },
+      "build_peak_rss": 15743520768,
+      "build_peak_anon": 6660706304,
+      "build_peak_file": 9086349312,
+      "build_hwm": 15825932288
+    },
+    "selections": [
+      {
+        "target": "0.95",
+        "status": "SELECTED",
+        "setting": "graph m8192 cap120000",
+        "recall": 0.961867,
+        "clusters": 322.288,
+        "vectors": 119999.0,
+        "p50_ms": 22.7712,
+        "routing_ms": 6.83409
+      },
+      {
+        "target": "0.95",
+        "status": "SELECTED",
+        "setting": "flat m32896 cap35000",
+        "recall": 0.950667,
+        "clusters": 99.468,
+        "vectors": 35000.0,
+        "p50_ms": 22.1983,
+        "routing_ms": 14.251
+      },
+      {
+        "target": "0.99",
+        "status": "NOT_REACHED_DIAGNOSTIC",
+        "setting": "graph m8192 cap600000",
+        "recall": 0.975733,
+        "clusters": 1519.01,
+        "vectors": 599999.0,
+        "p50_ms": 85.61489999999999,
+        "routing_ms": 7.16213
+      },
+      {
+        "target": "0.99",
+        "status": "SELECTED",
+        "setting": "flat m32896 cap250000",
+        "recall": 0.9836,
+        "clusters": 659.244,
+        "vectors": 250000.0,
+        "p50_ms": 51.368,
+        "routing_ms": 14.2844
+      },
+      {
+        "target": "0.995",
+        "status": "NOT_REACHED_DIAGNOSTIC",
+        "setting": "graph m8192 cap600000",
+        "recall": 0.975733,
+        "clusters": 1519.01,
+        "vectors": 599999.0,
+        "p50_ms": 85.61489999999999,
+        "routing_ms": 7.16213
+      },
+      {
+        "target": "0.995",
+        "status": "NOT_REACHED_DIAGNOSTIC",
+        "setting": "flat m32896 cap600000",
+        "recall": 0.990667,
+        "clusters": 1541.84,
+        "vectors": 600000.0,
+        "p50_ms": 98.1432,
+        "routing_ms": 14.2943
+      }
+    ]
+  },
+  "emeans-32k-s40-e4": {
+    "memory": {
+      "build_s": 172.236,
+      "clustering_s": 0.954545,
+      "reassign_s": 0,
+      "reassigned_vectors": 0,
+      "graph_s": 158.922,
+      "leaves": 32768,
+      "index_bytes": 9233482004,
+      "build_peak_rss": 18761269248,
+      "build_peak_anon": 9703333888,
+      "build_peak_file": 9057935360,
+      "build_hwm": 18761269248,
+      "serving_rss": 9632346112,
+      "serving_anon": 9627414528,
+      "serving_file": 4931584
+    },
+    "partition": {
+      "method": "emeans",
+      "k": 32768,
+      "rows": 8840823,
+      "threads": 32,
+      "seed": 42,
+      "train_s": 278.4901343740057,
+      "assign_s": 378.9635679370258,
+      "total_s": 657.4537023110315,
+      "assignment_objective": 4272658.297526509,
+      "empty_clusters": 0,
+      "largest_cluster": 1767,
+      "faiss_version": "1.15.1",
+      "details": {
+        "sample": 1310720,
+        "recipe": {
+          "name": "canonical_v1",
+          "batch_law": "throughput",
+          "batch_law_requested": "auto",
+          "batch_law_reason": "d > 16",
+          "batch_size": 131072,
+          "alpha0": 0.4201024640585372,
+          "alpha0_source": "step_law",
+          "nepochs": 4,
+          "steps_per_pass": 10,
+          "total_steps": 40,
+          "epoch_rows": [
+            1310720,
+            1310720,
+            1310720,
+            1310720
+          ],
+          "epoch_steps": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "tail_policy": "keep",
+          "alpha_min_factor": 0.1,
+          "check_unused_every": 5,
+          "unused_threshold": 0.1,
+          "split_epsilon": 0.0001,
+          "init_usage": 1.52587890625e-05,
+          "seed": 42,
+          "backend": "faiss",
+          "assignment_chunk_size": 65536
+        },
+        "splits": 16664,
+        "objective": [
+          732118.6838045418,
+          648981.7073867023,
+          627810.6805744469,
+          611519.0221542418
+        ]
+      },
+      "build_peak_rss": 15774842880,
+      "build_peak_anon": 6692163584,
+      "build_peak_file": 9086234624,
+      "build_hwm": 15826214912
+    },
+    "selections": [
+      {
+        "target": "0.95",
+        "status": "SELECTED",
+        "setting": "graph m8192 cap50000",
+        "recall": 0.943733,
+        "clusters": 137.595,
+        "vectors": 49997.5,
+        "p50_ms": 13.4958,
+        "routing_ms": 6.7082299999999995
+      },
+      {
+        "target": "0.95",
+        "status": "SELECTED",
+        "setting": "flat m32896 cap35000",
+        "recall": 0.9496,
+        "clusters": 98.0867,
+        "vectors": 34998.6,
+        "p50_ms": 22.607,
+        "routing_ms": 14.1113
+      },
+      {
+        "target": "0.99",
+        "status": "NOT_REACHED_DIAGNOSTIC",
+        "setting": "graph m8192 cap600000",
+        "recall": 0.974667,
+        "clusters": 1523.86,
+        "vectors": 599998.0,
+        "p50_ms": 85.0075,
+        "routing_ms": 7.04267
+      },
+      {
+        "target": "0.99",
+        "status": "SELECTED",
+        "setting": "flat m32896 cap250000",
+        "recall": 0.983067,
+        "clusters": 659.387,
+        "vectors": 249999.0,
+        "p50_ms": 50.9435,
+        "routing_ms": 14.0667
+      },
+      {
+        "target": "0.995",
+        "status": "NOT_REACHED_DIAGNOSTIC",
+        "setting": "graph m8192 cap600000",
+        "recall": 0.974667,
+        "clusters": 1523.86,
+        "vectors": 599998.0,
+        "p50_ms": 85.0075,
+        "routing_ms": 7.04267
+      },
+      {
+        "target": "0.995",
+        "status": "NOT_REACHED_DIAGNOSTIC",
+        "setting": "flat m32896 cap600000",
+        "recall": 0.9912,
+        "clusters": 1552.71,
+        "vectors": 599999.0,
+        "p50_ms": 97.8468,
+        "routing_ms": 14.1518
+      }
+    ]
+  },
+  "lloyd-32k": {
+    "memory": {
+      "build_s": 166.482,
+      "clustering_s": 0.942209,
+      "reassign_s": 0,
+      "reassigned_vectors": 0,
+      "graph_s": 153.673,
+      "leaves": 32768,
+      "index_bytes": 9233495844,
+      "build_peak_rss": 18769768448,
+      "build_peak_anon": 9711849472,
+      "build_peak_file": 9057918976,
+      "build_hwm": 18769768448,
+      "serving_rss": 9640087552,
+      "serving_anon": 9635131392,
+      "serving_file": 4956160
+    },
+    "partition": {
+      "method": "lloyd",
+      "k": 32768,
+      "rows": 8840823,
+      "threads": 32,
+      "seed": 42,
+      "train_s": 222.5420516890008,
+      "assign_s": 377.6287228760193,
+      "total_s": 600.1707745650201,
+      "assignment_objective": 4362609.413109839,
+      "empty_clusters": 0,
+      "largest_cluster": 2229,
+      "faiss_version": "1.15.1",
+      "details": {
+        "sample": 1310720,
+        "iterations": 4,
+        "objective": [
+          1061096.75,
+          653569.4375,
+          630331.5625,
+          621134.875
+        ]
+      },
+      "build_peak_rss": 15852724224,
+      "build_peak_anon": 6769627136,
+      "build_peak_file": 9084502016,
+      "build_hwm": 15852724224
+    },
+    "selections": [
+      {
+        "target": "0.95",
+        "status": "SELECTED",
+        "setting": "graph m8192 cap35000",
+        "recall": 0.944,
+        "clusters": 116.336,
+        "vectors": 35000.0,
+        "p50_ms": 11.3239,
+        "routing_ms": 6.3499300000000005
+      },
+      {
+        "target": "0.95",
+        "status": "SELECTED",
+        "setting": "flat m32896 cap35000",
+        "recall": 0.958,
+        "clusters": 117.072,
+        "vectors": 35000.0,
+        "p50_ms": 21.5901,
+        "routing_ms": 14.6604
+      },
+      {
+        "target": "0.99",
+        "status": "NOT_REACHED_DIAGNOSTIC",
+        "setting": "graph m8192 cap600000",
+        "recall": 0.9752,
+        "clusters": 1972.42,
+        "vectors": 600000.0,
+        "p50_ms": 87.61280000000001,
+        "routing_ms": 6.43669
+      },
+      {
+        "target": "0.99",
+        "status": "SELECTED",
+        "setting": "flat m32896 cap250000",
+        "recall": 0.9852,
+        "clusters": 844.733,
+        "vectors": 250000.0,
+        "p50_ms": 52.392199999999995,
+        "routing_ms": 14.7261
+      },
+      {
+        "target": "0.995",
+        "status": "NOT_REACHED_DIAGNOSTIC",
+        "setting": "graph m8192 cap600000",
+        "recall": 0.9752,
+        "clusters": 1972.42,
+        "vectors": 600000.0,
+        "p50_ms": 87.61280000000001,
+        "routing_ms": 6.43669
+      },
+      {
+        "target": "0.995",
+        "status": "SELECTED",
+        "setting": "flat m32896 cap600000",
+        "recall": 0.990933,
+        "clusters": 2036.88,
+        "vectors": 600000.0,
+        "p50_ms": 100.217,
+        "routing_ms": 14.678600000000001
+      }
+    ]
+  }
+}

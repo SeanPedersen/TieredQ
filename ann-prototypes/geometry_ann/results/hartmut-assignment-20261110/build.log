@@ -1,0 +1,8 @@
+[ 34%] Built target geometry_ann
+[ 44%] Built target geometry_tests
+[ 48%] Built target cell_tests
+[ 65%] Built target graph_bench
+[ 74%] Built target cell_ceiling
+[ 83%] Built target geometry_bench
+[ 93%] Built target sq8_oracle
+[100%] Built target dataset_tests

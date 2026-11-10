@@ -4,9 +4,12 @@
 // Runs outside timed search; temporary per-thread buffers hold one distance per vector.
 #include "cell_bounds.h"
 #include "parallel.h"
+#include "rank_scores.h"
+#include "scan_policies.h"
 #include <algorithm>
 #include <chrono>
 #include <numeric>
+#include <sstream>
 #include <stdexcept>
 namespace geometry_ann {
 namespace {
@@ -18,7 +21,7 @@ double nanoseconds(Clock::time_point start) {
 }
 struct QueryContext {
     std::span<const Leaf> leaves;
-    std::vector<std::size_t> profits, truth_leaves;
+    std::vector<std::size_t> profits, truth_leaves, truth_rows;
     std::vector<double> truth_distances, centroid_distances;
     double reference = 0;
 };
@@ -29,6 +32,15 @@ std::size_t vectors_to_cover(const QueryContext& context, std::span<const std::s
         if (covered >= recall_k) break;
     }
     return spent;
+}
+// Mirrors timed search under a vector cap: leaves that no longer fit are skipped, not split.
+double coverage_within(const QueryContext& context, std::span<const std::size_t> order, std::size_t budget) {
+    std::size_t spent = 0, covered = 0;
+    for (auto leaf : order) {
+        if (context.leaves[leaf].size > budget - spent) continue;
+        spent += context.leaves[leaf].size; covered += context.profits[leaf];
+    }
+    return double(covered) / double(recall_k);
 }
 template<class Key>
 std::vector<std::size_t> order_by(std::size_t count, Key key) {
@@ -44,20 +56,24 @@ void add_safety(CellScore& score, const QueryContext& context, std::span<const d
     }
     score.mean_truth_bound_ratio /= double(context.truth_leaves.size());
 }
-CellScore ranked_score(std::string name, const QueryContext& context, std::span<const double> bounds, double bound_ns) {
-    CellScore score; score.name = std::move(name); score.bound_ns_per_leaf = bound_ns;
+CellScore ranked_score(std::string name, const QueryContext& context, std::span<const double> bounds, double bound_ns,
+                       std::span<const std::size_t> budgets, bool lower_bound = true) {
+    CellScore score; score.name = std::move(name); score.bound_ns_per_leaf = bound_ns; score.lower_bound = lower_bound;
     const auto n = context.leaves.size();
     const auto& centroid = context.centroid_distances;
-    for (std::size_t l = 0; l < n; ++l) if (bounds[l] <= context.reference) {
-        ++score.certified_clusters; score.certified_vectors += context.leaves[l].size;
+    if (lower_bound) {
+        for (std::size_t l = 0; l < n; ++l) if (bounds[l] <= context.reference) {
+            ++score.certified_clusters; score.certified_vectors += context.leaves[l].size;
+        }
+        add_safety(score, context, bounds);
     }
-    add_safety(score, context, bounds);
     // Pure order ranks by the bound; centroid distance breaks the many zero-bound ties.
     auto pure = order_by(n, [&](std::size_t l) { return std::pair(bounds[l], centroid[l]); });
     auto hybrid = order_by(n, [&](std::size_t l) {
         return std::pair((1 - hybrid_weight) * centroid[l] + hybrid_weight * bounds[l], centroid[l]); });
     score.pure_vectors_10 = vectors_to_cover(context, pure);
     score.hybrid_vectors_10 = vectors_to_cover(context, hybrid);
+    for (auto budget : budgets) score.coverage.push_back(coverage_within(context, pure, budget));
     std::vector<std::size_t> rank(n);
     for (std::size_t i = 0; i < n; ++i) rank[pure[i]] = i + 1;
     for (auto leaf : context.truth_leaves) score.mean_truth_rank += double(rank[leaf]);
@@ -76,8 +92,20 @@ CellStudy Index::diagnose_cells(std::span<const float> queries, std::span<const 
     Matrix packed(std::span<const float>(vectors_), {codes_, code_scales_, code_offsets_});
     CellStudy study;
     auto start = Clock::now();
-    auto slabs = build_cell_slabs(packed, d, leaves_, options.directions, options.threads);
+    auto slabs = options.slabs ? build_cell_slabs(packed, d, leaves_, options.directions, options.threads) : CellSlabs{};
     study.slab_build_s = nanoseconds(start) * 1e-9; study.slab_bytes = slabs.bytes();
+    if (options.statistical && !geometry_metadata_) throw std::invalid_argument("statistical scores require radius metadata");
+    start = Clock::now();
+    auto spread = options.statistical ? build_spread_model(packed, d, leaves_, options.spread_axes, options.spread_sample, 42, options.threads) : SpreadModel{};
+    study.spread_build_s = nanoseconds(start) * 1e-9; study.spread_bytes = spread.bytes();
+    const auto& budgets = options.coverage_budgets;
+    SpillPlan spill_plan; std::vector<Spill> spills;
+    if (options.policies) {
+        auto candidates = nearest_leaves(leaves_, options.policy_neighbors, options.threads);
+        spill_plan = build_spill_plan(packed, d, leaves_, candidates, options.policy_neighbors, options.threads);
+        for (double tau : options.spill_taus) spills.push_back(apply_spill(spill_plan, leaves_, tau));
+    }
+    const std::size_t policy_cap = budgets.empty() ? ids_.size() : *std::max_element(budgets.begin(), budgets.end());
     std::vector<Id> position(ids_.size());
     for (std::size_t i = 0; i < ids_.size(); ++i) position[ids_[i]] = Id(i);
     study.queries.resize(truth.size());
@@ -86,13 +114,13 @@ CellStudy Index::diagnose_cells(std::span<const float> queries, std::span<const 
         auto query = queries.subspan(qi * d, d);
         auto& members = member_buffers[thread]; members.resize(ids_.size());
         for (std::size_t i = 0; i < ids_.size(); ++i) members[i] = packed.distance(query, Id(i), d);
-        QueryContext context{leaves_, std::vector<std::size_t>(n), {}, {}, std::vector<double>(n), 0};
+        QueryContext context{leaves_, std::vector<std::size_t>(n), {}, {}, {}, std::vector<double>(n), 0};
         for (std::size_t l = 0; l < n; ++l) context.centroid_distances[l] = centroid_l2(query, leaves_[l].geometry.centroid);
         if (truth[qi].size() != recall_k) throw std::invalid_argument("cell diagnostic requires 10 truth IDs");
         for (Id id : truth[qi]) {
             if (id >= position.size()) throw std::invalid_argument("cell diagnostic truth ID");
             auto leaf = leaf_containing(leaves_, position[id]);
-            ++context.profits[leaf]; context.truth_leaves.push_back(leaf);
+            ++context.profits[leaf]; context.truth_leaves.push_back(leaf); context.truth_rows.push_back(position[id]);
             context.truth_distances.push_back(members[position[id]]);
             context.reference = std::max(context.reference, members[position[id]]);
         }
@@ -108,11 +136,25 @@ CellStudy Index::diagnose_cells(std::span<const float> queries, std::span<const 
         double ball_ns = nanoseconds(ball_start) / double(n);
         for (std::size_t l = 0; l < n; ++l)
             for (std::size_t i = leaves_[l].offset; i < leaves_[l].offset + leaves_[l].size; ++i) nearest[l] = std::min(nearest[l], members[i]);
-        row.scores.push_back(ranked_score("centroid", context, zero, 0));
-        if (geometry_metadata_) row.scores.push_back(ranked_score("ball", context, ball, ball_ns));
-        std::vector<double> widest_joint;
+        row.scores.push_back(ranked_score("centroid", context, zero, 0, budgets));
+        if (geometry_metadata_) row.scores.push_back(ranked_score("ball", context, ball, ball_ns, budgets));
+        if (options.statistical) {
+            auto projection = project_query(spread, query);
+            for (bool directional : {false, true}) for (double beta : options.betas) {
+                if (directional && beta == 0) continue;  // identical to the isotropic D + r̄² score
+                std::vector<double> estimate(n);
+                auto estimate_start = Clock::now();
+                for (std::size_t l = 0; l < n; ++l)
+                    estimate[l] = expected_nearest(spread, l, context.centroid_distances[l], projection, beta, directional);
+                std::ostringstream name;
+                name << (directional ? "evt-pca" + std::to_string(spread.axes) : std::string("evt-iso")) << "-b" << beta;
+                row.scores.push_back(ranked_score(name.str(), context, estimate, nanoseconds(estimate_start) / double(n), budgets, false));
+            }
+        }
+        std::vector<double> widest_joint = ball;
         std::vector<std::size_t> direction_counts{options.small_directions};
         if (options.directions != options.small_directions) direction_counts.push_back(options.directions);
+        if (!options.slabs) direction_counts.clear();
         for (auto used : direction_counts) {
             auto prefix = "knn" + std::to_string(used);
             auto timed_bounds = [&](std::size_t sweeps, bool joint) {
@@ -127,9 +169,9 @@ CellStudy Index::diagnose_cells(std::span<const float> queries, std::span<const 
             auto [single, single_ns] = timed_bounds(0, false);
             auto [cheap, cheap_ns] = timed_bounds(options.cheap_sweeps, true);
             auto [joint, joint_ns] = timed_bounds(options.converged_sweeps, true);
-            row.scores.push_back(ranked_score(prefix + "-single", context, single, single_ns));
-            row.scores.push_back(ranked_score(prefix + "-joint" + std::to_string(options.cheap_sweeps), context, cheap, cheap_ns));
-            row.scores.push_back(ranked_score(prefix + "-joint", context, joint, joint_ns));
+            row.scores.push_back(ranked_score(prefix + "-single", context, single, single_ns, budgets));
+            row.scores.push_back(ranked_score(prefix + "-joint" + std::to_string(options.cheap_sweeps), context, cheap, cheap_ns, budgets));
+            row.scores.push_back(ranked_score(prefix + "-joint", context, joint, joint_ns, budgets));
             widest_joint = std::move(joint);
         }
         if (options.hull) {
@@ -162,10 +204,28 @@ CellStudy Index::diagnose_cells(std::span<const float> queries, std::span<const 
                         std::span(members).subspan(leaf.offset, leaf.size),
                         {std::nullopt, options.rank_gap, options.rank_iterations}).upper;
                 }
-                row.scores.push_back(ranked_score("hull-rank", context, estimate, nanoseconds(rank_start) / double(n)));
+                row.scores.push_back(ranked_score("hull-rank", context, estimate, nanoseconds(rank_start) / double(n), budgets));
             }
         }
-        row.scores.push_back(ranked_score("nearest-member", context, nearest, 0));
+        row.scores.push_back(ranked_score("nearest-member", context, nearest, 0, budgets));
+        if (options.policies) {
+            auto order = order_by(n, [&](std::size_t l) { return context.centroid_distances[l]; });
+            for (std::size_t s = 0; s < spills.size(); ++s) {
+                CellScore spill; spill.ranked = false; spill.lower_bound = false; spill.spill_fraction = spills[s].fraction;
+                std::ostringstream name; name << "spill-" << options.spill_taus[s]; spill.name = name.str();
+                for (auto budget : budgets)
+                    spill.coverage.push_back(spilled_coverage(order, spills[s], spill_plan.leaf_of_row, context.truth_rows, budget));
+                row.scores.push_back(spill);
+            }
+            for (auto window : options.patience_windows) {
+                CellScore adaptive; adaptive.ranked = false; adaptive.lower_bound = false;
+                adaptive.name = "patience-" + std::to_string(window);
+                auto scan = patience_scan(order, leaves_, members, context.truth_leaves, recall_k, window, policy_cap);
+                adaptive.adaptive_vectors = double(scan.vectors); adaptive.adaptive_leaves = double(scan.leaves);
+                adaptive.adaptive_coverage = scan.coverage;
+                row.scores.push_back(adaptive);
+            }
+        }
     });
     return study;
 }

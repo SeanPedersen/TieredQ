@@ -13,6 +13,14 @@ double l2(std::span<const float> a, std::span<const float> b);
 std::span<const float> row(std::span<const float> data, std::size_t d, Id id);
 std::vector<Group> cluster(Matrix data, std::size_t d, const Group& ids,
                            std::size_t count, const BuildOptions& options, std::mt19937& rng);
+// Lifts the hierarchical restriction at coarse boundaries; returns how many vectors changed leaf.
+// Leaves that become empty are removed together with their `owners` entry.
+std::size_t refine_leaves(Matrix data, std::size_t d, std::vector<Group>& leaves, std::vector<std::size_t>& owners,
+                          std::span<const float> parent_centroids, const BuildOptions& options);
+// Leaves from per-row labels (empty labels dropped); returns parent member groups and sets
+// `owners[leaf]` from clustering the leaf centroids into `options.coarse` parents.
+std::vector<Group> external_leaves(Matrix data, std::size_t d, const BuildOptions& options, std::mt19937& rng,
+                                   std::vector<Group>& leaves, std::vector<std::size_t>& owners);
 std::vector<Group> adaptive(Matrix data, std::size_t d,
                             std::vector<Group> coarse, const BuildOptions& options,
                             std::vector<std::size_t>& owners, std::mt19937& rng);

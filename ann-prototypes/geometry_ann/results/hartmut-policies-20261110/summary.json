@@ -1,0 +1,242 @@
+{
+  "qwen-32k-emeans4": {
+    "fixed": {
+      "centroid": {
+        "coverage_35000": 0.968,
+        "coverage_50000": 0.976,
+        "coverage_70000": 0.9828,
+        "coverage_88408": 0.9864,
+        "coverage_120000": 0.9884000000000001,
+        "coverage_176816": 0.992,
+        "coverage_250000": 0.9948,
+        "coverage_350000": 0.9952,
+        "coverage_442041": 0.9968,
+        "coverage_600000": 0.9984
+      },
+      "spill-0.02": {
+        "coverage_35000": 0.9692,
+        "coverage_50000": 0.976,
+        "coverage_70000": 0.9824,
+        "coverage_88408": 0.9864,
+        "coverage_120000": 0.9888,
+        "coverage_176816": 0.9916,
+        "coverage_250000": 0.9944,
+        "coverage_350000": 0.9952,
+        "coverage_442041": 0.9956,
+        "coverage_600000": 0.9976
+      },
+      "spill-0.05": {
+        "coverage_35000": 0.9688,
+        "coverage_50000": 0.9752,
+        "coverage_70000": 0.9788,
+        "coverage_88408": 0.9852,
+        "coverage_120000": 0.9884000000000001,
+        "coverage_176816": 0.9908,
+        "coverage_250000": 0.994,
+        "coverage_350000": 0.9952,
+        "coverage_442041": 0.996,
+        "coverage_600000": 0.9968
+      },
+      "spill-0.1": {
+        "coverage_35000": 0.9672,
+        "coverage_50000": 0.9736,
+        "coverage_70000": 0.98,
+        "coverage_88408": 0.982,
+        "coverage_120000": 0.9892,
+        "coverage_176816": 0.9912,
+        "coverage_250000": 0.9936,
+        "coverage_350000": 0.9956,
+        "coverage_442041": 0.9964,
+        "coverage_600000": 0.9972
+      },
+      "spill-0.2": {
+        "coverage_35000": 0.9636,
+        "coverage_50000": 0.9748,
+        "coverage_70000": 0.9792,
+        "coverage_88408": 0.9816,
+        "coverage_120000": 0.9868,
+        "coverage_176816": 0.992,
+        "coverage_250000": 0.994,
+        "coverage_350000": 0.9952,
+        "coverage_442041": 0.9968,
+        "coverage_600000": 0.9972
+      },
+      "spill-0.4": {
+        "coverage_35000": 0.9616,
+        "coverage_50000": 0.9728,
+        "coverage_70000": 0.978,
+        "coverage_88408": 0.9824,
+        "coverage_120000": 0.9864,
+        "coverage_176816": 0.9912,
+        "coverage_250000": 0.9932,
+        "coverage_350000": 0.9948,
+        "coverage_442041": 0.9968,
+        "coverage_600000": 0.9976
+      }
+    },
+    "spill_fraction": {
+      "spill-0.02": 0.1210653125845863,
+      "spill-0.05": 0.22618493775975382,
+      "spill-0.1": 0.3934529624674083,
+      "spill-0.2": 0.6235997485754438,
+      "spill-0.4": 0.8367526416941047
+    },
+    "patience": {
+      "patience-4": {
+        "vectors": 3203.876,
+        "leaves": 8.212,
+        "coverage": 0.8676
+      },
+      "patience-8": {
+        "vectors": 5492.432,
+        "leaves": 14.024,
+        "coverage": 0.9092
+      },
+      "patience-16": {
+        "vectors": 9504.624,
+        "leaves": 24.636,
+        "coverage": 0.9396
+      },
+      "patience-32": {
+        "vectors": 17517.736,
+        "leaves": 45.324,
+        "coverage": 0.9636
+      },
+      "patience-64": {
+        "vectors": 31150.752,
+        "leaves": 81.916,
+        "coverage": 0.9784
+      },
+      "patience-128": {
+        "vectors": 57208.932,
+        "leaves": 150.856,
+        "coverage": 0.9848
+      },
+      "patience-256": {
+        "vectors": 109431.62,
+        "leaves": 286.968,
+        "coverage": 0.9904
+      }
+    }
+  },
+  "qwen-32k-lloyd": {
+    "fixed": {
+      "centroid": {
+        "coverage_35000": 0.9644,
+        "coverage_50000": 0.9736,
+        "coverage_70000": 0.9808,
+        "coverage_88408": 0.9836,
+        "coverage_120000": 0.9876,
+        "coverage_176816": 0.9916,
+        "coverage_250000": 0.994,
+        "coverage_350000": 0.9964,
+        "coverage_442041": 0.9976,
+        "coverage_600000": 0.9988
+      },
+      "spill-0.02": {
+        "coverage_35000": 0.9664,
+        "coverage_50000": 0.9744,
+        "coverage_70000": 0.9816,
+        "coverage_88408": 0.986,
+        "coverage_120000": 0.988,
+        "coverage_176816": 0.992,
+        "coverage_250000": 0.9944,
+        "coverage_350000": 0.9964,
+        "coverage_442041": 0.9968,
+        "coverage_600000": 0.998
+      },
+      "spill-0.05": {
+        "coverage_35000": 0.9632000000000001,
+        "coverage_50000": 0.974,
+        "coverage_70000": 0.9792,
+        "coverage_88408": 0.9836,
+        "coverage_120000": 0.9884000000000001,
+        "coverage_176816": 0.9904,
+        "coverage_250000": 0.9944,
+        "coverage_350000": 0.9956,
+        "coverage_442041": 0.9968,
+        "coverage_600000": 0.9976
+      },
+      "spill-0.1": {
+        "coverage_35000": 0.962,
+        "coverage_50000": 0.9736,
+        "coverage_70000": 0.9772,
+        "coverage_88408": 0.9812,
+        "coverage_120000": 0.986,
+        "coverage_176816": 0.99,
+        "coverage_250000": 0.9928,
+        "coverage_350000": 0.9956,
+        "coverage_442041": 0.9968,
+        "coverage_600000": 0.9972
+      },
+      "spill-0.2": {
+        "coverage_35000": 0.9596,
+        "coverage_50000": 0.9688,
+        "coverage_70000": 0.9768,
+        "coverage_88408": 0.9812,
+        "coverage_120000": 0.9852,
+        "coverage_176816": 0.9904,
+        "coverage_250000": 0.992,
+        "coverage_350000": 0.9952,
+        "coverage_442041": 0.9968,
+        "coverage_600000": 0.9976
+      },
+      "spill-0.4": {
+        "coverage_35000": 0.9592,
+        "coverage_50000": 0.9704,
+        "coverage_70000": 0.9772,
+        "coverage_88408": 0.98,
+        "coverage_120000": 0.9852,
+        "coverage_176816": 0.9908,
+        "coverage_250000": 0.992,
+        "coverage_350000": 0.9956,
+        "coverage_442041": 0.9972,
+        "coverage_600000": 0.998
+      }
+    },
+    "spill_fraction": {
+      "spill-0.02": 0.1510435171024236,
+      "spill-0.05": 0.2527996545118028,
+      "spill-0.1": 0.41657988175987687,
+      "spill-0.2": 0.6439535097580847,
+      "spill-0.4": 0.8524930314745585
+    },
+    "patience": {
+      "patience-4": {
+        "vectors": 2884.008,
+        "leaves": 8.316,
+        "coverage": 0.8568
+      },
+      "patience-8": {
+        "vectors": 4783.36,
+        "leaves": 14.22,
+        "coverage": 0.894
+      },
+      "patience-16": {
+        "vectors": 8345.516,
+        "leaves": 25.376,
+        "coverage": 0.9268
+      },
+      "patience-32": {
+        "vectors": 14505.796,
+        "leaves": 45.316,
+        "coverage": 0.9516
+      },
+      "patience-64": {
+        "vectors": 25822.692,
+        "leaves": 82.2,
+        "coverage": 0.9664
+      },
+      "patience-128": {
+        "vectors": 48081.02,
+        "leaves": 155.588,
+        "coverage": 0.9772
+      },
+      "patience-256": {
+        "vectors": 90635.148,
+        "leaves": 298.188,
+        "coverage": 0.9872
+      }
+    }
+  }
+}

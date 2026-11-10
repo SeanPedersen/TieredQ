@@ -7,6 +7,7 @@
 // concave dual φ(w) = 2S(w) - wᵀGw reaches the exact distance from q to the slab polytope.
 #include "cell_bounds.h"
 #include "parallel.h"
+#include "scan_policies.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -93,20 +94,16 @@ CellSlabs build_cell_slabs(Matrix packed, std::size_t d, std::span<const Leaf> l
     if (!directions || directions >= n || directions > max_directions)
         throw std::invalid_argument("cell directions must be within 1..min(leaves-1, 64)");
     CellSlabs slabs; slabs.directions = directions;
-    slabs.neighbors.resize(n * directions); slabs.low.resize(n * directions); slabs.high.resize(n * directions);
+    slabs.low.resize(n * directions); slabs.high.resize(n * directions);
     slabs.gram.resize(n * directions * directions);
     const double eps = error_factor(d);
+    slabs.neighbors = nearest_leaves(leaves, directions, threads);
     parallel_for(n, threads, [&](std::size_t l, std::size_t) {
         const auto& center = leaves[l].geometry.centroid;
-        std::vector<std::pair<double, Id>> ranked; ranked.reserve(n - 1);
-        for (std::size_t other = 0; other < n; ++other)
-            if (other != l) ranked.emplace_back(centroid_l2(center, leaves[other].geometry.centroid), Id(other));
-        std::partial_sort(ranked.begin(), ranked.begin() + directions, ranked.end());
         const std::size_t base = l * directions;
         std::vector<double> axes(directions * d);
         for (std::size_t e = 0; e < directions; ++e) {
-            slabs.neighbors[base + e] = ranked[e].second;
-            const auto& target = leaves[ranked[e].second].geometry.centroid;
+            const auto& target = leaves[slabs.neighbors[base + e]].geometry.centroid;
             for (std::size_t j = 0; j < d; ++j) axes[e * d + j] = double(target[j]) - double(center[j]);
         }
         for (std::size_t e = 0; e < directions; ++e) for (std::size_t f = 0; f <= e; ++f) {

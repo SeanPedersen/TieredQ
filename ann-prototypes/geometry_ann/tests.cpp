@@ -57,6 +57,59 @@ void check_index(std::span<const float> data, std::size_t d, bool local_kmeans) 
     }
 }
 }
+// Thread count must not change partitions: limited searches would expose any difference.
+void check_threaded_build(std::span<const float> data, std::size_t d, std::size_t reassign_parents) {
+    BuildOptions serial; serial.coarse = 6; serial.children = 9; serial.leaf_budget = 54; serial.training_sample = 64;
+    serial.reassign_parents = reassign_parents; serial.geometry_metadata = true; serial.graph_degree = 4;
+    auto threaded = serial; threaded.build_threads = 5;
+    Index one(data, d, serial), many(data, d, threaded);
+    require(one.leaf_count() == many.leaf_count(), "threaded build changed leaf count");
+    for (std::size_t q = 0; q < 25; ++q) {
+        auto query = data.subspan(q * d, d);
+        SearchOptions options; options.leaf_scans = 2; options.ordering = Ordering::centroid;
+        auto a = one.search(query, options), b = many.search(query, options);
+        require(a.vectors_scanned == b.vectors_scanned && a.neighbors.size() == b.neighbors.size(), "threaded build changed leaves");
+        for (std::size_t i = 0; i < a.neighbors.size(); ++i)
+            require(a.neighbors[i].id == b.neighbors[i].id && a.neighbors[i].distance == b.neighbors[i].distance, "threaded build changed partitions");
+        // Reassignment moves members across coarse cells: complete flat and graph searches stay exact.
+        auto expected = brute(data, query, 10);
+        for (auto routing : {Routing::flat, Routing::hierarchy}) {
+            SearchOptions complete; complete.routing = routing; complete.leaf_scans = many.leaf_count(); complete.ordering = Ordering::bound;
+            complete.metadata_evaluations = 100000;
+            auto found = many.search(query, complete);
+            require(found.neighbors.size() == expected.size(), "reassigned index lost results");
+            for (std::size_t i = 0; i < expected.size(); ++i)
+                require(found.neighbors[i].id == expected[i].id, "reassigned index differs from brute force");
+        }
+    }
+    if (reassign_parents) require(one.build_statistics().reassigned_vectors == many.build_statistics().reassigned_vectors, "threaded reassignment moved different vectors");
+}
+// Externally trained labels (with unused label values) must yield exact complete searches.
+void check_external_assignments(std::span<const float> data, std::size_t d) {
+    const std::size_t rows = data.size() / d, unused_stride = 3, label_values = 40;
+    std::vector<std::uint32_t> labels(rows);
+    for (std::size_t i = 0; i < rows; ++i) labels[i] = std::uint32_t((i * 7919) % label_values) * unused_stride;
+    BuildOptions build; build.coarse = 5; build.assignments = labels; build.geometry_metadata = true; build.graph_degree = 4;
+    Index index(data, d, build);
+    require(index.leaf_count() == label_values, "external labels must define the leaves");
+    for (std::size_t q = 0; q < 20; ++q) {
+        auto query = data.subspan(q * d, d);
+        auto expected = brute(data, query, 10);
+        for (auto routing : {Routing::flat, Routing::hierarchy, Routing::graph}) {
+            SearchOptions complete; complete.routing = routing; complete.leaf_scans = index.leaf_count();
+            complete.ordering = Ordering::centroid; complete.metadata_evaluations = 100000; complete.graph_seeds = 4;
+            auto found = index.search(query, complete);
+            require(found.neighbors.size() == expected.size(), "external partition lost results");
+            if (routing != Routing::graph)
+                for (std::size_t i = 0; i < expected.size(); ++i)
+                    require(found.neighbors[i].id == expected[i].id, "external partition differs from brute force");
+        }
+    }
+    BuildOptions mismatched = build; std::vector<std::uint32_t> short_labels(rows - 1); mismatched.assignments = short_labels;
+    bool rejected = false;
+    try { Index invalid(data, d, mismatched); } catch (const std::invalid_argument&) { rejected = true; }
+    require(rejected, "label count mismatch must be rejected");
+}
 int main() {
     try {
         constexpr std::size_t dimension = 9, population = 193;
@@ -169,6 +222,8 @@ int main() {
             require(rejected,"SQ8 accepted missing radius metadata");
         }
         check_index(data, dimension, false); check_index(data, dimension, true);
+        for (std::size_t parents : {0, 2, 6}) check_threaded_build(data, dimension, parents);
+        check_external_assignments(data, dimension);
         std::vector<float> duplicates(31 * dimension, 2); check_index(duplicates, dimension, false);
         std::vector<float> singleton(dimension, 0); check_index(singleton, dimension, false);
         std::vector<float> wide(population * 33);

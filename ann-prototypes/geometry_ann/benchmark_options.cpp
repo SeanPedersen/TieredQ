@@ -18,7 +18,7 @@ std::size_t number(const std::string& text) {
 BenchmarkOptions parse_options(int argc, char** argv) {
     const std::vector<std::string> known = {"--base", "--queries", "--truth", "--n", "--nq", "--dim", "--seed",
         "--coarse", "--children", "--leaves", "--target-size", "--sample", "--iterations", "--directions",
-        "--pca-sample", "--metadata", "--variant", "--split", "--vectors", "--leaf-scans", "--routing", "--ordering", "--graph-degree", "--graph-parents", "--graph-refinements", "--graph-seeds", "--metadata-budgets", "--weights", "--bounds", "--controls", "--settings", "--shared-directions", "--shared-sample", "--evaluation-queries", "--evaluation-truth", "--evaluation-output", "--evaluation-nq", "--repeats", "--evaluation-fixed-settings", "--int8-base", "--int8-scales", "--int8-offsets", "--geometry-diagnostics", "--evaluation-group-bounds"};
+        "--pca-sample", "--metadata", "--variant", "--split", "--vectors", "--leaf-scans", "--routing", "--ordering", "--graph-degree", "--graph-parents", "--graph-refinements", "--graph-seeds", "--metadata-budgets", "--weights", "--bounds", "--controls", "--settings", "--shared-directions", "--shared-sample", "--evaluation-queries", "--evaluation-truth", "--evaluation-output", "--evaluation-nq", "--repeats", "--evaluation-fixed-settings", "--int8-base", "--int8-scales", "--int8-offsets", "--geometry-diagnostics", "--evaluation-group-bounds", "--build-threads", "--search-cpu", "--reassign-parents", "--reassign-iterations", "--memory-output", "--assignments"};
     std::map<std::string, std::string> args;
     for (int i = 1; i < argc; i += 2) {
         if (i + 1 == argc) throw std::invalid_argument("options require a value; see README.md");
@@ -50,6 +50,13 @@ BenchmarkOptions parse_options(int argc, char** argv) {
     build.training_sample = get("--sample", build.training_sample); build.iterations = get("--iterations", build.iterations);
     build.directions = get("--directions", build.directions); build.pca_sample = get("--pca-sample", build.pca_sample);
     build.seed = std::uint32_t(get("--seed", build.seed));
+    build.build_threads = get("--build-threads", build.build_threads);
+    if (!build.build_threads) throw std::invalid_argument("build threads must be positive");
+    if (args.contains("--search-cpu")) options.search_cpu = get("--search-cpu", 0);
+    build.reassign_parents = get("--reassign-parents", build.reassign_parents);
+    build.reassign_iterations = get("--reassign-iterations", build.reassign_iterations);
+    if (args.contains("--memory-output")) options.memory_output = args.at("--memory-output");
+    if (args.contains("--assignments")) options.assignments_file = args.at("--assignments");
     if (args.contains("--split")) options.split = args.at("--split");
     if (options.split != "variance" && options.split != "kmeans") throw std::invalid_argument("split must be variance or kmeans");
     build.local_kmeans_split = options.split == "kmeans";

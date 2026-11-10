@@ -1,0 +1,414 @@
+{
+  "faiss-32k": {
+    "memory": {
+      "build_s": 609.50499562599,
+      "build_threads": 32,
+      "nlist": 32768,
+      "build_peak_rss": 23428005888,
+      "build_peak_anon": 14342979584,
+      "build_peak_file": 9085026304,
+      "build_hwm": 23428005888,
+      "serving_rss": 14338097152,
+      "serving_anon": 14305878016,
+      "serving_file": 32219136
+    },
+    "selections": [
+      {
+        "target": "0.95",
+        "status": "SELECTED",
+        "setting": "nprobe96",
+        "recall": 0.9557333333333333,
+        "clusters": 96.0,
+        "vectors": 31300.668,
+        "p50_ms": 12.671370000000001,
+        "routing_ms": null
+      },
+      {
+        "target": "0.99",
+        "status": "SELECTED",
+        "setting": "nprobe1024",
+        "recall": 0.988,
+        "clusters": 1024.0,
+        "vectors": 315460.564,
+        "p50_ms": 49.866353000000004,
+        "routing_ms": null
+      },
+      {
+        "target": "0.995",
+        "status": "NOT_REACHED_DIAGNOSTIC",
+        "setting": "nprobe1536",
+        "recall": 0.99,
+        "clusters": 1536.0,
+        "vectors": 470999.248,
+        "p50_ms": 70.24919899999999,
+        "routing_ms": null
+      }
+    ]
+  },
+  "faiss-8k": {
+    "memory": {
+      "build_s": 137.21236373501597,
+      "build_threads": 32,
+      "nlist": 8192,
+      "build_peak_rss": 23257800704,
+      "build_peak_anon": 14172790784,
+      "build_peak_file": 9085132800,
+      "build_hwm": 23257800704,
+      "serving_rss": 14183276544,
+      "serving_anon": 14150950912,
+      "serving_file": 32325632
+    },
+    "selections": [
+      {
+        "target": "0.95",
+        "status": "SELECTED",
+        "setting": "nprobe48",
+        "recall": 0.9450666666666667,
+        "clusters": 48.0,
+        "vectors": 62029.48,
+        "p50_ms": 9.868808999999999,
+        "routing_ms": null
+      },
+      {
+        "target": "0.99",
+        "status": "SELECTED",
+        "setting": "nprobe256",
+        "recall": 0.9833333333333333,
+        "clusters": 256.0,
+        "vectors": 315817.0906666667,
+        "p50_ms": 42.960587,
+        "routing_ms": null
+      },
+      {
+        "target": "0.995",
+        "status": "NOT_REACHED_DIAGNOSTIC",
+        "setting": "nprobe512",
+        "recall": 0.9897333333333334,
+        "clusters": 512.0,
+        "vectors": 625698.76,
+        "p50_ms": 82.869527,
+        "routing_ms": null
+      }
+    ]
+  },
+  "ours-32k-p0": {
+    "memory": {
+      "build_s": 230.068,
+      "clustering_s": 133.965,
+      "reassign_s": 0,
+      "reassigned_vectors": 0,
+      "graph_s": 84.706,
+      "leaves": 32602,
+      "index_bytes": 9232645412,
+      "build_peak_rss": 18604138496,
+      "build_peak_anon": 9546190848,
+      "build_peak_file": 9057947648,
+      "build_hwm": 18604138496,
+      "serving_rss": 9480396800,
+      "serving_anon": 9475452928,
+      "serving_file": 4943872
+    },
+    "selections": [
+      {
+        "target": "0.95",
+        "status": "SELECTED",
+        "setting": "graph m8192 cap120000",
+        "recall": 0.954,
+        "clusters": 317.617,
+        "vectors": 120000.0,
+        "p50_ms": 21.7441,
+        "routing_ms": 6.00911
+      },
+      {
+        "target": "0.95",
+        "status": "SELECTED",
+        "setting": "flat m32896 cap70000",
+        "recall": 0.949467,
+        "clusters": 189.267,
+        "vectors": 70000.0,
+        "p50_ms": 25.237,
+        "routing_ms": 14.3122
+      },
+      {
+        "target": "0.99",
+        "status": "NOT_REACHED_DIAGNOSTIC",
+        "setting": "graph m16384 cap600000",
+        "recall": 0.980533,
+        "clusters": 1606.88,
+        "vectors": 600000.0,
+        "p50_ms": 91.40169999999999,
+        "routing_ms": 12.9735
+      },
+      {
+        "target": "0.99",
+        "status": "SELECTED",
+        "setting": "flat m32896 cap442041",
+        "recall": 0.985733,
+        "clusters": 1190.21,
+        "vectors": 442041.0,
+        "p50_ms": 74.6622,
+        "routing_ms": 14.3124
+      },
+      {
+        "target": "0.995",
+        "status": "NOT_REACHED_DIAGNOSTIC",
+        "setting": "graph m16384 cap600000",
+        "recall": 0.980533,
+        "clusters": 1606.88,
+        "vectors": 600000.0,
+        "p50_ms": 91.40169999999999,
+        "routing_ms": 12.9735
+      },
+      {
+        "target": "0.995",
+        "status": "NOT_REACHED_DIAGNOSTIC",
+        "setting": "flat m32896 cap600000",
+        "recall": 0.988133,
+        "clusters": 1626.63,
+        "vectors": 600000.0,
+        "p50_ms": 95.5114,
+        "routing_ms": 14.3279
+      }
+    ]
+  },
+  "ours-32k-p8": {
+    "memory": {
+      "build_s": 1539.68,
+      "clustering_s": 133.695,
+      "reassign_s": 1312.99,
+      "reassigned_vectors": 4520396,
+      "graph_s": 81.6979,
+      "leaves": 32602,
+      "index_bytes": 9232645412,
+      "build_peak_rss": 18615742464,
+      "build_peak_anon": 9557811200,
+      "build_peak_file": 9057931264,
+      "build_hwm": 18615742464,
+      "serving_rss": 9492000768,
+      "serving_anon": 9487073280,
+      "serving_file": 4927488
+    },
+    "selections": [
+      {
+        "target": "0.95",
+        "status": "SELECTED",
+        "setting": "graph m8192 cap120000",
+        "recall": 0.9508,
+        "clusters": 398.283,
+        "vectors": 120000.0,
+        "p50_ms": 23.067700000000002,
+        "routing_ms": 6.75841
+      },
+      {
+        "target": "0.95",
+        "status": "SELECTED",
+        "setting": "flat m32896 cap35000",
+        "recall": 0.952,
+        "clusters": 117.475,
+        "vectors": 35000.0,
+        "p50_ms": 20.6953,
+        "routing_ms": 14.1149
+      },
+      {
+        "target": "0.99",
+        "status": "NOT_REACHED_DIAGNOSTIC",
+        "setting": "graph m16384 cap600000",
+        "recall": 0.9752,
+        "clusters": 2021.5,
+        "vectors": 600000.0,
+        "p50_ms": 95.4802,
+        "routing_ms": 14.6091
+      },
+      {
+        "target": "0.99",
+        "status": "SELECTED",
+        "setting": "flat m32896 cap350000",
+        "recall": 0.988267,
+        "clusters": 1185.13,
+        "vectors": 350000.0,
+        "p50_ms": 63.4773,
+        "routing_ms": 14.219
+      },
+      {
+        "target": "0.995",
+        "status": "NOT_REACHED_DIAGNOSTIC",
+        "setting": "graph m16384 cap600000",
+        "recall": 0.9752,
+        "clusters": 2021.5,
+        "vectors": 600000.0,
+        "p50_ms": 95.4802,
+        "routing_ms": 14.6091
+      },
+      {
+        "target": "0.995",
+        "status": "NOT_REACHED_DIAGNOSTIC",
+        "setting": "flat m32896 cap600000",
+        "recall": 0.990667,
+        "clusters": 2042.29,
+        "vectors": 600000.0,
+        "p50_ms": 98.4027,
+        "routing_ms": 14.327200000000001
+      }
+    ]
+  },
+  "ours-8k-p0": {
+    "memory": {
+      "build_s": 77.3887,
+      "clustering_s": 55.6905,
+      "reassign_s": 0,
+      "reassigned_vectors": 0,
+      "graph_s": 10.7933,
+      "leaves": 8192,
+      "index_bytes": 9124765508,
+      "build_peak_rss": 18363379712,
+      "build_peak_anon": 9305423872,
+      "build_peak_file": 9057955840,
+      "build_hwm": 18363379712,
+      "serving_rss": 9225469952,
+      "serving_anon": 9220517888,
+      "serving_file": 4952064
+    },
+    "selections": [
+      {
+        "target": "0.95",
+        "status": "SELECTED",
+        "setting": "graph m4096 cap176816",
+        "recall": 0.9504,
+        "clusters": 125.8,
+        "vectors": 176816.0,
+        "p50_ms": 25.4941,
+        "routing_ms": 2.8589499999999997
+      },
+      {
+        "target": "0.95",
+        "status": "SELECTED",
+        "setting": "flat m8256 cap176816",
+        "recall": 0.955733,
+        "clusters": 126.473,
+        "vectors": 176816.0,
+        "p50_ms": 27.042099999999998,
+        "routing_ms": 3.55166
+      },
+      {
+        "target": "0.99",
+        "status": "NOT_REACHED_DIAGNOSTIC",
+        "setting": "graph m4096 cap600000",
+        "recall": 0.978667,
+        "clusters": 414.281,
+        "vectors": 600000.0,
+        "p50_ms": 79.44760000000001,
+        "routing_ms": 3.0695
+      },
+      {
+        "target": "0.99",
+        "status": "NOT_REACHED_DIAGNOSTIC",
+        "setting": "flat m8256 cap600000",
+        "recall": 0.983467,
+        "clusters": 418.363,
+        "vectors": 600000.0,
+        "p50_ms": 81.0899,
+        "routing_ms": 3.56739
+      },
+      {
+        "target": "0.995",
+        "status": "NOT_REACHED_DIAGNOSTIC",
+        "setting": "graph m4096 cap600000",
+        "recall": 0.978667,
+        "clusters": 414.281,
+        "vectors": 600000.0,
+        "p50_ms": 79.44760000000001,
+        "routing_ms": 3.0695
+      },
+      {
+        "target": "0.995",
+        "status": "NOT_REACHED_DIAGNOSTIC",
+        "setting": "flat m8256 cap600000",
+        "recall": 0.983467,
+        "clusters": 418.363,
+        "vectors": 600000.0,
+        "p50_ms": 81.0899,
+        "routing_ms": 3.56739
+      }
+    ]
+  },
+  "ours-8k-p4": {
+    "memory": {
+      "build_s": 389.995,
+      "clustering_s": 55.5934,
+      "reassign_s": 312.923,
+      "reassigned_vectors": 4773167,
+      "graph_s": 10.4439,
+      "leaves": 8192,
+      "index_bytes": 9124765508,
+      "build_peak_rss": 18379259904,
+      "build_peak_anon": 9321320448,
+      "build_peak_file": 9057939456,
+      "build_hwm": 18379259904,
+      "serving_rss": 9235582976,
+      "serving_anon": 9230647296,
+      "serving_file": 4935680
+    },
+    "selections": [
+      {
+        "target": "0.95",
+        "status": "SELECTED",
+        "setting": "graph m4096 cap88408",
+        "recall": 0.947333,
+        "clusters": 77.5907,
+        "vectors": 88408.0,
+        "p50_ms": 14.2332,
+        "routing_ms": 2.6614899999999997
+      },
+      {
+        "target": "0.95",
+        "status": "SELECTED",
+        "setting": "flat m8256 cap70000",
+        "recall": 0.950267,
+        "clusters": 62.2227,
+        "vectors": 70000.0,
+        "p50_ms": 13.607899999999999,
+        "routing_ms": 3.63623
+      },
+      {
+        "target": "0.99",
+        "status": "NOT_REACHED_DIAGNOSTIC",
+        "setting": "graph m4096 cap600000",
+        "recall": 0.977867,
+        "clusters": 511.697,
+        "vectors": 600000.0,
+        "p50_ms": 80.4472,
+        "routing_ms": 2.9235700000000002
+      },
+      {
+        "target": "0.99",
+        "status": "SELECTED",
+        "setting": "flat m8256 cap442041",
+        "recall": 0.9864,
+        "clusters": 379.744,
+        "vectors": 442041.0,
+        "p50_ms": 61.8744,
+        "routing_ms": 3.70586
+      },
+      {
+        "target": "0.995",
+        "status": "NOT_REACHED_DIAGNOSTIC",
+        "setting": "graph m4096 cap600000",
+        "recall": 0.977867,
+        "clusters": 511.697,
+        "vectors": 600000.0,
+        "p50_ms": 80.4472,
+        "routing_ms": 2.9235700000000002
+      },
+      {
+        "target": "0.995",
+        "status": "NOT_REACHED_DIAGNOSTIC",
+        "setting": "flat m8256 cap600000",
+        "recall": 0.988667,
+        "clusters": 514.936,
+        "vectors": 600000.0,
+        "p50_ms": 82.23,
+        "routing_ms": 3.69734
+      }
+    ]
+  }
+}

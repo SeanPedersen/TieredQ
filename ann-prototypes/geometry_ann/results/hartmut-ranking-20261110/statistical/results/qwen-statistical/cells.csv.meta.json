@@ -1,0 +1,1 @@
+{"leaves": 8192, "build_s": 951.178, "slab_build_s": 1.08e-07, "slab_bytes": 0, "spread_build_s": 5.95772, "spread_bytes": 1245184, "directions": 32, "small_directions": 8, "hull_iterations": 64, "cheap_sweeps": 4, "converged_sweeps": 256, "threads": 32, "queries": 250}

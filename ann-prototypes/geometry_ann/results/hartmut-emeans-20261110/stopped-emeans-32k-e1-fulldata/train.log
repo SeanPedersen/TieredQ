@@ -1,0 +1,3 @@
+This is e-means. If you use our work or find it useful, please cite the e-means paper (Bessa et al., see faiss/contrib/e_means/README.md).
+Clustering 8840823 points in 1024D to 32768 clusters, 1 epochs (batch 131072, alpha0 0.206, throughput batch law, auto for d > 16)
+  Epoch 1 / 1, iteration 68 / 68 (509.48 s): objective=4.36679e+06

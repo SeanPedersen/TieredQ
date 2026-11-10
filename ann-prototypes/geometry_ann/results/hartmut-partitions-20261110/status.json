@@ -1,0 +1,5 @@
+{
+  "stage": "stopped_by_operator",
+  "utc": "2026-11-10T03:43:48Z",
+  "reason": "hierarchical assignment found to be the scan-count bottleneck; superseded by leaf-reassignment study"
+}

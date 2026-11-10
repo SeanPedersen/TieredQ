@@ -29,5 +29,7 @@ QuantizedDataset load_quantized(const std::string& codes, const std::string& sca
 Dataset synthetic(std::size_t count, std::size_t queries, std::size_t dimension, std::uint32_t seed);
 Dataset load_dataset(const std::string& base, const std::string& queries, const std::string& truth,
                      std::size_t query_limit);
+// Raw little-endian uint32 leaf labels, one per base row (written by train_partitions.py).
+std::vector<std::uint32_t> load_labels(const std::string& path, std::size_t rows);
 std::vector<Neighbor> exact(std::span<const float> base, std::span<const float> query, std::size_t k);
 }

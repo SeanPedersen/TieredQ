@@ -1,0 +1,2 @@
+Building fixed leaves: n=1000000 d=128 storage=SQ8
+Leaves=8192 build_s=23.4886 slab_build_s=1.07e-07 slab_bytes=0

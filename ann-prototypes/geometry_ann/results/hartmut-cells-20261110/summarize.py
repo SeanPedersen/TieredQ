@@ -21,7 +21,7 @@ def summarize(path):
     queries = {row['query'] for row in rows}
     if any(len(v) != len(queries) for v in by_score.values()):
         raise ValueError(f'{path}: incomplete score rows')
-    unsafe = sum(int(row['unsafe']) for row in rows)
+    unsafe = sum(int(row['unsafe']) for row in rows if row.get('lower_bound', '1') == '1')
     if unsafe:
         raise ValueError(f'{path}: {unsafe} unsafe bounds')
     centroid = by_score['centroid']
@@ -35,6 +35,10 @@ def summarize(path):
             numbers = [float(r[column]) for r in values]
             stats[column] = dict(mean=statistics.mean(numbers), median=statistics.median(numbers), p95=p95(numbers))
         stats['ranked'] = values[0]['ranked'] == '1'
+        stats['lower_bound'] = values[0].get('lower_bound', '1') == '1'
+        for column in values[0]:
+            if column.startswith('coverage_') and values[0][column] != '':
+                stats[column] = statistics.mean(float(r[column]) for r in values)
         result['scores'][score] = stats
     return result
 
@@ -66,6 +70,14 @@ for model, result in summary.items():
         lines.append(f"| {score} | {f('certified_clusters', 1)} | {f('certified_vectors')} | {f('undecided_clusters', 1)} | "
                      f"{f('pure_vectors_10') if ranked else '—'} | {f('hybrid_vectors_10') if ranked else '—'} | "
                      f"{s['mean_truth_rank']['mean']:.2f} | {s['mean_truth_bound_ratio']['mean']:.3f} | {s['bound_ns_per_leaf']['mean']:.0f} |")
+    budgets = [c for c in next(iter(result['scores'].values())) if c.startswith('coverage_')]
+    if budgets:
+        lines += ['', 'Mean truth coverage (recall proxy) when scanning whole leaves in score order under a vector cap:', '',
+                  '| Score | ' + ' | '.join(b.removeprefix('coverage_') for b in budgets) + ' |',
+                  '|---|' + '---:|' * len(budgets)]
+        for score, s in result['scores'].items():
+            if budgets[0] in s:
+                lines.append(f'| {score} | ' + ' | '.join(f'{s[b]:.4f}' for b in budgets) + ' |')
     lines.append('')
 (ROOT / 'REPORT.md').write_text('\n'.join(lines) + '\n')
 print('\n'.join(lines))

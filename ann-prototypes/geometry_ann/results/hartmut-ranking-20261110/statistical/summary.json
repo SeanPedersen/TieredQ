@@ -1,0 +1,1324 @@
+{
+  "qwen-statistical": {
+    "queries": 250,
+    "oracle_vectors_10": {
+      "mean": 8391.184,
+      "p95": 19869
+    },
+    "truth_clusters": 4.148,
+    "scores": {
+      "centroid": {
+        "certified_clusters": {
+          "mean": 8192.0,
+          "median": 8192.0,
+          "p95": 8192.0
+        },
+        "certified_vectors": {
+          "mean": 8840823.0,
+          "median": 8840823.0,
+          "p95": 8840823.0
+        },
+        "undecided_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "pure_vectors_10": {
+          "mean": 147196.12,
+          "median": 22478.5,
+          "p95": 879005.0
+        },
+        "hybrid_vectors_10": {
+          "mean": 147196.12,
+          "median": 22478.5,
+          "p95": 879005.0
+        },
+        "mean_truth_rank": {
+          "mean": 20.2828,
+          "median": 4.7,
+          "p95": 99.2
+        },
+        "mean_truth_bound_ratio": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "bound_ns_per_leaf": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "ranked": true,
+        "lower_bound": true,
+        "coverage_35000": 0.8832,
+        "coverage_88408": 0.9352,
+        "coverage_176816": 0.9632000000000001,
+        "coverage_442041": 0.9864
+      },
+      "ball": {
+        "certified_clusters": {
+          "mean": 8133.036,
+          "median": 8146.0,
+          "p95": 8155.0
+        },
+        "certified_vectors": {
+          "mean": 8839771.368,
+          "median": 8840687.5,
+          "p95": 8840721.0
+        },
+        "undecided_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "pure_vectors_10": {
+          "mean": 311296.428,
+          "median": 22478.5,
+          "p95": 1613952.0
+        },
+        "hybrid_vectors_10": {
+          "mean": 149676.356,
+          "median": 22478.5,
+          "p95": 870906.0
+        },
+        "mean_truth_rank": {
+          "mean": 31.5076,
+          "median": 4.6,
+          "p95": 162.1
+        },
+        "mean_truth_bound_ratio": {
+          "mean": 0.00011970912095605691,
+          "median": 0.0,
+          "p95": 0.0007704112924300842
+        },
+        "bound_ns_per_leaf": {
+          "mean": 34.3287763671875,
+          "median": 34.9888916015625,
+          "p95": 48.1632080078125
+        },
+        "ranked": true,
+        "lower_bound": true,
+        "coverage_35000": 0.876,
+        "coverage_88408": 0.928,
+        "coverage_176816": 0.9468,
+        "coverage_442041": 0.968
+      },
+      "evt-iso-b0": {
+        "certified_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "certified_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "pure_vectors_10": {
+          "mean": 240539.608,
+          "median": 31699.5,
+          "p95": 1073866.0
+        },
+        "hybrid_vectors_10": {
+          "mean": 148117.424,
+          "median": 25672.5,
+          "p95": 699439.0
+        },
+        "mean_truth_rank": {
+          "mean": 41.6408,
+          "median": 7.449999999999999,
+          "p95": 193.3
+        },
+        "mean_truth_bound_ratio": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "bound_ns_per_leaf": {
+          "mean": 9.9947607421875,
+          "median": 10.70025634765625,
+          "p95": 12.1888427734375
+        },
+        "ranked": true,
+        "lower_bound": false,
+        "coverage_35000": 0.8516,
+        "coverage_88408": 0.916,
+        "coverage_176816": 0.9456,
+        "coverage_442041": 0.978
+      },
+      "evt-iso-b0.5": {
+        "certified_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "certified_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "pure_vectors_10": {
+          "mean": 220553.568,
+          "median": 31803.0,
+          "p95": 999729.0
+        },
+        "hybrid_vectors_10": {
+          "mean": 144743.908,
+          "median": 25606.0,
+          "p95": 678224.0
+        },
+        "mean_truth_rank": {
+          "mean": 33.0272,
+          "median": 6.7,
+          "p95": 143.8
+        },
+        "mean_truth_bound_ratio": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "bound_ns_per_leaf": {
+          "mean": 9.690474609375,
+          "median": 10.5684814453125,
+          "p95": 11.9871826171875
+        },
+        "ranked": true,
+        "lower_bound": false,
+        "coverage_35000": 0.8568,
+        "coverage_88408": 0.9184,
+        "coverage_176816": 0.9556,
+        "coverage_442041": 0.984
+      },
+      "evt-iso-b1": {
+        "certified_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "certified_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "pure_vectors_10": {
+          "mean": 204201.492,
+          "median": 30746.0,
+          "p95": 914621.0
+        },
+        "hybrid_vectors_10": {
+          "mean": 142554.196,
+          "median": 25688.0,
+          "p95": 678177.0
+        },
+        "mean_truth_rank": {
+          "mean": 27.3212,
+          "median": 6.050000000000001,
+          "p95": 109.4
+        },
+        "mean_truth_bound_ratio": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "bound_ns_per_leaf": {
+          "mean": 9.48271728515625,
+          "median": 10.43328857421875,
+          "p95": 11.8787841796875
+        },
+        "ranked": true,
+        "lower_bound": false,
+        "coverage_35000": 0.8592,
+        "coverage_88408": 0.9188,
+        "coverage_176816": 0.9608,
+        "coverage_442041": 0.9848
+      },
+      "evt-iso-b1.5": {
+        "certified_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "certified_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "pure_vectors_10": {
+          "mean": 191317.376,
+          "median": 31619.5,
+          "p95": 870803.0
+        },
+        "hybrid_vectors_10": {
+          "mean": 140633.648,
+          "median": 24055.0,
+          "p95": 691863.0
+        },
+        "mean_truth_rank": {
+          "mean": 23.4036,
+          "median": 5.699999999999999,
+          "p95": 93.3
+        },
+        "mean_truth_bound_ratio": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "bound_ns_per_leaf": {
+          "mean": 9.34718310546875,
+          "median": 10.3944091796875,
+          "p95": 11.3597412109375
+        },
+        "ranked": true,
+        "lower_bound": false,
+        "coverage_35000": 0.86,
+        "coverage_88408": 0.9208,
+        "coverage_176816": 0.962,
+        "coverage_442041": 0.9864
+      },
+      "evt-iso-b2": {
+        "certified_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "certified_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "pure_vectors_10": {
+          "mean": 186317.624,
+          "median": 30853.0,
+          "p95": 867367.0
+        },
+        "hybrid_vectors_10": {
+          "mean": 139872.3,
+          "median": 22996.5,
+          "p95": 709565.0
+        },
+        "mean_truth_rank": {
+          "mean": 20.95,
+          "median": 5.1,
+          "p95": 89.3
+        },
+        "mean_truth_bound_ratio": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "bound_ns_per_leaf": {
+          "mean": 9.42278515625,
+          "median": 10.4052734375,
+          "p95": 11.6702880859375
+        },
+        "ranked": true,
+        "lower_bound": false,
+        "coverage_35000": 0.86,
+        "coverage_88408": 0.9204,
+        "coverage_176816": 0.962,
+        "coverage_442041": 0.9868
+      },
+      "evt-pca8-b0.5": {
+        "certified_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "certified_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "pure_vectors_10": {
+          "mean": 221852.808,
+          "median": 34081.0,
+          "p95": 1078542.0
+        },
+        "hybrid_vectors_10": {
+          "mean": 143462.22,
+          "median": 25565.5,
+          "p95": 713744.0
+        },
+        "mean_truth_rank": {
+          "mean": 32.5008,
+          "median": 6.699999999999999,
+          "p95": 147.2
+        },
+        "mean_truth_bound_ratio": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "bound_ns_per_leaf": {
+          "mean": 37.75094140625,
+          "median": 41.98828125,
+          "p95": 44.4083251953125
+        },
+        "ranked": true,
+        "lower_bound": false,
+        "coverage_35000": 0.8532,
+        "coverage_88408": 0.916,
+        "coverage_176816": 0.9544,
+        "coverage_442041": 0.9808
+      },
+      "evt-pca8-b1": {
+        "certified_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "certified_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "pure_vectors_10": {
+          "mean": 218393.168,
+          "median": 33188.0,
+          "p95": 1035218.0
+        },
+        "hybrid_vectors_10": {
+          "mean": 141411.764,
+          "median": 24400.0,
+          "p95": 694521.0
+        },
+        "mean_truth_rank": {
+          "mean": 27.9692,
+          "median": 5.95,
+          "p95": 115.0
+        },
+        "mean_truth_bound_ratio": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "bound_ns_per_leaf": {
+          "mean": 37.53097412109375,
+          "median": 41.90869140625,
+          "p95": 44.2806396484375
+        },
+        "ranked": true,
+        "lower_bound": false,
+        "coverage_35000": 0.858,
+        "coverage_88408": 0.92,
+        "coverage_176816": 0.956,
+        "coverage_442041": 0.978
+      },
+      "evt-pca8-b1.5": {
+        "certified_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "certified_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "pure_vectors_10": {
+          "mean": 251689.416,
+          "median": 32476.0,
+          "p95": 1223163.0
+        },
+        "hybrid_vectors_10": {
+          "mean": 144215.216,
+          "median": 23434.0,
+          "p95": 798953.0
+        },
+        "mean_truth_rank": {
+          "mean": 28.4576,
+          "median": 5.75,
+          "p95": 111.0
+        },
+        "mean_truth_bound_ratio": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "bound_ns_per_leaf": {
+          "mean": 37.18863525390625,
+          "median": 42.24468994140625,
+          "p95": 44.082275390625
+        },
+        "ranked": true,
+        "lower_bound": false,
+        "coverage_35000": 0.8544,
+        "coverage_88408": 0.9116,
+        "coverage_176816": 0.9448,
+        "coverage_442041": 0.9756
+      },
+      "evt-pca8-b2": {
+        "certified_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "certified_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "pure_vectors_10": {
+          "mean": 363625.356,
+          "median": 42921.5,
+          "p95": 2131897.0
+        },
+        "hybrid_vectors_10": {
+          "mean": 152476.616,
+          "median": 21657.5,
+          "p95": 737741.0
+        },
+        "mean_truth_rank": {
+          "mean": 38.236,
+          "median": 6.0,
+          "p95": 156.1
+        },
+        "mean_truth_bound_ratio": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "bound_ns_per_leaf": {
+          "mean": 37.0719033203125,
+          "median": 42.230712890625,
+          "p95": 44.0855712890625
+        },
+        "ranked": true,
+        "lower_bound": false,
+        "coverage_35000": 0.8188,
+        "coverage_88408": 0.882,
+        "coverage_176816": 0.9184,
+        "coverage_442041": 0.9624
+      },
+      "nearest-member": {
+        "certified_clusters": {
+          "mean": 4.156,
+          "median": 4.0,
+          "p95": 8.0
+        },
+        "certified_vectors": {
+          "mean": 8403.512,
+          "median": 7199.5,
+          "p95": 19869.0
+        },
+        "undecided_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "pure_vectors_10": {
+          "mean": 8391.184,
+          "median": 7199.5,
+          "p95": 19869.0
+        },
+        "hybrid_vectors_10": {
+          "mean": 15091.148,
+          "median": 8634.5,
+          "p95": 55527.0
+        },
+        "mean_truth_rank": {
+          "mean": 2.2292,
+          "median": 2.0,
+          "p95": 4.0
+        },
+        "mean_truth_bound_ratio": {
+          "mean": 0.7310626703305121,
+          "median": 0.7981268759947142,
+          "p95": 0.9455540303110705
+        },
+        "bound_ns_per_leaf": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "ranked": true,
+        "lower_bound": true,
+        "coverage_35000": 1.0,
+        "coverage_88408": 1.0,
+        "coverage_176816": 1.0,
+        "coverage_442041": 1.0
+      }
+    },
+    "meta": {
+      "leaves": 8192,
+      "build_s": 951.178,
+      "slab_build_s": 1.08e-07,
+      "slab_bytes": 0,
+      "spread_build_s": 5.95772,
+      "spread_bytes": 1245184,
+      "directions": 32,
+      "small_directions": 8,
+      "hull_iterations": 64,
+      "cheap_sweeps": 4,
+      "converged_sweeps": 256,
+      "threads": 32,
+      "queries": 250
+    }
+  },
+  "sift-statistical": {
+    "queries": 250,
+    "oracle_vectors_10": {
+      "mean": 1407.508,
+      "p95": 2400
+    },
+    "truth_clusters": 6.704,
+    "scores": {
+      "centroid": {
+        "certified_clusters": {
+          "mean": 8192.0,
+          "median": 8192.0,
+          "p95": 8192.0
+        },
+        "certified_vectors": {
+          "mean": 1000000.0,
+          "median": 1000000.0,
+          "p95": 1000000.0
+        },
+        "undecided_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "pure_vectors_10": {
+          "mean": 12313.916,
+          "median": 7010.0,
+          "p95": 43555.0
+        },
+        "hybrid_vectors_10": {
+          "mean": 12313.916,
+          "median": 7010.0,
+          "p95": 43555.0
+        },
+        "mean_truth_rank": {
+          "mean": 19.9272,
+          "median": 13.55,
+          "p95": 63.6
+        },
+        "mean_truth_bound_ratio": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "bound_ns_per_leaf": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "ranked": true,
+        "lower_bound": true,
+        "coverage_5000": 0.8388,
+        "coverage_10000": 0.9256,
+        "coverage_20000": 0.9776,
+        "coverage_35000": 0.9916
+      },
+      "ball": {
+        "certified_clusters": {
+          "mean": 4494.992,
+          "median": 4635.5,
+          "p95": 7050.0
+        },
+        "certified_vectors": {
+          "mean": 541046.3,
+          "median": 514790.5,
+          "p95": 805946.0
+        },
+        "undecided_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "pure_vectors_10": {
+          "mean": 27871.8,
+          "median": 11729.0,
+          "p95": 109322.0
+        },
+        "hybrid_vectors_10": {
+          "mean": 12420.368,
+          "median": 7010.0,
+          "p95": 43294.0
+        },
+        "mean_truth_rank": {
+          "mean": 44.164,
+          "median": 17.6,
+          "p95": 190.8
+        },
+        "mean_truth_bound_ratio": {
+          "mean": 0.0010813663395715272,
+          "median": 0.0,
+          "p95": 0.00671859881121481
+        },
+        "bound_ns_per_leaf": {
+          "mean": 19.11794580078125,
+          "median": 17.97918701171875,
+          "p95": 27.4735107421875
+        },
+        "ranked": true,
+        "lower_bound": true,
+        "coverage_5000": 0.8096,
+        "coverage_10000": 0.8836,
+        "coverage_20000": 0.9288,
+        "coverage_35000": 0.9532
+      },
+      "evt-iso-b0": {
+        "certified_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "certified_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "pure_vectors_10": {
+          "mean": 16436.528,
+          "median": 10105.5,
+          "p95": 49654.0
+        },
+        "hybrid_vectors_10": {
+          "mean": 12762.58,
+          "median": 7687.5,
+          "p95": 46768.0
+        },
+        "mean_truth_rank": {
+          "mean": 22.2876,
+          "median": 14.95,
+          "p95": 73.8
+        },
+        "mean_truth_bound_ratio": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "bound_ns_per_leaf": {
+          "mean": 9.6576650390625,
+          "median": 10.19842529296875,
+          "p95": 11.5086669921875
+        },
+        "ranked": true,
+        "lower_bound": false,
+        "coverage_5000": 0.8004,
+        "coverage_10000": 0.9004,
+        "coverage_20000": 0.9528,
+        "coverage_35000": 0.9864
+      },
+      "evt-iso-b0.5": {
+        "certified_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "certified_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "pure_vectors_10": {
+          "mean": 15947.256,
+          "median": 10094.0,
+          "p95": 47751.0
+        },
+        "hybrid_vectors_10": {
+          "mean": 12528.912,
+          "median": 7358.0,
+          "p95": 44522.0
+        },
+        "mean_truth_rank": {
+          "mean": 20.7244,
+          "median": 14.25,
+          "p95": 65.4
+        },
+        "mean_truth_bound_ratio": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "bound_ns_per_leaf": {
+          "mean": 9.6500634765625,
+          "median": 10.22918701171875,
+          "p95": 11.375244140625
+        },
+        "ranked": true,
+        "lower_bound": false,
+        "coverage_5000": 0.8124,
+        "coverage_10000": 0.9032,
+        "coverage_20000": 0.9572,
+        "coverage_35000": 0.9872
+      },
+      "evt-iso-b1": {
+        "certified_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "certified_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "pure_vectors_10": {
+          "mean": 15679.932,
+          "median": 10361.0,
+          "p95": 47352.0
+        },
+        "hybrid_vectors_10": {
+          "mean": 12352.704,
+          "median": 7255.0,
+          "p95": 42209.0
+        },
+        "mean_truth_rank": {
+          "mean": 19.73,
+          "median": 13.399999999999999,
+          "p95": 63.6
+        },
+        "mean_truth_bound_ratio": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "bound_ns_per_leaf": {
+          "mean": 9.5828798828125,
+          "median": 10.16241455078125,
+          "p95": 11.2469482421875
+        },
+        "ranked": true,
+        "lower_bound": false,
+        "coverage_5000": 0.8152,
+        "coverage_10000": 0.9012,
+        "coverage_20000": 0.9592,
+        "coverage_35000": 0.9868
+      },
+      "evt-iso-b1.5": {
+        "certified_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "certified_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "pure_vectors_10": {
+          "mean": 16044.2,
+          "median": 10631.0,
+          "p95": 50668.0
+        },
+        "hybrid_vectors_10": {
+          "mean": 12368.88,
+          "median": 7135.5,
+          "p95": 40976.0
+        },
+        "mean_truth_rank": {
+          "mean": 19.5088,
+          "median": 13.399999999999999,
+          "p95": 61.7
+        },
+        "mean_truth_bound_ratio": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "bound_ns_per_leaf": {
+          "mean": 9.56990380859375,
+          "median": 10.15924072265625,
+          "p95": 11.126708984375
+        },
+        "ranked": true,
+        "lower_bound": false,
+        "coverage_5000": 0.8072,
+        "coverage_10000": 0.8984,
+        "coverage_20000": 0.96,
+        "coverage_35000": 0.9856
+      },
+      "evt-iso-b2": {
+        "certified_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "certified_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "pure_vectors_10": {
+          "mean": 17333.932,
+          "median": 11931.0,
+          "p95": 59013.0
+        },
+        "hybrid_vectors_10": {
+          "mean": 12491.344,
+          "median": 7178.0,
+          "p95": 43011.0
+        },
+        "mean_truth_rank": {
+          "mean": 20.5004,
+          "median": 13.850000000000001,
+          "p95": 62.9
+        },
+        "mean_truth_bound_ratio": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "bound_ns_per_leaf": {
+          "mean": 9.55024755859375,
+          "median": 10.1522216796875,
+          "p95": 10.855224609375
+        },
+        "ranked": true,
+        "lower_bound": false,
+        "coverage_5000": 0.7976,
+        "coverage_10000": 0.8896000000000001,
+        "coverage_20000": 0.9588,
+        "coverage_35000": 0.9824
+      },
+      "evt-pca8-b0.5": {
+        "certified_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "certified_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "pure_vectors_10": {
+          "mean": 15918.732,
+          "median": 10684.5,
+          "p95": 50303.0
+        },
+        "hybrid_vectors_10": {
+          "mean": 12375.556,
+          "median": 7327.5,
+          "p95": 45377.0
+        },
+        "mean_truth_rank": {
+          "mean": 20.8184,
+          "median": 13.95,
+          "p95": 67.9
+        },
+        "mean_truth_bound_ratio": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "bound_ns_per_leaf": {
+          "mean": 37.495361328125,
+          "median": 40.31500244140625,
+          "p95": 41.9398193359375
+        },
+        "ranked": true,
+        "lower_bound": false,
+        "coverage_5000": 0.8024,
+        "coverage_10000": 0.9008,
+        "coverage_20000": 0.9576,
+        "coverage_35000": 0.9876
+      },
+      "evt-pca8-b1": {
+        "certified_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "certified_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "pure_vectors_10": {
+          "mean": 16533.24,
+          "median": 10380.0,
+          "p95": 52999.0
+        },
+        "hybrid_vectors_10": {
+          "mean": 12241.052,
+          "median": 7684.5,
+          "p95": 43174.0
+        },
+        "mean_truth_rank": {
+          "mean": 21.0696,
+          "median": 14.1,
+          "p95": 68.8
+        },
+        "mean_truth_bound_ratio": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "bound_ns_per_leaf": {
+          "mean": 37.4149404296875,
+          "median": 40.2646484375,
+          "p95": 42.7430419921875
+        },
+        "ranked": true,
+        "lower_bound": false,
+        "coverage_5000": 0.7952,
+        "coverage_10000": 0.8912,
+        "coverage_20000": 0.9584,
+        "coverage_35000": 0.9832
+      },
+      "evt-pca8-b1.5": {
+        "certified_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "certified_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "pure_vectors_10": {
+          "mean": 20278.936,
+          "median": 12656.0,
+          "p95": 75775.0
+        },
+        "hybrid_vectors_10": {
+          "mean": 12422.232,
+          "median": 7882.5,
+          "p95": 43741.0
+        },
+        "mean_truth_rank": {
+          "mean": 25.3172,
+          "median": 16.4,
+          "p95": 82.1
+        },
+        "mean_truth_bound_ratio": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "bound_ns_per_leaf": {
+          "mean": 37.20532080078125,
+          "median": 40.08782958984375,
+          "p95": 42.313232421875
+        },
+        "ranked": true,
+        "lower_bound": false,
+        "coverage_5000": 0.7516,
+        "coverage_10000": 0.864,
+        "coverage_20000": 0.9464,
+        "coverage_35000": 0.9772
+      },
+      "evt-pca8-b2": {
+        "certified_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "certified_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "pure_vectors_10": {
+          "mean": 33297.104,
+          "median": 22696.0,
+          "p95": 124188.0
+        },
+        "hybrid_vectors_10": {
+          "mean": 13212.784,
+          "median": 8103.5,
+          "p95": 46112.0
+        },
+        "mean_truth_rank": {
+          "mean": 45.25,
+          "median": 32.65,
+          "p95": 142.6
+        },
+        "mean_truth_bound_ratio": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "bound_ns_per_leaf": {
+          "mean": 36.89586279296875,
+          "median": 39.85540771484375,
+          "p95": 41.3455810546875
+        },
+        "ranked": true,
+        "lower_bound": false,
+        "coverage_5000": 0.5984,
+        "coverage_10000": 0.7484,
+        "coverage_20000": 0.8728,
+        "coverage_35000": 0.9444
+      },
+      "nearest-member": {
+        "certified_clusters": {
+          "mean": 6.764,
+          "median": 7.0,
+          "p95": 10.0
+        },
+        "certified_vectors": {
+          "mean": 1421.172,
+          "median": 1394.0,
+          "p95": 2521.0
+        },
+        "undecided_clusters": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "undecided_vectors": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "pure_vectors_10": {
+          "mean": 1414.16,
+          "median": 1394.0,
+          "p95": 2407.0
+        },
+        "hybrid_vectors_10": {
+          "mean": 3771.084,
+          "median": 2898.5,
+          "p95": 10185.0
+        },
+        "mean_truth_rank": {
+          "mean": 3.536,
+          "median": 3.7,
+          "p95": 5.3
+        },
+        "mean_truth_bound_ratio": {
+          "mean": 0.8688452076724396,
+          "median": 0.8995199237423112,
+          "p95": 0.9617568085528083
+        },
+        "bound_ns_per_leaf": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p95": 0.0
+        },
+        "ranked": true,
+        "lower_bound": true,
+        "coverage_5000": 1.0,
+        "coverage_10000": 1.0,
+        "coverage_20000": 1.0,
+        "coverage_35000": 1.0
+      }
+    },
+    "meta": {
+      "leaves": 8192,
+      "build_s": 23.4886,
+      "slab_build_s": 1.07e-07,
+      "slab_bytes": 0,
+      "spread_build_s": 0.389918,
+      "spread_bytes": 1187840,
+      "directions": 32,
+      "small_directions": 8,
+      "hull_iterations": 64,
+      "cheap_sweeps": 4,
+      "converged_sweeps": 256,
+      "threads": 32,
+      "queries": 250
+    }
+  }
+}

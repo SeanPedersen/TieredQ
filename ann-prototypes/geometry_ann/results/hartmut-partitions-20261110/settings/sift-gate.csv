@@ -1,0 +1,6 @@
+routing,bounds,weight,metadata_cap,vector_cap,scan_order
+flat,none,0,8256,35000,centroid
+graph,none,0,2048,35000,centroid
+graph,none,0,4096,35000,centroid
+graph,none,0,8192,35000,centroid
+graph,none,0,16384,35000,centroid

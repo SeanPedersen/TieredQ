@@ -15,9 +15,10 @@ struct BenchmarkOptions {
     BoundsMode selected_bounds = BoundsMode::automatic;
     std::size_t graph_seeds = 4;
     bool graph_controls = true, evaluation_group_bounds = false;
-    std::string geometry_diagnostics, settings_file, int8_base, int8_scales, int8_offsets;
+    std::string geometry_diagnostics, settings_file, int8_base, int8_scales, int8_offsets, memory_output, assignments_file;
     std::string evaluation_queries, evaluation_truth, evaluation_output, evaluation_fixed_settings;
     std::size_t evaluation_nq = 750, repeats = 3;
+    std::optional<std::size_t> search_cpu;  // pin after a multi-threaded build so search stays single-core
     std::vector<std::size_t> vector_caps = {std::numeric_limits<std::size_t>::max()};
     RoutingMode routing = RoutingMode::hierarchy;
     std::string base, queries, truth, variant = "all", split = "variance";

@@ -2,7 +2,11 @@
 # requires-python = ">=3.12"
 # dependencies = ["faiss-cpu>=1.8", "numpy>=1.26"]
 # ///
-"""Single-thread Faiss calibration with optional frozen-budget replay on independent queries."""
+"""Faiss calibration with optional frozen-budget replay on independent queries.
+
+Build may use several threads (--build-threads); every search runs single-threaded,
+optionally pinned to one core (--search-cpu). Peak anonymous/file-backed RSS is sampled
+during the build."""
 import argparse
 import csv
 import json
@@ -14,12 +18,22 @@ from pathlib import Path
 import resource
 import sys
 
+def requested_build_threads(argv: list[str]) -> int:
+    # BLAS reads its thread count at import, so this must be known before importing faiss.
+    for flag, value in zip(argv, argv[1:]):
+        if flag == "--build-threads":
+            return int(value)
+    return 1
+
+
+BUILD_THREADS = requested_build_threads(sys.argv)
 for thread_variable in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "VECLIB_MAXIMUM_THREADS"):
-    os.environ[thread_variable] = "1"
+    os.environ[thread_variable] = str(BUILD_THREADS)
 
 import faiss
 import numpy as np
 from faiss_reference import K, build_reference, measure, select_targets
+from memory_probe import MemorySampler, read_memory
 
 
 def records(path: Path, dtype: str) -> np.ndarray:
@@ -81,8 +95,11 @@ def main() -> None:
     parser.add_argument("--int8-base",type=Path)
     parser.add_argument("--int8-scales",type=Path)
     parser.add_argument("--int8-offsets",type=Path)
+    parser.add_argument("--build-threads", type=int, default=1)
+    parser.add_argument("--search-cpu", type=int)
+    parser.add_argument("--memory-output", type=Path)
     args = parser.parse_args()
-    if min(args.nq, args.nlist, args.sample, args.evaluation_nq, args.evaluation_repeats) <= 0:
+    if min(args.nq, args.nlist, args.sample, args.evaluation_nq, args.evaluation_repeats, args.build_threads) <= 0:
         parser.error("counts must be positive")
     targets = [float(t) for t in args.targets.split(",")]
     if not targets or any(not math.isfinite(t) or not 0 < t <= 1 for t in targets):
@@ -95,7 +112,8 @@ def main() -> None:
         parser.error("evaluation requires queries, truth, and output")
     if args.evaluation_output and args.evaluation_output.exists():
         raise FileExistsError(args.evaluation_output)
-    faiss.omp_set_num_threads(1)
+    faiss.omp_set_num_threads(args.build_threads)
+    sampler = MemorySampler()
     base_owner = records(args.base, "<f4")
     base = np.ascontiguousarray(base_owner)
     base_bytes = base.nbytes
@@ -112,9 +130,19 @@ def main() -> None:
     build_seconds += validation_seconds
     peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     peak = int(peak if sys.platform == "darwin" else peak * 1024)
+    build_memory = sampler.stop()
     del base
     if isinstance(base_owner, np.memmap): base_owner._mmap.close()
     del base_owner
+    # Single-query searches with one OpenMP thread never reach the BLAS path (nq < 20).
+    faiss.omp_set_num_threads(1)
+    if args.search_cpu is not None: os.sched_setaffinity(0, {args.search_cpu})
+    if args.memory_output:
+        serving = read_memory()
+        with args.memory_output.open("x") as output:
+            json.dump(dict(build_s=build_seconds, build_threads=args.build_threads, nlist=args.nlist, **build_memory,
+                           serving_rss=serving.get("VmRSS", 0), serving_anon=serving.get("RssAnon", 0),
+                           serving_file=serving.get("RssFile", 0)), output, indent=2)
     if args.budgets:
         budgets = sorted({int(value) for value in args.budgets.split(",")})
         if not budgets or min(budgets) <= 0 or (args.variant != "hnsw" and max(budgets) > args.nlist):

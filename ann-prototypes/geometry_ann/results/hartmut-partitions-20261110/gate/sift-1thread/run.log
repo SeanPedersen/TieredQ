@@ -1,0 +1,8 @@
+Storage=SQ8
+Building shared graph: n=1000000 d=128 queries=250 degree=8
+Built 8192 leaves in 24.6575s; graph=1.69022s build_threads=1 PCA=0s; graph bytes=262400
+flat/none weight=0 metadata=8256 vectors=35000 recall=0.982 p50_us=1773.27
+graph/none weight=0 metadata=2048 vectors=35000 recall=0.9812 p50_us=1568.16
+graph/none weight=0 metadata=4096 vectors=35000 recall=0.9816 p50_us=2227.99
+graph/none weight=0 metadata=8192 vectors=35000 recall=0.982 p50_us=3324.45
+graph/none weight=0 metadata=16384 vectors=35000 recall=0.982 p50_us=3499.5
