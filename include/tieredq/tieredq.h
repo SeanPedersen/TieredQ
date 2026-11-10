@@ -3,6 +3,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -308,12 +309,14 @@ class TieredQIndex {
   std::vector<TieredQQuery> fine_query_weights(const float* queries, size_t rows) const;
 };
 // Fast-mode inverted-file index. With lists == 0 each of the codec's k-means centroids (at most 256) forms one list
-// at no extra storage; otherwise build trains a separate model-space k-means coarse quantizer with that many lists
-// (seeded sample of at least 32,768 or 64 rows per list, or the sample given to train_lists) and stores its centroids. Lists are stored contiguously in
-// one fast representation, so every list scan uses the flat index's kernels; each list starts on a 32-document
-// boundary (padded with copies of its last row, which are never returned). Search ranks lists by model-space
-// distance to the query and scans the nearest nprobe nonempty lists. Ids are input row order. Build replaces the
-// content.
+// at no extra storage; otherwise build trains a separate k-means coarse quantizer with that many lists (seeded sample
+// of at least 32,768 or 64 rows per list, or the sample given to train_lists) and stores its centroids. Coarse lists
+// live in model space for inner product and cosine, and in input space for L2 (plain L2 k-means: the L2 lift's model
+// space is dominated by row norms; L2 indexes saved before payload version 4 keep their model-space lists). Lists are
+// stored contiguously in one fast representation, so every list scan uses the flat index's kernels; each list starts
+// on a 32-document boundary (padded with copies of its last row, which are never returned). Search ranks lists by
+// distance to the query in the coarse quantizer's space and scans the nearest nprobe nonempty lists. Ids are input
+// row order. Build replaces the content.
 // Range-checkpoint pruning of list scans (exact FP32 code scans on AVX-512; nibble byte-table scans on AVX-512, AVX2
 // and NEON; other scans ignore it): after a prefix of its code a document skips the rest when its score bound cannot
 // reach the running top k. With confidence 0 (default) the bound covers every suffix code, so hits equal the unpruned
@@ -335,7 +338,18 @@ class TieredQIVFIndex {
   // of on a sample of build()'s rows, so a partition learned on earlier data serves later builds unchanged. Loaded
   // indexes with trained lists keep them the same way.
   void train_lists(const float* sample, size_t rows);
+  // Coarse indexes only: fixes the lists to given centroids (lists() x coarse_dimensions() floats, row-major) instead
+  // of training them, e.g. a partition trained elsewhere; build() then only assigns. Centroids are in the coarse
+  // space: input vectors for L2 and inner product, normalized vectors for cosine.
+  void set_lists(const float* centroids);
+  // Floats per coarse centroid: the input dimensions, plus the lift's one for L2 indexes saved before version 4.
+  size_t coarse_dimensions() const { return input_space_coarse_ ? codec().config().dimensions : codec().model_dimensions(); }
   void build(const float* rows, size_t count);
+  // Fills out (count x config().dimensions floats, row-major) with the input rows ids[0..count), for builds whose rows
+  // are not held as one float array (e.g. decoded from a compact store). Called from the building thread only.
+  using RowLoader = std::function<void(const uint32_t* ids, size_t count, float* out)>;
+  // The same build pulling rows through a loader, a bounded chunk at a time; equals build() on the loaded rows.
+  void build(const RowLoader& rows, size_t count);
   size_t size() const { return size_; }
   size_t lists() const { return list_rows_.size(); }
   size_t list_size(size_t list) const { return list_rows_.at(list); }
@@ -370,7 +384,7 @@ class TieredQIVFIndex {
   void search_rows(const float* queries, const TieredQQuery* weights, size_t rows, size_t k, size_t nprobe,
                    float* scores, uint32_t* ids, TieredQPruning pruning) const;
   const float* model_rows(const float* rows, size_t first, size_t count, std::vector<float>& buffer) const;
-  std::vector<uint32_t> coarse_lists(const float* rows, size_t count);
+  std::vector<uint32_t> coarse_lists(const RowLoader& rows, size_t count);
   void write_lists(tieredq_detail::Writer& writer) const;
   template<class Reader> static TieredQIVFIndex read_lists(TieredQ model, Reader& reader);
   // Version 2 payloads store every padded document's id raw; build() wrote them ascending per list.
@@ -388,6 +402,12 @@ class TieredQIVFIndex {
   uint32_t coarse_lists_ = 0;                    // 0: lists are the codec's centroids
   uint64_t seed_ = 0;
   bool fixed_lists_ = false;                     // train_lists() trained coarse_; build() only assigns
+  // Coarse centroids live in input space (new L2 indexes: plain L2 k-means, assignment and ranking on the input
+  // vectors) instead of the codec's model space (inner product, cosine, and L2 indexes saved before payload version 4,
+  // whose lifted space is dominated by row norms).
+  bool input_space_coarse_ = false;
+  // Rows [first, first + count) in the coarse quantizer's space.
+  const float* coarse_rows(const float* rows, size_t first, size_t count, std::vector<float>& buffer) const;
   std::shared_ptr<const tieredq_detail::CoarseQuantizer> coarse_;
 };
 } // namespace dv

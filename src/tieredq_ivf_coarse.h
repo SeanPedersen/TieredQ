@@ -1,5 +1,6 @@
-// IVF coarse quantizer for list counts beyond the codec's centroids: k-means in model space, with assignment and
-// query ranking through the encoder's SIMD GEMM. Lists rank by q.c - |c|^2/2, the squared-distance order.
+// IVF coarse quantizer for list counts beyond the codec's centroids: k-means in the coarse space (model space, or input
+// space for L2 indexes), with assignment and query ranking through the encoder's SIMD GEMM. Lists rank by q.c - |c|^2/2,
+// the squared-distance order.
 // Centroids are held as binary16 panels of c / scale(c), scale(c) = max |c_k|: a single query streams every
 // centroid from L3 (#41: 6 MiB of FP32 at 2048 x 768 was ~0.2 ms per query), and the per-centroid scale keeps any
 // data range inside binary16. Assignment, ranking and saved centroids all use these rounded centroids.

@@ -17,8 +17,9 @@ using tieredq_detail::selection_block;
 using tieredq_detail::fast_list_alignment;
 using tieredq_detail::CoarseQuantizer;
 namespace {
-// Version 2 adds the coarse quantizer section; version 3 stores the ids as Elias-Fano lists instead of raw.
-constexpr uint32_t raw_ids_payload_version=2,ivf_payload_version=3;
+// Version 2 adds the coarse quantizer section; version 3 stores the ids as Elias-Fano lists instead of raw; version 4
+// adds the coarse space (written only for input-space coarse lists, so every other index stays readable as version 3).
+constexpr uint32_t raw_ids_payload_version=2,ivf_payload_version=3,coarse_space_payload_version=4;
 constexpr uint32_t padding_id=UINT32_MAX;
 // Scored documents per scan call at most; calls start on list starts or chunk multiples, both aligned, and chunk
 // multiples are whole lookup blocks.
@@ -49,7 +50,8 @@ std::vector<uint32_t> probe_order(const float* closeness,const std::vector<uint3
 
 TieredQIVFIndex::TieredQIVFIndex(TieredQ codec,uint32_t lists,uint64_t seed)
     : documents_(std::move(codec),TieredQIndexMode::fast),
-      coarse_lists_(lists),seed_(seed) {
+      coarse_lists_(lists),seed_(seed),
+      input_space_coarse_(lists && documents_.codec().config().metric==TieredQMetric::l2) {
   list_begin_.assign(lists ? lists : documents_.codec().config().num_centroids,0);
   list_rows_.assign(list_begin_.size(),0);
   ids_=tieredq_detail::EliasFanoLists::encode({},list_rows_.size());
@@ -65,48 +67,82 @@ const float* TieredQIVFIndex::model_rows(const float* rows,size_t first,size_t c
   return buffer.data();
 }
 
+const float* TieredQIVFIndex::coarse_rows(const float* rows,size_t first,size_t count,std::vector<float>& buffer) const {
+  return input_space_coarse_ ? rows+first*codec().config().dimensions : model_rows(rows,first,count,buffer);
+}
+
 void TieredQIVFIndex::train_lists(const float* sample,size_t rows) {
   if (!coarse_lists_) bad("train_lists needs an index with coarse lists");
   if (!sample && rows) bad("null vector data");
   std::vector<float> lifted;
   coarse_=std::make_shared<const CoarseQuantizer>(tieredq_detail::train_coarse(
-      model_rows(sample,0,rows,lifted),rows,codec().model_dimensions(),coarse_lists_,seed_));
+      coarse_rows(sample,0,rows,lifted),rows,coarse_dimensions(),coarse_lists_,seed_));
+  fixed_lists_=true;
+}
+
+void TieredQIVFIndex::set_lists(const float* centroids) {
+  if (!coarse_lists_) bad("set_lists needs an index with coarse lists");
+  if (!centroids) bad("null centroids");
+  const size_t values=product(coarse_lists_,coarse_dimensions());
+  if (!std::all_of(centroids,centroids+values,[](float value) { return std::isfinite(value); })) bad("nonfinite centroids");
+  coarse_=std::make_shared<const CoarseQuantizer>(CoarseQuantizer::from(std::vector<float>(centroids,centroids+values),
+                                                                        coarse_lists_,coarse_dimensions()));
   fixed_lists_=true;
 }
 
 // Coarse lists: k-means on a seeded sample (unless train_lists fixed them), then every row's nearest list.
-std::vector<uint32_t> TieredQIVFIndex::coarse_lists(const float* rows,size_t count) {
+std::vector<uint32_t> TieredQIVFIndex::coarse_lists(const RowLoader& rows,size_t count) {
   const TieredQ& model=codec();
-  const size_t d=model.config().dimensions,md=model.model_dimensions();
+  const size_t d=model.config().dimensions;
   std::vector<float> lifted;
   if (!fixed_lists_) {
     const size_t sample_rows=std::min(count,std::max(coarse_minimum_sample,product(coarse_rows_per_list,coarse_lists_)));
     tieredq_detail::TrainingRng rng(seed_);
     const auto picked=rng.choice(count,sample_rows);
+    const std::vector<uint32_t> ids(picked.begin(),picked.end());
     std::vector<float> sample(product(sample_rows,d));
-    for (size_t i=0;i<sample_rows;++i) std::copy_n(rows+picked[i]*d,d,sample.data()+i*d);
-    const float* model_sample=model_rows(sample.data(),0,sample_rows,lifted);
-    coarse_=std::make_shared<const CoarseQuantizer>(tieredq_detail::train_coarse(model_sample,sample_rows,md,coarse_lists_,seed_));
+    rows(ids.data(),sample_rows,sample.data());
+    const float* coarse_sample=coarse_rows(sample.data(),0,sample_rows,lifted);
+    coarse_=std::make_shared<const CoarseQuantizer>(tieredq_detail::train_coarse(coarse_sample,sample_rows,coarse_dimensions(),coarse_lists_,seed_));
   }
-  std::vector<uint32_t> lists(count);
+  std::vector<uint32_t> lists(count),ids(std::min(coarse_assign_chunk,count));
+  std::vector<float> chunk(product(ids.size(),d));
   for (size_t first=0;first<count;first+=coarse_assign_chunk) {
     const size_t n=std::min(coarse_assign_chunk,count-first);
-    coarse_->assign(model_rows(rows,first,n,lifted),n,lists.data()+first);
+    std::iota(ids.begin(),ids.begin()+n,uint32_t(first));
+    rows(ids.data(),n,chunk.data());
+    coarse_->assign(coarse_rows(chunk.data(),0,n,lifted),n,lists.data()+first);
   }
   return lists;
 }
 
 void TieredQIVFIndex::build(const float* rows,size_t count) {
+  if (count && !rows) bad("null vector data");
+  const size_t d=codec().config().dimensions;
+  build([rows,d](const uint32_t* ids,size_t n,float* out) {
+    for (size_t i=0;i<n;++i) std::copy_n(rows+size_t(ids[i])*d,d,out+i*d);
+  },count);
+}
+
+void TieredQIVFIndex::build(const RowLoader& rows,size_t count) {
   if (count>=padding_id) bad("index exceeds uint32 document ids");
+  if (count && !rows) bad("null row loader");
   const TieredQ& model=codec();
   const size_t stride=model.bytes_per_vector(),centroid_byte=model.code_bytes(),lists=list_rows_.size();
   const size_t d=model.config().dimensions;
-  if (count && !rows) bad("null vector data");
+  std::vector<uint32_t> chunk_ids;
+  std::vector<float> chunk_rows;
   // Codec-centroid lists come from the codes; coarse lists are known first, so rows are encoded in list order below.
   std::vector<uint8_t> encoded;
   std::vector<uint32_t> list_of=coarse_lists_ && count ? coarse_lists(rows,count) : std::vector<uint32_t>(count);
-  if (!coarse_lists_) {
-    encoded=model.encode(rows,count);
+  if (!coarse_lists_ && count) {
+    encoded.resize(product(count,stride));
+    for (size_t first=0;first<count;first+=ivf_build_chunk) {
+      const size_t n=std::min(ivf_build_chunk,count-first);
+      chunk_ids.resize(n); std::iota(chunk_ids.begin(),chunk_ids.end(),uint32_t(first));
+      chunk_rows.resize(product(n,d)); rows(chunk_ids.data(),n,chunk_rows.data());
+      model.encode(chunk_rows.data(),n,encoded.data()+first*stride);
+    }
     for (size_t row=0;row<count;++row) list_of[row]=encoded[row*stride+centroid_byte];
   }
   std::vector<uint32_t> list_rows(lists,0),list_begin(lists,0);
@@ -128,12 +164,11 @@ void TieredQIVFIndex::build(const float* rows,size_t count) {
   // Documents go to the fast storage a chunk at a time, so a build holds one chunk of codes besides it.
   TieredQIndex documents(model,TieredQIndexMode::fast);
   std::vector<uint8_t> chunk_codes;
-  std::vector<float> chunk_rows;
   for (size_t first=0;first<padded;first+=ivf_build_chunk) {
     const size_t n=std::min(ivf_build_chunk,padded-first);
     if (coarse_lists_) {
       chunk_rows.resize(product(n,d));
-      for (size_t i=0;i<n;++i) std::copy_n(rows+size_t(source[first+i])*d,d,chunk_rows.data()+i*d);
+      rows(source.data()+first,n,chunk_rows.data());
       chunk_codes.resize(product(n,stride));
       model.encode(chunk_rows.data(),n,chunk_codes.data());
     } else {
@@ -243,7 +278,10 @@ void TieredQIVFIndex::search_rows(const float* queries,const TieredQQuery* weigh
   }
   // Coarse closeness for all queries at once through the GEMM; codec lists use the prepared centroid scores.
   std::vector<float> coarse_closeness;
-  if (coarse_) { coarse_closeness.resize(product(rows,lists())); coarse_->closeness(model_queries,rows,coarse_closeness.data()); }
+  if (coarse_) {
+    coarse_closeness.resize(product(rows,lists()));
+    coarse_->closeness(input_space_coarse_ ? queries : model_queries,rows,coarse_closeness.data());
+  }
   const auto& cache=*documents_.fast_;
   // Fine-tier models scan their prefix view, which shares the model's projection, so one set of query weights serves
   // the list scans and the rescoring of their candidates.
@@ -356,9 +394,11 @@ void TieredQIVFIndex::search_rows(const float* queries,const TieredQQuery* weigh
 // Elias-Fano id words, fast payload (with the fine rows of fine-tier models). An unbuilt coarse index has no centroids
 // yet.
 void TieredQIVFIndex::write_lists(tieredq_detail::Writer& writer) const {
-  writer.u32(ivf_payload_version);writer.u32(uint32_t(lists()));writer.u32(coarse_lists_ ? 1 : 0);
+  writer.u32(input_space_coarse_ ? coarse_space_payload_version : ivf_payload_version);
+  writer.u32(uint32_t(lists()));writer.u32(coarse_lists_ ? 1 : 0);
   if (coarse_lists_) {
     writer.u64(seed_);writer.u32(coarse_ ? 1 : 0);
+    if (input_space_coarse_) writer.u32(1);
     if (coarse_) for (float value:coarse_->centroids()) writer.f32(value);
   }
   writer.u64(size_);
@@ -382,18 +422,23 @@ std::vector<uint8_t> TieredQIVFIndex::serialize() const {
 template<class Reader>
 TieredQIVFIndex TieredQIVFIndex::read_lists(TieredQ model,Reader& reader) {
   const uint32_t version=reader.u32();
-  if (version!=raw_ids_payload_version && version!=ivf_payload_version) bad("unsupported IVF payload version");
+  if (version!=raw_ids_payload_version && version!=ivf_payload_version && version!=coarse_space_payload_version)
+    bad("unsupported IVF payload version");
   const uint32_t lists=reader.u32(),coarse=reader.u32();
   if (coarse>1 || (!coarse && lists!=model.config().num_centroids) || !lists) bad("invalid IVF list count");
   const uint64_t seed=coarse ? reader.u64() : 0;
   const uint32_t trained=coarse ? reader.u32() : 0;
   if (trained>1) bad("invalid IVF coarse flag");
+  const uint32_t input_space=coarse && version==coarse_space_payload_version ? reader.u32() : 0;
+  if (input_space>1 || (version==coarse_space_payload_version && !input_space)) bad("invalid IVF coarse space");
+  if (input_space && model.config().metric!=TieredQMetric::l2) bad("input-space coarse lists need an L2 model");
   TieredQIVFIndex index(std::move(model),coarse ? lists : 0,seed);
+  index.input_space_coarse_=input_space==1;  // earlier L2 payloads keep their model-space lists
   if (trained) {
-    const size_t md=index.codec().model_dimensions();
-    std::vector<float> centroids(product(lists,md));
+    const size_t dimensions=index.coarse_dimensions();
+    std::vector<float> centroids(product(lists,dimensions));
     tieredq_detail::read_f32_array(reader,centroids.data(),centroids.size());
-    index.coarse_=std::make_shared<const CoarseQuantizer>(CoarseQuantizer::from(centroids,lists,md));
+    index.coarse_=std::make_shared<const CoarseQuantizer>(CoarseQuantizer::from(centroids,lists,dimensions));
     index.fixed_lists_=true;
   }
   index.size_=size_t(reader.u64());

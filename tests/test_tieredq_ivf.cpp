@@ -12,6 +12,7 @@
 #include <random>
 #include <set>
 #include <stdexcept>
+#include <string>
 #include <unistd.h>
 namespace {
 using namespace dv;
@@ -192,6 +193,121 @@ void multi_chunk_build_test(uint32_t lists) {
   TieredQIVFIndex ivf(codec,lists); ivf.build(data.data(),many);
   same(run(ivf,probes,ivf.lists()),expected,"multi-chunk IVF build differs from the flat index");
 }
+// Probing ranks lists by the rule that assigned the rows: a stored row used as the query, probing one list, scans its
+// own list. L2 coarse lists live in input space; L2 codec lists come from the encoder's model-space centroids and are
+// not covered.
+void probe_order_test(TieredQMetric metric,uint32_t lists) {
+  const auto codec=train(metric,4*dimensions);
+  const auto data=clustered_rows(rows,61);
+  TieredQIVFIndex ivf(codec,lists); ivf.build(data.data(),rows);
+  const auto assignment=ivf.list_assignment();
+  constexpr size_t probes=200;
+  size_t own=0;
+  for (size_t row=0;row<probes;++row) {
+    const auto hits=ivf.search(data.data()+row*dimensions,k,1);
+    require(!hits.empty(),"single-list probe found nothing");
+    own+=assignment[hits.front().id]==assignment[row];
+  }
+  if (own!=probes) throw std::runtime_error("a stored row does not probe its own list first (metric "+
+      std::to_string(int(metric))+", lists "+std::to_string(lists)+": "+std::to_string(own)+"/"+std::to_string(probes)+")");
+}
+// L2 coarse lists are plain L2 k-means on the input vectors: every row sits in the list of its nearest input-space
+// centroid (the list mean, up to the last k-means step), and a saved index round-trips with the same hits.
+void l2_input_space_test() {
+  constexpr uint32_t lists=20;
+  const auto codec=train(TieredQMetric::l2,4*dimensions);
+  const auto data=clustered_rows(rows,67),probes=clustered_rows(queries,71);
+  TieredQIVFIndex ivf(codec,lists); ivf.build(data.data(),rows);
+  const auto assignment=ivf.list_assignment();
+  std::vector<double> sums(size_t(lists)*dimensions,0); std::vector<size_t> counts(lists,0);
+  for (size_t row=0;row<rows;++row) {
+    ++counts[assignment[row]];
+    for (uint32_t j=0;j<dimensions;++j) sums[assignment[row]*dimensions+j]+=data[row*dimensions+j];
+  }
+  auto distance=[&](size_t row,uint32_t list) {
+    double total=0;
+    for (uint32_t j=0;j<dimensions;++j) { const double e=data[row*dimensions+j]-sums[list*dimensions+j]/double(counts[list]); total+=e*e; }
+    return total;
+  };
+  size_t nearest=0;
+  for (size_t row=0;row<rows;++row) {
+    uint32_t best=0;
+    for (uint32_t list=1;list<lists;++list) if (counts[list] && distance(row,list)<distance(row,best)) best=list;
+    nearest+=best==assignment[row];
+  }
+  require(nearest>=rows*98/100,"L2 coarse lists are not input-space nearest-mean lists");
+  const auto expected=run(ivf,probes,3);
+  same(run(TieredQIVFIndex::deserialize(ivf.serialize()),probes,3),expected,"input-space L2 IVF does not round-trip");
+}
+// An L2 index saved as version 3 (model-space coarse lists) loads and returns the hits that version returned.
+void l2_v3_file_test() {
+  const auto fixtures=std::filesystem::path(__FILE__).parent_path()/"fixtures";
+  const auto loaded=TieredQIVFIndex::load((fixtures/"tieredq_ivf_l2_v3.tq").string());
+  constexpr size_t fixture_dimensions=16,fixture_queries=8,fixture_k=10,fixture_nprobe=3;
+  auto read=[&](const char* name,auto& out) {
+    std::ifstream in(fixtures/name,std::ios::binary);
+    in.read(reinterpret_cast<char*>(out.data()),std::streamsize(out.size()*sizeof(out[0])));
+    require(bool(in),"short L2 version 3 fixture");
+  };
+  std::vector<float> fixture_probes(fixture_queries*fixture_dimensions); read("tieredq_ivf_l2_v3.queries",fixture_probes);
+  std::vector<uint32_t> expected(fixture_queries*fixture_k); read("tieredq_ivf_l2_v3.hits",expected);
+  std::vector<uint32_t> found;
+  for (size_t q=0;q<fixture_queries;++q)
+    for (const auto& hit:loaded.search(fixture_probes.data()+q*fixture_dimensions,fixture_k,fixture_nprobe)) found.push_back(hit.id);
+  require(found==expected,"L2 version 3 index changed its hits");
+  const auto again=TieredQIVFIndex::deserialize(loaded.serialize());
+  std::vector<uint32_t> reloaded;
+  for (size_t q=0;q<fixture_queries;++q)
+    for (const auto& hit:again.search(fixture_probes.data()+q*fixture_dimensions,fixture_k,fixture_nprobe)) reloaded.push_back(hit.id);
+  require(reloaded==expected,"resaved L2 version 3 index changed its hits");
+}
+// set_lists fixes the partition to given centroids: every row lands in its nearest given centroid's list (L2: input
+// distance; inner product: q.c - |c|^2/2, as list ranking), builds keep those lists, and bad input is rejected.
+void set_lists_test(TieredQMetric metric) {
+  constexpr uint32_t lists=20;
+  const auto codec=train(metric,2*dimensions);
+  const auto data=clustered_rows(rows,73);
+  const std::vector<float> centroids(data.begin(),data.begin()+size_t(lists)*dimensions);
+  TieredQIVFIndex ivf(codec,lists); ivf.set_lists(centroids.data()); ivf.build(data.data(),rows);
+  const auto assignment=ivf.list_assignment();
+  auto closeness=[&](size_t row,uint32_t list) {
+    double dot=0,norm=0;
+    for (uint32_t j=0;j<dimensions;++j) { const double c=centroids[list*dimensions+j]; dot+=data[row*dimensions+j]*c; norm+=c*c; }
+    return dot-norm/2;
+  };
+  size_t nearest=0;
+  for (size_t row=0;row<rows;++row) {
+    uint32_t best=0;
+    for (uint32_t list=1;list<lists;++list) if (closeness(row,list)>closeness(row,best)) best=list;
+    nearest+=best==assignment[row];
+  }
+  // Binary16 centroids may flip near-ties.
+  require(nearest>=rows*99/100,"set_lists rows are not in their nearest given list");
+  TieredQIVFIndex again(codec,lists); again.set_lists(centroids.data()); again.build(data.data(),rows);
+  require(again.list_assignment()==assignment,"set_lists partitions differ between builds");
+  std::vector<float> bad_centroids=centroids; bad_centroids[3]=std::nanf("");
+  require(rejects([&] { TieredQIVFIndex index(codec,lists); index.set_lists(bad_centroids.data()); }),"nonfinite centroids accepted");
+  require(rejects([&] { TieredQIVFIndex plain(codec); plain.set_lists(centroids.data()); }),"set_lists without coarse lists accepted");
+}
+// A build pulling rows through a loader equals the build over the same rows in one array: same lists, same serialized
+// index; the loader only sees in-range ids. Covers codec and coarse lists, both metrics and several build chunks.
+void loader_build_test(TieredQMetric metric,uint32_t lists,size_t count) {
+  const auto codec=train(metric,2*dimensions);
+  const auto data=clustered_rows(count,59);
+  TieredQIVFIndex direct(codec,lists); direct.build(data.data(),count);
+  TieredQIVFIndex loaded(codec,lists);
+  size_t loaded_rows=0;
+  loaded.build([&](const uint32_t* ids,size_t n,float* out) {
+    for (size_t i=0;i<n;++i) {
+      require(ids[i]<count,"loader asked for an id outside the build");
+      std::copy_n(data.data()+size_t(ids[i])*dimensions,dimensions,out+i*dimensions);
+    }
+    loaded_rows+=n;
+  },count);
+  require(loaded_rows>=count,"loader build skipped rows");
+  require(loaded.list_assignment()==direct.list_assignment(),"loader build changes the lists");
+  require(loaded.serialize()==direct.serialize(),"loader build differs from the array build");
+}
 // Random partitions, including empty lists, one-id lists and a lone list (zero-width low parts): every id decodes at
 // its position in order and at random, the words round-trip, and corrupt or mis-sized streams are rejected.
 void elias_fano_test() {
@@ -280,5 +396,12 @@ void tieredq_ivf_tests() {
   persistence_test(20);
   for (auto metric:{TieredQMetric::inner_product,TieredQMetric::l2}) fixed_lists_test(metric);
   for (uint32_t lists:{0u,20u}) multi_chunk_build_test(lists);
+  for (auto metric:{TieredQMetric::inner_product,TieredQMetric::cosine}) for (uint32_t lists:{0u,20u}) probe_order_test(metric,lists);
+  probe_order_test(TieredQMetric::l2,20);
+  l2_input_space_test();
+  for (auto metric:{TieredQMetric::inner_product,TieredQMetric::l2}) set_lists_test(metric);
+  l2_v3_file_test();
+  for (auto metric:{TieredQMetric::inner_product,TieredQMetric::l2}) for (uint32_t lists:{0u,20u}) for (size_t count:{size_t(rows),size_t(20000)})
+    loader_build_test(metric,lists,count);
   std::cout<<"PASS IVF\n";
 }
