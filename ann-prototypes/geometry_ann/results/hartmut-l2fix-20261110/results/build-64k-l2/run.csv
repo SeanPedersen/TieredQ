@@ -1,0 +1,2 @@
+queries,mode,expansion,super_probes,lists,nprobe,candidates,recall10,p50_us,p99_us,mean_us
+heldout,router,64.0,64,65536,128,40,0.9544,2688.7,3066.1,2720.5

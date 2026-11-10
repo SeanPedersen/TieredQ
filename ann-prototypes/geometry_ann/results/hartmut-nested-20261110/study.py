@@ -14,7 +14,10 @@ INDEXES = EXPERIMENTS / 'TieredQ-issue44-router-20261110/indexes'
 ROWS, THREADS, SEARCH_CPU = 8840823, 32, 2
 QUERIES = f"heldout:{QWEN / 'data/test_queries.fvecs'}:{QWEN / 'data/test_truth.ivecs'}:750"
 NPROBES = [96, 128, 256, 512, 1024]
-MODELS = [dict(name='tiers-64k', index=INDEXES / 'scratch-64k.tq', totals='4,5,6,8', fine='0', candidates='40,100')]
+# tiers-64k-fine: 6 and 8 bits plateaued at the same recall without fine tiers (and an L2 codec did not change it), so
+# the per-rank bit cap, not the total, limits the refinement; fine tiers let the top ranks take up to 12 bits.
+MODELS = [dict(name='tiers-64k', index=INDEXES / 'scratch-64k.tq', totals='4,5,6,8', fine='0', candidates='40,100'),
+          dict(name='tiers-64k-fine', index=INDEXES / 'scratch-64k.tq', totals='6,8', fine='1', candidates='40')]
 
 
 def status(stage, **extra):

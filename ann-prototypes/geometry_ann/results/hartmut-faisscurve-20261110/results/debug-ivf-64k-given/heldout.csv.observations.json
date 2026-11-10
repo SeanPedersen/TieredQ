@@ -1,0 +1,56 @@
+{
+  "calibration": [
+    {
+      "budget": 64,
+      "recall10": 0.952,
+      "p50_us": 19141.695,
+      "p99_us": 20425.043,
+      "mean_distance_evaluations": 10509.584,
+      "max_distance_evaluations": 15286
+    },
+    {
+      "budget": 256,
+      "recall10": 0.9792,
+      "p50_us": 23276.923,
+      "p99_us": 24900.348,
+      "mean_distance_evaluations": 40180.236,
+      "max_distance_evaluations": 52028
+    },
+    {
+      "budget": 1024,
+      "recall10": 0.99,
+      "p50_us": 39000.347,
+      "p99_us": 44746.858,
+      "mean_distance_evaluations": 156847.216,
+      "max_distance_evaluations": 185552
+    }
+  ],
+  "heldout": [
+    {
+      "budget": 64,
+      "recall10": 0.9397333333333333,
+      "p50_us": 19117.961,
+      "p99_us": 20262.3,
+      "mean_distance_evaluations": 10454.105333333333,
+      "max_distance_evaluations": 16339
+    },
+    {
+      "budget": 256,
+      "recall10": 0.9705333333333334,
+      "p50_us": 23197.399,
+      "p99_us": 25245.548,
+      "mean_distance_evaluations": 40076.78533333333,
+      "max_distance_evaluations": 54320
+    },
+    {
+      "budget": 1024,
+      "recall10": 0.9854666666666667,
+      "p50_us": 38871.235,
+      "p99_us": 43028.983,
+      "mean_distance_evaluations": 156386.74933333334,
+      "max_distance_evaluations": 183519
+    }
+  ],
+  "build_s": 10.700572817120701,
+  "peak_build_rss_bytes": 22996889600
+}

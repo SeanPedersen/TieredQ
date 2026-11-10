@@ -1,0 +1,22 @@
+{
+  "faiss_version": "1.15.1",
+  "selection": {
+    "0.95": {
+      "budget": 64,
+      "recall10": 0.952,
+      "p50_us": 19141.695,
+      "p99_us": 20425.043,
+      "mean_distance_evaluations": 10509.584,
+      "max_distance_evaluations": 15286
+    }
+  },
+  "targets": [
+    0.95
+  ],
+  "nlist": 65536,
+  "sample": 2621440,
+  "seed": 42,
+  "diagnostic_budgets": [],
+  "calibration_queries": "/home/sean/experiments/TieredQ-issue44-msmarco8m-20261107/data/calibration_queries.fvecs",
+  "test_queries": "/home/sean/experiments/TieredQ-issue44-msmarco8m-20261107/data/test_queries.fvecs"
+}
