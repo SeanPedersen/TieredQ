@@ -1,5 +1,5 @@
 """Faiss IVF-SQ8 baselines of the #52 scorecard with full held-out curves and 32-thread batch QPS (#51), on Qwen/MS
-MARCO 8.84M x 1024 (shared SQ8 codes). HNSW and flat (exact) coarse quantizers at 64K and 128K lists, each trained by
+MARCO 8.84M x 1024 (shared SQ8 codes). HNSW coarse quantizer at 64K and 128K lists and the flat (exact) one at 64K, each trained by
 Faiss itself on 40 rows per list with 4 Lloyd iterations (build time end to end). Every budget is replayed on the 750
 held-out queries one query at a time on one pinned core, then as one 32-thread batch call. Same budgets as the
 finelists study. Runs under the shared benchmark lock; resumable per step (exit.json)."""
@@ -14,7 +14,8 @@ THREADS, SEARCH_CPU = 32, 2
 ROWS_PER_CENTROID = 40
 BUDGETS = {65536: [64, 96, 128, 192, 256, 384, 512, 768, 1024, 1536, 2048, 3072],
            131072: [128, 192, 256, 384, 512, 768, 1024, 1536, 2048, 3072, 4096, 6144]}
-STEPS = [('ivf-hnsw', 65536), ('ivf-hnsw', 131072), ('ivf', 65536), ('ivf', 131072)]
+# Exact quantizer at 128K is left out: finelists has its single-query curve, and 64K gives the flat quantizer's batch QPS.
+STEPS = [('ivf-hnsw', 65536), ('ivf-hnsw', 131072), ('ivf', 65536)]
 
 
 def status(stage, **extra):

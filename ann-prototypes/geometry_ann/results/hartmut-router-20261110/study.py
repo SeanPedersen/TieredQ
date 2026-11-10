@@ -16,8 +16,8 @@ ROOT = Path.cwd()
 EXPERIMENTS = ROOT.parent
 QWEN = EXPERIMENTS / 'TieredQ-issue44-msmarco8m-20261107'
 ROWS, THREADS, SEARCH_CPU = 8840823, 32, 2
-QUERIES = ';'.join([f"calibration:{QWEN / 'data/calibration_queries.fvecs'}:{QWEN / 'data/calibration_truth.ivecs'}:250",
-                    f"heldout:{QWEN / 'data/test_queries.fvecs'}:{QWEN / 'data/test_truth.ivecs'}:750"])
+# Held-out queries only: the scorecard compares full curves, so nothing is selected on calibration queries.
+QUERIES = f"heldout:{QWEN / 'data/test_queries.fvecs'}:{QWEN / 'data/test_truth.ivecs'}:750"
 NPROBES = {65536: [32, 48, 64, 96, 128, 192, 256, 384, 512, 768, 1024, 1536],
            131072: [64, 96, 128, 192, 256, 384, 512, 768, 1024, 1536, 2048, 3072]}
 BATCH_NPROBES = {65536: [64, 256, 1024], 131072: [128, 512, 2048]}
@@ -25,10 +25,9 @@ DUEL = EXPERIMENTS / 'TieredQ-issue44-routerduel-20261110/results'
 GIVEN = dict(candidates='40,100', expansions='8,16,32,64')
 SCRATCH = dict(candidates='40', expansions='16,32', train_iterations=4, rows_per_list=40, assignment_supers=256,
                assignment_probes=16)
-# Scratch builds first: they answer the build-time question (#48) and need no given partition.
-MODELS = ([dict(name=f'scratch-{lists // 1024}k', lists=lists, **SCRATCH) for lists in (65536, 131072)] +
-          [dict(name=f'router-{lists // 1024}k', lists=lists, centroids=DUEL / f'{lists // 1024}k/centroids.f32', **GIVEN)
-           for lists in (65536, 131072)])
+# The shipping configuration, built from scratch: end-to-end build time (#48) and the curves of #52. The given-partition
+# models (router-*, GIVEN) are diagnostics, run only if the scratch partition falls short of Faiss's Lloyd lists.
+MODELS = [dict(name=f'scratch-{lists // 1024}k', lists=lists, **SCRATCH) for lists in (65536, 131072)]
 
 
 def status(stage, **extra):
