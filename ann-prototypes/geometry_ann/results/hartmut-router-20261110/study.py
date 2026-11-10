@@ -4,7 +4,10 @@ SQ8 re-rank of its top 40/100, measured with the exact coarse ranking and with t
 (probed supers hold that many member centroids per probed list, at least 16 supers). 128 lists per super, 2-bit router
 codes, exact re-rank of the router's first 256 lists. Single queries alone on one pinned core; a 32-thread batch pass
 (#51) at three nprobes per list count. The built indexes are saved under indexes/ and reused by reruns. Full nprobe
-sweeps on the 250 calibration and 750 held-out queries. Runs under the shared benchmark lock; resumable per model
+sweeps on the 250 calibration and 750 held-out queries. Exact assignment runs as FP32 BLAS sgemm (#48).
+The scratch-* models build from nothing at Faiss's IVF training budget (4 Lloyd iterations on 40 sample rows per
+list), with restricted assignment (256 supers, 16 probes) in training and build, so their build time is end to end
+and comparable to Faiss's; they measure the exact ranking and the router at expansions 16/32, top 40. Runs under the shared benchmark lock; resumable per model
 (exit.json)."""
 import datetime, fcntl, json, subprocess, time
 from pathlib import Path
@@ -19,8 +22,12 @@ NPROBES = {65536: [32, 48, 64, 96, 128, 192, 256, 384, 512, 768, 1024, 1536],
            131072: [64, 96, 128, 192, 256, 384, 512, 768, 1024, 1536, 2048, 3072]}
 BATCH_NPROBES = {65536: [64, 256, 1024], 131072: [128, 512, 2048]}
 DUEL = EXPERIMENTS / 'TieredQ-issue44-routerduel-20261110/results'
-MODELS = [dict(name=f'router-{lists // 1024}k', lists=lists, centroids=DUEL / f'{lists // 1024}k/centroids.f32')
-          for lists in (65536, 131072)]
+GIVEN = dict(candidates='40,100', expansions='8,16,32,64')
+SCRATCH = dict(candidates='40', expansions='16,32', train_iterations=4, rows_per_list=40, assignment_supers=256,
+               assignment_probes=16)
+MODELS = ([dict(name=f'router-{lists // 1024}k', lists=lists, centroids=DUEL / f'{lists // 1024}k/centroids.f32', **GIVEN)
+           for lists in (65536, 131072)] +
+          [dict(name=f'scratch-{lists // 1024}k', lists=lists, **SCRATCH) for lists in (65536, 131072)])
 
 
 def status(stage, **extra):
@@ -49,11 +56,15 @@ try:
                 continue
             status('measuring', model=model['name'])
             lists = model['lists']
+            lists_option = ([f"centroids={model['centroids']}"] if 'centroids' in model else
+                            [f"{key}={model[key]}" for key in ('train_iterations', 'rows_per_list', 'assignment_supers',
+                                                               'assignment_probes')])
             args = [str(ROOT / 'build/tieredq_ivf_qwen'), f"codes={QWEN / 'base.i8'}", f"scales={QWEN / 'scales.f32'}",
-                    f"offsets={QWEN / 'offsets.f32'}", f'rows={ROWS}', f'lists={lists}', f"centroids={model['centroids']}",
+                    f"offsets={QWEN / 'offsets.f32'}", f'rows={ROWS}', f'lists={lists}', *lists_option,
                     f"index={ROOT / 'indexes' / (model['name'] + '.tq')}", f'threads={THREADS}', f'search_cpu={SEARCH_CPU}',
-                    'code_bits=2048', 'max_scan_bits=4', 'nprobes=' + ','.join(map(str, NPROBES[lists])), 'candidates=40,100',
-                    'expansions=8,16,32,64', 'lists_per_super=128', 'rerank=256', 'router_bits=2', 'min_super_probes=16',
+                    'code_bits=2048', 'max_scan_bits=4', 'nprobes=' + ','.join(map(str, NPROBES[lists])),
+                    f"candidates={model['candidates']}", f"expansions={model['expansions']}", 'lists_per_super=128',
+                    'rerank=256', 'router_bits=2', 'min_super_probes=16',
                     f'batch_threads={THREADS}', 'batch_nprobes=' + ','.join(map(str, BATCH_NPROBES[lists])),
                     f'queries={QUERIES}', f"out={out / 'run'}"]
             started = time.time()

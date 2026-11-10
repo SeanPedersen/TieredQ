@@ -1,5 +1,5 @@
 // Coarse training options of TieredQIVFIndex (#48): restricted assignment that probes every super equals exact
-// assignment label for label, few probes keep almost every exact label, the iteration count changes the trained
+// (BLAS) assignment label for label on data without near-ties, few probes keep almost every exact label, the iteration count changes the trained
 // lists, and invalid options or codec-list indexes are rejected.
 #include "tieredq/tieredq.h"
 #include <cmath>

@@ -222,7 +222,8 @@ auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*p
   `set_coarse_training({iterations, assignment_supers, assignment_probes})` sets the Lloyd iterations of list
   training (default 20) and opts into restricted assignment (#48). Each row is then assigned among the members of its
   `assignment_probes` nearest supers, a k-means of the lists' centroids. Rows whose nearest list lies in a probed
-  super get the exact label bit for bit. On Qwen 1024-D (500K rows, 32K lists), 256 supers and 16 probes kept 99.0%
+  super get the exact label, up to floating-point near-ties. Exact assignment runs as FP32 BLAS `sgemm`, as in
+  Faiss; query ranking keeps the binary16 panels. On Qwen 1024-D (500K rows, 32K lists), 256 supers and 16 probes kept 99.0%
   of exact labels and ran 8.5× faster.
   Exact coarse ranking streams every centroid per query: about 9 ms at 64K × 1024. `build_router()` adds a two-level
   compressed router (#47) for single queries. It ranks about lists/128 supers exactly, scans the 2-bit TieredQ codes of

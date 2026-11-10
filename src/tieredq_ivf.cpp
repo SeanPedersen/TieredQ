@@ -10,6 +10,7 @@
 #include "tieredq_heap.h"
 #include "tieredq_fast_fine.h"
 #include <bit>
+#include <chrono>
 #include <optional>
 #include <numeric>
 namespace dv {
@@ -36,6 +37,10 @@ constexpr size_t coarse_minimum_sample=32768,coarse_rows_per_list=64;
 constexpr size_t coarse_assign_chunk=65536;
 // Documents encoded (coarse lists) or copied into the fast storage at a time during build.
 constexpr size_t ivf_build_chunk=8192;
+
+double seconds_since(std::chrono::steady_clock::time_point start) {
+  return std::chrono::duration<double>(std::chrono::steady_clock::now()-start).count();
+}
 
 size_t aligned(size_t documents) { return (documents+fast_list_alignment-1)/fast_list_alignment*fast_list_alignment; }
 
@@ -129,6 +134,7 @@ std::vector<uint32_t> TieredQIVFIndex::coarse_lists(const RowLoader& rows,size_t
   const TieredQ& model=codec();
   const size_t d=model.config().dimensions;
   std::vector<float> lifted;
+  auto started=std::chrono::steady_clock::now();
   if (!fixed_lists_) {
     const size_t sample_rows=std::min(count,std::max(coarse_minimum_sample,product(coarse_rows_per_list,coarse_lists_)));
     tieredq_detail::TrainingRng rng(seed_);
@@ -140,20 +146,19 @@ std::vector<uint32_t> TieredQIVFIndex::coarse_lists(const RowLoader& rows,size_t
     coarse_=std::make_shared<const CoarseQuantizer>(tieredq_detail::train_coarse(coarse_sample,sample_rows,coarse_dimensions(),
                                                                                 coarse_lists_,seed_,coarse_training_));
   }
-  // The restricted assigner groups the lists once for every chunk.
-  std::optional<tieredq_detail::RestrictedAssigner> restricted;
-  if (coarse_training_.assignment_supers)
-    restricted.emplace(*coarse_,coarse_training_.assignment_supers,coarse_training_.assignment_probes,seed_);
+  build_stats_.train_s=seconds_since(started);
+  started=std::chrono::steady_clock::now();
+  // One assigner for every chunk: it holds the FP32 centroids, or the restricted assigner's super grouping.
+  const tieredq_detail::ListAssigner assigner(*coarse_,coarse_training_,seed_);
   std::vector<uint32_t> lists(count),ids(std::min(coarse_assign_chunk,count));
   std::vector<float> chunk(product(ids.size(),d));
   for (size_t first=0;first<count;first+=coarse_assign_chunk) {
     const size_t n=std::min(coarse_assign_chunk,count-first);
     std::iota(ids.begin(),ids.begin()+n,uint32_t(first));
     rows(ids.data(),n,chunk.data());
-    const float* coarse_chunk=coarse_rows(chunk.data(),0,n,lifted);
-    if (restricted) restricted->assign(coarse_chunk,n,lists.data()+first);
-    else coarse_->assign(coarse_chunk,n,lists.data()+first);
+    assigner.assign(coarse_rows(chunk.data(),0,n,lifted),n,lists.data()+first);
   }
+  build_stats_.assign_s=seconds_since(started);
   return lists;
 }
 
@@ -175,7 +180,9 @@ void TieredQIVFIndex::build(const RowLoader& rows,size_t count) {
   std::vector<float> chunk_rows;
   // Codec-centroid lists come from the codes; coarse lists are known first, so rows are encoded in list order below.
   std::vector<uint8_t> encoded;
+  build_stats_={};
   std::vector<uint32_t> list_of=coarse_lists_ && count ? coarse_lists(rows,count) : std::vector<uint32_t>(count);
+  const auto encoding=std::chrono::steady_clock::now();
   if (!coarse_lists_ && count) {
     encoded.resize(product(count,stride));
     for (size_t first=0;first<count;first+=ivf_build_chunk) {
@@ -222,7 +229,10 @@ void TieredQIVFIndex::build(const RowLoader& rows,size_t count) {
   documents_=std::move(documents);
   ids_=tieredq_detail::EliasFanoLists::encode(list_of,lists);
   list_begin_=std::move(list_begin);list_rows_=std::move(list_rows);size_=count;
+  build_stats_.encode_s=seconds_since(encoding);
+  const auto routing=std::chrono::steady_clock::now();
   refresh_router();
+  build_stats_.router_s=seconds_since(routing);
   tieredq_detail::release_freed_heap();
 }
 

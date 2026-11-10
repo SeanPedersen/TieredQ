@@ -16,6 +16,8 @@ void dsyevd_(const char*,const char*,const int*,double*,const int*,double*,doubl
 void dgeqrf_(const int*,const int*,double*,const int*,double*,double*,const int*,int*);
 void dorgqr_(const int*,const int*,const int*,double*,const int*,const double*,double*,const int*,int*);
 void dsyrk_(const char*,const char*,const int*,const int*,const double*,const double*,const int*,const double*,double*,const int*);
+void sgemm_(const char*,const char*,const int*,const int*,const int*,const float*,const float*,const int*,const float*,
+            const int*,const float*,float*,const int*);
 }
 
 namespace dv::tieredq_detail {
@@ -25,6 +27,7 @@ class TrainingLinalg {
   decltype(&dgeqrf_) qr=&dgeqrf_;
   decltype(&dorgqr_) generate_q=&dorgqr_;
   decltype(&dsyrk_) syrk=&dsyrk_;
+  decltype(&sgemm_) gemm=&sgemm_;
 
   std::vector<double> covariance(const std::vector<double>& residual,const std::vector<double>& mean,
                                  int dimensions,int rows,StageProfile& profile) const {
@@ -81,8 +84,8 @@ class TrainingLinalg {
     if (!path || !*path) return result;
     const char* stage=std::getenv("TIEREDQ_BLAS_STAGE");
     const std::string selection=stage ? stage : "all";
-    if (selection!="all" && selection!="covariance" && selection!="eigen" && selection!="qr")
-      throw std::runtime_error("TieredQ: BLAS stage must be all, covariance, eigen or qr");
+    if (selection!="all" && selection!="covariance" && selection!="eigen" && selection!="qr" && selection!="gemm")
+      throw std::runtime_error("TieredQ: BLAS stage must be all, covariance, eigen, qr or gemm");
 #if defined(__unix__) || defined(__APPLE__)
     int flags=RTLD_NOW|RTLD_LOCAL;
 #ifdef RTLD_DEEPBIND
@@ -96,11 +99,13 @@ class TrainingLinalg {
       result.qr=symbol<decltype(result.qr)>(handle,"dgeqrf_");
       result.generate_q=symbol<decltype(result.generate_q)>(handle,"dorgqr_");
       result.syrk=symbol<decltype(result.syrk)>(handle,"dsyrk_");
+      result.gemm=symbol<decltype(result.gemm)>(handle,"sgemm_");
     } catch (...) { dlclose(handle); throw; }
     if (selection=="all") return result;
     if (selection!="covariance") result.syrk=&dsyrk_;
     if (selection!="eigen") result.eigen=&dsyevd_;
     if (selection!="qr") { result.qr=&dgeqrf_; result.generate_q=&dorgqr_; }
+    if (selection!="gemm") result.gemm=&sgemm_;
     return result;
 #else
     throw std::runtime_error("TieredQ: dynamic BLAS is unavailable on this platform");

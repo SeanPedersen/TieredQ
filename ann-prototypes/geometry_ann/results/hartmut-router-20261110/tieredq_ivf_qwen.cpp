@@ -1,5 +1,7 @@
 // TieredQ IVF with the two-level coarse router (#47) on Qwen/MS MARCO 8.84M x 1024 (SQ8 store): a 2-bit
-// TieredQIVFIndex on given Lloyd lists (set_lists), measured with an exact SQ8 re-rank of its top k', once with the
+// TieredQIVFIndex on given Lloyd lists (set_lists), or with lists trained in the library at Faiss's budget (#48:
+// rows_per_list sample rows per list, train_iterations Lloyd iterations, restricted assignment with
+// assignment_supers / assignment_probes; build time then counts sampling and training), measured with an exact SQ8 re-rank of its top k', once with the
 // exact coarse ranking and once per router expansion (probed supers = enough for expansion member centroids per
 // probed list, at least min_super_probes). The built index is saved (index=) before the router is added, so later runs
 // load it instead of rebuilding. Single-query latency runs alone on one pinned core; the batch pass (#51) runs all
@@ -38,7 +40,8 @@ constexpr std::uint64_t seed = 42;
 struct Options {
     std::string codes, scales, offsets, out, centroids, index;
     std::vector<std::string> query_sets;  // name:queries.fvecs:truth.ivecs:count
-    std::size_t rows = 0, dim = 1024, lists = 65536, threads = 32, batch_threads = 0;
+    std::size_t rows = 0, dim = 1024, lists = 65536, threads = 32, batch_threads = 0, rows_per_list = 40;
+    dv::TieredQCoarseTraining training;
     int search_cpu = 2;
     unsigned code_bits = 2048, max_scan_bits = 4;
     std::vector<std::size_t> nprobes, candidates, batch_nprobes;
@@ -58,7 +61,11 @@ Options parse(int argc, char** argv) {
     auto maybe = [&](const char* key, const std::string& fallback) { auto it = kv.find(key); if (it == kv.end()) return fallback; auto v = it->second; kv.erase(it); return v; };
     Options o;
     o.codes = take("codes"); o.scales = take("scales"); o.offsets = take("offsets"); o.out = take("out");
-    o.centroids = take("centroids"); o.index = maybe("index", "");
+    o.centroids = maybe("centroids", ""); o.index = maybe("index", "");
+    o.rows_per_list = std::stoul(maybe("rows_per_list", "40"));
+    o.training.iterations = std::uint32_t(std::stoul(maybe("train_iterations", "4")));
+    o.training.assignment_supers = std::uint32_t(std::stoul(maybe("assignment_supers", "0")));
+    o.training.assignment_probes = std::uint32_t(std::stoul(maybe("assignment_probes", "16")));
     o.rows = std::stoul(take("rows")); o.dim = std::stoul(maybe("dim", "1024")); o.lists = std::stoul(take("lists"));
     o.threads = std::stoul(maybe("threads", "32")); o.batch_threads = std::stoul(maybe("batch_threads", "0"));
     o.search_cpu = std::stoi(maybe("search_cpu", "2")); o.code_bits = unsigned(std::stoul(maybe("code_bits", "2048")));
@@ -162,20 +169,30 @@ int main(int argc, char** argv) try {
     std::FILE* batch_out = std::fopen((o.out + "-batch.csv").c_str(), "w");
     if (!report || !rows_out || !batch_out) throw std::runtime_error("cannot write outputs");
 
-    double codec_s = 0, build_s = 0, load_s = 0;
+    double codec_s = 0, lists_s = 0, build_s = 0, load_s = 0;
+    dv::TieredQBuildStats phases;
     auto start = Clock::now();
     auto build = [&] {
-        auto codec_sample = sample_rows(store, codec_sample_rows, 1, o.dim);
+        auto codec_sample = sample_rows(store, std::min(codec_sample_rows, o.rows), 1, o.dim);
         auto config = dv::TieredQConfig::target_code_bits(std::uint32_t(o.dim), o.code_bits);
         config.metric = dv::TieredQMetric::inner_product; config.max_scan_bits = o.max_scan_bits;
-        auto codec = dv::TieredQ::train(config, codec_sample.data(), codec_sample_rows, seed);
+        auto codec = dv::TieredQ::train(config, codec_sample.data(), codec_sample.size() / o.dim, seed);
         codec_s = seconds(start); start = Clock::now();
         dv::TieredQIVFIndex built(codec, std::uint32_t(o.lists), seed);
-        auto given = Store::read<float>(o.centroids);
-        if (given.size() != o.lists * o.dim) throw std::runtime_error("centroids must be lists x dim float32");
-        built.set_lists(given.data());
+        built.set_coarse_training(o.training);
+        if (!o.centroids.empty()) {
+            auto given = Store::read<float>(o.centroids);
+            if (given.size() != o.lists * o.dim) throw std::runtime_error("centroids must be lists x dim float32");
+            built.set_lists(given.data());
+        } else {
+            // Faiss's recipe: rows_per_list decoded sample rows per list, trained before the build.
+            auto sample = sample_rows(store, std::min(o.rows, o.lists * o.rows_per_list), 2, o.dim);
+            built.train_lists(sample.data(), sample.size() / o.dim);
+        }
+        lists_s = seconds(start); start = Clock::now();
         built.build([&](const std::uint32_t* ids, std::size_t count, float* out) { store.decode(ids, count, out); }, o.rows);
         build_s = seconds(start);
+        phases = built.build_stats();
         return built;
     };
     const bool cached = !o.index.empty() && std::filesystem::exists(o.index);
@@ -190,10 +207,14 @@ int main(int argc, char** argv) try {
     double router_s = 0;
     if (!o.expansions.empty()) { start = Clock::now(); ivf.build_router(o.router); router_s = seconds(start); }
     std::fprintf(report, "{\"lists\": %zu, \"routed_lists\": %zu, \"largest_list\": %zu, \"code_bits\": %u, \"max_scan_bits\": %u, "
-                 "\"cached_index\": %s, \"codec_s\": %.2f, \"build_s\": %.2f, \"load_s\": %.2f, \"router_s\": %.2f, "
+                 "\"cached_index\": %s, \"codec_s\": %.2f, \"lists_s\": %.2f, \"build_s\": %.2f, \"assign_s\": %.2f, "
+                 "\"encode_s\": %.2f, \"total_build_s\": %.2f, \"train_iterations\": %u, \"assignment_supers\": %u, "
+                 "\"assignment_probes\": %u, \"rows_per_list\": %zu, \"load_s\": %.2f, \"router_s\": %.2f, "
                  "\"index_bytes_without_router\": %zu, \"router_bytes\": %zu, \"lists_per_super\": %u, \"rerank\": %u, "
                  "\"router_bits\": %.2f, \"min_super_probes\": %u, \"build_peak_rss\": %zu}\n",
-                 o.lists, routed, largest, o.code_bits, o.max_scan_bits, cached ? "true" : "false", codec_s, build_s, load_s,
+                 o.lists, routed, largest, o.code_bits, o.max_scan_bits, cached ? "true" : "false", codec_s, lists_s, build_s,
+                 phases.assign_s, phases.encode_s, codec_s + lists_s + build_s + router_s, o.training.iterations,
+                 o.training.assignment_supers, o.training.assignment_probes, o.centroids.empty() ? o.rows_per_list : 0, load_s,
                  router_s, index_bytes, ivf.router_bytes(), o.router.lists_per_super, o.router.rerank, o.router.bits_per_dimension,
                  o.router.min_super_probes, peak_rss_bytes());
     std::fflush(report);

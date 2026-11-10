@@ -335,12 +335,18 @@ struct TieredQPruning {
 // the build) to their nearest list among the members of their assignment_probes nearest supers, a k-means of the
 // lists' centroids into assignment_supers groups: on Qwen 1024-D (500K rows, 32K lists) 256 supers and 16 probes gave
 // 99.0% exact labels at +0.1% objective, 8.5x faster than exact assignment. Rows whose nearest list lies in a probed
-// super get exactly the exact label. 0 (default) assigns exactly.
+// super get the exact label up to floating-point near-ties (both score the same rounded centroids; exact assignment
+// sums in FP32 BLAS, restricted scoring in the binary16 panel kernel). 0 (default) assigns exactly, via BLAS sgemm.
 struct TieredQCoarseTraining {
   uint32_t iterations = 20;
   uint32_t assignment_supers = 0;
   uint32_t assignment_probes = 16;
   void validate() const;
+};
+// Wall seconds of the last build() per phase: list training (0 for given lists), list assignment (0 for codec lists),
+// encoding and storing the documents (codec lists: the encoding that finds their lists too), and the router.
+struct TieredQBuildStats {
+  double train_s = 0, assign_s = 0, encode_s = 0, router_s = 0;
 };
 // Two-level compressed coarse router (#47) for single-query searches over many coarse lists, where ranking every
 // centroid exactly is memory-bound (about 9 ms per query at 64K x 1024). The nonempty lists' centroids are grouped
@@ -396,6 +402,7 @@ class TieredQIVFIndex {
   bool has_router() const { return bool(router_); }
   // Router codes, its super index and the row-major centroid copy for the exact re-rank; included in storage_bytes().
   size_t router_bytes() const;
+  const TieredQBuildStats& build_stats() const { return build_stats_; }
   size_t size() const { return size_; }
   size_t lists() const { return list_rows_.size(); }
   size_t list_size(size_t list) const { return list_rows_.at(list); }
@@ -452,6 +459,7 @@ class TieredQIVFIndex {
   uint64_t seed_ = 0;
   bool fixed_lists_ = false;                     // train_lists() trained coarse_; build() only assigns
   TieredQCoarseTraining coarse_training_;
+  TieredQBuildStats build_stats_;
   // Coarse centroids live in input space (new L2 indexes: plain L2 k-means, assignment and ranking on the input
   // vectors) instead of the codec's model space (inner product, cosine, and L2 indexes saved before payload version 4,
   // whose lifted space is dominated by row norms).

@@ -1,16 +1,82 @@
-// Restricted coarse assignment (#48): each row's nearest list among the members of its probes nearest supers (k-means
+// Coarse assignment at build time (#48). Exact assignment runs as FP32 BLAS sgemm on the rounded centroids, the way
+// Faiss assigns (1.3-1.5x the binary16 panel kernel's single-thread throughput on AVX2 and AVX-512); the panels stay for
+// query ranking, which streams the centroids once per query. Restricted assignment: each row's nearest list among the members of its probes nearest supers (k-means
 // of the lists' centroids), instead of among every list. Rows probing the same super are scored together against that
 // super's members through the coarse binary16 GEMM, so the work is about probes / supers of exact assignment while
-// staying GEMM-shaped. Members keep the coarse quantizer's rounded centroids, scales and norms, and every GEMM column
-// accumulates independently, so a row whose nearest list lies in a probed super gets exactly the exact label.
+// staying GEMM-shaped. Members keep the coarse quantizer's rounded centroids, scales and norms, so a row whose nearest
+// list lies in a probed super gets the exact label up to floating-point near-ties (the panel kernel and BLAS sum in
+// different orders).
 #pragma once
 #include "tieredq/tieredq.h"
 #include "tieredq_encode_float.h"
 #include "tieredq_ivf_coarse.h"
+#include "tieredq_train_linalg.h"
 #include <limits>
 #include <numeric>
+#include <optional>
+#if defined(__unix__) || defined(__APPLE__)
+#include <dlfcn.h>
+#endif
 
 namespace dv::tieredq_detail {
+// OpenBLAS sizes its own thread pool; within a call it uses the OpenMP thread count, so builds keep their thread budget.
+class BlasThreads {
+ public:
+  BlasThreads() {
+#if defined(__unix__) || defined(__APPLE__)
+    set_=reinterpret_cast<void(*)(int)>(dlsym(RTLD_DEFAULT,"openblas_set_num_threads"));
+    auto get=reinterpret_cast<int(*)()>(dlsym(RTLD_DEFAULT,"openblas_get_num_threads"));
+    if (!set_ || !get) { set_=nullptr; return; }
+    previous_=get();
+    set_(omp_get_max_threads());
+#endif
+  }
+  ~BlasThreads() { if (set_) set_(previous_); }
+  BlasThreads(const BlasThreads&)=delete;
+  BlasThreads& operator=(const BlasThreads&)=delete;
+ private:
+  void (*set_)(int)=nullptr;
+  int previous_=1;
+};
+
+// Exact nearest list per row (ties: lowest list id) by FP32 sgemm over row chunks and centroid tiles.
+class BlasAssigner {
+ public:
+  explicit BlasAssigner(const CoarseQuantizer& coarse) : coarse_(coarse),centroids_(coarse.centroids()) {}
+
+  void assign(const float* rows,size_t count,uint32_t* ids) const {
+    const BlasThreads threads;
+    const auto& linalg=TrainingLinalg::get();
+    const int d=int(coarse_.dimensions);
+    const size_t tile=std::min(tile_lists,coarse_.lists);
+    std::vector<float> dots(product(std::min(chunk_rows,count),tile)),best(std::min(chunk_rows,count));
+    for (size_t first=0;first<count;first+=chunk_rows) {
+      const size_t n=std::min(chunk_rows,count-first);
+      std::fill_n(best.begin(),n,-std::numeric_limits<float>::infinity());
+      for (size_t list0=0;list0<coarse_.lists;list0+=tile) {
+        const size_t m=std::min(tile,coarse_.lists-list0);
+        // Column-major: dots (m x n) = centroids[list0..)^T x rows^T, so each row's scores are contiguous.
+        const int mi=int(m),ni=int(n); const float one=1,zero=0; const char transposed='T',normal='N';
+        linalg.gemm(&transposed,&normal,&mi,&ni,&d,&one,centroids_.data()+list0*coarse_.dimensions,&d,
+                    rows+first*coarse_.dimensions,&d,&zero,dots.data(),&mi);
+#pragma omp parallel for schedule(static) if(n>1 && !omp_in_parallel())
+        for (size_t r=0;r<n;++r) {
+          const float* score=dots.data()+r*m;
+          for (size_t j=0;j<m;++j) {
+            const float closeness=score[j]-coarse_.half_norms[list0+j];
+            if (closeness>best[r]) { best[r]=closeness; ids[first+r]=uint32_t(list0+j); }
+          }
+        }
+      }
+    }
+  }
+
+ private:
+  static constexpr size_t chunk_rows=4096,tile_lists=8192;
+  const CoarseQuantizer& coarse_;
+  std::vector<float> centroids_;  // the rounded centroids, row-major
+};
+
 class RestrictedAssigner {
  public:
   RestrictedAssigner(const CoarseQuantizer& coarse,size_t supers,size_t probes,uint64_t seed)
@@ -127,16 +193,27 @@ class RestrictedAssigner {
   size_t probes_;
 };
 
-// Labels rows with the coarse quantizer's nearest list: exactly, or restricted when training sets assignment supers.
-inline void assign_lists(const CoarseQuantizer& coarse,const TieredQCoarseTraining& training,uint64_t seed,
-                         const float* rows,size_t count,uint32_t* ids) {
-  if (!training.assignment_supers) return coarse.assign(rows,count,ids);
-  RestrictedAssigner(coarse,training.assignment_supers,training.assignment_probes,seed).assign(rows,count,ids);
-}
+// Labels rows with the coarse quantizer's nearest list: exactly (BLAS), or restricted when training sets supers.
+class ListAssigner {
+ public:
+  ListAssigner(const CoarseQuantizer& coarse,const TieredQCoarseTraining& training,uint64_t seed) {
+    if (training.assignment_supers) restricted_.emplace(coarse,training.assignment_supers,training.assignment_probes,seed);
+    else exact_.emplace(coarse);
+  }
+  void assign(const float* rows,size_t count,uint32_t* ids) const {
+    if (restricted_) restricted_->assign(rows,count,ids);
+    else exact_->assign(rows,count,ids);
+  }
+ private:
+  std::optional<RestrictedAssigner> restricted_;
+  std::optional<BlasAssigner> exact_;
+};
 
 inline CoarseQuantizer train_coarse(const float* sample,size_t rows,size_t dimensions,size_t lists,uint64_t seed,
                                     const TieredQCoarseTraining& training) {
   return train_coarse(sample,rows,dimensions,lists,seed,training.iterations,
-                      [&](const CoarseQuantizer& q,const float* x,size_t n,uint32_t* ids) { assign_lists(q,training,seed,x,n,ids); });
+                      [&](const CoarseQuantizer& q,const float* x,size_t n,uint32_t* ids) {
+                        ListAssigner(q,training,seed).assign(x,n,ids);
+                      });
 }
 } // namespace dv::tieredq_detail
