@@ -1,0 +1,12 @@
+{
+  "build_s": 3052.4164948420366,
+  "build_threads": 32,
+  "nlist": 131072,
+  "build_peak_rss": 35249057792,
+  "build_peak_anon": 26901106688,
+  "build_peak_file": 9085415424,
+  "build_hwm": 35276746752,
+  "serving_rss": 13955895296,
+  "serving_anon": 13923352576,
+  "serving_file": 32542720
+}
