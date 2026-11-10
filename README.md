@@ -175,6 +175,10 @@ index.save("nested.tq")  # IVF, refinement and tier layout; attach the tier agai
   fetch the `encode_tier` rows of those ids (shape `ids.shape + (index.tier_bytes_per_vector,)`; ids of
   `2**32 - 1` are padding), then `scores, ids = index.rescore(queries, ids, rows, k=10)`.
 - `pruning=TieredQPruning(confidence=8)` opts IVF and nested scans into approximate pruning (see below).
+- Many lists: `ivf.set_coarse_training(iterations=10, assignment_supers=256, assignment_probes=16)` before
+  `build` sets the list training and opts into restricted assignment. After `build`, `ivf.build_router()` adds the
+  two-level coarse router, and `search(..., routing="auto" | "router" | "exact", super_probes=0)` selects the coarse
+  ranking (see the C++ notes on many lists).
 
 ## C++
 
@@ -213,6 +217,27 @@ auto hits = index.search(query, /*k=*/10, /*nprobe=*/16);
 auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*prefix_tiers=*/4});
 ```
 
+- **Many lists (64K+).** `set_lists(centroids)` fixes the lists to a partition trained elsewhere.
+  `build(RowLoader, count)` pulls rows by id in bounded chunks, so a base held as SQ8 codes needs no fp32 copy.
+  `set_coarse_training({iterations, assignment_supers, assignment_probes})` sets the Lloyd iterations of list
+  training (default 20) and opts into restricted assignment (#48). Each row is then assigned among the members of its
+  `assignment_probes` nearest supers, a k-means of the lists' centroids. Rows whose nearest list lies in a probed
+  super get the exact label bit for bit. On Qwen 1024-D (500K rows, 32K lists), 256 supers and 16 probes kept 99.0%
+  of exact labels and ran 8.5× faster.
+  Exact coarse ranking streams every centroid per query: about 9 ms at 64K × 1024. `build_router()` adds a two-level
+  compressed router (#47) for single queries. It ranks about lists/128 supers exactly, scans the 2-bit TieredQ codes of
+  the probed supers' member centroids, and re-ranks the first 256 lists exactly. The probed supers grow with `nprobe`.
+  Batches of 64 or more queries keep the exact GEMM ranking. `TieredQRouting{mode, super_probes}` forces either path
+  or the number of probed supers per search. The router persists with the index (payload version 5).
+
+  ```cpp
+  dv::TieredQIVFIndex index(codec, /*lists=*/65536);
+  index.set_lists(centroids);  // or set_coarse_training({10, 256, 16}) before training lists in build()
+  index.build(loader, count);
+  index.build_router();        // rebuilt by every later build()
+  auto hits = index.search(query, 40, /*nprobe=*/256);
+  auto exact = index.search(query, 40, 256, {}, {dv::TieredQRouting::Mode::exact});
+  ```
 - **Pruning.** By default the scan prunes exactly: hits equal an unpruned scan. A positive `confidence`
   bounds the remaining tiers statistically instead, which is faster and approximate. On OpenAI 100k, confidence 8
   kept recall unchanged (±0.0001) at 1.7× the QPS at 4 bits/dim. With `prefix_tiers = 3` it gave 1.6–2.4× the QPS

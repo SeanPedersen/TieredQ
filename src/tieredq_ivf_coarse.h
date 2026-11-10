@@ -11,6 +11,7 @@
 #include "tieredq_train_kmeans.h"
 #include "training_rng.h"
 #include <cmath>
+#include <omp.h>
 
 namespace dv::tieredq_detail {
 struct CoarseQuantizer {
@@ -68,6 +69,12 @@ struct CoarseQuantizer {
       }
     }
   }
+  // Centroid c's binary16 values over its scale, as the panels hold them (d values, row-major).
+  void half_row(size_t c,uint16_t* out) const {
+    constexpr size_t PANEL=TieredQPanels::PANEL;
+    const uint16_t* panel=panels.data.data()+c/PANEL*dimensions*PANEL+c%PANEL;
+    for (size_t k=0;k<dimensions;++k) out[k]=panel[k*PANEL];
+  }
   size_t allocated_bytes() const {
     return sizeof(*this)+panels.data.capacity()*sizeof(uint16_t)+(scales.capacity()+half_norms.capacity())*sizeof(float);
   }
@@ -79,19 +86,27 @@ struct CoarseQuantizer {
   }
 };
 
-// Lloyd k-means from lists distinct seeded sample rows, as the codec's centroid training.
-inline CoarseQuantizer train_coarse(const float* sample,size_t rows,size_t dimensions,size_t lists,uint64_t seed) {
-  constexpr int iterations=20;
+// Lloyd k-means from lists distinct seeded sample rows, as the codec's centroid training; assign(quantizer, rows,
+// count, ids) labels the sample each iteration (exact nearest list by default).
+constexpr size_t default_coarse_iterations=20;
+template<class Assign>
+CoarseQuantizer train_coarse(const float* sample,size_t rows,size_t dimensions,size_t lists,uint64_t seed,
+                             size_t iterations,Assign&& assign) {
   if (lists<1 || rows<lists) bad("IVF coarse training needs at least one row per list");
   TrainingRng rng(seed);
   const auto initial=rng.choice(rows,lists);
   std::vector<float> centroids(product(lists,dimensions));
   for (size_t c=0;c<lists;++c) std::copy_n(sample+initial[c]*dimensions,dimensions,centroids.data()+c*dimensions);
   std::vector<uint32_t> ids(rows);
-  for (int it=0;it<iterations;++it) {
-    CoarseQuantizer::from(centroids,lists,dimensions).assign(sample,rows,ids.data());
+  for (size_t it=0;it<iterations;++it) {
+    assign(CoarseQuantizer::from(centroids,lists,dimensions),sample,rows,ids.data());
     update_centroids(sample,rows,dimensions,ids.data(),centroids);
   }
   return CoarseQuantizer::from(centroids,lists,dimensions);
+}
+inline CoarseQuantizer train_coarse(const float* sample,size_t rows,size_t dimensions,size_t lists,uint64_t seed,
+                                    size_t iterations=default_coarse_iterations) {
+  return train_coarse(sample,rows,dimensions,lists,seed,iterations,
+                      [](const CoarseQuantizer& q,const float* x,size_t n,uint32_t* ids) { q.assign(x,n,ids); });
 }
 } // namespace dv::tieredq_detail

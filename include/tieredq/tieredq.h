@@ -15,7 +15,7 @@
 namespace dv {
 namespace tieredq_detail { struct FastFine; class FastRowReader; class StageProfile; struct FastScanCache; struct FastQueryBasis; struct EncoderData; class LazyEncoder;
                            struct TrainingRows;
-                           struct CoarseQuantizer; struct Writer; }
+                           struct CoarseQuantizer; struct CoarseRouter; struct Writer; }
 enum class TieredQIndexMode { fast, full };
 enum class TieredQKernel { automatic, scalar, avx2, avx512, neon };
 // Similarity an index serves; scores are always larger-is-better. Cosine normalizes rows and queries. L2 lifts rows
@@ -330,6 +330,43 @@ struct TieredQPruning {
   double confidence = 0;
   uint32_t prefix_tiers = automatic_prefix;
 };
+// Coarse list training and assignment of TieredQIVFIndex builds (#48); build-time only, not persisted. iterations
+// counts the Lloyd iterations of list training. assignment_supers > 0 assigns rows (in every training iteration and in
+// the build) to their nearest list among the members of their assignment_probes nearest supers, a k-means of the
+// lists' centroids into assignment_supers groups: on Qwen 1024-D (500K rows, 32K lists) 256 supers and 16 probes gave
+// 99.0% exact labels at +0.1% objective, 8.5x faster than exact assignment. Rows whose nearest list lies in a probed
+// super get exactly the exact label. 0 (default) assigns exactly.
+struct TieredQCoarseTraining {
+  uint32_t iterations = 20;
+  uint32_t assignment_supers = 0;
+  uint32_t assignment_probes = 16;
+  void validate() const;
+};
+// Two-level compressed coarse router (#47) for single-query searches over many coarse lists, where ranking every
+// centroid exactly is memory-bound (about 9 ms per query at 64K x 1024). The nonempty lists' centroids are grouped
+// into supers (k-means, about one per lists_per_super centroids), stored as codes of a small L2 TieredQ IVF index
+// (bits_per_dimension, 4-bit scan cap): a search ranks the supers exactly, scores the codes of the probed supers'
+// member centroids, then re-ranks the best rerank of them exactly on the same rounded centroids the exact ranking uses
+// and keeps the compressed order beyond them. The number of probed supers grows with nprobe: enough supers to hold
+// expansion member centroids per wanted list, at least min_super_probes.
+struct TieredQRouterConfig {
+  uint32_t lists_per_super = 128;
+  double bits_per_dimension = 2;
+  uint32_t rerank = 256;
+  double expansion = 32;
+  uint32_t min_super_probes = 64;
+  uint64_t seed = 0;
+  void validate() const;
+};
+// Per-search choice of coarse ranking. automatic uses the router (when built) for calls of fewer than
+// batch_queries queries and the exact GEMM ranking, which amortizes the centroids across queries, for larger batches.
+// router forces the router; exact ignores it. super_probes > 0 overrides the router's probed supers.
+struct TieredQRouting {
+  enum class Mode { automatic, router, exact };
+  static constexpr size_t batch_queries = 64;
+  Mode mode = Mode::automatic;
+  uint32_t super_probes = 0;
+};
 class TieredQIVFIndex {
  public:
   explicit TieredQIVFIndex(TieredQ codec, uint32_t lists = 0, uint64_t seed = 0);
@@ -343,6 +380,9 @@ class TieredQIVFIndex {
   // space: input vectors for L2 and inner product, normalized vectors for cosine.
   void set_lists(const float* centroids);
   // Floats per coarse centroid: the input dimensions, plus the lift's one for L2 indexes saved before version 4.
+  // Coarse indexes only: list training iterations and restricted assignment for later train_lists() and build() calls.
+  void set_coarse_training(TieredQCoarseTraining training);
+  const TieredQCoarseTraining& coarse_training() const { return coarse_training_; }
   size_t coarse_dimensions() const { return input_space_coarse_ ? codec().config().dimensions : codec().model_dimensions(); }
   void build(const float* rows, size_t count);
   // Fills out (count x config().dimensions floats, row-major) with the input rows ids[0..count), for builds whose rows
@@ -350,6 +390,12 @@ class TieredQIVFIndex {
   using RowLoader = std::function<void(const uint32_t* ids, size_t count, float* out)>;
   // The same build pulling rows through a loader, a bounded chunk at a time; equals build() on the loaded rows.
   void build(const RowLoader& rows, size_t count);
+  // Coarse indexes only: builds the two-level router over the current lists (now when built, otherwise at the next
+  // build) and rebuilds it after every later build(), set_lists() or train_lists() and build. Loaded indexes keep theirs.
+  void build_router(TieredQRouterConfig config = {});
+  bool has_router() const { return bool(router_); }
+  // Router codes, its super index and the row-major centroid copy for the exact re-rank; included in storage_bytes().
+  size_t router_bytes() const;
   size_t size() const { return size_; }
   size_t lists() const { return list_rows_.size(); }
   size_t list_size(size_t list) const { return list_rows_.at(list); }
@@ -357,17 +403,18 @@ class TieredQIVFIndex {
   std::vector<uint32_t> list_assignment() const;
   // Fast representation (including list padding), list offsets and the Elias-Fano id lists.
   size_t storage_bytes() const;
-  std::vector<TieredQHit> search(const float* query, size_t k, size_t nprobe, TieredQPruning pruning = {}) const;
+  std::vector<TieredQHit> search(const float* query, size_t k, size_t nprobe, TieredQPruning pruning = {},
+                                 TieredQRouting routing = {}) const;
   // Results are rows x min(k, size()) in row-major order; slots past the probed rows hold id UINT32_MAX and
   // score -inf. Queries are split across OpenMP workers; a single query scans on the calling thread.
   void search_batch(const float* queries, size_t rows, size_t k, size_t nprobe, float* scores, uint32_t* ids,
-                    TieredQPruning pruning = {}) const;
+                    TieredQPruning pruning = {}, TieredQRouting routing = {}) const;
   // The same searches with the queries' codec().query_weights() prepared by the caller, which reuses them (e.g. a
   // TieredQRefinement rescoring the hits from the same weights) instead of projecting each query again.
   std::vector<TieredQHit> search(const float* query, const TieredQQuery& weights, size_t k, size_t nprobe,
-                                 TieredQPruning pruning = {}) const;
+                                 TieredQPruning pruning = {}, TieredQRouting routing = {}) const;
   void search_batch(const float* queries, const TieredQQuery* weights, size_t rows, size_t k, size_t nprobe,
-                    float* scores, uint32_t* ids, TieredQPruning pruning = {}) const;
+                    float* scores, uint32_t* ids, TieredQPruning pruning = {}, TieredQRouting routing = {}) const;
   // Stored document of every input row id (id order), to address document_rows().
   std::vector<uint32_t> id_documents() const;
   // codec().encode() rows (bytes_per_vector() each) of stored documents, recovered exactly from the list storage, so
@@ -380,15 +427,17 @@ class TieredQIVFIndex {
   static TieredQIVFIndex load(const std::string& path);
  private:
   std::vector<TieredQHit> search_hits(const float* query, const TieredQQuery* weights, size_t k, size_t nprobe,
-                                      TieredQPruning pruning) const;
+                                      TieredQPruning pruning, TieredQRouting routing) const;
   void search_rows(const float* queries, const TieredQQuery* weights, size_t rows, size_t k, size_t nprobe,
-                   float* scores, uint32_t* ids, TieredQPruning pruning) const;
+                   float* scores, uint32_t* ids, TieredQPruning pruning, TieredQRouting routing) const;
+  void refresh_router();
   const float* model_rows(const float* rows, size_t first, size_t count, std::vector<float>& buffer) const;
   std::vector<uint32_t> coarse_lists(const RowLoader& rows, size_t count);
   void write_lists(tieredq_detail::Writer& writer) const;
   template<class Reader> static TieredQIVFIndex read_lists(TieredQ model, Reader& reader);
   // Version 2 payloads store every padded document's id raw; build() wrote them ascending per list.
   template<class Reader> void read_raw_ids(Reader& reader, size_t padded);
+  template<class Reader> void read_router(Reader& reader);
   struct Place { uint32_t list, position; };
   Place place_of(size_t document) const;
   bool live(size_t document) const;  // not list padding
@@ -402,6 +451,7 @@ class TieredQIVFIndex {
   uint32_t coarse_lists_ = 0;                    // 0: lists are the codec's centroids
   uint64_t seed_ = 0;
   bool fixed_lists_ = false;                     // train_lists() trained coarse_; build() only assigns
+  TieredQCoarseTraining coarse_training_;
   // Coarse centroids live in input space (new L2 indexes: plain L2 k-means, assignment and ranking on the input
   // vectors) instead of the codec's model space (inner product, cosine, and L2 indexes saved before payload version 4,
   // whose lifted space is dominated by row norms).
@@ -409,5 +459,7 @@ class TieredQIVFIndex {
   // Rows [first, first + count) in the coarse quantizer's space.
   const float* coarse_rows(const float* rows, size_t first, size_t count, std::vector<float>& buffer) const;
   std::shared_ptr<const tieredq_detail::CoarseQuantizer> coarse_;
+  std::shared_ptr<const TieredQRouterConfig> router_config_;  // set by build_router()
+  std::shared_ptr<const tieredq_detail::CoarseRouter> router_;
 };
 } // namespace dv

@@ -315,6 +315,8 @@ void tieredq_fast_mode_tests();
 void tieredq_additive_tests();
 void tieredq_metric_tests();
 void tieredq_ivf_tests();
+void tieredq_ivf_router_tests();
+void tieredq_ivf_training_tests();
 void tieredq_refinement_tests();
 void tieredq_nested_tests();
 void tieredq_nested_flat_tests();
@@ -336,6 +338,8 @@ int main() {
     tieredq_additive_tests();
     tieredq_metric_tests();
     tieredq_ivf_tests();
+    tieredq_ivf_router_tests();
+    tieredq_ivf_training_tests();
     tieredq_refinement_tests();
     tieredq_nested_tests();
     tieredq_nested_flat_tests();

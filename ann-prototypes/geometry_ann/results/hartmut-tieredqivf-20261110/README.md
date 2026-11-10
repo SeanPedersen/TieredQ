@@ -17,5 +17,23 @@ stopped as impractically slow.
 | 2-bit IVF alone | 1536 | 0.935 (cal) | 21.3 |
 | Nested, suffix to 4 bits/dim | 1536 | 0.943 (cal) | 21.7 |
 
-About 9 ms of every query is the exact coarse ranking over 64K centroids (#47). 128K results: pending, see `results/lloyd-128k`.
+About 9 ms of every query is the exact coarse ranking over 64K centroids (#47).
+
+128K lists: the build took 2,674 s (assign and encode) plus 127 s (tier). Codes 3.14 GB; tier 2.30 GB; no empty lists,
+largest list 875. Held out, 2-bit IVF + SQ8 re-rank of the top 40 (top 100 gave the same recall at every nprobe):
+
+| nprobe | Recall | p50 / p99 ms |
+|---:|---:|---|
+| 64 | 0.939 | 19.1 / 20.1 |
+| 128 | 0.957 | 19.4 / 20.3 |
+| 256 | 0.970 | 20.4 / 21.3 |
+| 512 | 0.979 | 22.1 / 23.2 |
+| 1024 | 0.985 | 25.3 / 26.5 |
+| 2048 | 0.989 | 31.8 / 33.3 |
+| 3072 | 0.991 | 38.0 / 39.5 |
+
+About 19 ms of every query is the exact coarse ranking over 128K centroids, twice the 64K cost. What remains, the scan
+and the re-rank, is about 0.4 ms at nprobe 128 and about 6 ms at 1024. At equal vectors scanned (twice the nprobe), 128K lists
+reach higher recall than 64K: 0.970 at nprobe 256 against 0.960 at 128, and 0.989 at 2048 against 0.986 at 1024. The 2-bit IVF alone plateaus at 0.941 and the nested 2+2-bit index at 0.948. The two-level router is
+measured end to end in `hartmut-router-20261110`.
 `run.json`'s serving RSS counts touched pages of the memory-mapped SQ8 file, so use the index byte counts.
