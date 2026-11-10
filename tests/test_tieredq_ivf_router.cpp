@@ -57,6 +57,33 @@ void exhaustive_router_test(TieredQMetric metric) {
   }
 }
 
+// probe_lists names the lists a search scans: every hit lies in them, for codec and coarse lists, routed or exact; an
+// exhaustive router returns the exact order.
+void probe_lists_test(TieredQMetric metric,uint32_t list_count) {
+  const auto data=gaussian_rows(rows,43),queries=gaussian_rows(20,47);
+  auto config=TieredQConfig::target_code_bits(dimensions,2*dimensions);
+  config.metric=metric; config.fine_tiers=false; config.max_scan_bits=4;
+  TieredQIVFIndex ivf(TieredQ::train(config,data.data(),rows,3),list_count,5);
+  ivf.build(data.data(),rows);
+  const size_t probes=std::min<size_t>(nprobe,ivf.lists()/4);
+  if (list_count) {
+    TieredQRouterConfig router; router.lists_per_super=lists_per_super; router.rerank=list_count; router.min_super_probes=list_count;
+    ivf.build_router(router);
+  }
+  const auto assignment=ivf.list_assignment();
+  for (size_t q=0;q<20;++q) {
+    const float* query=queries.data()+q*dimensions;
+    for (auto mode:{TieredQRouting::Mode::automatic,TieredQRouting::Mode::exact}) {
+      const auto lists=ivf.probe_lists(query,probes,{mode});
+      require(lists.size()==probes,"probe_lists size");
+      const std::set<uint32_t> probed(lists.begin(),lists.end());
+      for (const auto& hit:ivf.search(query,k,probes,{},{mode})) require(probed.count(assignment[hit.id]),"hit outside probe_lists");
+    }
+    if (list_count) require(ivf.probe_lists(query,probes)==ivf.probe_lists(query,probes,{TieredQRouting::Mode::exact}),
+                            "exhaustive router order differs from exact probe_lists");
+  }
+}
+
 // Default re-rank and automatic super probes: hits stay close to the exact ranking's, and fewer supers lose recall.
 void automatic_router_test() {
   const auto data=gaussian_rows(rows,17),queries=gaussian_rows(100,19);
@@ -143,6 +170,7 @@ void lifecycle_test() {
 } // namespace
 void tieredq_ivf_router_tests() {
   for (auto metric:{TieredQMetric::inner_product,TieredQMetric::cosine,TieredQMetric::l2}) exhaustive_router_test(metric);
+  for (auto metric:{TieredQMetric::inner_product,TieredQMetric::l2}) for (uint32_t list_count:{0u,lists}) probe_lists_test(metric,list_count);
   automatic_router_test();
   batch_threshold_test();
   lifecycle_test();

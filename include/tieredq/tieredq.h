@@ -422,6 +422,8 @@ class TieredQIVFIndex {
                                  TieredQPruning pruning = {}, TieredQRouting routing = {}) const;
   void search_batch(const float* queries, const TieredQQuery* weights, size_t rows, size_t k, size_t nprobe,
                     float* scores, uint32_t* ids, TieredQPruning pruning = {}, TieredQRouting routing = {}) const;
+  // The nprobe lists a search of query would scan, nearest first (empty lists skipped), ranked as routing says.
+  std::vector<uint32_t> probe_lists(const float* query, size_t nprobe, TieredQRouting routing = {}) const;
   // Stored document of every input row id (id order), to address document_rows().
   std::vector<uint32_t> id_documents() const;
   // codec().encode() rows (bytes_per_vector() each) of stored documents, recovered exactly from the list storage, so

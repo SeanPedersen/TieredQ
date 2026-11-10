@@ -60,6 +60,15 @@ class PythonIVFIndex {
     ensure_codec(sample.data(), sample.shape(0));
     index_->train_lists(sample.data(), sample.shape(0));
   }
+  // Fixes the lists to given centroids (lists x dimensions); applied when the codec is trained, if it is not yet.
+  void set_lists(Matrix centroids) {
+    if (!lists_) throw std::invalid_argument("set_lists needs lists > 0");
+    require_width(centroids.shape(1), config_.dimensions);
+    if (centroids.shape(0) != lists_) throw std::invalid_argument("set_lists needs one centroid per list");
+    std::unique_lock lock(mutex_);
+    given_lists_.assign(centroids.data(), centroids.data() + centroids.shape(0) * centroids.shape(1));
+    if (index_) index_->set_lists(given_lists_.data());
+  }
   void build(Matrix rows) {
     require_width(rows.shape(1), config_.dimensions);
     std::unique_lock lock(mutex_);
@@ -88,6 +97,12 @@ class PythonIVFIndex {
     if (!index_) throw std::runtime_error("build() the index before build_router()");
     index_->build_router(config);
   }
+  std::vector<uint32_t> probe_lists(FloatArray query, size_t nprobe, dv::TieredQRouting routing) const {
+    const auto shape = query_rows(query, config_.dimensions);
+    if (shape.rows != 1) throw std::invalid_argument("probe_lists takes one query");
+    std::shared_lock lock(mutex_);
+    return trained().probe_lists(query.data(), nprobe, routing);
+  }
   bool has_router() const {
     std::shared_lock lock(mutex_);
     return index_ && index_->has_router();
@@ -111,6 +126,7 @@ class PythonIVFIndex {
     if (index_) return;
     index_.emplace(train_codec(config_, rows, count), lists_, training_seed);
     if (training_) index_->set_coarse_training(*training_);
+    if (!given_lists_.empty()) index_->set_lists(given_lists_.data());
   }
   const dv::TieredQIVFIndex& trained() const {
     if (!index_) throw std::runtime_error("build() the index before using it");
@@ -120,6 +136,7 @@ class PythonIVFIndex {
   dv::TieredQConfig config_;
   uint32_t lists_;
   std::optional<dv::TieredQCoarseTraining> training_;
+  std::vector<float> given_lists_;
   std::optional<dv::TieredQIVFIndex> index_;
   mutable std::shared_mutex mutex_;
 };
@@ -157,6 +174,10 @@ void bind_ivf(nb::module_& module) {
       .def("train_lists", &PythonIVFIndex::train_lists, "sample"_a.noconvert(),
            "Trains the codec (if untrained) and the coarse lists on sample, so later builds keep this partition.",
            nb::call_guard<nb::gil_scoped_release>())
+      .def("set_lists", &PythonIVFIndex::set_lists, "centroids"_a.noconvert(),
+           "Fixes the coarse lists to given centroids (lists x dimensions float32; input space, normalized for cosine),\n"
+           "e.g. a partition trained elsewhere; build() then only assigns rows.",
+           nb::call_guard<nb::gil_scoped_release>())
       .def("build", &PythonIVFIndex::build, "rows"_a.noconvert(),
            "Replaces the content with rows; the first training (here or in train_lists) also trains the codec.",
            nb::call_guard<nb::gil_scoped_release>())
@@ -191,6 +212,15 @@ void bind_ivf(nb::module_& module) {
          "lists; rebuilt by every later build() and saved with the index.",
          nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro("has_router", &PythonIVFIndex::has_router, nb::call_guard<nb::gil_scoped_release>())
+      .def("probe_lists", [](const PythonIVFIndex& self, FloatArray query, size_t nprobe, const std::string& routing,
+                             uint32_t super_probes) {
+        const dv::TieredQRouting route{parse_routing(routing), super_probes};
+        std::vector<uint32_t> lists;
+        { nb::gil_scoped_release release; lists = self.probe_lists(query, nprobe, route); }
+        const size_t count = lists.size();
+        return owned_array(std::move(lists), {count});
+      }, "query"_a.noconvert(), nb::kw_only(), "nprobe"_a, "routing"_a = "auto", "super_probes"_a = 0,
+         "The nprobe lists a search of query scans, nearest first (empty lists skipped).")
       .def("list_assignment", [](const PythonIVFIndex& self) {
         std::vector<uint32_t> lists;
         { nb::gil_scoped_release release; lists = self.list_assignment(); }

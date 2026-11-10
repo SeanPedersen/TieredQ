@@ -300,6 +300,29 @@ std::vector<TieredQHit> TieredQIVFIndex::search_hits(const float* query,const Ti
   return hits;
 }
 
+std::vector<uint32_t> TieredQIVFIndex::probe_lists(const float* query,size_t nprobe,TieredQRouting routing) const {
+  if (!query) bad("null query");
+  if (routing.mode==TieredQRouting::Mode::router && !router_) bad("router search needs build_router() on a built index");
+  const size_t probes=std::clamp<size_t>(nprobe,1,lists());
+  std::vector<float> lifted;
+  const float* coarse_query=query;
+  if (!input_space_coarse_ && codec().config().metric!=TieredQMetric::inner_product) {
+    lifted.resize(codec().model_dimensions());
+    codec().lift_queries(query,1,lifted.data());
+    coarse_query=lifted.data();
+  }
+  if (router_ && routing.mode!=TieredQRouting::Mode::exact) return router_->probe_order(*coarse_,coarse_query,probes,routing.super_probes);
+  if (!coarse_) {
+    const auto weights=codec().model_query_weights(coarse_query);
+    std::vector<float> closeness(lists());
+    for (size_t list=0;list<lists();++list) closeness[list]=weights.centroid_scores[list]-codec().centroid_half_norms_[list];
+    return probe_order(closeness.data(),list_rows_,probes);
+  }
+  std::vector<float> closeness(lists());
+  coarse_->closeness(coarse_query,1,closeness.data());
+  return probe_order(closeness.data(),list_rows_,probes);
+}
+
 void TieredQIVFIndex::search_batch(const float* queries,size_t rows,size_t k,size_t nprobe,
     float* scores,uint32_t* ids,TieredQPruning pruning,TieredQRouting routing) const {
   search_rows(queries,nullptr,rows,k,nprobe,scores,ids,pruning,routing);

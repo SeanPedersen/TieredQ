@@ -73,3 +73,25 @@ def test_invalid_router_and_training_uses(data):
         TieredQIVFIndex(DIMENSIONS, 2 * DIMENSIONS, lists=LISTS).build_router()
     with pytest.raises(ValueError):
         TieredQIVFIndex(DIMENSIONS, 2 * DIMENSIONS).set_coarse_training(iterations=5)
+
+
+def test_probe_lists_match_exhaustive_router(data):
+    vectors, queries = data
+    index = built(vectors)
+    index.build_router(lists_per_super=LISTS_PER_SUPER, rerank=LISTS, min_super_probes=LISTS)
+    for query in queries[:8]:
+        routed = index.probe_lists(query, nprobe=NPROBE, routing="router")
+        assert routed.shape == (NPROBE,)
+        np.testing.assert_array_equal(routed, index.probe_lists(query, nprobe=NPROBE, routing="exact"))
+
+
+def test_set_lists_fixes_the_partition(data):
+    vectors, _ = data
+    centroids = gaussian(LISTS, 9)
+    index = TieredQIVFIndex(DIMENSIONS, 2 * DIMENSIONS, lists=LISTS, metric="l2", max_scan_bits=4)
+    index.set_lists(centroids)
+    index.build(vectors)
+    nearest = ((centroids ** 2).sum(1)[None, :] - 2 * vectors @ centroids.T).argmin(1)
+    assert (index.list_assignment() == nearest).mean() > 0.99
+    with pytest.raises(ValueError):
+        index.set_lists(centroids[:-1])
