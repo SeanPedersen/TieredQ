@@ -1,10 +1,9 @@
-"""Nested TieredQ refinement tiers against the SQ8 re-rank (#49) on Qwen/MS MARCO 8.84M x 1024 (SQ8 store). Loads the
-64K 2-bit TieredQIVFIndex saved by the router study (Lloyd lists, same codec seed and sample), adds the two-level router
-(min 16 probed supers), and measures the exact SQ8 re-rank (1,024 B per vector) next to TieredQNestedIVFIndex suffix
-tiers refining to 4/5/6/8 bits/dim total, with and without fine suffix tiers, in RAM, at candidates 40/100/200 over
-the full nprobe sweep. Then the 6-bit tier on the NVMe SSD (TieredQFileRows; page-cached and direct reads, queue depths
-1/2/4/8). Every query alone on one pinned core; 250 calibration and 750 held-out queries. Runs under the shared
-benchmark lock; resumable per model (exit.json)."""
+"""TieredQ refinement tiers in place of the SQ8 re-rank (#49), for the RAM axis of #52, on Qwen/MS MARCO 8.84M x 1024.
+Loads the router study's from-scratch 64K index (the shipping configuration), adds the router (expansion 64, at least
+32 supers), and measures, on the 750 held-out queries alone on one pinned core: the exact SQ8 re-rank of the top 40/100
+(1,024 B per vector, memory-mapped store) and TieredQNestedIVFIndex suffix tiers refining to 4/5/6/8 bits/dim total,
+held in RAM, rescoring the top 40/100, at 5 nprobes. Serving RSS (anonymous and file-backed) is recorded per
+configuration. Runs under the shared benchmark lock; resumable per model (exit.json)."""
 import datetime, fcntl, json, subprocess, time
 from pathlib import Path
 
@@ -13,11 +12,9 @@ EXPERIMENTS = ROOT.parent
 QWEN = EXPERIMENTS / 'TieredQ-issue44-msmarco8m-20261107'
 INDEXES = EXPERIMENTS / 'TieredQ-issue44-router-20261110/indexes'
 ROWS, THREADS, SEARCH_CPU = 8840823, 32, 2
-QUERIES = ';'.join([f"calibration:{QWEN / 'data/calibration_queries.fvecs'}:{QWEN / 'data/calibration_truth.ivecs'}:250",
-                    f"heldout:{QWEN / 'data/test_queries.fvecs'}:{QWEN / 'data/test_truth.ivecs'}:750"])
-NPROBES = [32, 64, 96, 128, 192, 256, 384, 512, 768, 1024, 1536]
-MODELS = [dict(name='tiers-64k', index=INDEXES / 'router-64k.tq', totals='4,5,6,8', fine='0,1', candidates='40,100,200',
-               ssd_total=6, ssd_nprobes='256,1024', queue_depths='1,2,4,8')]
+QUERIES = f"heldout:{QWEN / 'data/test_queries.fvecs'}:{QWEN / 'data/test_truth.ivecs'}:750"
+NPROBES = [96, 128, 256, 512, 1024]
+MODELS = [dict(name='tiers-64k', index=INDEXES / 'scratch-64k.tq', totals='4,5,6,8', fine='0', candidates='40,100')]
 
 
 def status(stage, **extra):
@@ -48,8 +45,7 @@ try:
             args = [str(ROOT / 'build/nested_qwen'), f"codes={QWEN / 'base.i8'}", f"scales={QWEN / 'scales.f32'}",
                     f"offsets={QWEN / 'offsets.f32'}", f'rows={ROWS}', f"index={model['index']}", f'threads={THREADS}',
                     f'search_cpu={SEARCH_CPU}', 'nprobes=' + ','.join(map(str, NPROBES)), f"candidates={model['candidates']}",
-                    f"totals={model['totals']}", f"fine={model['fine']}", f'ssd_dir={out}', f"ssd_total={model['ssd_total']}",
-                    f"ssd_nprobes={model['ssd_nprobes']}", f"queue_depths={model['queue_depths']}", f'queries={QUERIES}',
+                    f"totals={model['totals']}", f"fine={model['fine']}", f'queries={QUERIES}',
                     f"out={out / 'run'}"]
             started = time.time()
             with (out / 'run.log').open('w') as log:

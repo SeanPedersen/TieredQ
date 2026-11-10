@@ -3,7 +3,9 @@
 // per nprobe and candidate depth: the exact SQ8 re-rank (the baseline, 1,024 B per vector) and TieredQNestedIVFIndex
 // with a suffix tier refining to each total bits/dim, with and without fine suffix tiers, held in RAM. Then one tier on
 // SSD (TieredQFileRows; page-cached and direct reads, queue depths). Every query runs alone on one pinned core;
-// recall@10 is against the dataset's truth.
+// recall@10 is against the dataset's truth. Serving memory is read from /proc/self/status after each configuration's
+// sweep (anonymous: the index, router and in-RAM tier; file-backed: the memory-mapped SQ8 store's touched pages, which
+// only the SQ8 re-rank needs while serving), as compare_faiss reads it for Faiss.
 // Usage: nested_qwen KEY=VALUE...  (see Options)
 #include <tieredq/tieredq.h>
 #include <tieredq/tieredq_nested.h>
@@ -122,6 +124,16 @@ std::size_t true_hits(const std::vector<dv::TieredQHit>& found, const std::vecto
         hits += std::count(truth.begin() + q * top_k, truth.begin() + (q + 1) * top_k, std::int32_t(found[i].id));
     return hits;
 }
+struct Memory { std::size_t rss = 0, anon = 0, file = 0; };
+Memory serving_memory() {
+    std::ifstream in("/proc/self/status"); std::string key; std::size_t kb = 0; Memory m; std::string unit;
+    while (in >> key) {
+        if (key == "VmRSS:") { in >> kb >> unit; m.rss = kb * 1024; }
+        else if (key == "RssAnon:") { in >> kb >> unit; m.anon = kb * 1024; }
+        else if (key == "RssFile:") { in >> kb >> unit; m.file = kb * 1024; }
+    }
+    return m;
+}
 struct QuerySet { std::string name; std::size_t count; std::vector<float> queries; std::vector<std::int32_t> truth; };
 
 // Tier rows of every base row, encoded a chunk at a time from the SQ8 store and handed to sink(first, count, rows).
@@ -148,7 +160,8 @@ int main(int argc, char** argv) try {
     auto start = Clock::now();
     dv::TieredQIVFIndex ivf = dv::TieredQIVFIndex::load(o.index);
     const double load_s = seconds(start); start = Clock::now();
-    dv::TieredQRouterConfig router; router.min_super_probes = 16; router.seed = seed;
+    // The router study's best setting: expansion 64, at least 32 probed supers.
+    dv::TieredQRouterConfig router; router.expansion = 64; router.min_super_probes = 32; router.seed = seed;
     ivf.build_router(router);
     const double router_s = seconds(start);
     const auto codec_sample = sample_rows(store, std::min(codec_sample_rows, o.rows), 1, o.dim);
@@ -159,7 +172,8 @@ int main(int argc, char** argv) try {
         const std::size_t nq = std::stoul(count);
         sets.push_back({name, nq, read_vecs<float>(qpath, o.dim, nq), read_vecs<std::int32_t>(tpath, top_k, nq)});
     }
-    std::fprintf(rows_out, "queries,tier,total_bits,fine,tier_bytes,reads,queue_depth,lists,nprobe,candidates,recall10,p50_us,p99_us,mean_us\n");
+    std::fprintf(rows_out, "queries,tier,total_bits,fine,tier_bytes,reads,queue_depth,lists,nprobe,candidates,recall10,p50_us,p99_us,mean_us,"
+                 "rss_bytes,anon_bytes,file_bytes\n");
     std::fprintf(report, "{\"lists\": %zu, \"load_s\": %.2f, \"router_s\": %.2f, \"ivf_storage_bytes\": %zu, \"router_bytes\": %zu, \"tiers\": [",
                  ivf.lists(), load_s, router_s, ivf.storage_bytes(), ivf.router_bytes());
 
@@ -179,9 +193,11 @@ int main(int argc, char** argv) try {
                 us[q] = std::chrono::duration<double, std::micro>(Clock::now() - t).count();
                 hits += true_hits(found, set.truth, q);
             }
-            std::fprintf(rows_out, "%s,%s,%zu,%zu,%zu,%s,%zu,%zu,%zu,%zu,%.4f,%.1f,%.1f,%.1f\n", set.name.c_str(), tier, total, fine,
-                         tier_bytes, reads, queue_depth, ivf.lists(), nprobe, depth, double(hits) / double(set.count * top_k),
-                         percentile(us, 0.5), percentile(us, 0.99), std::accumulate(us.begin(), us.end(), 0.0) / set.count);
+            const Memory memory = serving_memory();
+            std::fprintf(rows_out, "%s,%s,%zu,%zu,%zu,%s,%zu,%zu,%zu,%zu,%.4f,%.1f,%.1f,%.1f,%zu,%zu,%zu\n", set.name.c_str(), tier, total,
+                         fine, tier_bytes, reads, queue_depth, ivf.lists(), nprobe, depth, double(hits) / double(set.count * top_k),
+                         percentile(us, 0.5), percentile(us, 0.99), std::accumulate(us.begin(), us.end(), 0.0) / set.count,
+                         memory.rss, memory.anon, memory.file);
             std::fflush(rows_out);
         }
         if (sched_setaffinity(0, sizeof(all), &all)) throw std::runtime_error("cannot unpin");
