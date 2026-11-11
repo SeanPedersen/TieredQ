@@ -1,0 +1,16 @@
+tieredq-nested-ivf {}: built in 61.6s, 0.269 GB, {'lists': 4096, 'has_router': False, 'storage_bytes': 151104860, 'prefix_bits': 768, 'total_bits': 6137, 'tier_bytes': 908982764, 'tier_bytes_per_vector': 676, 'memory_before_kib': {'Anonymous': 4056744, 'AnonHugePages': 0, 'RssAnon': 4056744}, 'memory_after_kib': {'Anonymous': 4332672, 'AnonHugePages': 0, 'RssAnon': 4332672}}
+  query=[32, 100]: recall=0.8683 qps=489 qps/GB=1816
+  query=[64, 100]: recall=0.8912 qps=443 qps/GB=1645
+  query=[96, 100]: recall=0.8984 qps=406 qps/GB=1506
+  query=[128, 100]: recall=0.9020 qps=375 qps/GB=1393
+  query=[192, 100]: recall=0.9055 qps=337 qps/GB=1253
+  query=[32, 200]: recall=0.9474 qps=322 qps/GB=1196
+  query=[64, 200]: recall=0.9800 qps=296 qps/GB=1097
+  query=[96, 200]: recall=0.9901 qps=285 qps/GB=1058
+  query=[128, 200]: recall=0.9943 qps=274 qps/GB=1016
+  query=[192, 200]: recall=0.9977 qps=245 qps/GB=908
+  query=[32, 400]: recall=0.9484 qps=187 qps/GB=695
+  query=[64, 400]: recall=0.9812 qps=186 qps/GB=689
+  query=[96, 400]: recall=0.9913 qps=117 qps/GB=435
+  query=[128, 400]: recall=0.9952 qps=127 qps/GB=471
+  query=[192, 400]: recall=0.9983 qps=153 qps/GB=567

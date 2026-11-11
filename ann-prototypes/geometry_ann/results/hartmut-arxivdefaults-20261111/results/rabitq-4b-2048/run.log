@@ -1,0 +1,8 @@
+rabitq-ivf {'num_clusters': 2048, 'total_bits': 4}: built in 52.6s, 0.760 GB, {'memory_before_kib': {'Anonymous': 4056688, 'AnonHugePages': 0, 'RssAnon': 4056688}, 'memory_after_kib': {'Anonymous': 4843356, 'AnonHugePages': 0, 'RssAnon': 4843356}}
+  query=8: recall=0.8486 qps=2185 qps/GB=2873
+  query=12: recall=0.8934 qps=1989 qps/GB=2616
+  query=16: recall=0.9200 qps=1834 qps/GB=2411
+  query=24: recall=0.9486 qps=1598 qps/GB=2101
+  query=32: recall=0.9619 qps=1443 qps/GB=1897
+  query=48: recall=0.9764 qps=1188 qps/GB=1562
+  query=64: recall=0.9827 qps=1020 qps/GB=1341

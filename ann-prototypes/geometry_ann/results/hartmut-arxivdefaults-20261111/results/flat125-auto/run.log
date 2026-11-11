@@ -1,0 +1,10 @@
+tieredq-ivf {'bits_per_dim': 1.25, 'lists': None}: built in 49.2s, 0.240 GB, {'lists': 4096, 'has_router': False, 'storage_bytes': 186301660, 'live_rows': 1344643, 'padding_rows': 62909, 'empty_lists': 0, 'memory_before_kib': {'Anonymous': 4056740, 'AnonHugePages': 0, 'RssAnon': 4056740}, 'memory_after_kib': {'Anonymous': 4302344, 'AnonHugePages': 0, 'RssAnon': 4302348}}
+  query=16: recall=0.8489 qps=1992 qps/GB=8290
+  query=24: recall=0.8774 qps=1806 qps/GB=7514
+  query=32: recall=0.8931 qps=1637 qps/GB=6812
+  query=48: recall=0.9099 qps=1412 qps/GB=5877
+  query=64: recall=0.9186 qps=1210 qps/GB=5035
+  query=96: recall=0.9270 qps=961 qps/GB=3999
+  query=128: recall=0.9312 qps=806 qps/GB=3356
+  query=160: recall=0.9334 qps=694 qps/GB=2889
+  query=192: recall=0.9348 qps=605 qps/GB=2518
