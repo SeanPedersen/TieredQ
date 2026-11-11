@@ -50,6 +50,18 @@ void same(const Results& a,const Results& b,const char* message) {
   require(a.ids==b.ids,message);
   for (size_t i=0;i<a.scores.size();++i) require(a.scores[i]==b.scores[i] || (std::isinf(a.scores[i]) && std::isinf(b.scores[i])),message);
 }
+// Scores match exactly; ids match except among rows whose score ties a neighbour's, where scan order decides.
+void same_up_to_ties(const Results& a,const Results& b,const char* message) {
+  for (size_t q=0;q<queries;++q) {
+    const auto score=[&](const Results& r,size_t i) { return r.scores[q*k+i]; };
+    for (size_t i=0;i<k;++i) {
+      const bool both_unfilled=std::isinf(score(a,i)) && std::isinf(score(b,i));
+      require(score(a,i)==score(b,i) || both_unfilled,(std::string(message)+" (scores)").c_str());
+      const bool tied=(i>0 && score(a,i)==score(a,i-1)) || (i+1<k && score(a,i)==score(a,i+1));
+      require(tied || a.ids[q*k+i]==b.ids[q*k+i],(std::string(message)+" (ids)").c_str());
+    }
+  }
+}
 // Full probe equals the flat fast index; single and batched searches agree.
 void full_probe_test(TieredQMetric metric,uint32_t code_bits,uint32_t lists=0) {
   const auto codec=train(metric,code_bits);
@@ -175,7 +187,7 @@ void fixed_lists_test(TieredQMetric metric) {
   const auto probes=clustered_rows(queries,43);
   Results expected{std::vector<float>(queries*k),std::vector<uint32_t>(queries*k)};
   flat.search_batch(probes.data(),queries,k,expected.scores.data(),expected.ids.data());
-  same(run(fresh,probes,lists),expected,"full probe over fixed lists differs from the flat index");
+  same_up_to_ties(run(fresh,probes,lists),expected,"full probe over fixed lists differs from the flat index");
   bool rejected=false;
   try { TieredQIVFIndex plain(codec); plain.train_lists(sample.data(),rows); } catch (const std::runtime_error&) { rejected=true; }
   require(rejected,"train_lists without coarse lists accepted");
