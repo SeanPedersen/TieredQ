@@ -50,14 +50,15 @@ void same(const Results& a,const Results& b,const char* message) {
   require(a.ids==b.ids,message);
   for (size_t i=0;i<a.scores.size();++i) require(a.scores[i]==b.scores[i] || (std::isinf(a.scores[i]) && std::isinf(b.scores[i])),message);
 }
-// Scores match exactly; ids match except among rows whose score ties a neighbour's, where scan order decides.
+// Scores match exactly; ids match except among rows whose score ties a neighbour's or the k-th score (a tie with a
+// row ranked beyond k), where scan order decides.
 void same_up_to_ties(const Results& a,const Results& b,const char* message) {
   for (size_t q=0;q<queries;++q) {
     const auto score=[&](const Results& r,size_t i) { return r.scores[q*k+i]; };
     for (size_t i=0;i<k;++i) {
       const bool both_unfilled=std::isinf(score(a,i)) && std::isinf(score(b,i));
       require(score(a,i)==score(b,i) || both_unfilled,(std::string(message)+" (scores)").c_str());
-      const bool tied=(i>0 && score(a,i)==score(a,i-1)) || (i+1<k && score(a,i)==score(a,i+1));
+      const bool tied=(i>0 && score(a,i)==score(a,i-1)) || (i+1<k && score(a,i)==score(a,i+1)) || score(a,i)==score(a,k-1);
       require(tied || a.ids[q*k+i]==b.ids[q*k+i],(std::string(message)+" (ids)").c_str());
     }
   }
