@@ -1,0 +1,1 @@
+{"lists": 65536, "load_s": 5.28, "router_s": 6.26, "ivf_storage_bytes": 2911881072, "router_bytes": 179829640, "tiers": [{"total_bits": 6, "fine": 1, "tier_bytes_per_vector": 509, "train_s": 3.27, "encode_s": 125.74}]}

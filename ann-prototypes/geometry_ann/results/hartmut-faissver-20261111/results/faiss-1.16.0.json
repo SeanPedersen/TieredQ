@@ -1,0 +1,215 @@
+{
+ "faiss": "1.16.0",
+ "rows": [
+  {
+   "variant": "ivf",
+   "kind": "single",
+   "build_s": 11.1310472789919,
+   "budget": 128,
+   "recall10": 0.9598666666666666,
+   "p50_us": 20629.616,
+   "p99_us": 22269.354,
+   "mean_distance_evaluations": 20452.234666666667,
+   "max_distance_evaluations": 28500
+  },
+  {
+   "variant": "ivf",
+   "kind": "single",
+   "build_s": 11.1310472789919,
+   "budget": 512,
+   "recall10": 0.9793333333333333,
+   "p50_us": 28291.326,
+   "p99_us": 30710.445,
+   "mean_distance_evaluations": 78972.864,
+   "max_distance_evaluations": 100201
+  },
+  {
+   "variant": "ivf",
+   "kind": "single",
+   "build_s": 11.1310472789919,
+   "budget": 2048,
+   "recall10": 0.9905333333333334,
+   "p50_us": 58253.049,
+   "p99_us": 63159.384,
+   "mean_distance_evaluations": 310675.116,
+   "max_distance_evaluations": 349065
+  },
+  {
+   "variant": "ivf",
+   "kind": "batch",
+   "parallel_mode": 0,
+   "budget": 128,
+   "threads": 32,
+   "recall10": 0.9598666666666666,
+   "qps": 1740.9064052535534
+  },
+  {
+   "variant": "ivf",
+   "kind": "batch",
+   "parallel_mode": 1,
+   "budget": 128,
+   "threads": 32,
+   "recall10": 0.9598666666666666,
+   "qps": 2198.2423100757874
+  },
+  {
+   "variant": "ivf",
+   "kind": "batch",
+   "parallel_mode": 2,
+   "budget": 128,
+   "threads": 32,
+   "recall10": 0.9598666666666666,
+   "qps": 2581.056930921804
+  },
+  {
+   "variant": "ivf",
+   "kind": "batch",
+   "parallel_mode": 3,
+   "budget": 128,
+   "threads": 32,
+   "recall10": 0.9598666666666666,
+   "qps": 2656.3980842137917
+  },
+  {
+   "variant": "ivf",
+   "kind": "batch",
+   "parallel_mode": 0,
+   "budget": 512,
+   "threads": 32,
+   "recall10": 0.9793333333333333,
+   "qps": 734.6723888649614
+  },
+  {
+   "variant": "ivf",
+   "kind": "batch",
+   "parallel_mode": 1,
+   "budget": 512,
+   "threads": 32,
+   "recall10": 0.9793333333333333,
+   "qps": 854.6022546119758
+  },
+  {
+   "variant": "ivf",
+   "kind": "batch",
+   "parallel_mode": 2,
+   "budget": 512,
+   "threads": 32,
+   "recall10": 0.9793333333333333,
+   "qps": 898.8911800070573
+  },
+  {
+   "variant": "ivf",
+   "kind": "batch",
+   "parallel_mode": 3,
+   "budget": 512,
+   "threads": 32,
+   "recall10": 0.9793333333333333,
+   "qps": 885.3342500836717
+  },
+  {
+   "variant": "ivf-hnsw",
+   "kind": "single",
+   "build_s": 12.865899191005155,
+   "budget": 128,
+   "recall10": 0.9478666666666666,
+   "p50_us": 3132.975,
+   "p99_us": 3976.201,
+   "mean_distance_evaluations": 20515.344,
+   "max_distance_evaluations": 29004
+  },
+  {
+   "variant": "ivf-hnsw",
+   "kind": "single",
+   "build_s": 12.865899191005155,
+   "budget": 256,
+   "recall10": 0.9633333333333334,
+   "p50_us": 6067.731,
+   "p99_us": 7371.752,
+   "mean_distance_evaluations": 40158.95333333333,
+   "max_distance_evaluations": 54632
+  },
+  {
+   "variant": "ivf-hnsw",
+   "kind": "single",
+   "build_s": 12.865899191005155,
+   "budget": 1024,
+   "recall10": 0.984,
+   "p50_us": 23380.981,
+   "p99_us": 26417.898,
+   "mean_distance_evaluations": 156622.49333333335,
+   "max_distance_evaluations": 183751
+  },
+  {
+   "variant": "ivf-hnsw",
+   "kind": "batch",
+   "parallel_mode": 0,
+   "budget": 128,
+   "threads": 32,
+   "recall10": 0.9478666666666666,
+   "qps": 2954.1492759645284
+  },
+  {
+   "variant": "ivf-hnsw",
+   "kind": "batch",
+   "parallel_mode": 1,
+   "budget": 128,
+   "threads": 32,
+   "recall10": 0.9478666666666666,
+   "qps": 2523.8597880139705
+  },
+  {
+   "variant": "ivf-hnsw",
+   "kind": "batch",
+   "parallel_mode": 2,
+   "budget": 128,
+   "threads": 32,
+   "recall10": 0.9478666666666666,
+   "qps": 3003.294879415403
+  },
+  {
+   "variant": "ivf-hnsw",
+   "kind": "batch",
+   "parallel_mode": 3,
+   "budget": 128,
+   "threads": 32,
+   "recall10": 0.9478666666666666,
+   "qps": 2973.5140063647154
+  },
+  {
+   "variant": "ivf-hnsw",
+   "kind": "batch",
+   "parallel_mode": 0,
+   "budget": 512,
+   "threads": 32,
+   "recall10": 0.9764,
+   "qps": 800.3298792950801
+  },
+  {
+   "variant": "ivf-hnsw",
+   "kind": "batch",
+   "parallel_mode": 1,
+   "budget": 512,
+   "threads": 32,
+   "recall10": 0.9764,
+   "qps": 772.3044879794546
+  },
+  {
+   "variant": "ivf-hnsw",
+   "kind": "batch",
+   "parallel_mode": 2,
+   "budget": 512,
+   "threads": 32,
+   "recall10": 0.9764,
+   "qps": 808.0101089031299
+  },
+  {
+   "variant": "ivf-hnsw",
+   "kind": "batch",
+   "parallel_mode": 3,
+   "budget": 512,
+   "threads": 32,
+   "recall10": 0.9764,
+   "qps": 808.0403340884725
+  }
+ ]
+}
