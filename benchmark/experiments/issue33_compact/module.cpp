@@ -12,10 +12,10 @@ namespace {
 constexpr size_t tier_fields = 5;
 
 // Mirrors PythonIndex's constructor (bindings/index.cpp) for fast mode.
-dv::TieredQConfig fast_config(uint32_t dimensions, uint32_t code_bits, const std::string& metric, bool fine_tiers,
+tq::TieredQConfig fast_config(uint32_t dimensions, uint32_t code_bits, const std::string& metric, bool fine_tiers,
                               bool exact_fast_scores) {
-  auto config = dv::TieredQConfig::target_code_bits(dimensions, code_bits);
-  config.target_mode = exact_fast_scores ? dv::TieredQIndexMode::full : dv::TieredQIndexMode::fast;
+  auto config = tq::TieredQConfig::target_code_bits(dimensions, code_bits);
+  config.target_mode = exact_fast_scores ? tq::TieredQIndexMode::full : tq::TieredQIndexMode::fast;
   config.metric = tieredq_python::parse_metric(metric);
   config.fine_tiers = fine_tiers;
   config.validate();
@@ -47,7 +47,7 @@ nb::dict train_encode(Matrix data, uint32_t code_bits, const std::string& metric
     model_bytes = codec.serialize().size();
     for (const auto& tier : codec.tiers())
       tiers.insert(tiers.end(), {tier.start, tier.dimensions, tier.bits, tier.scale_group, tier.bit_offset});
-    dv::TieredQIndex index(std::move(codec));
+    tq::TieredQIndex index(std::move(codec));
     index.add(data.data(), count);
     fast_storage = index.storage_bytes();
     fast_stride = index.bytes_per_vector();

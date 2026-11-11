@@ -51,7 +51,7 @@ int main(int argc,char** argv) {
   const size_t training_count=fitting.size()/dimensions;
   for (uint32_t bits:{808u,1176u,1560u}) {
     std::cout<<"training bits="<<bits<<std::endl;
-    auto codec=dv::TieredQ::train({dimensions,bits,256,true},fitting.data(),training_count,42);
+    auto codec=tq::TieredQ::train({dimensions,bits,256,true},fitting.data(),training_count,42);
     // Synthetic runs repeat fitting rows; supplied embeddings use the complete database.
     const auto encoded=codec.encode(database.empty() ? fitting.data() : database.data(),database.empty() ? training_count : count);
     const size_t stride=codec.bytes_per_vector();
@@ -64,8 +64,8 @@ int main(int argc,char** argv) {
 
     for (size_t i=0;i<query_count;++i) {
       auto q=codec.query(queries.data()+i*dimensions);
-      codec.score_planes(planes.data(),count,q,reference.data(),dv::TieredQKernel::scalar,false);
-      codec.score_planes(planes.data(),count,q,scores.data(),dv::TieredQKernel::automatic,false);
+      codec.score_planes(planes.data(),count,q,reference.data(),tq::TieredQKernel::scalar,false);
+      codec.score_planes(planes.data(),count,q,scores.data(),tq::TieredQKernel::automatic,false);
       const auto scalar_hits=top(reference),automatic_hits=top(scores);
       agreements+=scalar_hits==automatic_hits;
       if (!database.empty()) {
@@ -90,7 +90,7 @@ int main(int argc,char** argv) {
       const size_t mode=(turn+round+i)%2;
       auto start=Clock::now(); auto q=codec.query(queries.data()+i*dimensions); const double prep=milliseconds(start);
       start=Clock::now();
-      codec.score_planes(planes.data(),count,q,scores.data(),mode ? dv::TieredQKernel::automatic : dv::TieredQKernel::scalar,false);
+      codec.score_planes(planes.data(),count,q,scores.data(),mode ? tq::TieredQKernel::automatic : tq::TieredQKernel::scalar,false);
       const double scoring=milliseconds(start);
       start=Clock::now(); const auto hits=top(scores); const double select=milliseconds(start); checksum+=hits.front();
       if (!round) continue;

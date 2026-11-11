@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 
 class EliasFanoLists {
  public:
@@ -57,4 +57,4 @@ class EliasFanoLists {
   size_t universe_ = 0;
 };
 
-}  // namespace dv::tieredq_detail
+}  // namespace tq::tieredq_detail

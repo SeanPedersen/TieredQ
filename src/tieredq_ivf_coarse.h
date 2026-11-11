@@ -13,7 +13,7 @@
 #include <cmath>
 #include <omp.h>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 struct CoarseQuantizer {
   static constexpr size_t block_rows = 64;
   size_t lists = 0, dimensions = 0;
@@ -109,4 +109,4 @@ inline CoarseQuantizer train_coarse(const float* sample,size_t rows,size_t dimen
   return train_coarse(sample,rows,dimensions,lists,seed,iterations,
                       [](const CoarseQuantizer& q,const float* x,size_t n,uint32_t* ids) { q.assign(x,n,ids); });
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

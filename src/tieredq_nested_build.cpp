@@ -9,7 +9,7 @@
 #include <cmath>
 #include <numeric>
 
-namespace dv {
+namespace tq {
 using tieredq_detail::bad;
 using tieredq_detail::product;
 namespace {
@@ -121,4 +121,4 @@ void TieredQNestedIVFIndex::write_tier(const std::string& path,const TieredQIVFI
   // After the buffers above are freed, so the trim can return them.
   tieredq_detail::release_freed_heap();
 }
-} // namespace dv
+} // namespace tq

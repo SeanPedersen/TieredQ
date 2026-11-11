@@ -10,7 +10,7 @@
 #include <stdexcept>
 #include <vector>
 namespace {
-using namespace dv;
+using namespace tq;
 void require(bool condition,const char* message) { if (!condition) throw std::runtime_error(message); }
 constexpr uint32_t dimensions=48,centroids=8,seed=7;
 constexpr size_t rows=3001,queries=32,k=10;

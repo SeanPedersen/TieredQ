@@ -9,7 +9,7 @@
 #include <cmath>
 #include <stdexcept>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 struct LookupRangeBounds { size_t prefix_sections; FastRangeBounds bounds; };
 struct LookupRangeCheckpoint { LookupRangeBounds bounds; float threshold; };
 // Kernels without per-instruction directed rounding (NEON, AVX2) evaluate the bound in the default round-to-nearest
@@ -86,4 +86,4 @@ inline LookupRangeBounds prepare_lookup_range_bounds(const FastScanCache& cache,
   return {prefix,{range_round_up(high),range_round_down(low),range_round_up(magnitude),
       range_round_up(rounding_error/(1.0-rounding_error))}};
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

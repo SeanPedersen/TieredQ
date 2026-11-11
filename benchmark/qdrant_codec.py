@@ -1,6 +1,6 @@
 """Qdrant TurboQuant+ (production `quantization` crate) behind the codec_native.Index interface.
 
-The Rust shim in turboquant/native builds, saves, reloads and exhaustively scores TQ+ codes
+The Rust shim in codec_adapters/qdrant_turboquant_plus/native builds, saves, reloads and exhaustively scores TQ+ codes
 (cosine, or L2 for SIFT) without a Qdrant server. An index is a directory holding
 `metadata.json` and `codes.bin`. TQ+ calibration is seeded inside the patched crate and its
 rotation seeds are fixed upstream, so the benchmark seed does not change the codec.
@@ -14,7 +14,7 @@ import shutil
 import tempfile
 
 HERE = Path(__file__).resolve().parent
-DEFAULT_LIBRARY = HERE/"turboquant/native/target/release/libqdrant_bench.so"
+DEFAULT_LIBRARY = HERE/"codec_adapters/qdrant_turboquant_plus/native/target/release/libqdrant_bench.so"
 SUPPORTED_BITS = (1, 2, 4)
 # Allocated codes, quantizer heap (rotation/calibration), Index struct, encode seconds, stride.
 STAT_FIELDS = 5

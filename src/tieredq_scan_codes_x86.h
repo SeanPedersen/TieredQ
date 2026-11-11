@@ -10,7 +10,7 @@
 #include <limits>
 #include <utility>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 constexpr size_t code_register_lanes=16,code_pair_entries=2*code_register_lanes,code_pair_bits=5;
 constexpr size_t fast_code_query_tile_avx512=8,fast_code_query_tile_avx2=4;
 
@@ -348,4 +348,4 @@ inline void scan_codes_avx2(const FastScanCache& cache,const TieredQQuery& q,
     size_t first,size_t count,float* scores) {
   scan_codes_avx2_tile(cache,1,first,count,scores,count,[&](size_t)->const TieredQQuery& {return q;});
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

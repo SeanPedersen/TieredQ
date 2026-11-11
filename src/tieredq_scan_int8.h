@@ -16,7 +16,7 @@
 #include <stdexcept>
 #include <vector>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 constexpr size_t fast_scan_block_docs = 16;
 constexpr size_t fast_scan_coordinates_per_group = 4;
 constexpr size_t fast_scan_vector_docs = 4;
@@ -179,4 +179,4 @@ inline std::shared_ptr<FastScanCache> build_fast_scan_cache(
   }
   return cache;
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

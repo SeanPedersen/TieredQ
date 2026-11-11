@@ -2,7 +2,7 @@
 #include "tieredq/tieredq.h"
 #include "tieredq_index_read.h"
 #include <span>
-namespace dv {
+namespace tq {
 using tieredq_detail::Layout;
 using tieredq_detail::bad;
 using tieredq_detail::product;
@@ -66,4 +66,4 @@ TieredQIndex TieredQIndex::load(const std::string& path) {
     throw;
   }
 }
-} // namespace dv
+} // namespace tq

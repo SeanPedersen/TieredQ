@@ -8,7 +8,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace dv {
+namespace tq {
 class TieredQNestedIndex {
  public:
   // Encodes rows (count x dimensions) as the prefix scan list and an in-RAM tier. refinement was trained on prefix
@@ -29,4 +29,4 @@ class TieredQNestedIndex {
  private:
   TieredQNestedIVFIndex nested_;
 };
-} // namespace dv
+} // namespace tq

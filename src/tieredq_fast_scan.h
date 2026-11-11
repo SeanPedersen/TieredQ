@@ -9,7 +9,7 @@
 #include "tieredq_scan_fast_scalar.h"
 #include "tieredq_lookup_range.h"
 #if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
-#define DV_TIEREDQ_X86 1
+#define TQ_X86 1
 #include "tieredq_scan_int8_avx512.h"
 #include "tieredq_scan_int8_avx2.h"
 #include "tieredq_range_checkpoint_avx512.h"
@@ -17,12 +17,12 @@
 #include "tieredq_lookup_range_avx2.h"
 #endif
 #if defined(__aarch64__) || defined(_M_ARM64)
-#define DV_TIEREDQ_NEON 1
+#define TQ_NEON 1
 #include "tieredq_scan_int8_neon.h"
 #include "tieredq_lookup_range_neon.h"
 #endif
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 // Range starts every fast kernel accepts: 16-document int8/code blocks and the 32-document AVX2 lookup chunks.
 constexpr size_t fast_list_alignment = 32;
 
@@ -85,9 +85,9 @@ inline bool lookup_range_scan_supported(const FastScanCache& cache,const std::ve
 inline void scan_range_lookup([[maybe_unused]] const FastScanCache& cache,[[maybe_unused]] const FastScanLookupQuery& q,
     [[maybe_unused]] size_t first,[[maybe_unused]] size_t count,[[maybe_unused]] float* scores,
     [[maybe_unused]] const LookupRangeCheckpoint& checkpoint) {
-#ifdef DV_TIEREDQ_NEON
+#ifdef TQ_NEON
   scan_range_lookup_neon(cache,q,first,count,scores,checkpoint);
-#elif defined(DV_TIEREDQ_X86)
+#elif defined(TQ_X86)
   if (fast_scan_backend(cache)==FastScanBackend::avx512) scan_range_lookup_avx512(cache,q,first,count,scores,checkpoint);
   else scan_range_lookup_avx2(cache,q,first,count,scores,checkpoint);
 #else
@@ -102,7 +102,7 @@ template<class Run>
 void with_fast_scan(const FastScanCache& cache,const TieredQ& codec,const float* queries,size_t rows,Run run,
                     const TieredQQuery* weights=nullptr) {
   [[maybe_unused]] const auto backend=fast_scan_backend(cache);
-#ifdef DV_TIEREDQ_NEON
+#ifdef TQ_NEON
   if (backend==FastScanBackend::neon) {
     auto from_weights=[&](const TieredQQuery& q) { return fast_scan_query(cache,q); };
     auto prepare=[&](const float* vector) { return from_weights(codec.model_query_weights(vector)); };
@@ -114,7 +114,7 @@ void with_fast_scan(const FastScanCache& cache,const TieredQ& codec,const float*
     return;
   }
 #endif
-#ifdef DV_TIEREDQ_X86
+#ifdef TQ_X86
   if (backend==FastScanBackend::avx512 || backend==FastScanBackend::avx2) {
     auto prepare=[&](const float* vector) { return fast_scan_query_x86(cache,codec,vector); };
     auto from_weights=[&](const TieredQQuery& q) { return fast_scan_query_x86(cache,q); };
@@ -136,4 +136,4 @@ void with_fast_scan(const FastScanCache& cache,const TieredQ& codec,const float*
   };
   run(fast_search_queries(cache,codec,queries,rows,prepare,from_weights,weights),size_t(1),scan);
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

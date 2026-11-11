@@ -18,9 +18,9 @@
 namespace tieredq_python {
 using namespace nb::literals;
 namespace {
-dv::TieredQIndexMode parse_index_mode(const std::string& mode) {
-  if (mode=="fast") return dv::TieredQIndexMode::fast;
-  if (mode=="full") return dv::TieredQIndexMode::full;
+tq::TieredQIndexMode parse_index_mode(const std::string& mode) {
+  if (mode=="fast") return tq::TieredQIndexMode::fast;
+  if (mode=="full") return tq::TieredQIndexMode::full;
   throw std::invalid_argument("mode must be 'fast' or 'full'");
 }
 }  // namespace
@@ -30,13 +30,13 @@ class PythonIndex {
   PythonIndex(uint32_t dimensions, uint32_t code_bits, const std::string& mode, const std::string& metric,
               std::optional<double> allocation_power, bool exact_fast_scores, uint32_t max_scan_bits,
               bool fine_tiers, uint32_t max_tier_bits)
-      : config_(dv::TieredQConfig::target_code_bits(dimensions, code_bits)), mode_(parse_index_mode(mode)) {
+      : config_(tq::TieredQConfig::target_code_bits(dimensions, code_bits)), mode_(parse_index_mode(mode)) {
     // Full-target training keeps Lloyd-Max books, whose fast scan is bit-exact with the codec but slower (#13).
-    config_.target_mode = exact_fast_scores ? dv::TieredQIndexMode::full : mode_;
+    config_.target_mode = exact_fast_scores ? tq::TieredQIndexMode::full : mode_;
     config_.metric = parse_metric(metric);
     config_.max_scan_bits = max_scan_bits;
     // Full mode scores wide fine-tier codes only through its scalar scan, so it keeps codes at 8 bits.
-    config_.fine_tiers = fine_tiers && mode_ != dv::TieredQIndexMode::full;
+    config_.fine_tiers = fine_tiers && mode_ != tq::TieredQIndexMode::full;
     config_.max_tier_bits = max_tier_bits;
     if (allocation_power) {
       if (!(*allocation_power > 0)) throw std::invalid_argument("allocation_power must be positive");
@@ -61,7 +61,7 @@ class PythonIndex {
     std::shared_lock lock(mutex_);
     return index_ ? index_->codec().fast_prefix_bits() : 0;
   }
-  const char* mode() const { return mode_==dv::TieredQIndexMode::fast ? "fast" : "full"; }
+  const char* mode() const { return mode_==tq::TieredQIndexMode::fast ? "fast" : "full"; }
   const char* metric() const { return metric_name(config_.metric); }
   size_t storage_bytes() const {
     std::shared_lock lock(mutex_);
@@ -96,7 +96,7 @@ class PythonIndex {
   }
   void warn_if_scalar() {
     if (scalar_warning_emitted_ || !uses_scalar_fast_scan()) return;
-    const char* message=dv::TieredQIndex::native_fast_scan_available()
+    const char* message=tq::TieredQIndex::native_fast_scan_available()
         ? "TieredQ fast search is using the portable scalar scorer because this index's representation has no compatible SIMD kernel on this CPU. Rebuild the index from the original vectors on this machine to use its native fast representation."
         : "TieredQ fast search is using the portable scalar scorer because this CPU has no supported native fast kernel. Rebuilding on this CPU will not enable SIMD acceleration.";
     scalar_warning_emitted_=true;
@@ -113,7 +113,7 @@ class PythonIndex {
     const size_t width = rank == 1 ? queries.shape(0) : queries.shape(1);
     require_width(width, config_.dimensions);
     std::shared_lock lock(mutex_);
-    const dv::TieredQIndex& index = trained();
+    const tq::TieredQIndex& index = trained();
     const size_t found = std::min(k, index.size());
     SearchResult result{std::vector<float>(array_elements(rows, found), 0.0f),
                         std::vector<uint32_t>(array_elements(rows, found), 0),
@@ -127,25 +127,25 @@ class PythonIndex {
     trained().save(path);
   }
   static std::unique_ptr<PythonIndex> load(const std::string& path) {
-    return std::unique_ptr<PythonIndex>(new PythonIndex(dv::TieredQIndex::load(path)));
+    return std::unique_ptr<PythonIndex>(new PythonIndex(tq::TieredQIndex::load(path)));
   }
 
  private:
-  explicit PythonIndex(dv::TieredQIndex index)
+  explicit PythonIndex(tq::TieredQIndex index)
       : config_(index.codec().config()), mode_(index.mode()), index_(std::move(index)) {}
-  const dv::TieredQIndex& trained() const {
+  const tq::TieredQIndex& trained() const {
     if (!index_) throw std::runtime_error("add() at least 2 rows before searching");
     return *index_;
   }
-  dv::TieredQIndex& trained() {
+  tq::TieredQIndex& trained() {
     if (!index_) throw std::runtime_error("add() at least 2 rows before searching");
     return *index_;
   }
 
-  dv::TieredQConfig config_;
-  dv::TieredQIndexMode mode_;
+  tq::TieredQConfig config_;
+  tq::TieredQIndexMode mode_;
   bool scalar_warning_emitted_ = false;
-  std::optional<dv::TieredQIndex> index_;
+  std::optional<tq::TieredQIndex> index_;
   mutable std::shared_mutex mutex_;
 };
 

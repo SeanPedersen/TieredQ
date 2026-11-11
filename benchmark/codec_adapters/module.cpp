@@ -6,7 +6,7 @@
 #include <random>
 #include <tieredq/tieredq.h>
 #include <tieredq/tieredq_nested_flat.h>
-#include "rabitq_flat.h"
+#include "rabitq/rabitq_flat.h"
 #include <filesystem>
 #include <chrono>
 #include <memory>
@@ -21,11 +21,11 @@ constexpr size_t top_k = 10;
 constexpr bool rabitq_high_accuracy = benchmark::RaBitQFlat::high_accuracy;
 constexpr size_t training_limit = 32768;
 class Index {
-  std::unique_ptr<dv::TieredQIndex> tq_;
+  std::unique_ptr<tq::TieredQIndex> tq_;
   std::unique_ptr<benchmark::RaBitQFlat> rq_;
   size_t width_, count_;
   double encode_s_ = 0;
-  Index(std::unique_ptr<dv::TieredQIndex> tq, std::unique_ptr<benchmark::RaBitQFlat> rq, size_t width, size_t count)
+  Index(std::unique_ptr<tq::TieredQIndex> tq, std::unique_ptr<benchmark::RaBitQFlat> rq, size_t width, size_t count)
       : tq_(std::move(tq)), rq_(std::move(rq)), width_(width), count_(count) {}
  public:
   static Index load(const std::string& path, bool tieredq) {
@@ -34,7 +34,7 @@ class Index {
       const size_t width = rq->dimensions(), count = rq->size();
       return Index(nullptr, std::move(rq), width, count);
     }
-    auto tq = std::make_unique<dv::TieredQIndex>(dv::TieredQIndex::load(path));
+    auto tq = std::make_unique<tq::TieredQIndex>(tq::TieredQIndex::load(path));
     const size_t width = tq->codec().config().dimensions, count = tq->size();
     return Index(std::move(tq), nullptr, width, count);
   }
@@ -50,10 +50,10 @@ class Index {
     if (tieredq) {
       const bool lifted = l2 && !native_metric;
       const size_t budget = code_bits ? code_bits : bits * (width_ - (lifted ? 1 : 0));
-      auto config = dv::TieredQConfig::target_code_bits(width_, budget);
-      if (l2 && native_metric) config.metric = dv::TieredQMetric::l2;
+      auto config = tq::TieredQConfig::target_code_bits(width_, budget);
+      if (l2 && native_metric) config.metric = tq::TieredQMetric::l2;
       config.num_centroids = std::min<size_t>(256, count_ / 2);
-      config.target_mode = fast && !exact ? dv::TieredQIndexMode::fast : dv::TieredQIndexMode::full;
+      config.target_mode = fast && !exact ? tq::TieredQIndexMode::fast : tq::TieredQIndexMode::full;
       config.fine_tiers = fine_tiers && fast;
       const size_t train_count = std::min(count_, training_limit);
       std::vector<uint32_t> order(count_);
@@ -61,7 +61,7 @@ class Index {
       std::mt19937_64 rng(seed);
       std::shuffle(order.begin(), order.end(), rng);
       // The first train_count shuffled rows, read in place (the same model as training on them gathered).
-      tq_ = std::make_unique<dv::TieredQIndex>(dv::TieredQ::train_sampled(config, base.data(), count_, order.data(), train_count, seed), fast ? dv::TieredQIndexMode::fast : dv::TieredQIndexMode::full);
+      tq_ = std::make_unique<tq::TieredQIndex>(tq::TieredQ::train_sampled(config, base.data(), count_, order.data(), train_count, seed), fast ? tq::TieredQIndexMode::fast : tq::TieredQIndexMode::full);
       const auto start = std::chrono::steady_clock::now();
       tq_->add(base.data(), count_);
       encode_s_ = std::chrono::duration<double>(std::chrono::steady_clock::now()-start).count();
@@ -90,7 +90,7 @@ class Index {
     result["allocated_vector_bytes"] = tq_->storage_bytes();
     result["model_serialized_bytes"] = codec.model_bytes();
     result["model_memory_bytes"] = codec.memory_bytes();
-    result["model_serving_memory_bytes"] = dv::TieredQ::deserialize(codec.serialize()).memory_bytes();
+    result["model_serving_memory_bytes"] = tq::TieredQ::deserialize(codec.serialize()).memory_bytes();
     result["scalar_fast_scan"] = tq_->uses_scalar_fast_scan();
     return result;
   }
@@ -120,14 +120,14 @@ class Index {
     if (rq_) { rq_->save(path.c_str()); return std::max<size_t>(std::filesystem::file_size(path),rq_->storage_bytes()); }
     tq_->save(path);
     // Serving footprint: a reloaded index holds the model's serving state; encoder state is built only on append.
-    const auto served=dv::TieredQIndex::load(path);
+    const auto served=tq::TieredQIndex::load(path);
     return std::max<size_t>(std::filesystem::file_size(path), served.storage_bytes()+served.codec().memory_bytes());
   }
 };
 // Flat nested TieredQ (#13): a prefix_bits prefix scanned for every row, the top `candidates` rescored with a
 // TieredQRefinement tier to code_bits, both trained on the same seeded sample as Index's TieredQ path.
 class NestedIndex {
-  std::unique_ptr<dv::TieredQNestedIndex> nested_;
+  std::unique_ptr<tq::TieredQNestedIndex> nested_;
   size_t width_, candidates_;
   double encode_s_ = 0;
  public:
@@ -143,12 +143,12 @@ class NestedIndex {
     std::shuffle(order.begin(), order.end(), rng);
     std::vector<float> sample(train_count*width_);
     for (size_t i=0; i<train_count; ++i) std::copy_n(base.data()+size_t(order[i])*width_, width_, sample.data()+i*width_);
-    auto config = dv::TieredQConfig::target_code_bits(width_, prefix_bits);
+    auto config = tq::TieredQConfig::target_code_bits(width_, prefix_bits);
     config.num_centroids = std::min<size_t>(256, count / 2);
-    auto prefix = dv::TieredQ::train(config, sample.data(), train_count, seed);
-    auto refinement = dv::TieredQRefinement::train(prefix, code_bits, sample.data(), train_count, seed);
+    auto prefix = tq::TieredQ::train(config, sample.data(), train_count, seed);
+    auto refinement = tq::TieredQRefinement::train(prefix, code_bits, sample.data(), train_count, seed);
     const auto start = std::chrono::steady_clock::now();
-    nested_ = std::make_unique<dv::TieredQNestedIndex>(std::move(prefix), std::move(refinement), base.data(), count);
+    nested_ = std::make_unique<tq::TieredQNestedIndex>(std::move(prefix), std::move(refinement), base.data(), count);
     encode_s_ = std::chrono::duration<double>(std::chrono::steady_clock::now()-start).count();
   }
   double encode_seconds() const { return encode_s_; }

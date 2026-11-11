@@ -43,12 +43,12 @@ Result evaluate(const std::vector<float>& base,const std::vector<float>& queries
   std::mt19937_64 rng(seed); std::shuffle(order.begin(),order.end(),rng);
   std::vector<float> sample(train_count*d);
   for (size_t i=0;i<train_count;++i) std::copy_n(base.data()+order[i]*d,d,sample.data()+i*d);
-  auto config=dv::TieredQConfig::target_code_bits(d,code_bits);
+  auto config=tq::TieredQConfig::target_code_bits(d,code_bits);
   config.num_centroids=centroids;
   const char* mode=std::getenv("AB_MODE");
-  config.target_mode=mode && !std::strcmp(mode,"full") ? dv::TieredQIndexMode::full : dv::TieredQIndexMode::fast;
+  config.target_mode=mode && !std::strcmp(mode,"full") ? tq::TieredQIndexMode::full : tq::TieredQIndexMode::fast;
   if (const char* power=std::getenv("AB_POWER")) config.allocation_power=std::stod(power);
-  dv::TieredQIndex index(dv::TieredQ::train(config,sample.data(),train_count,seed),config.target_mode);
+  tq::TieredQIndex index(tq::TieredQ::train(config,sample.data(),train_count,seed),config.target_mode);
   index.add(base.data(),n);
   std::vector<float> scores(nq*top_k); std::vector<uint32_t> ids(nq*top_k);
   omp_set_num_threads(threads);

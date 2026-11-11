@@ -14,7 +14,7 @@
 #include <optional>
 #include <vector>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 constexpr uint32_t lookup_code_bits=4; // widest tier of the narrow x86 lookup cache
 constexpr size_t lookup_pair_groups=2;
 constexpr uint32_t split_code_bits=3,split_low_bits=2,split_high_bits=split_code_bits-split_low_bits;
@@ -113,4 +113,4 @@ inline uint32_t lookup_group_count(const LookupWidthCounts& dimensions,bool spli
       stream(split_high_bits,dimensions[split_high_bits]+three);
 }
 inline size_t lookup_group_bytes(size_t groups) { return (groups+lookup_pair_groups-1)/lookup_pair_groups; }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

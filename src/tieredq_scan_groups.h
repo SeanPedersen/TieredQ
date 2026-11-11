@@ -10,7 +10,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 constexpr uint32_t group_table_bits = 5;       // widest group a vpermt2ps register pair indexes
 constexpr uint32_t short_table_bits = 4;       // groups up to this width use one 16-entry register
 constexpr uint32_t short_table_entries = 16;
@@ -71,4 +71,4 @@ inline bool scan_groups_match(const std::vector<TieredQTier>& tiers, const Tiere
   return expected.scan_tables==q.scan_tables &&
          std::equal(expected.scan_groups.begin(),expected.scan_groups.end(),q.scan_groups.begin(),q.scan_groups.end(),same_group);
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

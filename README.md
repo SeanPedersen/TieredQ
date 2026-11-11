@@ -92,8 +92,8 @@ after `code_bits` are keyword-only:
   lists to the same candidate depth and rescores those candidates. Train nested
   prefix models with `TieredQConfig::fine_tiers = false` (the Python nested index does).
   Nested suffix refinement can independently opt into wider codes with `fine_tiers=True`.
-- In C++, use `dv::TieredQIndex(codec)` for fast mode or
-  `dv::TieredQIndex(codec, dv::TieredQIndexMode::full)` for full mode.
+- In C++, use `tq::TieredQIndex(codec)` for fast mode or
+  `tq::TieredQIndex(codec, tq::TieredQIndexMode::full)` for full mode.
   Inspect the enum with `index.mode()`; the boolean constructor is removed.
 - The first `add()` needs a representative batch of at least two vectors.
   Inputs must be contiguous float32 NumPy arrays.
@@ -263,24 +263,24 @@ Include `<tieredq/tieredq.h>`, use `find_package(TieredQ CONFIG REQUIRED)`, and
 link `TieredQ::TieredQ`. FetchContent also works. See [integration.md](integration.md)
 for layouts, threading, ownership and dependency setup.
 
-`dv::TieredQ::train(config, sample, rows, seed)` trains on a contiguous sample. To train on part of a larger
-array without copying it, `dv::TieredQ::train_sampled(config, data, count, sample_ids, sample_rows, seed)` reads
+`tq::TieredQ::train(config, sample, rows, seed)` trains on a contiguous sample. To train on part of a larger
+array without copying it, `tq::TieredQ::train_sampled(config, data, count, sample_ids, sample_rows, seed)` reads
 the named rows in place (the same model). About 8–16K training rows reach full recall on 1M-row sets; fewer than
 ~32 rows per centroid lose recall ([#19.2 results](benchmark/results/issue19-drift-20261031/README.md)).
 
 ### IVF (C++)
 
-`dv::TieredQIVFIndex` is a fast-mode inverted-file index. With `lists = 0` the codec's k-means centroids
+`tq::TieredQIVFIndex` is a fast-mode inverted-file index. With `lists = 0` the codec's k-means centroids
 (at most 256) are the lists, at no extra storage. Any other count trains a separate coarse quantizer, whose
 centroids are stored.
 
 ```cpp
-dv::TieredQIVFIndex index(codec, /*lists=*/1024);
+tq::TieredQIVFIndex index(codec, /*lists=*/1024);
 index.train_lists(sample, sample_rows);  // optional: fix the lists on a sample; builds then only assign rows
 index.build(rows, count);
 auto hits = index.search(query, /*k=*/10, /*nprobe=*/16);
 // Opt-in approximate pruning for models with more than four tiers (about 2+ bits/dim):
-auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*prefix_tiers=*/4});
+auto fast = index.search(query, 10, 16, tq::TieredQPruning{/*confidence=*/8, /*prefix_tiers=*/4});
 ```
 
 - **Layout and memory.** Lists are packed back to back (payload version 6, #53). A scan starts each list on the
@@ -316,11 +316,11 @@ auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*p
   loaded with padded lists).
 
   ```cpp
-  dv::TieredQIVFIndex index(codec, /*lists=*/65536);  // trains fast ({4, 256, 16, 40}) and routes by default
+  tq::TieredQIVFIndex index(codec, /*lists=*/65536);  // trains fast ({4, 256, 16, 40}) and routes by default
   index.set_lists(centroids);  // optional: a partition trained elsewhere
   index.build(loader, count);  // the router is rebuilt by every later build()
   auto hits = index.search(query, 40, /*nprobe=*/256);
-  auto exact = index.search(query, 40, 256, {}, {dv::TieredQRouting::Mode::exact});
+  auto exact = index.search(query, 40, 256, {}, {tq::TieredQRouting::Mode::exact});
   ```
 - **Pruning.** By default the scan prunes exactly: hits equal an unpruned scan. A positive `confidence`
   bounds the remaining tiers statistically instead, which is faster and approximate. On OpenAI 100k, confidence 8
@@ -348,11 +348,11 @@ auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*p
 - **Sub-1-bit index + rerank.** With rerank, the in-RAM IVF code can be far below 1 bit/dim. On OpenAI-1M (256
   lists), a 512-bit prefix (627 index bits/vector) with an INT8 rerank tier reached R@10 0.95 / 0.99 at 2.8x / 3.1x
   the QPS of RaBitQ 1 bit (1,683 bits) + INT8.
-- **Nested rerank codes.** `dv::TieredQRefinement` (`<tieredq/tieredq_refinement.h>`) trains a suffix that refines
+- **Nested rerank codes.** `tq::TieredQRefinement` (`<tieredq/tieredq_refinement.h>`) trains a suffix that refines
   the prefix towards a finer model. The suffix is read by id for the scan's candidates and scored with the scan's query
   weights; nesting costs about no recall against a flat code of the full width:
 
-  `dv::TieredQNestedIVFIndex` (`<tieredq/tieredq_nested.h>`) serves this end to end. The prefix codes stay in the
+  `tq::TieredQNestedIVFIndex` (`<tieredq/tieredq_nested.h>`) serves this end to end. The prefix codes stay in the
   in-RAM IVF lists. Each candidate's tier row is read by id from a `TieredQRowSource`: `TieredQMemoryRows` in RAM,
   `TieredQFileRows` with one `pread` per candidate on SSD (`TieredQFileReads::direct` bypasses the page cache), or your
   own store. `TieredQTierRows::prefix_and_suffix` stores the prefix row and the suffix (one contiguous read). The
@@ -363,15 +363,15 @@ auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*p
 
   ```cpp
   // Train the prefix on the same sample and seed as the refinement, with fine tiers disabled.
-  auto config = dv::TieredQConfig::target_code_bits(d, d);
+  auto config = tq::TieredQConfig::target_code_bits(d, d);
   config.fine_tiers = false;
-  auto codec = dv::TieredQ::train(config, sample, rows, seed);
-  auto refinement = dv::TieredQRefinement::train(codec, /*total_code_bits=*/4 * d, sample, rows, seed,
+  auto codec = tq::TieredQ::train(config, sample, rows, seed);
+  auto refinement = tq::TieredQRefinement::train(codec, /*total_code_bits=*/4 * d, sample, rows, seed,
                                                /*fine_tiers=*/true, /*max_tier_bits=*/12);
-  dv::TieredQIVFIndex ivf(codec);
+  tq::TieredQIVFIndex ivf(codec);
   ivf.build(data, n);
-  dv::TieredQNestedIVFIndex index(std::move(ivf), std::move(refinement), dv::TieredQTierRows::prefix_and_suffix);
-  dv::TieredQRowFileWriter writer("tier.rows", index.tier_bytes_per_vector());
+  tq::TieredQNestedIVFIndex index(std::move(ivf), std::move(refinement), tq::TieredQTierRows::prefix_and_suffix);
+  tq::TieredQRowFileWriter writer("tier.rows", index.tier_bytes_per_vector());
   std::vector<uint8_t> buffer(chunk * index.tier_bytes_per_vector());
   for (size_t first = 0; first < n; first += chunk) {        // ids in build order
     const size_t count = std::min(chunk, n - first);
@@ -379,7 +379,7 @@ auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*p
     writer.append(buffer.data(), count);
   }
   writer.finish();
-  index.attach_tier(std::make_shared<dv::TieredQFileRows>("tier.rows"));
+  index.attach_tier(std::make_shared<tq::TieredQFileRows>("tier.rows"));
   auto hits = index.search(query, /*k=*/10, /*nprobe=*/32, /*candidates=*/50);
   ```
   `TieredQNestedIVFIndex::build(TieredQNestedConfig, loader, count)` does all of the above with the low-RAM defaults
@@ -388,12 +388,12 @@ auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*p
   memory-mapped base, so no float copy is made:
 
   ```cpp
-  auto rows = dv::sq8_row_loader(codes, n, scales, offsets);  // codes: n x d int8, row = codes * scales + offsets
-  dv::TieredQNestedConfig config;
+  auto rows = tq::sq8_row_loader(codes, n, scales, offsets);  // codes: n x d int8, row = codes * scales + offsets
+  tq::TieredQNestedConfig config;
   config.dimensions = d;                                      // other fields: 0 or unset picks the default
-  auto index = dv::TieredQNestedIVFIndex::build(config, rows, n);
+  auto index = tq::TieredQNestedIVFIndex::build(config, rows, n);
   index.write_tier("/nvme/tier.rows", rows);
-  index.attach_tier(std::make_shared<dv::TieredQFileRows>("/nvme/tier.rows", dv::TieredQFileReads::direct, 32));
+  index.attach_tier(std::make_shared<tq::TieredQFileRows>("/nvme/tier.rows", tq::TieredQFileReads::direct, 32));
   auto hits = index.search(query, /*k=*/10, /*nprobe=*/192);  // 40 candidates
   ```
   An exact final stage (`attach_exact`) rescores the tier's best `finals` candidates with exact vectors, e.g. an SQ8
@@ -403,22 +403,22 @@ auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*p
   query ([hybrid study](ann-prototypes/geometry_ann/results/hartmut-hybrid-20261111/README.md)).
 
   ```cpp
-  index.attach_exact(std::make_shared<dv::TieredQSQ8Rows>(
-      std::make_shared<dv::TieredQFileRows>("sq8.rows", dv::TieredQFileReads::direct, /*queue_depth=*/32),
+  index.attach_exact(std::make_shared<tq::TieredQSQ8Rows>(
+      std::make_shared<tq::TieredQFileRows>("sq8.rows", tq::TieredQFileReads::direct, /*queue_depth=*/32),
       scales, offsets), /*finals=*/16);
   ```
-- **Flat nested search.** `dv::TieredQNestedIndex` (`<tieredq/tieredq_nested_flat.h>`) scans a narrow prefix for
+- **Flat nested search.** `tq::TieredQNestedIndex` (`<tieredq/tieredq_nested_flat.h>`) scans a narrow prefix for
   every document and rescores the top candidates with an in-RAM suffix tier (a one-list `TieredQNestedIVFIndex`). On
   OpenAI-1536 it is the fast flat path from about 3 bits/dim. A 512-bit prefix with a 3 bits/dim total tier reached
   RaBitQ's 4-bit recall at 2.2x (100K, 50 candidates) and 2.9x (1M, 100 candidates) its single-query QPS, with
   0.76-0.79x its stored bits. The plain flat index is at 0.54x there.
 
   ```cpp
-  auto config = dv::TieredQConfig::target_code_bits(d, 512);
+  auto config = tq::TieredQConfig::target_code_bits(d, 512);
   config.fine_tiers = false;
-  auto prefix = dv::TieredQ::train(config, sample, rows, seed);
-  auto refinement = dv::TieredQRefinement::train(prefix, /*total_code_bits=*/3 * d, sample, rows, seed);
-  dv::TieredQNestedIndex index(std::move(prefix), std::move(refinement), data, n);
+  auto prefix = tq::TieredQ::train(config, sample, rows, seed);
+  auto refinement = tq::TieredQRefinement::train(prefix, /*total_code_bits=*/3 * d, sample, rows, seed);
+  tq::TieredQNestedIndex index(std::move(prefix), std::move(refinement), data, n);
   auto hits = index.search(query, /*k=*/10, /*candidates=*/100);
   ```
 

@@ -27,15 +27,15 @@ std::vector<float> normal_rows(size_t rows, uint32_t seed) {
 }
 
 // Scores of documents 0..count by the fast index (search_fast over all of them, mapped back by id).
-std::vector<float> index_scores(const dv::TieredQ& codec, const float* rows, size_t count, const float* query) {
-  dv::TieredQIndex index(codec);
+std::vector<float> index_scores(const tq::TieredQ& codec, const float* rows, size_t count, const float* query) {
+  tq::TieredQIndex index(codec);
   index.add(rows, count);
   std::vector<float> scores(count);
   for (const auto& hit : index.search_fast(query, count)) scores[hit.id] = hit.score;
   return scores;
 }
 
-void check_format(const dv::TieredQ& codec, const dv::TieredQFastBlocks& blocks, const std::vector<float>& data,
+void check_format(const tq::TieredQ& codec, const tq::TieredQFastBlocks& blocks, const std::vector<float>& data,
                   const std::vector<float>& query, bool native) {
   const size_t stride = codec.bytes_per_vector();
   for (size_t count : counts) {
@@ -81,28 +81,28 @@ void check_format(const dv::TieredQ& codec, const dv::TieredQFastBlocks& blocks,
 void tieredq_blocks_tests() {
   const auto training = normal_rows(training_rows, 3), data = normal_rows(counts[std::size(counts) - 1], 5), query = normal_rows(1, 7);
   for (uint32_t bits_per_dim : {1u, 2u, 4u}) {
-    auto config = dv::TieredQConfig::target_code_bits(dimensions, dimensions * bits_per_dim);
+    auto config = tq::TieredQConfig::target_code_bits(dimensions, dimensions * bits_per_dim);
     config.num_centroids = centroids; config.fine_tiers = false;
-    const auto codec = dv::TieredQ::train(config, training.data(), training_rows);
-    const dv::TieredQFastBlocks native(codec);
+    const auto codec = tq::TieredQ::train(config, training.data(), training_rows);
+    const tq::TieredQFastBlocks native(codec);
     check_format(codec, native, data, query, true);
-    const dv::TieredQFastBlocks reopened(codec, native.format());
+    const tq::TieredQFastBlocks reopened(codec, native.format());
     require(reopened.format() == native.format() && reopened.block_bytes(300) == native.block_bytes(300), "persisted format reopens differently");
     for (uint32_t format : candidate_formats) {
       if (format == native.format()) continue;
-      try { check_format(codec, dv::TieredQFastBlocks(codec, format), data, query, false); }
+      try { check_format(codec, tq::TieredQFastBlocks(codec, format), data, query, false); }
       catch (const std::runtime_error& e) { if (!std::string(e.what()).ends_with("does not fit this model") && !std::string(e.what()).ends_with("identify this model's codes")) throw; }
     }
   }
   bool rejected = false;
-  try { dv::TieredQFastBlocks(dv::TieredQ::train({dimensions, dimensions, centroids}, training.data(), training_rows), 0); }
+  try { tq::TieredQFastBlocks(tq::TieredQ::train({dimensions, dimensions, centroids}, training.data(), training_rows), 0); }
   catch (const std::runtime_error&) { rejected = true; }
   require(rejected, "unknown fast block format accepted");
   {
-    auto config = dv::TieredQConfig::target_code_bits(dimensions, dimensions * 2);
+    auto config = tq::TieredQConfig::target_code_bits(dimensions, dimensions * 2);
     config.num_centroids = centroids; config.fine_tiers = false;
-    const auto codec = dv::TieredQ::train(config, training.data(), training_rows);
-    const dv::TieredQFastBlocks blocks(codec);
+    const auto codec = tq::TieredQ::train(config, training.data(), training_rows);
+    const tq::TieredQFastBlocks blocks(codec);
     const auto rows = codec.encode(data.data(), 17);
     std::vector<uint8_t> block(blocks.block_bytes(17)), out(codec.bytes_per_vector());
     blocks.pack(rows.data(), 17, block.data());

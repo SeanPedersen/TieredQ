@@ -9,7 +9,7 @@
 #include <immintrin.h>
 #endif
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 // Any code up to 12 bits (#26), which may span three bytes; the scan kernels' read_code covers at most two.
 inline uint32_t read_wide_code(const uint8_t* data, uint32_t offset, unsigned bits) {
   uint32_t window=0;
@@ -91,4 +91,4 @@ struct Layout {
       throw std::runtime_error("TieredQ: query correction weight shape mismatch");
   }
 };
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

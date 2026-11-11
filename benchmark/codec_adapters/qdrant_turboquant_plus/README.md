@@ -4,24 +4,24 @@ This focused runner uses Python 3.12/uv for data, calibration and timing, a C++2
 
 The dataset catalogue pins Gemini/DBpedia revision `e14a0f193988e9efb7ccc57b4c615418e6540f62` and both parquet SHA256 checksums. `gemini_data.py` verifies all 100,000 rows, dimensions and finite values, holds out 1,000 seed-0 document vectors, and preserves split IDs and array hashes. These are document queries, not independently embedded search queries.
 
-Clone Qdrant beside the TieredQ checkout (the Cargo path dependency expects this layout), pin `222b2e44ab1c3f17e8246396ead6558e45041df7`, and run `python benchmark/turboquant/patch_qdrant.py ../qdrant` exactly once on that clean dependency checkout. The overlay seeds the otherwise unseedable production calibration sampler and adds allocation/timing observations; it preserves native encoding/scoring and upstream fixed rotation seeds.
+Clone Qdrant beside the TieredQ checkout (the Cargo path dependency expects this layout), pin `222b2e44ab1c3f17e8246396ead6558e45041df7`, and run `python benchmark/codec_adapters/qdrant_turboquant_plus/patch_qdrant.py ../qdrant` exactly once on that clean dependency checkout. The overlay seeds the otherwise unseedable production calibration sampler and adds allocation/timing observations; it preserves native encoding/scoring and upstream fixed rotation seeds.
 
 From `benchmark/`, on Hartmut, use the existing locked Python environment and a separate native build:
 
 ```sh
 uv sync --locked --python 3.12
-cmake -S turboquant/native -B turboquant/build \
+cmake -S codec_adapters/qdrant_turboquant_plus/native -B codec_adapters/qdrant_turboquant_plus/build \
   -DPython_EXECUTABLE="$PWD/.venv/bin/python" -DCMAKE_BUILD_TYPE=Release
-cmake --build turboquant/build -j8
-cd turboquant/native
+cmake --build codec_adapters/qdrant_turboquant_plus/build -j8
+cd codec_adapters/qdrant_turboquant_plus/native
 RUSTFLAGS='-C target-cpu=native -C opt-level=3' \
   CFLAGS='-O3 -march=native -ffp-contract=off' \
   taskset -c 0-7 cargo +1.99.1 build --release --locked -j8
-cd ../..
+cd ../../..
 OPENBLAS_NUM_THREADS=1 taskset -c 0-7 uv run --locked python -c \
   'from pathlib import Path; from data import prepare; from threadpoolctl import threadpool_limits; threadpool_limits(1); prepare(Path("data"), "gemini")'
 OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=8 taskset -c 0-7 \
-  uv run --locked python turboquant/run_experiment.py /absolute/fresh/output
+  uv run --locked python codec_adapters/qdrant_turboquant_plus/run_experiment.py /absolute/fresh/output
 ```
 
 Use a fresh output directory for every run. The runner builds the three Qdrant anchors, calibrates integer TieredQ total-code-bit budgets from storage only, and validates all six configurations before the 24-row timing matrix. Calibration retains every measured attempt and selects the largest measured feasible allocation, stopping within 0.5% when possible. The public TieredQ cap remains eight times input dimension. Discontinuities can leave larger gaps.

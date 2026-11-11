@@ -4,7 +4,7 @@
 #include "tieredq_scan_codes_x86.h"
 #include <immintrin.h>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 constexpr size_t fast_scan_avx2_lanes=8,fast_lookup_avx2_docs=32;
 constexpr size_t fast_scan_avx2_group_bytes=fast_scan_block_docs*sizeof(int32_t);
 
@@ -118,4 +118,4 @@ inline void scan_fast_avx2_tile(const FastScanCache& cache,const FastScanQueryX8
   if (rows==1) scan_fast_avx2_tile_impl<1>(cache,queries,rows,first,count,scores,stride);
   else scan_fast_avx2_tile_impl<fast_scan_query_tile_avx2>(cache,queries,rows,first,count,scores,stride);
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

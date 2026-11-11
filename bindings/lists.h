@@ -8,11 +8,11 @@
 namespace tieredq_python {
 struct RouterChoice {
   std::optional<bool> use;  // unset: the index's automatic choice
-  dv::TieredQRouterConfig config;
+  tq::TieredQRouterConfig config;
 };
 inline RouterChoice parse_router(nb::handle router) {
   if (router.is_none()) return {};
-  if (nb::isinstance<dv::TieredQRouterConfig>(router)) return {true, nb::cast<dv::TieredQRouterConfig>(router)};
+  if (nb::isinstance<tq::TieredQRouterConfig>(router)) return {true, nb::cast<tq::TieredQRouterConfig>(router)};
   if (PyBool_Check(router.ptr())) return {nb::cast<bool>(router), {}};
   throw std::invalid_argument("router must be None, a bool or a TieredQRouterConfig");
 }

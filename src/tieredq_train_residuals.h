@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 struct CenteredResiduals { std::vector<double> values,mean; };
 // value(row, j) reads a sample coordinate.
 template<class Value>
@@ -37,4 +37,4 @@ inline CenteredResiduals centered_residuals(const float* sample,size_t rows,size
   return centered_residuals_with([&](size_t row,size_t j) { return sample[row*dimensions+j]; },rows,dimensions,ids,
                                  centroids);
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

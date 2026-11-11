@@ -4,7 +4,7 @@
 #include <memory>
 #include <utility>
 
-namespace dv {
+namespace tq {
 namespace {
 constexpr uint32_t scan_lists=1;
 constexpr size_t scan_nprobe=1;
@@ -38,4 +38,4 @@ void TieredQNestedIndex::search_batch(const float* queries,size_t rows,size_t k,
                                       uint32_t* ids) const {
   nested_.search_batch(queries,rows,k,scan_nprobe,candidates,scores,ids);
 }
-} // namespace dv
+} // namespace tq

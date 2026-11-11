@@ -48,7 +48,7 @@ def measure_point(native, vectors, dataset, bits, seed, adapter_bytes, output_di
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--native", type=Path, default=HERE / "build-native")
+    parser.add_argument("--native", type=Path, default=HERE / "build-adapters")
     parser.add_argument("--data", type=Path, default=HERE / "data")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--datasets", nargs="+", choices=REPORTED_BUDGETS, default=list(REPORTED_BUDGETS))
@@ -71,7 +71,7 @@ def main():
                   seeds=args.seeds, threads=args.threads, platform=platform.platform(),
                   native_sha256=digest(Path(codec_native.__file__)),
                   source_sha256={str(path.relative_to(REPO)): digest(path)
-                                 for folder in (REPO / "src", REPO / "include", HERE / "native")
+                                 for folder in (REPO / "src", REPO / "include", HERE / "codec_adapters")
                                  for path in sorted(folder.rglob("*")) if path.is_file()},
                   harness_sha256={name: digest(HERE / name)
                                   for name in ("measure_storage.py", "data.py", "l2_transform.py", "datasets.json")},

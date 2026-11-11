@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 struct TrainingRows {
   const float* data;
   size_t dimensions;
@@ -44,4 +44,4 @@ struct TrainingRows {
     return buffer.data();
   }
 };
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

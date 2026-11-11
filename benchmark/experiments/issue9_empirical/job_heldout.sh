@@ -21,8 +21,8 @@ done
 arm_env() {
   case $1 in
     base) echo "" ;;
-    layout-par*) echo "DV_TIEREDQ_ALLOCATOR=exact DV_TIEREDQ_ALLOCATION_WEIGHT=parallel DV_TIEREDQ_PARALLEL_WEIGHT=${1#layout-par}" ;;
-    layout-p*) echo "DV_TIEREDQ_ALLOCATOR=exact DV_TIEREDQ_ALLOCATION_POWER=${1#layout-p}" ;;
+    layout-par*) echo "TQ_ALLOCATOR=exact TQ_ALLOCATION_WEIGHT=parallel TQ_PARALLEL_WEIGHT=${1#layout-par}" ;;
+    layout-p*) echo "TQ_ALLOCATOR=exact TQ_ALLOCATION_POWER=${1#layout-p}" ;;
   esac
 }
 recall() {  # $1 arm, $2 cpus

@@ -4,7 +4,7 @@
 #pragma once
 #include "tieredq_search.h"
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 // Each concurrent worker holds a query_tile x document_tile score scratch. One worker keeps the wide tile;
 // parallel searches use a narrow one, which bounds the multi-worker peak and measured faster there.
 constexpr size_t fast_search_document_tile = 4096;
@@ -77,4 +77,4 @@ void search_fast_tiles(const std::vector<Prepared>& queries,size_t documents,siz
     search_fast_document_tiles<fast_search_parallel_document_tile>(queries,documents,k,query_tile,available,scan,finish);
   else search_fast_document_tiles<fast_search_document_tile>(queries,documents,k,query_tile,available,scan,finish);
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

@@ -13,7 +13,7 @@
 #include <memory>
 #include <vector>
 
-namespace dv {
+namespace tq {
 namespace tieredq_detail { struct RefinementEncoder; }
 struct TieredQRefinementQuery {
   // Prefix projection terms (TieredQ::model_query_weights): centroid scores and correction weights.
@@ -96,4 +96,4 @@ class TieredQRefinement {
   void project(const float* model_rows, size_t count, const uint8_t* prefix_rows, std::vector<float>& out,
                std::vector<float>& dots) const;
 };
-} // namespace dv
+} // namespace tq

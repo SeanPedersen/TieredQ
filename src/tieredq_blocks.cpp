@@ -9,7 +9,7 @@
 #include <cstring>
 #include <numeric>
 
-namespace dv {
+namespace tq {
 using tieredq_detail::bad;
 using tieredq_detail::FastScanCache;
 namespace {
@@ -200,4 +200,4 @@ TieredQFastBlocks::Scanner TieredQFastBlocks::scanner(const float* query) const 
   }
   return make_scanner(model_query, nullptr);
 }
-}  // namespace dv
+}  // namespace tq

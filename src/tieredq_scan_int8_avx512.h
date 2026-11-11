@@ -9,7 +9,7 @@
 #include <immintrin.h>
 #include <omp.h>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 __attribute__((target("avx512f,avx512bw")))
 inline __mmask16 fast_mask(size_t n) {
   return n >= 16 ? __mmask16(0xFFFF) : __mmask16((1u<<n)-1);
@@ -79,4 +79,4 @@ inline void scan_fast_avx512_batch(const FastScanCache& cache,
     scan_fast_avx512_tile(cache,queries.data()+first,std::min(tile,queries.size()-first),
         0,cache.count,scores+first*cache.count,cache.count);
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

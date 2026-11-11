@@ -3,7 +3,7 @@
 #include "tieredq_scan_codes.h"
 #include <arm_neon.h>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 constexpr size_t fast_code_query_tile_neon=4;
 
 constexpr size_t code_neon_lanes=4,code_neon_quarters=fast_scan_block_docs/code_neon_lanes;
@@ -86,4 +86,4 @@ inline void scan_codes_neon(const FastScanCache& cache,const TieredQQuery& q,
     size_t first,size_t count,float* scores) {
   scan_codes_neon_tile(cache,1,first,count,scores,count,[&](size_t)->const TieredQQuery& {return q;});
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

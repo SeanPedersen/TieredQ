@@ -10,7 +10,7 @@
 #include <queue>
 #include <vector>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 constexpr unsigned max_code_bits=widest_fine_code_bits;
 using DistortionTable=std::array<double,max_code_bits+1>;
 // Per-rank variance (descending PCA order), bit cap, and distortion of each code width in units of that variance.
@@ -152,4 +152,4 @@ inline FastLookupAllocation exact_lookup_allocation(const std::vector<double>& v
   const bool additive_three=has_three_bit_tier(bits);
   return {std::move(bits),additive_three};
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

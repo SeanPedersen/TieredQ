@@ -173,9 +173,9 @@ def main():
     if args.codec:
         worker(args)
         return
-    from setup_native import REVISION
-    from native_build import build_native
-    native = build_native(full_score=args.full_score)
+    from setup_adapters import REVISION
+    from adapters_build import build_adapters
+    native = build_adapters(full_score=args.full_score)
     build, overlay, compiler_commands = native.directory, native.overlay, native.compiler_commands
     env = os.environ | {"PYTHONPATH": str(build), "OPENBLAS_NUM_THREADS": "1", "MKL_NUM_THREADS": "1", "OMP_NUM_THREADS": "8"}
     # Preparing and caching truth is intentionally outside measured matrix wall time.
@@ -196,7 +196,7 @@ def main():
                 "harness_sha256": {p.name:hashlib.sha256(p.read_bytes()).hexdigest()
                                    for p in [*HERE.glob("*.py"), HERE/"run.sh", HERE/"validate.sh", HERE/"uv.lock", HERE/"datasets.json"]},
                 "source_sha256": {str(p.relative_to(REPO)): hashlib.sha256(p.read_bytes()).hexdigest()
-                                  for folder in [REPO/"src", REPO/"include", HERE/"native"] for p in folder.rglob("*") if p.is_file()}}
+                                  for folder in [REPO/"src", REPO/"include", HERE/"codec_adapters"] for p in folder.rglob("*") if p.is_file()}}
     metadata["status"] = "running"
     (args.output/"meta.json").write_text(json.dumps(metadata, indent=2))
     start = time.perf_counter()

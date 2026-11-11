@@ -1,6 +1,6 @@
 """Issue #22 task 3.1: query energy on the data PCA ranks of trained TieredQ models (no codec change).
 
-The eval's training PCA (DV_TIEREDQ_TRAIN_DUMP of `ivf_eval tieredq-nesting`: residual eigenvectors and eigenvalues of
+The eval's training PCA (TQ_TRAIN_DUMP of `ivf_eval tieredq-nesting`: residual eigenvectors and eigenvalues of
 the 32,768-row seed-0 sample at 256 centroids) and each budget's tier layout (the `nesting model` lines) give the
 coded bits per rank. Per query set, mu_r = E[(q.u_r)^2] is the energy a query puts on rank r and lambda_r the data
 variance; score error ~ sum_r mu_r lambda_r 2^(-2 b_r) (uncoded ranks keep all of lambda_r). Reports, per budget:

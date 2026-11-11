@@ -12,7 +12,7 @@
 #include <mutex>
 #include <vector>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 struct EncodingModel {
   size_t dimensions;
   const std::vector<float>& centroids;
@@ -136,4 +136,4 @@ inline void encode_block(const EncodingModel& model,const EncoderState& encoder,
   }
   profile.mark("quantization_correction");
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

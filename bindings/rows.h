@@ -21,7 +21,7 @@ using OptionalLoader = std::optional<nb::callable>;
 using OptionalCount = std::optional<size_t>;
 
 struct RowInput {
-  dv::TieredQIVFIndex::RowLoader loader;
+  tq::TieredQIVFIndex::RowLoader loader;
   size_t count = 0;
 };
 
@@ -39,7 +39,7 @@ inline RowInput sq8_rows(const CodeMatrix& codes, const FloatVector& scales, con
   require_width(codes.shape(1), width);
   if (scales.shape(0) != width || offsets.shape(0) != width)
     throw std::invalid_argument("scales and offsets need one value per dimension");
-  return {dv::sq8_row_loader(codes.data(), codes.shape(0), float_values(scales), float_values(offsets)), codes.shape(0)};
+  return {tq::sq8_row_loader(codes.data(), codes.shape(0), float_values(scales), float_values(offsets)), codes.shape(0)};
 }
 // loader(ids: uint32 array) returns len(ids) x width float32 rows. The handle is borrowed: the callable is an argument
 // of the binding call that runs the build, so it outlives every copy of the loader.

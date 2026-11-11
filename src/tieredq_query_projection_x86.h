@@ -13,7 +13,7 @@
 #include <stdexcept>
 #include <vector>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 // Borrow only for a query call: caches may outlive, move or copy their model.
 // Exactly one of basis (FP32 row-major, format 2) and basis_half (binary16 rank panels, format 3) is populated.
 struct FastQueryBasis {
@@ -179,4 +179,4 @@ inline std::vector<std::vector<float>> project_fast_queries(const FastQueryProje
 inline std::vector<float> project_fast_query(const FastQueryProjection& map,const float* vector,FastQueryBasis source) {
   return std::move(project_fast_queries(map,vector,1,source)[0]);
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

@@ -8,7 +8,7 @@
 #include <cmath>
 #include <vector>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 constexpr size_t scale_grid_points=49,scale_grid_lanes=8;
 constexpr size_t scale_grid_storage=(scale_grid_points+scale_grid_lanes-1)/scale_grid_lanes*scale_grid_lanes;
 inline const std::array<double,scale_grid_storage>& scale_grid() {
@@ -247,4 +247,4 @@ template<class Model,class Work> void scale_grid_terms(const Model& model,const 
     default: return scale_grid_scalar(model,work,dots,norms);
   }
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

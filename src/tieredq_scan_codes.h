@@ -5,7 +5,7 @@
 #include "tieredq_scan_int8.h"
 #include <type_traits>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 // Queries sharing one decoded block; bounds per-worker score scratch at group*document tile floats.
 constexpr size_t fast_code_query_group=32;
 inline float fast_code_score(const FastScanCache& cache,const TieredQQuery& query,size_t doc) {
@@ -76,4 +76,4 @@ void scan_code_blocks(const FastScanCache& cache,size_t rows,size_t tile,size_t 
     }
   }
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

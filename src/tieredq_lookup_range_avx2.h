@@ -6,7 +6,7 @@
 #include "tieredq_lookup_range.h"
 #include "tieredq_scan_int8_avx2.h"
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 __attribute__((target("avx2,f16c"),always_inline))
 inline __m256 abs_ps_avx2(__m256 x) { return _mm256_and_ps(x,_mm256_castsi256_ps(_mm256_set1_epi32(INT32_MAX))); }
 // Whether any of the first valid documents of the 8 from doc can still reach the threshold after the prefix dot.
@@ -58,4 +58,4 @@ inline void scan_range_lookup_avx2(const FastScanCache& cache,const FastScanLook
     lookup_chunk_epilogue_avx2(cache,q,doc,first,end,dots,scores);
   }
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

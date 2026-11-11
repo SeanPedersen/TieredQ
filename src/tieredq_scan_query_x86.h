@@ -2,7 +2,7 @@
 #pragma once
 #include "tieredq_scan_lookup_x86.h"
 #include "tieredq_fast_dispatch.h"
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 struct FastScanQueryX86 {
   TieredQQuery codes;
   FastScanLookupQuery lookup;
@@ -55,4 +55,4 @@ inline FastScanQueryX86 fast_scan_query_x86(const FastScanCache& cache,
   return query;
 }
 
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

@@ -8,7 +8,7 @@
 #include <stdexcept>
 #include <vector>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 class TrainingRng {
  public:
   explicit TrainingRng(uint64_t seed) : engine_(seed) {}
@@ -34,4 +34,4 @@ class TrainingRng {
 };
 // Seeded n x n orthogonal matrix (row-major), as training rotates each tier; defined in tieredq.cpp.
 std::vector<float> seeded_rotation(int n, uint64_t seed);
-}  // namespace dv::tieredq_detail
+}  // namespace tq::tieredq_detail

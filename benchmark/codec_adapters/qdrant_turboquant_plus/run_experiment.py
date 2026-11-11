@@ -9,7 +9,7 @@ import time
 import numpy as np
 from threadpoolctl import threadpool_limits
 from adapters import Qdrant, TieredQ, sha
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from measure import recall
 
 OUT = Path(sys.argv[1]).resolve()
@@ -68,7 +68,7 @@ def measure(index, queries, truth, threads, batch, reference, label):
 
 def main():
     assert sorted(os.sched_getaffinity(0)) == list(range(8))
-    with np.load(Path(__file__).resolve().parents[1]/'data/gemini-prepared.npz') as data:
+    with np.load(Path(__file__).resolve().parents[2]/'data/gemini-prepared.npz') as data:
         base,queries,truth=(data[k] for k in ('base','queries','truth'))
     assert base.shape==(99000,768) and queries.shape==(1000,768) and truth.shape==(1000,10)
     validations=[];anchors=[];history=[];selected=[]

@@ -34,22 +34,22 @@ std::vector<T> read_rows(const std::string& path,size_t first,size_t count,size_
     throw std::runtime_error("cannot read the requested rows");
   return rows;
 }
-size_t truth_overlap(const std::vector<dv::TieredQHit>& hits,const uint32_t* truth) {
+size_t truth_overlap(const std::vector<tq::TieredQHit>& hits,const uint32_t* truth) {
   return std::count_if(hits.begin(),hits.end(),[&](const auto& hit){
     return std::find(truth,truth+top_k,hit.id)!=truth+top_k;
   });
 }
 
-size_t intersection(const std::vector<dv::TieredQHit>& exact,const std::vector<dv::TieredQHit>& fast) {
+size_t intersection(const std::vector<tq::TieredQHit>& exact,const std::vector<tq::TieredQHit>& fast) {
   size_t found=0;
   for (const auto& hit:exact)
     found+=std::any_of(fast.begin(),fast.end(),[&](const auto& other){return hit.id==other.id;});
   return found;
 }
-Measurements measure(const dv::TieredQIndex& index,const std::vector<float>& queries,size_t count,bool alternating,
+Measurements measure(const tq::TieredQIndex& index,const std::vector<float>& queries,size_t count,bool alternating,
     const std::vector<uint32_t>& truth) {
   const size_t dimensions=index.codec().config().dimensions;
-  std::vector<std::vector<dv::TieredQHit>> reference(count);
+  std::vector<std::vector<tq::TieredQHit>> reference(count);
   Measurements result;
   if (!alternating) {
     for (size_t i=0;i<count+warmup_queries;++i) {
@@ -93,7 +93,7 @@ int main(int argc,char** argv) {
     const size_t first=argc>5 ? std::stoul(argv[5]) : default_query_start;
     if (!count || (mode!="separate" && mode!="alternating")) throw std::runtime_error("invalid count or timing mode");
     omp_set_dynamic(0); omp_set_num_threads(1);
-    auto index=dv::TieredQIndex::load(argv[1]);
+    auto index=tq::TieredQIndex::load(argv[1]);
     if (index.size()<top_k) throw std::runtime_error("benchmark requires at least ten documents");
     const auto queries=read_rows<float>(argv[2],first,count,index.codec().config().dimensions);
     const auto truth=argc>6 ? read_rows<uint32_t>(argv[6],0,count,top_k) : std::vector<uint32_t>{};

@@ -10,11 +10,11 @@ CompressedRouter::CompressedRouter(std::span<const float> centroids, std::size_t
         throw std::invalid_argument("compressed routing needs centroids and 1..8 bits per dimension");
     if (scan_bits > 8) throw std::invalid_argument("routing scan bits must be 0..8");
     auto rows = centroids.size() / dimension;
-    auto config = dv::TieredQConfig::target_code_bits(std::uint32_t(dimension), std::uint32_t(bits_per_dimension * dimension));
-    config.metric = dv::TieredQMetric::l2;
+    auto config = tq::TieredQConfig::target_code_bits(std::uint32_t(dimension), std::uint32_t(bits_per_dimension * dimension));
+    config.metric = tq::TieredQMetric::l2;
     config.max_scan_bits = std::uint32_t(scan_bits);
-    auto codec = dv::TieredQ::train(config, centroids.data(), rows, seed);
-    index_ = std::make_unique<dv::TieredQIndex>(std::move(codec), dv::TieredQIndexMode::fast);
+    auto codec = tq::TieredQ::train(config, centroids.data(), rows, seed);
+    index_ = std::make_unique<tq::TieredQIndex>(std::move(codec), tq::TieredQIndexMode::fast);
     index_->add(centroids.data(), rows);
 }
 CompressedRouter::~CompressedRouter() = default;

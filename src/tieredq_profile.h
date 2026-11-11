@@ -10,9 +10,9 @@
 #include <utility>
 #include <vector>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 template<class Value> void dump_training_stage(const char* stage,const std::vector<Value>& values) {
-  const char* prefix=std::getenv("DV_TIEREDQ_TRAIN_DUMP");
+  const char* prefix=std::getenv("TQ_TRAIN_DUMP");
   if (!prefix) return;
   const std::string path=std::string(prefix)+"."+stage;
   std::ofstream out(path,std::ios::binary);
@@ -23,7 +23,7 @@ template<class Value> void dump_training_stage(const char* stage,const std::vect
 class StageProfile {
  public:
   using Clock = std::chrono::steady_clock;
-  explicit StageProfile(const char* label="tieredq_train_profile", StageProfile* sink=nullptr) : label_(label), sink_(sink), enabled_(std::getenv("DV_TIEREDQ_PROFILE") != nullptr), last_(enabled_ ? Clock::now() : Clock::time_point{}) {}
+  explicit StageProfile(const char* label="tieredq_train_profile", StageProfile* sink=nullptr) : label_(label), sink_(sink), enabled_(std::getenv("TQ_PROFILE") != nullptr), last_(enabled_ ? Clock::now() : Clock::time_point{}) {}
   StageProfile(const StageProfile&) = delete;
   StageProfile& operator=(const StageProfile&) = delete;
   // Charges the time since the previous mark to `stage`; repeated names accumulate.
@@ -61,4 +61,4 @@ class StageProfile {
   Clock::time_point last_;
   std::vector<std::pair<std::string, double>> stages_;
 };
-}  // namespace dv::tieredq_detail
+}  // namespace tq::tieredq_detail

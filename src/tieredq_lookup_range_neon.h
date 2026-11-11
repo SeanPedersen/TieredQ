@@ -5,7 +5,7 @@
 #include "tieredq_lookup_range.h"
 #include "tieredq_scan_lookup_neon.h"
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 // Whether any of the first valid documents of the vector at doc can still reach the threshold after the prefix dot.
 inline bool lookup_vector_survives_neon(const FastScanCache& c,const FastScanLookupQuery& q,
     const LookupRangeCheckpoint& checkpoint,size_t doc,const float32x4_t (&dot)[lookup_neon_quarters],size_t valid) {
@@ -71,4 +71,4 @@ inline void scan_range_lookup_neon(const FastScanCache& cache,const FastScanLook
     scan_range_lookup_vectors_neon<decltype(vectors)::value>(cache,q,base,doc,end,out,checkpoint);
   });
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

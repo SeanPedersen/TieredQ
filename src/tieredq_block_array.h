@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <vector>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 template<class T>
 class BlockArray {
  public:
@@ -41,4 +41,4 @@ class BlockArray {
   const T* borrowed_ = nullptr;
   size_t borrowed_size_ = 0;
 };
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

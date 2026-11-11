@@ -6,7 +6,7 @@
 #include <climits>
 #include <limits>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 namespace {
 constexpr size_t word_bits = sizeof(uint64_t) * CHAR_BIT;
 // Ids between select samples: a lookup scans at most this many ones (and about as many zeros) of the high stream.
@@ -169,4 +169,4 @@ size_t EliasFanoLists::allocated_bytes() const {
   return lists_.capacity() * sizeof(List) + samples_.capacity() * sizeof(uint32_t) + words_.capacity() * sizeof(uint64_t);
 }
 
-}  // namespace dv::tieredq_detail
+}  // namespace tq::tieredq_detail

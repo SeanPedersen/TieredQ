@@ -15,7 +15,7 @@
 #include <string>
 #include <vector>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 
 // Candidates rescored per query: at least this many, and this multiple of k (#26, 100k Gemini, OpenAI and GloVe:
 // k = 10 recall stops changing from 24 candidates; k = 100 still gains up to 1.5 k on OpenAI and GloVe; #31: Gemini
@@ -129,4 +129,4 @@ struct FastFine {
   }
 };
 
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

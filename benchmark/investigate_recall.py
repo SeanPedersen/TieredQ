@@ -18,7 +18,7 @@ HERE = Path(__file__).resolve().parent
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--native", type=Path, default=HERE / "build-native")
+    parser.add_argument("--native", type=Path, default=HERE / "build-adapters")
     parser.add_argument("--data", type=Path, default=HERE / "data")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--bits", nargs="+", type=int, default=[8])
@@ -36,7 +36,7 @@ def main():
 
     result = {"affinity": sorted(os.sched_getaffinity(0)), "seed": args.seed, "rows": [],
               "source_sha256": {str(p.relative_to(HERE.parent)): hashlib.sha256(p.read_bytes()).hexdigest()
-                                for folder in (HERE.parent / "src", HERE.parent / "include", HERE / "native")
+                                for folder in (HERE.parent / "src", HERE.parent / "include", HERE / "codec_adapters")
                                 for p in folder.rglob("*") if p.is_file()}}
     with threadpool_limits(limits=1):
         for dataset in args.datasets:

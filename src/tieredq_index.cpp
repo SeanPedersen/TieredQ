@@ -7,7 +7,7 @@
 #include "tieredq_fast_fine.h"
 #include "tieredq_fast_storage.h"
 #include "tieredq_fast_scan.h"
-namespace dv {
+namespace tq {
 using tieredq_detail::Layout;
 using tieredq_detail::bad;
 using tieredq_detail::product;
@@ -36,7 +36,7 @@ std::shared_ptr<tieredq_detail::FastScanCache> TieredQIndex::make_fast_storage(c
   if (lookup) return make_fast_storage(rows,count,true,tieredq_detail::x86_fast_level_max);
   if (tieredq_detail::fast_code_lookup_supported(codec.tiers_))
     return make_fast_storage(rows,count,false,tieredq_detail::fast_code_lookup_levels);
-#ifdef DV_TIEREDQ_NEON
+#ifdef TQ_NEON
   return make_fast_storage(rows,count,false,tieredq_detail::arm_fast_level_max);
 #else
   return make_fast_storage(rows,count,false,tieredq_detail::x86_fast_level_max);
@@ -178,7 +178,7 @@ TieredQIndex::~TieredQIndex() = default;
 void TieredQIndex::build_fast_scan() {
   if (fast_mode_) return;
   fast_.reset();
-#if defined(DV_TIEREDQ_NEON) || defined(DV_TIEREDQ_X86)
+#if defined(TQ_NEON) || defined(TQ_X86)
   if (!count_ || !tieredq_detail::fast_scan_available()) return;
   const size_t stride=codec_.bytes_per_vector();
   std::vector<uint8_t> rows(product(count_,stride));
@@ -187,7 +187,7 @@ void TieredQIndex::build_fast_scan() {
 #endif
 }
 namespace {
-#ifdef DV_TIEREDQ_X86
+#ifdef TQ_X86
 // Keep checkpoint preparation and selection scheduling separate from CPU/layout dispatch.
 template<class Finish>
 void fast_range_search(const tieredq_detail::FastScanCache& cache,const TieredQ& codec,
@@ -218,7 +218,7 @@ void lookup_range_search(const tieredq_detail::FastScanCache& cache,const Tiered
 template<class Finish>
 void fast_search(const tieredq_detail::FastScanCache& cache,const TieredQ& codec,
     const float* queries,size_t rows,size_t k,Finish finish,const std::vector<TieredQQuery>* weights=nullptr) {
-#ifdef DV_TIEREDQ_X86
+#ifdef TQ_X86
   if (rows==1 && tieredq_detail::fast_scan_backend(cache)==tieredq_detail::FastScanBackend::avx512 &&
       tieredq_detail::fast_range_checkpoint_supported(cache,codec.tiers())) {
     fast_range_search(cache,codec,queries,k,weights,finish);
@@ -452,4 +452,4 @@ void TieredQIndex::search_batch_model(const float* queries,size_t rows,size_t k,
     }
   }
 }
-} // namespace dv
+} // namespace tq

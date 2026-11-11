@@ -29,11 +29,11 @@ int main(int,char** argv) {
   std::mt19937_64 rng(seed); std::shuffle(order.begin(),order.end(),rng); order.resize(std::min(n,training_rows));
   std::vector<float> sample(order.size()*d);
   for (size_t i=0;i<order.size();++i) std::copy_n(base.data()+order[i]*d,d,sample.data()+i*d);
-  struct Arm { const char* name; dv::TieredQIndexMode target; };
-  std::vector<dv::TieredQIndex> indexes; const std::vector<Arm> arms{{"exact",dv::TieredQIndexMode::full},{"nibble",dv::TieredQIndexMode::fast}};
+  struct Arm { const char* name; tq::TieredQIndexMode target; };
+  std::vector<tq::TieredQIndex> indexes; const std::vector<Arm> arms{{"exact",tq::TieredQIndexMode::full},{"nibble",tq::TieredQIndexMode::fast}};
   for (const auto& arm:arms) {
-    dv::TieredQConfig config{uint32_t(d),code_bits,centroids,true}; config.target_mode=arm.target;
-    indexes.emplace_back(dv::TieredQ::train(config,sample.data(),order.size(),seed),dv::TieredQIndexMode::fast);
+    tq::TieredQConfig config{uint32_t(d),code_bits,centroids,true}; config.target_mode=arm.target;
+    indexes.emplace_back(tq::TieredQ::train(config,sample.data(),order.size(),seed),tq::TieredQIndexMode::fast);
     indexes.back().add(base.data(),n);
   }
   for (int round=0;round<rounds;++round) for (size_t a=0;a<arms.size();++a) {

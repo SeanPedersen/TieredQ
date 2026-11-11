@@ -22,14 +22,14 @@ constexpr size_t minimum_training_rows = 2;
 inline uint32_t auto_centroids(size_t sample_rows) {
   return std::min(maximum_auto_centroids, static_cast<uint32_t>(sample_rows / 2));
 }
-inline dv::TieredQMetric parse_metric(const std::string& metric) {
-  if (metric=="ip") return dv::TieredQMetric::inner_product;
-  if (metric=="cosine") return dv::TieredQMetric::cosine;
-  if (metric=="l2") return dv::TieredQMetric::l2;
+inline tq::TieredQMetric parse_metric(const std::string& metric) {
+  if (metric=="ip") return tq::TieredQMetric::inner_product;
+  if (metric=="cosine") return tq::TieredQMetric::cosine;
+  if (metric=="l2") return tq::TieredQMetric::l2;
   throw std::invalid_argument("metric must be 'ip', 'cosine' or 'l2'");
 }
-inline const char* metric_name(dv::TieredQMetric metric) {
-  return metric==dv::TieredQMetric::l2 ? "l2" : metric==dv::TieredQMetric::cosine ? "cosine" : "ip";
+inline const char* metric_name(tq::TieredQMetric metric) {
+  return metric==tq::TieredQMetric::l2 ? "l2" : metric==tq::TieredQMetric::cosine ? "cosine" : "ip";
 }
 // Rows of a seeded sample of at most training_sample_rows of count rows; all of them, in order, when fewer.
 inline std::vector<uint32_t> training_sample_ids(size_t count) {
@@ -40,20 +40,20 @@ inline std::vector<uint32_t> training_sample_ids(size_t count) {
   return ids;
 }
 // Trains config on the training sample of rows (count x dimensions), read in place.
-inline dv::TieredQ train_codec(dv::TieredQConfig config, const float* rows, size_t count) {
+inline tq::TieredQ train_codec(tq::TieredQConfig config, const float* rows, size_t count) {
   if (count < minimum_training_rows) throw std::runtime_error("training needs at least 2 rows");
   const auto ids = training_sample_ids(count);
   config.num_centroids = auto_centroids(ids.size());
-  return dv::TieredQ::train_sampled(config, rows, count, ids.data(), ids.size(), training_seed);
+  return tq::TieredQ::train_sampled(config, rows, count, ids.data(), ids.size(), training_seed);
 }
 // Trains config on the training sample of count rows read through a loader: the same model as train_codec on the
 // float rows they decode to, so float, SQ8 and callable builds train identically.
-inline dv::TieredQ train_codec(dv::TieredQConfig config, const dv::TieredQIVFIndex::RowLoader& rows, size_t count) {
+inline tq::TieredQ train_codec(tq::TieredQConfig config, const tq::TieredQIVFIndex::RowLoader& rows, size_t count) {
   if (count < minimum_training_rows) throw std::runtime_error("training needs at least 2 rows");
   const auto ids = training_sample_ids(count);
   std::vector<float> sample(ids.size() * config.dimensions);
   rows(ids.data(), ids.size(), sample.data());
   config.num_centroids = auto_centroids(ids.size());
-  return dv::TieredQ::train(config, sample.data(), ids.size(), training_seed);
+  return tq::TieredQ::train(config, sample.data(), ids.size(), training_seed);
 }
 }  // namespace tieredq_python

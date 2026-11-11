@@ -1,7 +1,6 @@
 # C++ integration contract
 
-Include <tieredq/tieredq.h> and link TieredQ::TieredQ. The dv namespace is
-retained for source compatibility. Headers under detail/ only complete private
+Include <tieredq/tieredq.h> and link TieredQ::TieredQ. Symbols live in the tq namespace. Headers under detail/ only complete private
 class storage; their symbols are not a supported API. src/ holds private
 training and SIMD implementation. Do not add it to normal consumer include
 paths. Dispatch is automatic; explicit kernels support diagnostics.
@@ -42,13 +41,13 @@ FP32 rows and the index owns its resulting encoded storage.
 
 ## Fast and full index storage
 
-Construct `dv::TieredQIndex(codec)` or Python
+Construct `tq::TieredQIndex(codec)` or Python
 `TieredQIndex(dimensions=d, code_bits=b)` to retain the default fast
-representation. Select `dv::TieredQIndexMode::full` in C++ or `mode="full"`
+representation. Select `tq::TieredQIndexMode::full` in C++ or `mode="full"`
 in Python to retain compact packed rows for full scoring. `search` and
 `search_batch` honor this choice; fast-only indexes support appending and do not
 require cache rebuilding. C++ explicit exact-kernel overrides are rejected on a
-fast-only index. Mode selection is read-only (`mode()` returning `dv::TieredQIndexMode` in C++, `mode`
+fast-only index. Mode selection is read-only (`mode()` returning `tq::TieredQIndexMode` in C++, `mode`
 returning `"fast"` or `"full"` in Python).
 
 `storage_bytes()` / Python `storage_bytes` accounts for allocated vector arrays,
@@ -146,7 +145,7 @@ and TieredQIndex.load(path) persist the trained index.
 
 The former boolean constructor and `fast_mode` accessor are removed. Use `mode="full"`
 instead of `fast_mode=False`, and `mode="fast"` instead of `fast_mode=True`. In C++,
-replace boolean arguments with `dv::TieredQIndexMode::full` / `::fast`. Existing saved
+replace boolean arguments with `tq::TieredQIndexMode::full` / `::fast`. Existing saved
 indexes retain their file format and stored mode when loaded.
 
 `search()` uses the selected storage mode; the default is fast scoring.

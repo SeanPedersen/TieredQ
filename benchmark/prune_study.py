@@ -267,7 +267,7 @@ def build(args, dataset, bits):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data", type=Path, default=HERE / "data")
-    parser.add_argument("--native", type=Path, default=HERE / "build-native")
+    parser.add_argument("--native", type=Path, default=HERE / "build-adapters")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--datasets", nargs="+", default=["sift", "glove", "openai"])
     parser.add_argument("--bits", nargs="+", type=int, default=[4, 8])

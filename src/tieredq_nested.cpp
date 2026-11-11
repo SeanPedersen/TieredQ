@@ -9,7 +9,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <fcntl.h>
-#ifdef DV_TIEREDQ_URING
+#ifdef TQ_URING
 #include <liburing.h>
 #endif
 #include <limits>
@@ -18,7 +18,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-namespace dv {
+namespace tq {
 using tieredq_detail::bad;
 using tieredq_detail::product;
 namespace {
@@ -64,7 +64,7 @@ void read_planned(int fd,const RowRead& row,size_t got) {
   }
 }
 
-#ifdef DV_TIEREDQ_URING
+#ifdef TQ_URING
 // One ring per thread: read() runs concurrently on search workers, and a ring is not thread-safe.
 struct ThreadRing {
   io_uring ring{};
@@ -164,7 +164,7 @@ TieredQFileRows::TieredQFileRows(const std::string& path,TieredQFileReads reads,
 }
 TieredQFileRows::~TieredQFileRows() { if (fd_>=0) ::close(fd_); }
 bool TieredQFileRows::concurrent_reads_available() {
-#ifdef DV_TIEREDQ_URING
+#ifdef TQ_URING
   return true;
 #else
   return false;
@@ -196,7 +196,7 @@ void TieredQFileRows::read(const uint32_t* ids,size_t count,uint8_t* out) const 
     const size_t last=std::min((offset+row_bytes_+data_alignment-1)/data_alignment*data_alignment,file_end);
     plan[i]={first,last-first,offset+row_bytes_-first,pages.get()+i*span};
   }
-#ifdef DV_TIEREDQ_URING
+#ifdef TQ_URING
   if (queue_depth_>1) read_concurrent(fd_,plan,queue_depth_); else
 #endif
   for (const auto& row:plan) read_planned(fd_,row,0);
@@ -466,4 +466,4 @@ TieredQNestedIVFIndex TieredQNestedIVFIndex::deserialize(const std::vector<uint8
   if (reader.remaining()) bad("trailing nested index bytes");
   return TieredQNestedIVFIndex(std::move(index),std::move(refinement),tier_rows);
 }
-} // namespace dv
+} // namespace tq

@@ -8,7 +8,7 @@
 #include <arm_neon.h>
 #include <omp.h>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 inline bool fast_scan_available() { return native_fast_scan_available(); }
 struct FastScanQuery {
   TieredQQuery codes;
@@ -117,4 +117,4 @@ inline void scan_fast_neon_batch(const FastScanCache& cache,
     scan_fast_neon_tile(cache,queries.data()+first,std::min(fast_scan_query_tile_neon,queries.size()-first),
         0,cache.count,scores+first*cache.count,cache.count);
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

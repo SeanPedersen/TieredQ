@@ -4,9 +4,9 @@
 #pragma once
 #include <cstdint>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 struct ScanGroupPlan {
   uint32_t window, shift, left, first, bits, table;
   bool straddles;
 };
-}  // namespace dv::tieredq_detail
+}  // namespace tq::tieredq_detail

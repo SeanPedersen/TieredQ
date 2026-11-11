@@ -11,7 +11,7 @@
 #include <optional>
 #include <vector>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 
 // books[b] for prefix_bits < b <= widest_fine_code_bits refines the prefix book by b - prefix_bits bits.
 struct FineBooks {
@@ -54,4 +54,4 @@ inline std::optional<Allocation> lloyd_max_fine_allocation(const AllocationModel
   return fine_or_none(greedy_allocation(with_fine_books(narrow,books,fine_cap,wide_dims),code_bits,false),books.prefix_bits);
 }
 
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

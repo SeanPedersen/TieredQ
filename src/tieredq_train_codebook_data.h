@@ -2,7 +2,7 @@
 #pragma once
 #include <array>
 #include <vector>
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 inline const std::array<std::vector<float>,9>& gaussian_codebooks() {
   static const std::array<std::vector<float>,9> books{{
     {},
@@ -157,4 +157,4 @@ inline const std::vector<float>& additive_three_codebook() {
   };
   return book;
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

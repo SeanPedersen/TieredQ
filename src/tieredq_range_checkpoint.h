@@ -6,7 +6,7 @@
 #include <cmath>
 #include <limits>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 constexpr size_t fast_range_prefix_tiers=4;
 struct FastRangeBounds { float high,low,magnitude,allowance_scale; };
 
@@ -69,4 +69,4 @@ inline FastRangeBounds prepare_fast_range_bounds(const FastScanCache& cache,
   return {range_round_up(high),range_round_down(low),range_round_up(magnitude),
       range_round_up(rounding_error/(1.0-rounding_error))};
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

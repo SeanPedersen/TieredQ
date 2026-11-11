@@ -4,7 +4,7 @@
 #include "tieredq_scan_codes.h"
 #include <bit>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 struct FastScanScalarQuery {
   TieredQQuery codes;
   FastScanLookupQuery lookup;
@@ -70,4 +70,4 @@ inline void scan_fast_scalar_tile(const FastScanCache& cache,const FastScanScala
     scores[row*stride+doc-first]=score;
   }
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

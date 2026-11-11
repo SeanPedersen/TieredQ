@@ -3,7 +3,7 @@
 #pragma once
 #include <vector>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 struct AdditiveBookParts { std::vector<unsigned> bits; std::vector<std::vector<float>> levels; };
 inline const std::vector<AdditiveBookParts>& additive_book_parts() { // indexed by code width; empty below 5
   static const std::vector<AdditiveBookParts> books{
@@ -32,4 +32,4 @@ inline const std::vector<AdditiveBookParts>& additive_book_parts() { // indexed 
   };
   return books;
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

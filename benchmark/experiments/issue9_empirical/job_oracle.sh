@@ -22,7 +22,7 @@ run() {  # $1 power, $2 cpus
       gemini) d=768 budgets="768 1152 1536 1920 2304 2688 3072" ;;
       openai) d=1536 budgets="1536 2304 3072 3840 4608 5376 6144" ;;
     esac
-    DV_TIEREDQ_ALLOCATOR=exact DV_TIEREDQ_ALLOCATION_POWER=$power OMP_NUM_THREADS=7 OPENBLAS_NUM_THREADS=1 \
+    TQ_ALLOCATOR=exact TQ_ALLOCATION_POWER=$power OMP_NUM_THREADS=7 OPENBLAS_NUM_THREADS=1 \
       taskset -c $cpus build-oracle/ab_eval $arm data/$ds $d 0 $budgets >> oracle/ab-$ds.tsv 2>> oracle/errors-$arm.log ||
       { echo 1 > oracle/exit-$arm; return 1; }
   done

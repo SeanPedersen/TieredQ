@@ -11,7 +11,7 @@ void require(bool ok, const char* message) {
 
 int main() {
   try {
-    using dv::tieredq_detail::TrainingRng;
+    using tq::tieredq_detail::TrainingRng;
     constexpr uint64_t seed = 42;
     constexpr size_t population = 100, selected = 17, samples = 65536;
     TrainingRng first(seed), second(seed);

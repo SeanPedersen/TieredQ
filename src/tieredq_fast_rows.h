@@ -7,7 +7,7 @@
 #include <array>
 #include <numeric>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 namespace fast_rows {
 constexpr int16_t no_code=-1,ambiguous_code=-2;
 constexpr size_t int8_values=size_t(1)<<CHAR_BIT;
@@ -188,4 +188,4 @@ inline void read_fast_rows(const FastScanCache& cache,const std::vector<std::vec
                            const uint32_t* docs,size_t count,uint8_t* rows) {
   FastRowReader(cache,levels,tiers,ranks,code_bytes,stride).read(cache,docs,count,rows);
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

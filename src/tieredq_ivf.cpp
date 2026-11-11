@@ -15,7 +15,7 @@
 #include <chrono>
 #include <optional>
 #include <numeric>
-namespace dv {
+namespace tq {
 using tieredq_detail::bad;
 using tieredq_detail::product;
 using tieredq_detail::TopK;
@@ -447,7 +447,7 @@ void TieredQIVFIndex::search_rows(const float* queries,const TieredQQuery* weigh
     }
     documents_.finish_scores(queries+row*d,scores+row*found,hits.size());
   };
-#ifdef DV_TIEREDQ_X86
+#ifdef TQ_X86
   const size_t code_prefix_tiers=pruning.prefix_tiers==TieredQPruning::automatic_prefix ?
       tieredq_detail::fast_range_prefix_tiers : pruning.prefix_tiers;
   const bool range=tieredq_detail::fast_scan_backend(cache)==tieredq_detail::FastScanBackend::avx512 &&
@@ -495,7 +495,7 @@ void TieredQIVFIndex::search_rows(const float* queries,const TieredQQuery* weigh
           }
         };
         bool scanned=false;
-#ifdef DV_TIEREDQ_X86
+#ifdef TQ_X86
         // Range checkpoint: documents whose prefix score bound cannot reach the threshold skip their suffix tiers
         // and score -inf; every other score is exact, so with the exact bound hits equal the unpruned scan.
         if constexpr (requires { prepared[row].codes.weights; }) if (range) {
@@ -699,4 +699,4 @@ TieredQIVFIndex TieredQIVFIndex::load(const std::string& path) {
     throw;
   }
 }
-} // namespace dv
+} // namespace tq

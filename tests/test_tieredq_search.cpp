@@ -23,7 +23,7 @@ void require(bool condition,const char* message) {
   if (!condition) throw std::runtime_error(message);
 }
 void fast_cache_accounting_test() {
-  using namespace dv::tieredq_detail;
+  using namespace tq::tieredq_detail;
   const int8_t little_endian_word[]{0x12,0x34,0x56,0x78};
   require(load_code_word(little_endian_word)==0x78563412u,"packed words must be little-endian");
   FastScanCache cache;
@@ -43,7 +43,7 @@ void fast_cache_accounting_test() {
 // Decaying coordinate scales mix 5-8-bit tiers with narrow ones that fit a single register-table pair;
 // centroid counts above one register pair exercise masked centroid tables.
 void high_bit_reference_test(uint32_t bits,float decay=0,uint32_t centroids=4) {
-  using namespace dv::tieredq_detail;
+  using namespace tq::tieredq_detail;
   constexpr size_t dimensions=13,documents=4109,query_count=11;
   const size_t training_rows=std::max<size_t>(128,2*centroids);
   std::mt19937 random(123);std::normal_distribution<float> normal;
@@ -51,9 +51,9 @@ void high_bit_reference_test(uint32_t bits,float decay=0,uint32_t centroids=4) {
   for (auto* values:{&training,&rows,&queries})
     for (size_t i=0;i<values->size();++i) (*values)[i]=normal(random)*std::exp(-decay*float(i%dimensions));
   // Full-target training keeps Lloyd-Max books, the exact FP32 code-lookup path this test pins.
-  dv::TieredQConfig config{dimensions,uint32_t(dimensions*bits),centroids,true};
-  config.target_mode=dv::TieredQIndexMode::full; config.fine_tiers=false;
-  auto codec=dv::TieredQ::train(config,training.data(),training_rows);
+  tq::TieredQConfig config{dimensions,uint32_t(dimensions*bits),centroids,true};
+  config.target_mode=tq::TieredQIndexMode::full; config.fine_tiers=false;
+  auto codec=tq::TieredQ::train(config,training.data(),training_rows);
   const auto encoded=codec.encode(rows.data(),documents);
   auto code_patterns=encoded;
   for (size_t doc=0;doc<documents;++doc) {
@@ -66,7 +66,7 @@ void high_bit_reference_test(uint32_t bits,float decay=0,uint32_t centroids=4) {
   const std::vector<std::vector<float>> levels(books.begin(),books.end());
   auto cache=build_fast_scan_cache(levels,codec.tiers(),codec.coded_dimensions(),documents,
       codec.bytes_per_vector(),codec.code_bytes(),centroids,fast_code_lookup_levels,code_patterns.data());
-  dv::TieredQIndex index(codec,dv::TieredQIndexMode::fast);index.add(rows.data(),documents);
+  tq::TieredQIndex index(codec,tq::TieredQIndexMode::fast);index.add(rows.data(),documents);
   const auto batched=codec.query_weights(queries.data(),query_count);
   for (size_t row=0;row<query_count;++row) {
     const auto single=codec.query_weights(queries.data()+row*dimensions);
@@ -74,13 +74,13 @@ void high_bit_reference_test(uint32_t bits,float decay=0,uint32_t centroids=4) {
         batched[row].correction_weights==single.correction_weights,"batched query weights differ from single queries");
   }
   // One call spans full and partial register tiles of every SIMD backend.
-  std::vector<dv::TieredQQuery> tile_queries;
+  std::vector<tq::TieredQQuery> tile_queries;
   std::vector<float> tile_expected(query_count*documents),tile_actual(query_count*documents);
   for (size_t row=0;row<query_count;++row) {
     tile_queries.push_back(codec.query(queries.data()+row*dimensions));
-    codec.score(code_patterns.data(),documents,tile_queries.back(),tile_expected.data()+row*documents,dv::TieredQKernel::scalar);
+    codec.score(code_patterns.data(),documents,tile_queries.back(),tile_expected.data()+row*documents,tq::TieredQKernel::scalar);
   }
-  [[maybe_unused]] auto tile_query=[&](size_t row)->const dv::TieredQQuery& {return tile_queries[row];};
+  [[maybe_unused]] auto tile_query=[&](size_t row)->const tq::TieredQQuery& {return tile_queries[row];};
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
   if (__builtin_cpu_supports("avx2")) {
     scan_codes_avx2_tile(*cache,query_count,0,documents,tile_actual.data(),documents,tile_query);
@@ -98,7 +98,7 @@ void high_bit_reference_test(uint32_t bits,float decay=0,uint32_t centroids=4) {
   for (size_t row=0;row<query_count;++row) {
     const auto q=codec.query(queries.data()+row*dimensions);
     std::vector<float> expected(documents),actual(documents);
-    codec.score(code_patterns.data(),documents,q,expected.data(),dv::TieredQKernel::scalar);
+    codec.score(code_patterns.data(),documents,q,expected.data(),tq::TieredQKernel::scalar);
     const auto prepared=fast_scan_query_scalar(*cache,codec,queries.data()+row*dimensions);
     scan_fast_scalar_tile(*cache,&prepared,1,0,documents,actual.data(),documents);
     require(actual==expected,"high-bit portable scan lost FP32 codebook precision");
@@ -117,7 +117,7 @@ void high_bit_reference_test(uint32_t bits,float decay=0,uint32_t centroids=4) {
     require(actual==expected,"high-bit NEON scan differs from scalar codec");
 #endif
     std::vector<uint32_t> order(documents);
-    codec.score(encoded.data(),documents,q,expected.data(),dv::TieredQKernel::scalar);
+    codec.score(encoded.data(),documents,q,expected.data(),tq::TieredQKernel::scalar);
     std::iota(order.begin(),order.end(),0);
     std::sort(order.begin(),order.end(),[&](auto a,auto b){return expected[a]>expected[b] || (expected[a]==expected[b] && a<b);});
     const auto hits=index.search_fast(queries.data()+row*dimensions,10);
@@ -128,16 +128,16 @@ void high_bit_reference_test(uint32_t bits,float decay=0,uint32_t centroids=4) {
 // Hand-built tiers of every width at odd bit offsets exercise each register-table period and phase, straddling
 // codes and a partial block against an independent reference that reads the original rows.
 void packed_code_layout_test() {
-  using namespace dv::tieredq_detail;
+  using namespace tq::tieredq_detail;
   constexpr size_t documents=1000,centroids=3,query_count=11;
   const std::vector<std::pair<uint32_t,uint32_t>> shape{{1,3},{8,37},{7,72},{6,35},{5,70},{4,39},{3,70},{2,37},{1,70}};
-  std::vector<dv::TieredQTier> tiers;
+  std::vector<tq::TieredQTier> tiers;
   uint32_t dimensions=0,code_bits=0;
   for (const auto& [bits,count]:shape) {
     tiers.push_back({dimensions,count,bits,0,code_bits});
     dimensions+=count;code_bits+=count*bits;
   }
-  const size_t code_bytes=(code_bits+7)/8,stride=code_bytes+dv::TieredQ::metadata_bytes;
+  const size_t code_bytes=(code_bits+7)/8,stride=code_bytes+tq::TieredQ::metadata_bytes;
   const Layout layout{code_bytes};
   std::mt19937 random(31);std::normal_distribution<float> normal;
   std::vector<uint8_t> rows(documents*stride,0);
@@ -153,7 +153,7 @@ void packed_code_layout_test() {
   const std::vector<std::vector<float>> levels(books.begin(),books.end());
   const auto cache=build_fast_scan_cache(levels,tiers,dimensions,documents,stride,code_bytes,centroids,fast_code_lookup_levels,rows.data());
   require(fast_vector_bytes(*cache)==(code_bits+31)/32*sizeof(uint32_t)+fast_metadata_bytes,"packed code bytes per vector");
-  std::vector<dv::TieredQQuery> queries(query_count);
+  std::vector<tq::TieredQQuery> queries(query_count);
   for (auto& q:queries) {
     for (size_t rank=0;rank<dimensions;++rank) q.weights.push_back(normal(random));
     for (size_t c=0;c<centroids;++c) { q.centroid_scores.push_back(normal(random));q.correction_weights.push_back(normal(random)); }
@@ -172,7 +172,7 @@ void packed_code_layout_test() {
     actual[row*documents+doc]=fast_code_score(*cache,queries[row],doc);
   }
   require(actual==expected,"packed portable scores differ from row reference");
-  [[maybe_unused]] auto query=[&](size_t row)->const dv::TieredQQuery& {return queries[row];};
+  [[maybe_unused]] auto query=[&](size_t row)->const tq::TieredQQuery& {return queries[row];};
   [[maybe_unused]] const std::vector<float> single(expected.begin(),expected.begin()+documents);
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
   if (__builtin_cpu_supports("avx2")) {
@@ -199,17 +199,17 @@ std::vector<uint8_t> file_bytes(const std::filesystem::path& path) {
 }
 // Legacy byte-per-coordinate payloads load into the packed layout and resave canonically; invalid legacy codes fail.
 void legacy_byte_payload_test() {
-  using namespace dv::tieredq_detail;
+  using namespace tq::tieredq_detail;
   constexpr size_t dimensions=13,documents=37,training_rows=128,centroids=4;
   std::mt19937 random(7);std::normal_distribution<float> normal;
   std::vector<float> training(training_rows*dimensions),rows(documents*dimensions);
   for (auto* values:{&training,&rows})
     for (size_t i=0;i<values->size();++i) (*values)[i]=normal(random)*std::exp(-0.5f*float(i%dimensions));
   // Legacy payloads belong to Lloyd-Max models, which keep the exact code lookup.
-  dv::TieredQConfig config{dimensions,uint32_t(dimensions*5),centroids,true};
-  config.target_mode=dv::TieredQIndexMode::full; config.fine_tiers=false;
-  auto codec=dv::TieredQ::train(config,training.data(),training_rows);
-  dv::TieredQIndex index(codec,dv::TieredQIndexMode::fast);index.add(rows.data(),documents);
+  tq::TieredQConfig config{dimensions,uint32_t(dimensions*5),centroids,true};
+  config.target_mode=tq::TieredQIndexMode::full; config.fine_tiers=false;
+  auto codec=tq::TieredQ::train(config,training.data(),training_rows);
+  tq::TieredQIndex index(codec,tq::TieredQIndexMode::fast);index.add(rows.data(),documents);
   const auto directory=std::filesystem::temp_directory_path();
   const auto packed_path=directory/"tieredq_packed.tq",legacy_path=directory/"tieredq_legacy.tq",resaved_path=directory/"tieredq_resaved.tq";
   index.save(packed_path.string());
@@ -228,7 +228,7 @@ void legacy_byte_payload_test() {
     save_file(legacy_path.string(),codec.serialize(),writer.data,documents,fast_index_file_kind);
   };
   legacy(bytes);
-  const auto loaded=dv::TieredQIndex::load(legacy_path.string());
+  const auto loaded=tq::TieredQIndex::load(legacy_path.string());
   for (size_t doc=0;doc<documents;++doc) {
     const auto expected=index.search_fast(rows.data()+doc*dimensions,5),actual=loaded.search_fast(rows.data()+doc*dimensions,5);
     for (size_t hit=0;hit<expected.size();++hit)
@@ -243,13 +243,13 @@ void legacy_byte_payload_test() {
   bytes[fast_level_position(cache->groups,0,narrow)]=uint8_t(1u<<codec.tiers()[cache->tier_of[narrow]].bits);
   legacy(bytes);
   bool rejected=false;
-  try { dv::TieredQIndex::load(legacy_path.string()); } catch (const std::exception&) { rejected=true; }
+  try { tq::TieredQIndex::load(legacy_path.string()); } catch (const std::exception&) { rejected=true; }
   require(rejected,"legacy code above its tier width accepted");
   for (const auto& path:{packed_path,legacy_path,resaved_path}) std::filesystem::remove(path);
 }
 // Signed int8-level payloads written before 5/6-bit models moved to packed codes still load, append and resave.
 void legacy_level_payload_test() {
-  using namespace dv::tieredq_detail;
+  using namespace tq::tieredq_detail;
   constexpr size_t dimensions=13,documents=37,training_rows=128,centroids=4;
   constexpr uint32_t bits=5;
 #if defined(__aarch64__)
@@ -261,9 +261,9 @@ void legacy_level_payload_test() {
   std::vector<float> training(training_rows*dimensions),rows(documents*dimensions);
   for (auto* values:{&training,&rows}) for (auto& value:*values) value=normal(random);
   // Legacy payloads belong to Lloyd-Max models, which keep the exact code lookup.
-  dv::TieredQConfig config{dimensions,uint32_t(dimensions*bits),centroids,true};
-  config.target_mode=dv::TieredQIndexMode::full; config.fine_tiers=false;
-  auto codec=dv::TieredQ::train(config,training.data(),training_rows);
+  tq::TieredQConfig config{dimensions,uint32_t(dimensions*bits),centroids,true};
+  config.target_mode=tq::TieredQIndexMode::full; config.fine_tiers=false;
+  auto codec=tq::TieredQ::train(config,training.data(),training_rows);
   const auto widest=std::max_element(codec.tiers().begin(),codec.tiers().end(),
       [](const auto& a,const auto& b){return a.bits<b.bits;})->bits;
   require(widest>lookup_code_bits && widest<fast_scan_code_bits-1,"legacy level model is not mid-width");
@@ -275,7 +275,7 @@ void legacy_level_payload_test() {
   const auto directory=std::filesystem::temp_directory_path();
   const auto legacy_path=directory/"tieredq_legacy_levels.tq",resaved_path=directory/"tieredq_legacy_levels_resaved.tq";
   save_file(legacy_path.string(),codec.serialize(),serialize_fast_storage(*cache),documents,fast_index_file_kind);
-  auto loaded=dv::TieredQIndex::load(legacy_path.string());
+  auto loaded=tq::TieredQIndex::load(legacy_path.string());
   require(loaded.has_fast_scan() && loaded.search_fast(rows.data(),5).size()==5,"legacy level payload does not search");
   auto check_scores=[&](const auto& reference) {
     const auto prepared=fast_scan_query_scalar(reference,codec,rows.data());
@@ -308,8 +308,8 @@ void streaming_search_test(uint32_t code_bits,uint32_t max_scan_bits,bool fast_m
   for (auto& value:queries) value=normal(random);
   std::fill_n(queries.data(),dimensions,0);
   for (size_t row=1;row<documents;row+=2) std::copy_n(rows.data(),dimensions,rows.data()+row*dimensions);
-  auto codec=dv::TieredQ::train({dimensions,code_bits,centroids,false,max_scan_bits},training.data(),training_rows);
-  dv::TieredQIndex index(std::move(codec),fast_mode ? dv::TieredQIndexMode::fast : dv::TieredQIndexMode::full);
+  auto codec=tq::TieredQ::train({dimensions,code_bits,centroids,false,max_scan_bits},training.data(),training_rows);
+  tq::TieredQIndex index(std::move(codec),fast_mode ? tq::TieredQIndexMode::fast : tq::TieredQIndexMode::full);
   index.add(rows.data(),documents);
   index.build_fast_scan();
   if (!index.has_fast_scan()) return;

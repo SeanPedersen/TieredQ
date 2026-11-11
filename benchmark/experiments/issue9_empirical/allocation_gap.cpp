@@ -1,5 +1,5 @@
 // Issue #9: how far is the greedy allocator from the exact optimum of its own objective (predicted distortion)?
-// Captures the real PCA spectrum by training once on the ab_eval seed-0 sample (DV_TIEREDQ_TRAIN_DUMP), then per budget:
+// Captures the real PCA spectrum by training once on the ab_eval seed-0 sample (TQ_TRAIN_DUMP), then per budget:
 //  - dense: greedy vs exact DP over Lloyd-Max widths 0..8 under sum(bits) <= budget (no padding);
 //  - fast: the shipped fast choice vs exact_lookup_allocation under padded nibble storage, both at the stored bits
 //    the shipped choice uses (equal memory) and at the nominal budget.
@@ -17,7 +17,7 @@
 #include <random>
 #include <string>
 #include <vector>
-using namespace dv::tieredq_detail;
+using namespace tq::tieredq_detail;
 template<class T> std::vector<T> load(const std::string& path) {
   std::ifstream in(path,std::ios::binary|std::ios::ate);
   std::vector<T> out(size_t(in.tellg())/sizeof(T));
@@ -35,10 +35,10 @@ std::vector<double> spectrum(const std::string& dir,uint32_t d) {
   std::vector<float> sample(rows*d);
   for (size_t i=0;i<rows;++i) std::copy_n(base.data()+order[i]*d,d,sample.data()+i*d);
   const std::string prefix="/tmp/issue9_spectrum_"+std::to_string(d);
-  setenv("DV_TIEREDQ_TRAIN_DUMP",prefix.c_str(),1);
-  auto config=dv::TieredQConfig::target_code_bits(d,d); config.num_centroids=centroids;
-  dv::TieredQ::train(config,sample.data(),rows,0);
-  unsetenv("DV_TIEREDQ_TRAIN_DUMP");
+  setenv("TQ_TRAIN_DUMP",prefix.c_str(),1);
+  auto config=tq::TieredQConfig::target_code_bits(d,d); config.num_centroids=centroids;
+  tq::TieredQ::train(config,sample.data(),rows,0);
+  unsetenv("TQ_TRAIN_DUMP");
   auto ascending=load<double>(prefix+".eigenvalues.f64");
   return {ascending.rbegin(),ascending.rend()};
 }

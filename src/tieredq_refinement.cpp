@@ -17,10 +17,10 @@
 #include <vector>
 #if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
 #include <immintrin.h>
-#define DV_TIEREDQ_REFINEMENT_X86 1
+#define TQ_REFINEMENT_X86 1
 #endif
 
-namespace dv {
+namespace tq {
 namespace tieredq_detail {
 struct RefinementEncoder {
   std::once_flag once;
@@ -112,7 +112,7 @@ float segment_sum_scalar(const uint8_t* prefix,const uint8_t* suffix,const Segme
   }
   return sum;
 }
-#ifdef DV_TIEREDQ_REFINEMENT_X86
+#ifdef TQ_REFINEMENT_X86
 // 16 fields of `bits` from a 16-byte window starting `start` (< 8) bits in: lane j shuffles window bytes t / 8 and
 // t / 8 + 1 (t = start + j * bits) into its dword and shifts by t % 8. Only 8-bit fields off a byte boundary need a
 // 17th byte (fits = false).
@@ -205,7 +205,7 @@ void project_int8_panels_scalar(const int8_t* panels,const float* scale,size_t i
 // The panels a projection pass covers: panels [first + offset, first + offset + count) of the block starting at panel
 // `first` of `width` panels.
 struct PanelRun { size_t first,width,offset; };
-#ifdef DV_TIEREDQ_REFINEMENT_X86
+#ifdef TQ_REFINEMENT_X86
 // Queries x Panels accumulators stay in registers over all inputs. Each output keeps one FMA chain over ascending
 // inputs, so any tiling gives every query the same weights.
 template<size_t Panels,size_t Queries>
@@ -261,14 +261,14 @@ void project_int8_group_tile_avx512(const int8_t* panels,const float* scale,size
 }
 #endif
 void project_int8_panels(const int8_t* panels,const float* scale,size_t inputs,size_t ranks,const float* x,float* out) {
-#ifdef DV_TIEREDQ_REFINEMENT_X86
+#ifdef TQ_REFINEMENT_X86
   static const bool avx512=__builtin_cpu_supports("avx512f");
   if (avx512) return project_int8_panels_avx512(panels,scale,inputs,ranks,x,out);
 #endif
   project_int8_panels_scalar(panels,scale,inputs,ranks,x,out);
 }
 bool int8_tiles_available() {
-#ifdef DV_TIEREDQ_REFINEMENT_X86
+#ifdef TQ_REFINEMENT_X86
   static const bool available=__builtin_cpu_supports("avx512f");
   return available;
 #else
@@ -280,7 +280,7 @@ bool int8_tiles_available() {
 // int8_tiles_available().
 void project_int8_group_rows(const int8_t* panels,const float* scale,size_t inputs,size_t ranks,size_t group,
                              const float* x,size_t rows,float* out) {
-#ifdef DV_TIEREDQ_REFINEMENT_X86
+#ifdef TQ_REFINEMENT_X86
   const size_t count=tieredq_detail::basis_panel_count(ranks),panel=group*int8_group_panels;
   const size_t first=panel/int8_block_panels*int8_block_panels,width=std::min(int8_block_panels,count-first);
   const PanelRun run{first,width,panel-first};
@@ -312,7 +312,7 @@ float projected_mean(const float* weights,const float* ratio,size_t count) {
   return sum;
 }
 bool avx512_kernel_available() {
-#ifdef DV_TIEREDQ_REFINEMENT_X86
+#ifdef TQ_REFINEMENT_X86
   static const bool available=__builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512bw");
   return available;
 #else
@@ -321,7 +321,7 @@ bool avx512_kernel_available() {
 }
 TieredQKernel resolve_kernel(TieredQKernel kernel) {
   if (kernel==TieredQKernel::automatic)
-    return avx512_kernel_available() && !std::getenv("DV_TIEREDQ_NO_AVX512") ? TieredQKernel::avx512 : TieredQKernel::scalar;
+    return avx512_kernel_available() && !std::getenv("TQ_NO_AVX512") ? TieredQKernel::avx512 : TieredQKernel::scalar;
   if (kernel==TieredQKernel::scalar || (kernel==TieredQKernel::avx512 && avx512_kernel_available())) return kernel;
   bad("refinement kernel unavailable");
   return TieredQKernel::scalar;
@@ -656,7 +656,7 @@ void TieredQRefinement::score(const uint8_t* prefix_rows,const uint8_t* suffix_r
   const size_t prefix_stride=prefix_.bytes_per_vector(),stride=bytes_per_vector(),code_bytes=suffix_code_bytes();
   const tieredq_detail::Layout layout{prefix_.code_bytes()};
   auto sum=segment_sum_scalar<Segment>;
-#ifdef DV_TIEREDQ_REFINEMENT_X86
+#ifdef TQ_REFINEMENT_X86
   if (resolve_kernel(kernel)==TieredQKernel::avx512) sum=segment_sum_avx512<Segment>;
 #else
   resolve_kernel(kernel);
@@ -738,4 +738,4 @@ TieredQRefinement TieredQRefinement::deserialize(const std::vector<uint8_t>& dat
   out.prepare();
   return out;
 }
-} // namespace dv
+} // namespace tq

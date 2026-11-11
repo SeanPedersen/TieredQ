@@ -7,7 +7,7 @@ namespace tieredq_python {
 using namespace nb::literals;
 
 void bind_lists(nb::module_& module) {
-  using Training = dv::TieredQCoarseTraining;
+  using Training = tq::TieredQCoarseTraining;
   const Training exact{};
   nb::class_<Training>(module, "TieredQCoarseTraining",
       "Coarse list training of IVF builds: Lloyd iterations, restricted assignment (assignment_supers > 0: each row's\n"
@@ -36,7 +36,7 @@ void bind_lists(nb::module_& module) {
                ", sample_rows_per_list=" + std::to_string(t.sample_rows_per_list) + ")";
       });
 
-  using Router = dv::TieredQRouterConfig;
+  using Router = tq::TieredQRouterConfig;
   const Router defaults{};
   nb::class_<Router>(module, "TieredQRouterConfig",
       "Two-level compressed coarse router settings (see the C++ notes); indexes with at least automatic_lists lists\n"

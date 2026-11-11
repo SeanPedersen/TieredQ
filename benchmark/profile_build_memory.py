@@ -1,7 +1,7 @@
 """RSS timeline of one TieredQ build, to attribute the build peak to training/encoding stages.
 
 A sampler thread reads VmRSS every SAMPLE_S while the native constructor runs with the GIL released. The
-native StageProfile (DV_TIEREDQ_PROFILE) prints per-stage seconds to stderr, which lets the timeline be
+native StageProfile (TQ_PROFILE) prints per-stage seconds to stderr, which lets the timeline be
 aligned to stages. RSS is reported as growth over the loaded FP32 corpus, as in measure_memory.py.
 """
 import argparse
@@ -32,7 +32,7 @@ def main():
     parser.add_argument("--data", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    os.environ["DV_TIEREDQ_PROFILE"] = "1"
+    os.environ["TQ_PROFILE"] = "1"
     from threadpoolctl import threadpool_limits
     import codec_native
     from data import prepare

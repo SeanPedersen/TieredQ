@@ -5,7 +5,7 @@
 
 namespace tieredq_python {
 enum class SearchMode { configured, fast };
-inline void search_rows(const dv::TieredQIndex& index, const float* queries,
+inline void search_rows(const tq::TieredQIndex& index, const float* queries,
                         size_t rows, size_t width, size_t k, float* scores,
                         uint32_t* ids, SearchMode mode) {
   const size_t found = std::min(k, index.size());

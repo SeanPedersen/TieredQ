@@ -13,7 +13,7 @@
 #include <unistd.h>
 #include <vector>
 namespace {
-using namespace dv;
+using namespace tq;
 void require(bool condition,const char* message) { if (!condition) throw std::runtime_error(message); }
 constexpr uint32_t dimensions=16,seed=7;
 constexpr size_t rows=TieredQRouterConfig::automatic_lists+3000,queries=8,k=10,nprobe=64;

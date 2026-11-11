@@ -1,7 +1,7 @@
 // Shared fast-kernel selection for query execution and user-visible fallback diagnostics.
 #pragma once
 #include "tieredq_scan_int8.h"
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 enum class FastScanBackend { scalar, neon, avx2, avx512 };
 inline bool native_fast_scan_available() {
 #if defined(__aarch64__) || defined(_M_ARM64)
@@ -26,4 +26,4 @@ inline FastScanBackend fast_scan_backend(const FastScanCache& cache) {
 #endif
   return FastScanBackend::scalar;
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

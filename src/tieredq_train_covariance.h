@@ -7,7 +7,7 @@
 #include <immintrin.h>
 #endif
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 inline std::vector<double> small_covariance_reference(const std::vector<double>& centered,size_t dimensions,size_t rows) {
   std::vector<double> output(dimensions*dimensions);
   const double alpha=1.0/double(rows-1);
@@ -68,4 +68,4 @@ inline std::vector<double> small_covariance_avx512(
   return output;
 }
 #endif
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

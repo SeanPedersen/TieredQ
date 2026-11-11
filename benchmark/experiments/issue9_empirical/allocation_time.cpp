@@ -10,7 +10,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <vector>
-using namespace dv::tieredq_detail;
+using namespace tq::tieredq_detail;
 constexpr int runs=9;
 constexpr double decay=0.8,power=1.5;
 int main(int argc,char** argv) {

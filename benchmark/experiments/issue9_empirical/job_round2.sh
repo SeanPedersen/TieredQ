@@ -29,8 +29,8 @@ budgets() {  # $1 dataset -> "d budgets"
 arm_env() {  # $1 arm -> environment for that arm
   case $1 in
     base) echo "" ;;
-    layout-query) echo "DV_TIEREDQ_ALLOCATOR=exact DV_TIEREDQ_ALLOCATION_WEIGHT=query" ;;
-    layout-p*) echo "DV_TIEREDQ_ALLOCATOR=exact DV_TIEREDQ_ALLOCATION_POWER=${1#layout-p}" ;;
+    layout-query) echo "TQ_ALLOCATOR=exact TQ_ALLOCATION_WEIGHT=query" ;;
+    layout-p*) echo "TQ_ALLOCATOR=exact TQ_ALLOCATION_POWER=${1#layout-p}" ;;
   esac
 }
 for ds in glove sift gemini openai; do grep -P '^base\t' ab-$ds.tsv > $O/ab-$ds.tsv; done

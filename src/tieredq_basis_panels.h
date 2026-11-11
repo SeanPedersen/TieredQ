@@ -11,10 +11,10 @@
 #include <vector>
 #if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
 #include <immintrin.h>
-#define DV_TIEREDQ_BASIS_X86 1
+#define TQ_BASIS_X86 1
 #endif
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 constexpr size_t basis_panel_ranks=16;
 // Largest query tile one projection pass shares the basis across.
 constexpr size_t basis_query_tile=8;
@@ -50,7 +50,7 @@ struct BasisProjection {
   size_t out_stride;
 };
 
-#ifdef DV_TIEREDQ_BASIS_X86
+#ifdef TQ_BASIS_X86
 // Queries x Panels accumulators stay in registers over all inputs; Panels counts the live panels of this block.
 template<size_t Queries,size_t Panels>
 __attribute__((target("avx512f"))) inline void project_panel_block_avx512(const BasisProjection& p,size_t panel) {
@@ -153,7 +153,7 @@ inline void project_queries_scalar(const BasisProjection& p,size_t rows) {
 
 // Projects `rows` vectors in query tiles of up to basis_query_tile, writing out[row * out_stride + rank].
 inline void project_basis_panels(BasisProjection p,size_t rows) {
-#ifdef DV_TIEREDQ_BASIS_X86
+#ifdef TQ_BASIS_X86
   const bool avx512=__builtin_cpu_supports("avx512f"),avx2=__builtin_cpu_supports("avx2") && __builtin_cpu_supports("f16c");
   if (avx512 || avx2) {
     while (rows) {
@@ -171,4 +171,4 @@ inline void project_basis_panels(BasisProjection p,size_t rows) {
 #endif
   project_queries_scalar(p,rows);
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

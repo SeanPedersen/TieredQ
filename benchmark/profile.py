@@ -50,15 +50,16 @@ def build(full_score, stages=False):
     text = text.replace("  tieredq_detail::search_fast_tiles(prepared,cache.count,k,1", "  profile.prepared();\n  tieredq_detail::search_fast_tiles(prepared,cache.count,k,1")
     path.write_text(f'#include "{header}"\n' + text)
     rq = root/"rabitq"
-    from setup_native import prepare
+    from setup_adapters import prepare
     overlay = prepare(HERE/".deps", full_score=full_score)
     shutil.copytree(overlay/"include", rq/"include", dirs_exist_ok=True)
-    flat = (HERE/"native/rabitq_flat.h").read_text()
+    flat = (HERE/"codec_adapters/rabitq/rabitq_flat.h").read_text()
     flat = replace_once(flat, "void search(const float* vector,size_t k,uint32_t* ids) const {", "void search(const float* vector,size_t k,uint32_t* ids) const {\n    bench_profile::Span profile;")
     flat = replace_once(flat, "query.set_g_add(distance,center_ip);", "query.set_g_add(distance,center_ip);\n    profile.prepared();")
-    (native/"rabitq_flat.h").write_text(f'#include "{header}"\n' + flat)
-    shutil.copyfile(HERE/"native/reference.cpp",native/"reference.cpp")
-    module = (HERE/"native/module.cpp").read_text()
+    (native/"rabitq").mkdir(exist_ok=True)
+    (native/"rabitq/rabitq_flat.h").write_text(f'#include "{header}"\n' + flat)
+    shutil.copyfile(HERE/"codec_adapters/rabitq/reference.cpp",native/"rabitq/reference.cpp")
+    module = (HERE/"codec_adapters/module.cpp").read_text()
     module = replace_once(module, "#include <nanobind/nanobind.h>", f'#include <nanobind/nanobind.h>\n#include "{header}"')
     module = replace_once(module, 'NB_MODULE(codec_native, m) {', '''NB_MODULE(codec_native, m) {
   m.def("profile_reset", []{ bench_profile::prep_s.store(0); bench_profile::total_s.store(0); });
@@ -67,7 +68,7 @@ def build(full_score, stages=False):
         from profile_stages import instrument
         module = instrument(source, module, header, replace_once)
     (native/"module.cpp").write_text(module)
-    cmake = (HERE/"native/CMakeLists.txt").read_text().replace("add_subdirectory(../.. tieredq)", f'add_subdirectory("{source}" tieredq)')
+    cmake = (HERE/"codec_adapters/CMakeLists.txt").read_text().replace("add_subdirectory(../.. tieredq)", f'add_subdirectory("{source}" tieredq)')
     (native/"CMakeLists.txt").write_text(cmake)
     build_dir = root/"build"
     subprocess.run(["cmake", "-S", str(native), "-B", str(build_dir), f"-DRABITQ_SOURCE={rq}", f"-DBENCH_FULL_SCORE={'ON' if full_score else 'OFF'}",

@@ -9,7 +9,7 @@
 #define TIEREDQ_ENCODING_X86 1
 #endif
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 // Resolves automatic to the best kernel this CPU runs; an explicit kernel the CPU lacks fails fast.
 inline TieredQKernel encoding_kernel(TieredQKernel kernel) {
 #ifdef TIEREDQ_ENCODING_X86
@@ -124,4 +124,4 @@ template<bool centroid=false> inline void ordered_matrix(const double* input,siz
     default: return ordered_matrix_scalar<centroid>(input,rows,panels,output);
   }
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

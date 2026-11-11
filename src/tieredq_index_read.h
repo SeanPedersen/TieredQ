@@ -5,7 +5,7 @@
 #include "tieredq_fast_storage.h"
 #include "tieredq_fast_fine.h"
 
-namespace dv {
+namespace tq {
 template<class Reader> void TieredQIndex::read_fast_payload(Reader& reader,size_t rows) {
   using namespace tieredq_detail;
   if (!fast_mode_ || count_) bad("fast payload needs an empty fast index");
@@ -31,4 +31,4 @@ template<class Reader> void TieredQIndex::read_fast_payload(Reader& reader,size_
   if (reader.remaining()) bad("trailing fast payload bytes");
   fast_=std::move(storage);count_=rows;
 }
-} // namespace dv
+} // namespace tq

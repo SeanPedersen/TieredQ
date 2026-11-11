@@ -40,13 +40,13 @@ int main(int argc,char** argv) {
   std::vector<float> scores(nq*top_k); std::vector<uint32_t> ids(nq*top_k);
   for (int a=5;a<argc;++a) {
     const uint32_t budget=std::stoul(argv[a]);
-    auto config=dv::TieredQConfig::target_code_bits(d,budget); config.num_centroids=centroids;
+    auto config=tq::TieredQConfig::target_code_bits(d,budget); config.num_centroids=centroids;
     std::vector<double> train,add; double t1b32=0,t8b32=0; uint32_t model=0,widest=0; double stored=0;
     for (size_t r=0;r<repeats;++r) {
       omp_set_num_threads(threads);
-      std::optional<dv::TieredQ> codec;
-      train.push_back(seconds([&] { codec.emplace(dv::TieredQ::train(config,sample.data(),train_count,0)); }));
-      dv::TieredQIndex index(std::move(*codec));
+      std::optional<tq::TieredQ> codec;
+      train.push_back(seconds([&] { codec.emplace(tq::TieredQ::train(config,sample.data(),train_count,0)); }));
+      tq::TieredQIndex index(std::move(*codec));
       add.push_back(seconds([&] { index.add(base.data(),n); }));
       model=index.codec().model_id(); stored=8.0*double(index.storage_bytes())/double(n);
       for (const auto& t:index.codec().tiers()) widest=std::max(widest,t.bits);

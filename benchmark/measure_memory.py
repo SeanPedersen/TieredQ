@@ -31,7 +31,7 @@ DATASETS = ["sift", "glove", "openai", "gemini", "openai1m", "msmarco1m", "msmar
 # Second query set scored on the same base and index (#22: real vs doc queries); storage does not depend on it.
 COMPANION_QUERIES = {"msmarco1m": "msmarco1m-doc"}
 CODECS = ["tieredq", "rabitq"]
-# Qdrant TQ+ needs the Rust shim (turboquant/native), so it is opt-in via --codecs.
+# Qdrant TQ+ needs the Rust shim (codec_adapters/qdrant_turboquant_plus/native), so it is opt-in via --codecs.
 OPTIONAL_CODECS = ["qdrant"]
 BIT_BUDGETS = [1, 2, 4]
 SUPPORTED_BITS = range(1, 9)
@@ -240,14 +240,14 @@ def metadata(compiler_commands, arguments):
             "cpu_affinity": sorted(os.sched_getaffinity(0)), "arguments": arguments, "python": sys.version,
             "serving_schedules": SERVING_SCHEDULES, "build_threads": BUILD_THREADS,
             "source_sha256": {str(p.relative_to(REPO)): hashlib.sha256(p.read_bytes()).hexdigest()
-                              for folder in [REPO / "src", REPO / "include", HERE / "native"]
+                              for folder in [REPO / "src", REPO / "include", HERE / "codec_adapters"]
                               for p in folder.rglob("*") if p.is_file()}}
 
 
 def prepare_native():
     """Build the native module; return the worker environment and run metadata."""
-    from native_build import build_native
-    native = build_native()
+    from adapters_build import build_adapters
+    native = build_adapters()
     env = os.environ | {"PYTHONPATH": os.pathsep.join([str(native.directory), str(HERE)]),
                         "OPENBLAS_NUM_THREADS": "1", "MKL_NUM_THREADS": "1", "OMP_NUM_THREADS": str(BUILD_THREADS)}
     return env, metadata(native.compiler_commands, sys.argv[1:])

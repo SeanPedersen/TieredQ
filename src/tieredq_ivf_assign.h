@@ -18,7 +18,7 @@
 #include <dlfcn.h>
 #endif
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 // OpenBLAS sizes its own thread pool; within a call it uses the OpenMP thread count, so builds keep their thread budget.
 class BlasThreads {
  public:
@@ -216,4 +216,4 @@ inline CoarseQuantizer train_coarse(const float* sample,size_t rows,size_t dimen
                         ListAssigner(q,training,seed).assign(x,n,ids);
                       });
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

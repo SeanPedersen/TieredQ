@@ -1,5 +1,5 @@
 #!/bin/bash
-# Issue #9 empirical-distortion A/B: c85b0f8 (base) vs the new tree under DV_TIEREDQ_DISTORTION=gaussian|raw|shape.
+# Issue #9 empirical-distortion A/B: c85b0f8 (base) vs the new tree under TQ_DISTORTION=gaussian|raw|shape.
 # Recall is deterministic, so arms run untimed in parallel, one 8-CPU lane each; reuses the issue #20 ab_eval
 # and exported data. The gaussian arm must reproduce base model_ids and runs on GloVe/SIFT only.
 # Pinned: source-new must be 8762da6. Main removed these switches when exact allocation on variance^1.5 became
@@ -24,7 +24,7 @@ run() {  # $1 arm, $2 cpus, $3.. datasets
       gemini) d=768 budgets="768 1152 1536 1920 2304 2688 3072" ;;
       openai) d=1536 budgets="1536 2304 3072 3840 4608 5376 6144" ;;
     esac
-    DV_TIEREDQ_DISTORTION=$mode OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 taskset -c $cpus \
+    TQ_DISTORTION=$mode OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 taskset -c $cpus \
       build-$tree/ab_eval $arm data/$ds $d 0 $budgets >> ab-$ds.tsv 2>> errors-$arm.log || { echo $arm > exit-$arm; return 1; }
   done
   echo 0 > exit-$arm

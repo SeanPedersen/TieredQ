@@ -12,7 +12,7 @@
 #include <string>
 #include <unistd.h>
 namespace {
-using namespace dv;
+using namespace tq;
 void require(bool condition,const char* message) { if (!condition) throw std::runtime_error(message); }
 constexpr uint32_t dimensions=24,centroids=8;
 constexpr size_t rows=1500,queries=20,k=10,min_overlap=8;

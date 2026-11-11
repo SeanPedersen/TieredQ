@@ -3,7 +3,7 @@
 #pragma once
 #include "index.h"
 #include <memory>
-namespace dv { class TieredQIndex; }
+namespace tq { class TieredQIndex; }
 namespace geometry_ann {
 struct RankedLeaf { double distance; Id leaf; };
 class CompressedRouter {
@@ -18,7 +18,7 @@ public:
     std::size_t bytes() const;
     std::size_t code_bits() const;
 private:
-    std::unique_ptr<dv::TieredQIndex> index_;
+    std::unique_ptr<tq::TieredQIndex> index_;
 };
 // The TieredQ scan parallelises single queries over OpenMP threads; benchmarks set one thread after the build.
 void set_router_threads(std::size_t threads);

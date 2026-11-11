@@ -11,7 +11,7 @@
 #include <limits>
 #include <optional>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 constexpr size_t lookup_vector_docs=16, lookup_chunk_docs=64;
 constexpr size_t lookup_block_docs=256, lookup_table_entries=size_t(1)<<lookup_code_bits, lookup_scale_groups=32;
 constexpr int lookup_quant_max=127;
@@ -306,4 +306,4 @@ inline FastScanLookupQuery fast_lookup_query(const FastScanLookupCache& cache,co
 inline FastScanLookupQuery prepare_fast_lookup_query(const FastScanLookupCache& cache,const float* vector,FastQueryBasis source) {
   return fast_lookup_query(cache,project_fast_query(cache.projection,vector,source));
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

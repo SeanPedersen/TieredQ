@@ -13,7 +13,7 @@
 #include <memory>
 #include <vector>
 
-namespace dv {
+namespace tq {
 namespace tieredq_detail { struct FastScanCache; class FastRowReader; }
 class TieredQFastBlocks {
  public:
@@ -63,4 +63,4 @@ class TieredQFastBlocks {
   std::shared_ptr<const tieredq_detail::FastScanCache> empty_;  // the format's geometry with no documents
   std::shared_ptr<const tieredq_detail::FastRowReader> reader_;  // unpack / rows decoding tables of that geometry
 };
-} // namespace dv
+} // namespace tq

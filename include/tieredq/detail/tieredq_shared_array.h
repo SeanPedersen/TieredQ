@@ -5,7 +5,7 @@
 #include <memory>
 #include <vector>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 
 template<class T> class SharedArray {
  public:
@@ -34,4 +34,4 @@ template<class T> class SharedArray {
   std::shared_ptr<const std::vector<T>> values_;
 };
 
-}  // namespace dv::tieredq_detail
+}  // namespace tq::tieredq_detail

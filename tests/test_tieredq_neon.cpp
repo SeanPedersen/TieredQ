@@ -5,8 +5,8 @@
 #include <limits>
 
 namespace {
-using namespace dv;
-using namespace dv::tieredq_detail;
+using namespace tq;
+using namespace tq::tieredq_detail;
 
 void require(bool ok,const char* message) {
   if (!ok) throw std::runtime_error(message);

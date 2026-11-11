@@ -20,7 +20,7 @@ void sgemm_(const char*,const char*,const int*,const int*,const int*,const float
             const int*,const float*,float*,const int*);
 }
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 class TrainingLinalg {
  public:
   decltype(&dsyevd_) eigen=&dsyevd_;
@@ -119,4 +119,4 @@ class TrainingLinalg {
   }
 #endif
 };
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

@@ -16,7 +16,7 @@ void dpotrf_(const char*,const int*,double*,const int*,int*);
 void dtrtri_(const char*,const char*,const int*,double*,const int*,int*);
 }
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 constexpr size_t lift_calibration_rows=32768;
 // Lower Cholesky factor of moment + ridge * I in column-major order, or empty if it is not positive definite.
 inline std::vector<double> lower_cholesky(std::vector<double> moment,int n,double ridge) {
@@ -73,4 +73,4 @@ inline void normalize_row(const float* x,size_t d,float* out) {
   const double norm=std::sqrt(square);
   for (size_t j=0;j<d;++j) out[j]=norm>0 ? float(x[j]/norm) : 0.0f;
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

@@ -6,7 +6,7 @@
 #include <arm_neon.h>
 #include <type_traits>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 constexpr size_t lookup_neon_lanes=4,lookup_neon_quarters=lookup_vector_docs/lookup_neon_lanes;
 constexpr size_t lookup_neon_vectors=lookup_chunk_docs/lookup_vector_docs;
 static_assert(lookup_vector_docs==16 && lookup_table_entries==16 && lookup_pair_groups==2 && lookup_neon_vectors==4);
@@ -110,4 +110,4 @@ inline void scan_fast_lookup_neon_range(const FastScanCache& cache,const FastSca
     scan_lookup_vectors_neon<decltype(vectors)::value>(cache,q,base,doc,end,out);
   });
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

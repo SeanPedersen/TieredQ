@@ -1,4 +1,4 @@
-// Runtime-sized TieredQ. Link dv_tieredq (LAPACK/BLAS); no Python dependency.
+// Runtime-sized TieredQ. Link tieredq (LAPACK/BLAS); no Python dependency.
 #pragma once
 #include <array>
 #include <cstddef>
@@ -13,7 +13,7 @@
 #include "tieredq/detail/tieredq_elias_fano.h"
 #include "tieredq/detail/tieredq_shared_array.h"
 
-namespace dv {
+namespace tq {
 namespace tieredq_detail { struct FastFine; class FastRowReader; class StageProfile; struct FastScanCache; struct FastQueryBasis; struct EncoderData; class LazyEncoder;
                            struct TrainingRows;
                            struct CoarseQuantizer; struct CoarseRouter; struct Writer; }
@@ -506,4 +506,4 @@ class TieredQIVFIndex {
   std::shared_ptr<const TieredQRouterConfig> router_config_;  // set by build_router()
   std::shared_ptr<const tieredq_detail::CoarseRouter> router_;
 };
-} // namespace dv
+} // namespace tq

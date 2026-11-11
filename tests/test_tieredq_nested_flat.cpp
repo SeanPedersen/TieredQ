@@ -9,7 +9,7 @@
 #include <stdexcept>
 #include <vector>
 namespace {
-using namespace dv;
+using namespace tq;
 void require(bool condition,const char* message) { if (!condition) throw std::runtime_error(message); }
 constexpr uint32_t dimensions=48,centroids=8,seed=13;
 constexpr size_t rows=1999,queries=24,k=10,candidates=40;

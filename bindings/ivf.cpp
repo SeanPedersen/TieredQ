@@ -19,12 +19,12 @@
 
 namespace tieredq_python {
 using namespace nb::literals;
-using Pruning = std::optional<dv::TieredQPruning>;
+using Pruning = std::optional<tq::TieredQPruning>;
 
-dv::TieredQRouting::Mode parse_routing(const std::string& name) {
-  if (name == "auto") return dv::TieredQRouting::Mode::automatic;
-  if (name == "router") return dv::TieredQRouting::Mode::router;
-  if (name == "exact") return dv::TieredQRouting::Mode::exact;
+tq::TieredQRouting::Mode parse_routing(const std::string& name) {
+  if (name == "auto") return tq::TieredQRouting::Mode::automatic;
+  if (name == "router") return tq::TieredQRouting::Mode::router;
+  if (name == "exact") return tq::TieredQRouting::Mode::exact;
   throw std::invalid_argument("routing must be 'auto', 'router' or 'exact'");
 }
 
@@ -33,13 +33,13 @@ class PythonIVFIndex {
   // lists unset: TieredQIVFIndex::automatic_lists() of the first build's rows.
   PythonIVFIndex(uint32_t dimensions, uint32_t code_bits, std::optional<uint32_t> lists, const std::string& metric,
                  bool fine_tiers, bool exact_fast_scores, uint32_t max_scan_bits,
-                 std::optional<dv::TieredQCoarseTraining> training, RouterChoice router)
-      : config_(dv::TieredQConfig::target_code_bits(dimensions, code_bits)), lists_(lists), router_(router) {
+                 std::optional<tq::TieredQCoarseTraining> training, RouterChoice router)
+      : config_(tq::TieredQConfig::target_code_bits(dimensions, code_bits)), lists_(lists), router_(router) {
     config_.metric = parse_metric(metric);
     config_.fine_tiers = fine_tiers;
-    if (exact_fast_scores) config_.target_mode = dv::TieredQIndexMode::full;
+    if (exact_fast_scores) config_.target_mode = tq::TieredQIndexMode::full;
     config_.max_scan_bits = max_scan_bits;
-    config_.max_scan_bits = dv::TieredQIVFIndex::automatic_scan_bits(config_);
+    config_.max_scan_bits = tq::TieredQIVFIndex::automatic_scan_bits(config_);
     config_.validate();
     if (training) set_coarse_training(*training);
     if (router_.use.value_or(false) && lists_ == 0u) throw std::invalid_argument("a router needs lists > 0");
@@ -85,24 +85,24 @@ class PythonIVFIndex {
     ensure_codec(rows);
     index_->build(rows.loader, rows.count);
   }
-  SearchResult search(FloatArray queries, size_t k, size_t nprobe, Pruning pruning, dv::TieredQRouting routing) const {
+  SearchResult search(FloatArray queries, size_t k, size_t nprobe, Pruning pruning, tq::TieredQRouting routing) const {
     const auto shape = query_rows(queries, config_.dimensions);
     std::shared_lock lock(mutex_);
     const auto& index = trained();
     auto result = empty_result(shape, std::min(k, index.size()));
     index.search_batch(queries.data(), shape.rows, k, nprobe, result.scores.data(), result.ids.data(),
-                       pruning.value_or(dv::TieredQPruning{}), routing);
+                       pruning.value_or(tq::TieredQPruning{}), routing);
     return result;
   }
   // Applies to the next list training and build; kept for the index trained later.
-  void set_coarse_training(dv::TieredQCoarseTraining training) {
+  void set_coarse_training(tq::TieredQCoarseTraining training) {
     if (require_lists("set_coarse_training") == 0) throw std::invalid_argument("set_coarse_training needs lists > 0");
     training.validate();
     std::unique_lock lock(mutex_);
     training_ = training;
     if (index_) index_->set_coarse_training(training);
   }
-  void build_router(dv::TieredQRouterConfig config) {
+  void build_router(tq::TieredQRouterConfig config) {
     std::unique_lock lock(mutex_);
     if (!index_) throw std::runtime_error("build() the index before build_router()");
     index_->build_router(config);
@@ -113,13 +113,13 @@ class PythonIVFIndex {
     if (index_) index_->remove_router();
   }
   // The training the next list training uses: the one set, else the library's automatic choice for the lists.
-  dv::TieredQCoarseTraining coarse_training() const {
+  tq::TieredQCoarseTraining coarse_training() const {
     std::shared_lock lock(mutex_);
     if (index_) return index_->coarse_training();
     if (require_lists("coarse_training") == 0) throw std::invalid_argument("coarse training needs lists > 0");
-    return training_.value_or(dv::TieredQCoarseTraining::automatic(*lists_));
+    return training_.value_or(tq::TieredQCoarseTraining::automatic(*lists_));
   }
-  std::vector<uint32_t> probe_lists(FloatArray query, size_t nprobe, dv::TieredQRouting routing) const {
+  std::vector<uint32_t> probe_lists(FloatArray query, size_t nprobe, tq::TieredQRouting routing) const {
     const auto shape = query_rows(query, config_.dimensions);
     if (shape.rows != 1) throw std::invalid_argument("probe_lists takes one query");
     std::shared_lock lock(mutex_);
@@ -138,11 +138,11 @@ class PythonIVFIndex {
     trained().save(path.string());
   }
   static std::unique_ptr<PythonIVFIndex> load(const std::filesystem::path& path) {
-    return std::unique_ptr<PythonIVFIndex>(new PythonIVFIndex(dv::TieredQIVFIndex::load(path.string())));
+    return std::unique_ptr<PythonIVFIndex>(new PythonIVFIndex(tq::TieredQIVFIndex::load(path.string())));
   }
 
  private:
-  explicit PythonIVFIndex(dv::TieredQIVFIndex index)
+  explicit PythonIVFIndex(tq::TieredQIVFIndex index)
       : config_(index.codec().config()), lists_(uint32_t(index.lists())), index_(std::move(index)) {}
   // The requested lists, which list-specific calls before the first build need to be explicit.
   uint32_t require_lists(const char* call) const {
@@ -154,8 +154,8 @@ class PythonIVFIndex {
   void ensure_codec(const RowInput& rows) {
     if (!index_) emplace(train_codec(config_, rows.loader, rows.count), rows.count);
   }
-  void emplace(dv::TieredQ codec, size_t rows) {
-    if (!lists_) lists_ = dv::TieredQIVFIndex::automatic_lists(rows);
+  void emplace(tq::TieredQ codec, size_t rows) {
+    if (!lists_) lists_ = tq::TieredQIVFIndex::automatic_lists(rows);
     if (router_.use.value_or(false) && *lists_ == 0) throw std::invalid_argument("a router needs lists > 0");
     index_.emplace(std::move(codec), *lists_, training_seed);
     if (training_) index_->set_coarse_training(*training_);
@@ -165,35 +165,35 @@ class PythonIVFIndex {
       else index_->remove_router();
     }
   }
-  const dv::TieredQIVFIndex& trained() const {
+  const tq::TieredQIVFIndex& trained() const {
     if (!index_) throw std::runtime_error("build() the index before using it");
     return *index_;
   }
 
-  dv::TieredQConfig config_;
+  tq::TieredQConfig config_;
   std::optional<uint32_t> lists_;
-  std::optional<dv::TieredQCoarseTraining> training_;
+  std::optional<tq::TieredQCoarseTraining> training_;
   RouterChoice router_;
   std::vector<float> given_lists_;
-  std::optional<dv::TieredQIVFIndex> index_;
+  std::optional<tq::TieredQIVFIndex> index_;
   mutable std::shared_mutex mutex_;
 };
 
 void bind_ivf(nb::module_& module) {
-  nb::class_<dv::TieredQPruning>(module, "TieredQPruning",
+  nb::class_<tq::TieredQPruning>(module, "TieredQPruning",
       "Range-checkpoint pruning of IVF list scans (nibble scans: AVX-512, AVX2, NEON; FP32 code scans: AVX-512).\n"
       "confidence 0 is exact; a positive confidence bounds the suffix score at that many standard deviations:\n"
       "approximate and faster. prefix_tiers 0 (default) sizes the prefix automatically.")
-      .def("__init__", [](dv::TieredQPruning* pruning, double confidence, uint32_t prefix_tiers) {
-        new (pruning) dv::TieredQPruning{confidence, prefix_tiers};
-      }, "confidence"_a = dv::TieredQPruning{}.confidence, "prefix_tiers"_a = dv::TieredQPruning{}.prefix_tiers)
-      .def_rw("confidence", &dv::TieredQPruning::confidence)
-      .def_rw("prefix_tiers", &dv::TieredQPruning::prefix_tiers);
+      .def("__init__", [](tq::TieredQPruning* pruning, double confidence, uint32_t prefix_tiers) {
+        new (pruning) tq::TieredQPruning{confidence, prefix_tiers};
+      }, "confidence"_a = tq::TieredQPruning{}.confidence, "prefix_tiers"_a = tq::TieredQPruning{}.prefix_tiers)
+      .def_rw("confidence", &tq::TieredQPruning::confidence)
+      .def_rw("prefix_tiers", &tq::TieredQPruning::prefix_tiers);
 
   nb::class_<PythonIVFIndex>(module, "TieredQIVFIndex", "Fast-mode inverted-file vector index.")
       .def("__init__", [](PythonIVFIndex* self, uint32_t dimensions, uint32_t code_bits, std::optional<uint32_t> lists,
                           const std::string& metric, bool fine_tiers, bool exact_fast_scores, uint32_t max_scan_bits,
-                          std::optional<dv::TieredQCoarseTraining> coarse_training, nb::handle router) {
+                          std::optional<tq::TieredQCoarseTraining> coarse_training, nb::handle router) {
         new (self) PythonIVFIndex(dimensions, code_bits, lists, metric, fine_tiers, exact_fast_scores, max_scan_bits,
                                   coarse_training, parse_router(router));
       }, "dimensions"_a, "code_bits"_a, nb::kw_only(), "lists"_a = nb::none(), "metric"_a = "ip", "fine_tiers"_a = false,
@@ -240,7 +240,7 @@ void bind_ivf(nb::module_& module) {
          "The first training (here or in train_lists) also trains the codec.")
       .def("search", [](const PythonIVFIndex& self, FloatArray queries, size_t k, size_t nprobe, Pruning pruning,
                         const std::string& routing, uint32_t super_probes) {
-        const dv::TieredQRouting route{parse_routing(routing), super_probes};
+        const tq::TieredQRouting route{parse_routing(routing), super_probes};
         SearchResult result;
         { nb::gil_scoped_release release; result = self.search(queries, k, nprobe, pruning, route); }
         return result_tuple(std::move(result));
@@ -252,10 +252,10 @@ void bind_ivf(nb::module_& module) {
       .def("set_coarse_training", [](PythonIVFIndex& self, uint32_t iterations, uint32_t assignment_supers,
                                      uint32_t assignment_probes, uint32_t sample_rows_per_list) {
         self.set_coarse_training({iterations, assignment_supers, assignment_probes, sample_rows_per_list});
-      }, nb::kw_only(), "iterations"_a = dv::TieredQCoarseTraining{}.iterations,
-         "assignment_supers"_a = dv::TieredQCoarseTraining{}.assignment_supers,
-         "assignment_probes"_a = dv::TieredQCoarseTraining{}.assignment_probes,
-         "sample_rows_per_list"_a = dv::TieredQCoarseTraining{}.sample_rows_per_list,
+      }, nb::kw_only(), "iterations"_a = tq::TieredQCoarseTraining{}.iterations,
+         "assignment_supers"_a = tq::TieredQCoarseTraining{}.assignment_supers,
+         "assignment_probes"_a = tq::TieredQCoarseTraining{}.assignment_probes,
+         "sample_rows_per_list"_a = tq::TieredQCoarseTraining{}.sample_rows_per_list,
          "Lloyd iterations of list training, restricted assignment (assignment_supers > 0: each row's nearest\n"
          "list among the members of its assignment_probes nearest supers) and build()'s list-training sample for\n"
          "later train_lists() and build(); overrides the automatic training (see coarse_training).",
@@ -266,10 +266,10 @@ void bind_ivf(nb::module_& module) {
       .def("build_router", [](PythonIVFIndex& self, uint32_t lists_per_super, double bits_per_dimension, uint32_t rerank,
                               double expansion, uint32_t min_super_probes, uint64_t seed) {
         self.build_router({lists_per_super, bits_per_dimension, rerank, expansion, min_super_probes, seed});
-      }, nb::kw_only(), "lists_per_super"_a = dv::TieredQRouterConfig{}.lists_per_super,
-         "bits_per_dimension"_a = dv::TieredQRouterConfig{}.bits_per_dimension, "rerank"_a = dv::TieredQRouterConfig{}.rerank,
-         "expansion"_a = dv::TieredQRouterConfig{}.expansion, "min_super_probes"_a = dv::TieredQRouterConfig{}.min_super_probes,
-         "seed"_a = dv::TieredQRouterConfig{}.seed,
+      }, nb::kw_only(), "lists_per_super"_a = tq::TieredQRouterConfig{}.lists_per_super,
+         "bits_per_dimension"_a = tq::TieredQRouterConfig{}.bits_per_dimension, "rerank"_a = tq::TieredQRouterConfig{}.rerank,
+         "expansion"_a = tq::TieredQRouterConfig{}.expansion, "min_super_probes"_a = tq::TieredQRouterConfig{}.min_super_probes,
+         "seed"_a = tq::TieredQRouterConfig{}.seed,
          "Builds the two-level compressed coarse router (coarse lists only) for searches over many\n"
          "lists; rebuilt by every later build() and saved with the index.",
          nb::call_guard<nb::gil_scoped_release>())
@@ -279,7 +279,7 @@ void bind_ivf(nb::module_& module) {
       .def_prop_ro("has_router", &PythonIVFIndex::has_router, nb::call_guard<nb::gil_scoped_release>())
       .def("probe_lists", [](const PythonIVFIndex& self, FloatArray query, size_t nprobe, const std::string& routing,
                              uint32_t super_probes) {
-        const dv::TieredQRouting route{parse_routing(routing), super_probes};
+        const tq::TieredQRouting route{parse_routing(routing), super_probes};
         std::vector<uint32_t> lists;
         { nb::gil_scoped_release release; lists = self.probe_lists(query, nprobe, route); }
         const size_t count = lists.size();

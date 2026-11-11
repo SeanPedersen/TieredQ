@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <vector>
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 constexpr double pi = 3.14159265358979323846;
 inline double pdf(double x) { return std::isfinite(x) ? std::exp(-x*x/2)/std::sqrt(2*pi) : 0; }
 inline double cdf(double x) { return 0.5*std::erfc(-x/std::sqrt(2.0)); }
@@ -48,4 +48,4 @@ inline std::vector<float> refined_prefix_codebook(const std::vector<float>& pref
   }
   return book;
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

@@ -3,7 +3,7 @@
 #pragma once
 #include "tieredq_scan_lookup_x86.h"
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 __attribute__((target("avx512f,avx512bw")))
 inline void lookup_epilogue(const FastScanCache& c, const FastScanLookupQuery& q, size_t first, __m512 dot, float* out, size_t output_first, size_t output_end) {
   const auto cid = _mm512_cvtepu8_epi32(_mm_loadu_si128(reinterpret_cast<const __m128i*>(c.centroid.data() + first)));
@@ -97,4 +97,4 @@ inline void scan_fast_lookup_avx512(const FastScanCache& c, const FastScanLookup
   scan_fast_lookup_avx512_range(c,q,0,c.count,out);
 }
 
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

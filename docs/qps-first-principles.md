@@ -294,7 +294,7 @@ Remote reproduction (existing data and library snapshot):
 ```sh
 cd ~/experiments/TieredQ-int8-x86-20261023/src
 g++ -std=c++20 -O3 -DNDEBUG -mavx512f -mavx512bw -Iinclude -Isrc \
-  /tmp/tq_nibble_batch_x86.cpp build/libdv_tieredq.a -fopenmp -llapack -lblas \
+  /tmp/tq_nibble_batch_x86.cpp build/libtieredq.a -fopenmp -llapack -lblas \
   -o /tmp/tq_nibble_batch_x86
 OMP_NUM_THREADS=8 /tmp/tq_nibble_batch_x86 128 16
 ```

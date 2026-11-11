@@ -17,8 +17,8 @@
 #include <string>
 #include <unistd.h>
 namespace {
-using namespace dv;
-using namespace dv::tieredq_detail;
+using namespace tq;
+using namespace tq::tieredq_detail;
 void require(bool condition,const char* message) { if (!condition) throw std::runtime_error(message); }
 constexpr uint32_t dimensions=32,centroids=4;
 constexpr size_t training_rows=1024,rows=600,queries=24,k=10;

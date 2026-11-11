@@ -13,7 +13,7 @@
 #include <string>
 #include <vector>
 
-namespace dv {
+namespace tq {
 // Fixed-size rows addressed by id. read() is called concurrently from search workers.
 class TieredQRowSource {
  public:
@@ -225,4 +225,4 @@ class TieredQNestedIVFIndex {
   std::shared_ptr<const TieredQExactRows> exact_;
   size_t finals_ = 0;
 };
-} // namespace dv
+} // namespace tq

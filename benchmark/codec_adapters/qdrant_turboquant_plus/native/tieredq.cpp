@@ -16,21 +16,21 @@ using Matrix=nb::ndarray<const float,nb::ndim<2>,nb::c_contig,nb::device::cpu>;
 using Ids=nb::ndarray<uint32_t,nb::ndim<2>,nb::c_contig,nb::device::cpu>;
 constexpr size_t top_k=10, training_limit=32768, centroids=256;
 class Index {
- dv::TieredQIndex index_;
+ tq::TieredQIndex index_;
  size_t dim_;
  double encode_s_=0;
- static dv::TieredQIndex build(Matrix base,uint32_t budget) {
+ static tq::TieredQIndex build(Matrix base,uint32_t budget) {
   const size_t n=base.shape(0),d=base.shape(1),count=std::min(n,training_limit);
-  auto config=dv::TieredQConfig::target_code_bits(d,budget);config.num_centroids=std::min(centroids,n/2);
+  auto config=tq::TieredQConfig::target_code_bits(d,budget);config.num_centroids=std::min(centroids,n/2);
   std::vector<size_t> order(n);std::iota(order.begin(),order.end(),0);std::mt19937_64 rng(0);std::shuffle(order.begin(),order.end(),rng);
   std::vector<float> sample(count*d);for(size_t i=0;i<count;++i)std::copy_n(base.data()+order[i]*d,d,sample.data()+i*d);
-  return dv::TieredQIndex(dv::TieredQ::train(config,sample.data(),count,0),dv::TieredQIndexMode::fast);
+  return tq::TieredQIndex(tq::TieredQ::train(config,sample.data(),count,0),tq::TieredQIndexMode::fast);
  }
  public:
  Index(Matrix base,uint32_t budget):index_(build(base,budget)),dim_(base.shape(1)) {
   auto start=std::chrono::steady_clock::now();index_.add(base.data(),base.shape(0));encode_s_=std::chrono::duration<double>(std::chrono::steady_clock::now()-start).count();
  }
- Index(const std::string& path,size_t dim):index_(dv::TieredQIndex::load(path)),dim_(dim){}
+ Index(const std::string& path,size_t dim):index_(tq::TieredQIndex::load(path)),dim_(dim){}
  void save(const std::string& path)const{index_.save(path);}
  double encode_seconds()const{return encode_s_;}
  void search(Matrix q,Ids ids,int threads)const{
@@ -40,7 +40,7 @@ class Index {
  nb::dict details()const{
   const auto& c=index_.codec();nb::dict out;nb::list tiers;uint32_t learned=0;
   for(const auto&t:c.tiers()){nb::dict x;x["dimensions"]=t.dimensions;x["bits"]=t.bits;tiers.append(x);learned+=t.dimensions*t.bits;}
-  out["tiers"]=tiers;out["learned_code_bits"]=learned;out["index_allocated_bytes"]=index_.storage_bytes();out["model_bytes"]=c.memory_bytes();out["shell_bytes"]=sizeof(Index)-sizeof(dv::TieredQ);out["resident_bytes"]=index_.storage_bytes()+c.memory_bytes()+sizeof(Index)-sizeof(dv::TieredQ);out["packed_code_bytes"]=c.code_bytes();out["vector_bytes"]=index_.bytes_per_vector();return out;
+  out["tiers"]=tiers;out["learned_code_bits"]=learned;out["index_allocated_bytes"]=index_.storage_bytes();out["model_bytes"]=c.memory_bytes();out["shell_bytes"]=sizeof(Index)-sizeof(tq::TieredQ);out["resident_bytes"]=index_.storage_bytes()+c.memory_bytes()+sizeof(Index)-sizeof(tq::TieredQ);out["packed_code_bytes"]=c.code_bytes();out["vector_bytes"]=index_.bytes_per_vector();return out;
  }
 };
 NB_MODULE(tieredq_bench,m){

@@ -16,16 +16,16 @@ void require(bool condition,const char* message) {
   if (!condition) throw std::runtime_error(message);
 }
 void rejection_test() {
-  using namespace dv::tieredq_detail;
+  using namespace tq::tieredq_detail;
   constexpr size_t documents=8213,centroids=2;
   const std::vector<std::pair<uint32_t,uint32_t>> shape{{8,3},{7,5},{6,7},{5,9},{4,1},{3,1}};
-  std::vector<dv::TieredQTier> tiers;
+  std::vector<tq::TieredQTier> tiers;
   uint32_t dimensions=0,code_bits=0;
   for (const auto& [bits,count]:shape) {
     tiers.push_back({dimensions,count,bits,0,code_bits});
     dimensions+=count;code_bits+=count*bits;
   }
-  const size_t code_bytes=(code_bits+7)/8,stride=code_bytes+dv::TieredQ::metadata_bytes;
+  const size_t code_bytes=(code_bits+7)/8,stride=code_bytes+tq::TieredQ::metadata_bytes;
   const Layout layout{code_bytes};
   std::mt19937 random(41);std::normal_distribution<float> normal;
   std::vector<uint8_t> rows(documents*stride);
@@ -43,7 +43,7 @@ void rejection_test() {
   require(fast_range_checkpoint_supported(*cache,tiers),"range checkpoint should support wide multi-tier layout");
   auto short_tiers=tiers;short_tiers.resize(fast_range_prefix_tiers);
   require(!fast_range_checkpoint_supported(*cache,short_tiers),"range checkpoint accepted missing suffix");
-  dv::TieredQQuery query;
+  tq::TieredQQuery query;
   for (size_t rank=0;rank<dimensions;++rank) query.weights.push_back(normal(random));
   query.centroid_scores={1.0f,-1.0f};query.correction_weights={0.25f,-0.5f};
   const auto bounds=prepare_fast_range_bounds(*cache,tiers,query);
@@ -77,16 +77,16 @@ void automatic_search_test() {
   for (auto* values:{&training,&rows,&queries}) for (size_t i=0;i<values->size();++i)
     (*values)[i]=std::ldexp(normal(random),-int(i%dimensions/8));
   // Full-target training keeps Lloyd-Max books; additive wide tiers would leave the code lookup this test covers.
-  dv::TieredQConfig config{dimensions,bits,centroids,false};
-  config.target_mode=dv::TieredQIndexMode::full; config.fine_tiers=false;
-  auto codec=dv::TieredQ::train(config,training.data(),training_rows);
-  require(codec.tiers().size()>dv::tieredq_detail::fast_range_prefix_tiers,"automatic range test needs a suffix");
-  dv::TieredQIndex index(codec,dv::TieredQIndexMode::fast);index.add(rows.data(),documents);
+  tq::TieredQConfig config{dimensions,bits,centroids,false};
+  config.target_mode=tq::TieredQIndexMode::full; config.fine_tiers=false;
+  auto codec=tq::TieredQ::train(config,training.data(),training_rows);
+  require(codec.tiers().size()>tq::tieredq_detail::fast_range_prefix_tiers,"automatic range test needs a suffix");
+  tq::TieredQIndex index(codec,tq::TieredQIndexMode::fast);index.add(rows.data(),documents);
   size_t code_bits=0;
   for (const auto& tier:codec.tiers()) code_bits+=size_t(tier.dimensions)*tier.bits;
-  require(index.bytes_per_vector()==(code_bits+31)/32*sizeof(uint32_t)+dv::tieredq_detail::fast_metadata_bytes,
+  require(index.bytes_per_vector()==(code_bits+31)/32*sizeof(uint32_t)+tq::tieredq_detail::fast_metadata_bytes,
       "automatic range search added stored bits per vector");
-  auto compare=[&](const dv::TieredQIndex& candidate) {
+  auto compare=[&](const tq::TieredQIndex& candidate) {
     for (size_t k:{size_t(1),size_t(10),candidate.size()+1}) {
       const size_t found=std::min(k,candidate.size());
       std::vector<float> scores(query_count*found);std::vector<uint32_t> ids(query_count*found);
@@ -105,16 +105,16 @@ void automatic_search_test() {
   compare(index);
   const auto path=std::filesystem::temp_directory_path()/("tieredq-range-"+std::to_string(getpid()));
   index.save(path.string());
-  const auto file=dv::tieredq_detail::load_file(path.string(),dv::tieredq_detail::fast_index_file_kind);
-  dv::tieredq_detail::Reader reader{file.payload};
-  require(reader.u32()==dv::tieredq_detail::fast_payload_version,"range checkpoint changed the fast payload version");
-  const auto blocks=(documents+dv::tieredq_detail::fast_scan_block_docs-1)/dv::tieredq_detail::fast_scan_block_docs;
+  const auto file=tq::tieredq_detail::load_file(path.string(),tq::tieredq_detail::fast_index_file_kind);
+  tq::tieredq_detail::Reader reader{file.payload};
+  require(reader.u32()==tq::tieredq_detail::fast_payload_version,"range checkpoint changed the fast payload version");
+  const auto blocks=(documents+tq::tieredq_detail::fast_scan_block_docs-1)/tq::tieredq_detail::fast_scan_block_docs;
   constexpr size_t header_bytes=3*sizeof(uint32_t),vector_headers=4*sizeof(uint64_t);
-  require(file.payload.size()==header_bytes+vector_headers+blocks*dv::tieredq_detail::fast_scan_block_docs*index.bytes_per_vector(),
+  require(file.payload.size()==header_bytes+vector_headers+blocks*tq::tieredq_detail::fast_scan_block_docs*index.bytes_per_vector(),
       "range checkpoint changed the serialized per-vector payload");
-  auto loaded=dv::TieredQIndex::load(path.string());compare(loaded);
+  auto loaded=tq::TieredQIndex::load(path.string());compare(loaded);
   loaded.add(rows.data()+documents*dimensions,append_rows);compare(loaded);
-  loaded.save(path.string());auto reloaded=dv::TieredQIndex::load(path.string());compare(reloaded);
+  loaded.save(path.string());auto reloaded=tq::TieredQIndex::load(path.string());compare(reloaded);
   std::filesystem::remove(path);
 }
 } // namespace

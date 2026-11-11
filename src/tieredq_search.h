@@ -11,7 +11,7 @@
 #if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
 #include <immintrin.h>
 #endif
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 #if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
 // Positions i < n with scores[i] > threshold, in order; returns how many were written to out.
 __attribute__((target("avx512f"))) inline size_t above_threshold(const float* scores,size_t n,float threshold,uint32_t* out) {
@@ -114,4 +114,4 @@ std::vector<Prepared> prepare_search_tiles(const float* queries,size_t rows,size
   });
   return prepared;
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

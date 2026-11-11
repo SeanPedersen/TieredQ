@@ -16,7 +16,7 @@ cd benchmark
 ./run.sh --max-base 1024 --queries 32 --seeds 0 # smoke across all datasets
 ./run.sh --datasets glove --max-base 1024 --queries 32 --seeds 0 --output output-smoke
 uv run python -m unittest test_benchmark
-PYTHONPATH=build-native uv run python -m unittest test_native test_reference
+PYTHONPATH=build-adapters uv run python -m unittest test_adapters test_reference
 uv run python -m unittest test_build_policy
 ```
 
@@ -261,7 +261,7 @@ To refresh the eleven reported TieredQ serving-memory points without running
 searches or collecting new timings, build the benchmark extension and use:
 
 ```sh
-uv run --locked --python 3.12 python -c 'from native_build import build_native; build_native()'
+uv run --locked --python 3.12 python -c 'from adapters_build import build_adapters; build_adapters()'
 uv run --locked --python 3.12 python measure_storage.py --output output-storage/results.json
 ```
 
@@ -281,7 +281,7 @@ The saved format and unchanged-budget disk sizes are preserved.
 
 ## Gemini/DBpedia native TurboQuant experiment
 
-The focused [TurboQuant runner](turboquant/README.md) adds the pinned 100K, 768D
+The focused [TurboQuant runner](codec_adapters/qdrant_turboquant_plus/README.md) adds the pinned 100K, 768D
 Gemini dataset with 1,000 held-out document queries and Qdrant’s native calibrated
 1/2/4-bit implementation. The [single-seed measured bundle](results/gemini-qdrant-turboquant-single-seed-20261026/README.md)
 contains 24 scheduling rows, storage-only integer TieredQ calibration, provenance,

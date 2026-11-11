@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace dv {
+namespace tq {
 using tieredq_detail::bad;
 
 void TieredQRouterConfig::validate() const {
@@ -135,4 +135,4 @@ CoarseRouter CoarseRouter::deserialize(const CoarseQuantizer& coarse,const std::
   return CoarseRouter(coarse,config,std::move(members),std::move(lists));
 }
 } // namespace tieredq_detail
-} // namespace dv
+} // namespace tq

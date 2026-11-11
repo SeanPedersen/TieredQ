@@ -20,7 +20,7 @@ from threadpoolctl import threadpool_limits
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-sys.path.insert(0, str(HERE / "build-native"))
+sys.path.insert(0, str(HERE / "build-adapters"))
 from measure import recall  # noqa: E402
 import codec_native  # noqa: E402
 
@@ -150,7 +150,7 @@ def write_provenance(out, data, manifest, corpus_ids, query_ids, truth, argument
     (provenance / "gemini-manifest.json").write_text((data / "gemini-manifest.json").read_text())
     overlay = HERE / ".deps" / "rabitq-native"
     (provenance / "rabitq-patches.json").write_text((overlay / "patches.json").read_text())
-    build = HERE / "build-native"
+    build = HERE / "build-adapters"
     (provenance / "compile_commands.json").write_text((build / "compile_commands.json").read_text())
     binary = next(build.glob("codec_native*.so"))
     (out / "binaries").mkdir()
@@ -159,12 +159,12 @@ def write_provenance(out, data, manifest, corpus_ids, query_ids, truth, argument
     repo = HERE.parent
     save(provenance / "source-sha256.json", {
         str(path.relative_to(repo)): sha_file(path)
-        for folder in (HERE / "native", repo / "src", repo / "include")
+        for folder in (HERE / "codec_adapters", repo / "src", repo / "include")
         for path in folder.rglob("*") if path.is_file()
     } | {"benchmark/run_rabitq_gemini.py": sha_file(Path(__file__)),
          "measure.py": sha_file(HERE / "measure.py"),
-         "setup_native.py": sha_file(HERE / "setup_native.py"),
-         "native_build.py": sha_file(HERE / "native_build.py"),
+         "setup_adapters.py": sha_file(HERE / "setup_adapters.py"),
+         "adapters_build.py": sha_file(HERE / "adapters_build.py"),
          "build_policy.py": sha_file(HERE / "build_policy.py")})
     save(provenance / "host.json", {
         "hostname": platform.node(), "platform": platform.platform(), "machine": platform.machine(),

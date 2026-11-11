@@ -8,7 +8,7 @@
 void half_basis_matches_rounded_fp32(size_t dimensions,size_t weights,const std::vector<float>& basis,
     const std::vector<float>& sigma,const std::vector<float>& mean,const std::vector<float>& centers,
     const std::vector<float>& norms,const std::vector<float>& query) {
-  using namespace dv::tieredq_detail;
+  using namespace tq::tieredq_detail;
   std::vector<uint16_t> half(basis.size());
   std::vector<float> rounded(basis.size());
   for (size_t i=0;i<basis.size();++i) { half[i]=half_encode(basis[i]); rounded[i]=half_decode(half[i]); }
@@ -46,7 +46,7 @@ void half_basis_matches_rounded_fp32(size_t dimensions,size_t weights,const std:
 }
 
 void tieredq_projection_tests() {
-  using namespace dv::tieredq_detail;
+  using namespace tq::tieredq_detail;
   constexpr size_t dimensions=37,centroids=19;
   for (size_t weights:{1u,7u,8u,15u,16u,17u,40u,918u}) {
     std::vector<float> basis(dimensions*weights),sigma(weights),mean(weights),centers(dimensions*centroids),norms(centroids),query(dimensions);

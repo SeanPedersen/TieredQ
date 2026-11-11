@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 inline void update_centroids_reference(const float* sample,size_t rows,size_t dimensions,const uint32_t* ids,
                                       std::vector<float>& centroids) {
   const size_t clusters=centroids.size()/dimensions;
@@ -55,4 +55,4 @@ inline void update_centroids(const float* sample,size_t rows,size_t dimensions,c
                              std::vector<float>& centroids) {
   update_centroids_with([&](size_t row,size_t j) { return sample[row*dimensions+j]; },rows,dimensions,ids,centroids);
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

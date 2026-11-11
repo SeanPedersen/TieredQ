@@ -6,7 +6,7 @@
 #include "tieredq/tieredq.h"
 #include "tieredq_ivf_coarse.h"
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 class CoarseRouter {
  public:
   // Routes the nonempty lists of coarse (list_rows[list] > 0).
@@ -46,4 +46,4 @@ template<class R> TieredQRouterConfig CoarseRouter::read_config(R& reader) {
   config.validate();
   return config;
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

@@ -9,7 +9,7 @@
 #include "tieredq_encode_float.h"
 #include "tieredq_train_rows.h"
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 inline std::pair<float,float> projected_distribution(double average,double variance) {
   constexpr float sigma_floor=1e-9f;
   return {float(average),float(std::sqrt(std::max(0.0,variance)))+sigma_floor};
@@ -125,4 +125,4 @@ inline void projection_stats(const std::vector<float>& projected,size_t rows,siz
     }
   }
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

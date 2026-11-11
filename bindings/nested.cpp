@@ -24,7 +24,7 @@
 namespace tieredq_python {
 using namespace nb::literals;
 namespace {
-using Pruning = std::optional<dv::TieredQPruning>;
+using Pruning = std::optional<tq::TieredQPruning>;
 using OptionalBits = std::optional<uint32_t>;
 using IdArray = nb::ndarray<nb::numpy, const uint32_t, nb::c_contig, nb::device::cpu>;
 using ByteArray = nb::ndarray<nb::numpy, const uint8_t, nb::c_contig, nb::device::cpu>;
@@ -34,26 +34,26 @@ constexpr size_t sq8_write_chunk_rows = 16384;
 // Reads in flight for direct-I/O tiers unless given: the NVMe tier's measured setting (#49).
 constexpr size_t direct_queue_depth = 32;
 
-dv::TieredQTierRows parse_tier_rows(const std::string& layout) {
-  if (layout=="prefix_and_suffix") return dv::TieredQTierRows::prefix_and_suffix;
-  if (layout=="suffix") return dv::TieredQTierRows::suffix;
+tq::TieredQTierRows parse_tier_rows(const std::string& layout) {
+  if (layout=="prefix_and_suffix") return tq::TieredQTierRows::prefix_and_suffix;
+  if (layout=="suffix") return tq::TieredQTierRows::suffix;
   throw std::invalid_argument("tier_rows must be 'prefix_and_suffix' or 'suffix'");
 }
-const char* tier_rows_name(dv::TieredQTierRows layout) {
-  return layout==dv::TieredQTierRows::suffix ? "suffix" : "prefix_and_suffix";
+const char* tier_rows_name(tq::TieredQTierRows layout) {
+  return layout==tq::TieredQTierRows::suffix ? "suffix" : "prefix_and_suffix";
 }
-dv::TieredQFileReads parse_reads(const std::string& reads) {
-  if (reads=="cached") return dv::TieredQFileReads::cached;
-  if (reads=="direct") return dv::TieredQFileReads::direct;
+tq::TieredQFileReads parse_reads(const std::string& reads) {
+  if (reads=="cached") return tq::TieredQFileReads::cached;
+  if (reads=="direct") return tq::TieredQFileReads::direct;
   throw std::invalid_argument("reads must be 'cached' or 'direct'");
 }
 }  // namespace
 
 class PythonNestedIndex {
  public:
-  explicit PythonNestedIndex(dv::TieredQNestedIVFIndex index) : index_(std::move(index)) {}
+  explicit PythonNestedIndex(tq::TieredQNestedIVFIndex index) : index_(std::move(index)) {}
   size_t size() const { return index_.size(); }
-  const dv::TieredQ& prefix() const { return index_.index().codec(); }
+  const tq::TieredQ& prefix() const { return index_.index().codec(); }
   uint32_t dimensions() const { return prefix().config().dimensions; }
   const char* metric() const { return metric_name(prefix().config().metric); }
   uint32_t prefix_bits() const { return prefix().config().code_bits; }
@@ -78,13 +78,13 @@ class PythonNestedIndex {
     index_.write_tier(path.string(), rows.loader);
   }
   bool has_router() const { return index_.index().has_router(); }
-  void attach_tier(std::shared_ptr<const dv::TieredQRowSource> tier) {
+  void attach_tier(std::shared_ptr<const tq::TieredQRowSource> tier) {
     std::unique_lock lock(mutex_);
     index_.attach_tier(std::move(tier));
   }
-  void attach_exact(std::shared_ptr<const dv::TieredQRowSource> codes, FloatVector scales, FloatVector offsets,
+  void attach_exact(std::shared_ptr<const tq::TieredQRowSource> codes, FloatVector scales, FloatVector offsets,
                     size_t finals) {
-    auto exact = std::make_shared<dv::TieredQSQ8Rows>(std::move(codes),
+    auto exact = std::make_shared<tq::TieredQSQ8Rows>(std::move(codes),
         std::vector<float>(scales.data(), scales.data() + scales.shape(0)),
         std::vector<float>(offsets.data(), offsets.data() + offsets.shape(0)));
     std::unique_lock lock(mutex_);
@@ -108,15 +108,15 @@ class PythonNestedIndex {
     auto result = empty_result(shape, std::min(k, size()));
     std::shared_lock lock(mutex_);
     index_.search_batch(queries.data(), shape.rows, k, nprobe,
-                        candidates.value_or(dv::TieredQNestedIVFIndex::candidates_for(k)), result.scores.data(),
-                        result.ids.data(), pruning.value_or(dv::TieredQPruning{}));
+                        candidates.value_or(tq::TieredQNestedIVFIndex::candidates_for(k)), result.scores.data(),
+                        result.ids.data(), pruning.value_or(tq::TieredQPruning{}));
     return result;
   }
   SearchResult candidates(FloatArray queries, size_t k, size_t nprobe, Pruning pruning) const {
     const auto shape = query_rows(queries, dimensions());
     auto result = empty_result(shape, std::min(k, size()));
     index_.index().search_batch(queries.data(), shape.rows, k, nprobe, result.scores.data(), result.ids.data(),
-                                pruning.value_or(dv::TieredQPruning{}));
+                                pruning.value_or(tq::TieredQPruning{}));
     return result;
   }
   SearchResult rescore(FloatArray queries, IdArray ids, ByteArray tier_rows, size_t k) const {
@@ -138,7 +138,7 @@ class PythonNestedIndex {
     std::ifstream in(path, std::ios::binary);
     if (!in) throw std::runtime_error("cannot read nested index from " + path.string());
     const std::vector<uint8_t> bytes{std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
-    return std::make_unique<PythonNestedIndex>(dv::TieredQNestedIVFIndex::deserialize(bytes));
+    return std::make_unique<PythonNestedIndex>(tq::TieredQNestedIVFIndex::deserialize(bytes));
   }
 
  private:
@@ -155,7 +155,7 @@ class PythonNestedIndex {
       throw std::invalid_argument("tier row width does not match the index");
     return depth;
   }
-  dv::TieredQNestedIVFIndex index_;
+  tq::TieredQNestedIVFIndex index_;
   mutable std::shared_mutex mutex_;  // guards the attached tier
 };
 
@@ -180,16 +180,16 @@ void bind_nested(nb::module_& module) {
                               OptionalBits prefix_bits, OptionalBits total_bits, OptionalBits lists,
                               const std::string& metric, const std::string& tier_rows, OptionalMatrix sample,
                               bool fine_tiers, uint32_t max_tier_bits, uint32_t max_scan_bits,
-                              std::optional<dv::TieredQCoarseTraining> coarse_training, nb::handle router) {
+                              std::optional<tq::TieredQCoarseTraining> coarse_training, nb::handle router) {
         const size_t width = vectors ? vectors->shape(1) : codes ? codes->shape(1) : dimensions.value_or(0);
         if (!width) throw std::invalid_argument("loader= needs dimensions=");
         const auto input = row_input(vectors, codes, scales, offsets, loader, count, width);
         if (sample) require_width(sample->shape(1), width);
-        dv::TieredQNestedConfig config;
+        tq::TieredQNestedConfig config;
         config.dimensions = uint32_t(width);
         config.prefix_bits = prefix_bits.value_or(0);
         config.total_bits = total_bits.value_or(0);
-        config.lists = lists.value_or(dv::TieredQNestedConfig::automatic_lists);
+        config.lists = lists.value_or(tq::TieredQNestedConfig::automatic_lists);
         config.metric = parse_metric(metric);
         config.tier_rows = parse_tier_rows(tier_rows);
         config.fine_tiers = fine_tiers;
@@ -201,7 +201,7 @@ void bind_nested(nb::module_& module) {
         config.router_config = choice.config;
         config.seed = training_seed;
         nb::gil_scoped_release release;
-        return std::make_unique<PythonNestedIndex>(dv::TieredQNestedIVFIndex::build(
+        return std::make_unique<PythonNestedIndex>(tq::TieredQNestedIVFIndex::build(
             config, input.loader, input.count, sample ? sample->data() : nullptr, sample ? sample->shape(0) : 0));
       }, "vectors"_a.noconvert() = nb::none(), nb::kw_only(), "codes"_a.noconvert() = nb::none(),
          "scales"_a.noconvert() = nb::none(), "offsets"_a.noconvert() = nb::none(), "loader"_a = nb::none(),
@@ -253,14 +253,14 @@ void bind_nested(nb::module_& module) {
       .def("attach_tier", [](PythonNestedIndex& self, ByteMatrix rows) {
         nb::gil_scoped_release release;
         std::vector<uint8_t> data(rows.data(), rows.data() + array_elements(rows.shape(0), rows.shape(1)));
-        self.attach_tier(std::make_shared<dv::TieredQMemoryRows>(std::move(data), rows.shape(1)));
+        self.attach_tier(std::make_shared<tq::TieredQMemoryRows>(std::move(data), rows.shape(1)));
       }, "rows"_a.noconvert(), "Serves the tier from RAM: a copy of encode_tier() rows for every vector, in id order.")
       .def("attach_tier", [](PythonNestedIndex& self, const std::filesystem::path& path, const std::string& reads,
                              OptionalCount queue_depth) {
         const auto mode = parse_reads(reads);
-        const size_t depth = queue_depth.value_or(mode == dv::TieredQFileReads::direct ? direct_queue_depth : 1);
+        const size_t depth = queue_depth.value_or(mode == tq::TieredQFileReads::direct ? direct_queue_depth : 1);
         nb::gil_scoped_release release;
-        self.attach_tier(std::make_shared<dv::TieredQFileRows>(path.string(), mode, depth));
+        self.attach_tier(std::make_shared<tq::TieredQFileRows>(path.string(), mode, depth));
       }, "path"_a, nb::kw_only(), "reads"_a = "cached", "queue_depth"_a = nb::none(),
          "Serves the tier from a write_tier() file. reads 'direct' bypasses the page cache; queue_depth > 1 keeps\n"
          "that many reads in flight per query (io_uring builds), which SSDs need for throughput (default: 32 for\n"
@@ -270,7 +270,7 @@ void bind_nested(nb::module_& module) {
         nb::gil_scoped_release release;
         const auto* begin = reinterpret_cast<const uint8_t*>(codes.data());
         std::vector<uint8_t> data(begin, begin + array_elements(codes.shape(0), codes.shape(1)));
-        self.attach_exact(std::make_shared<dv::TieredQMemoryRows>(std::move(data), codes.shape(1)), scales, offsets, finals);
+        self.attach_exact(std::make_shared<tq::TieredQMemoryRows>(std::move(data), codes.shape(1)), scales, offsets, finals);
       }, "codes"_a.noconvert(), "scales"_a.noconvert(), "offsets"_a.noconvert(), nb::kw_only(), "finals"_a,
          "Final exact stage from an SQ8 store in RAM (int8 codes, rows x dimensions, in id order; vector =\n"
          "codes * scales + offsets): each search rescores the tier's best max(k, finals) candidates exactly.")
@@ -278,7 +278,7 @@ void bind_nested(nb::module_& module) {
                               FloatVector offsets, size_t finals, const std::string& reads, size_t queue_depth) {
         const auto mode = parse_reads(reads);
         nb::gil_scoped_release release;
-        self.attach_exact(std::make_shared<dv::TieredQFileRows>(path.string(), mode, queue_depth), scales, offsets, finals);
+        self.attach_exact(std::make_shared<tq::TieredQFileRows>(path.string(), mode, queue_depth), scales, offsets, finals);
       }, "path"_a, "scales"_a.noconvert(), "offsets"_a.noconvert(), nb::kw_only(), "finals"_a, "reads"_a = "cached",
          "queue_depth"_a = 1,
          "Final exact stage from a write_sq8_rows() file, e.g. on SSD with reads='direct' and queue_depth=32, so\n"
@@ -288,7 +288,7 @@ void bind_nested(nb::module_& module) {
       .def_prop_ro("finals", &PythonNestedIndex::finals, nb::call_guard<nb::gil_scoped_release>())
       .def_static("write_sq8_rows", [](const std::filesystem::path& path, CodeMatrix codes) {
         nb::gil_scoped_release release;
-        dv::TieredQRowFileWriter writer(path.string(), codes.shape(1));
+        tq::TieredQRowFileWriter writer(path.string(), codes.shape(1));
         const auto* rows = reinterpret_cast<const uint8_t*>(codes.data());
         for (size_t first = 0; first < codes.shape(0); first += sq8_write_chunk_rows) {
           const size_t count = std::min(sq8_write_chunk_rows, size_t(codes.shape(0)) - first);
@@ -326,7 +326,7 @@ void bind_nested(nb::module_& module) {
         const auto* begin = reinterpret_cast<const uint8_t*>(data.c_str());
         const std::vector<uint8_t> bytes(begin, begin + data.size());
         nb::gil_scoped_release release;
-        return std::make_unique<PythonNestedIndex>(dv::TieredQNestedIVFIndex::deserialize(bytes));
+        return std::make_unique<PythonNestedIndex>(tq::TieredQNestedIVFIndex::deserialize(bytes));
       }, "data"_a)
       .def("save", &PythonNestedIndex::save, "path"_a, nb::call_guard<nb::gil_scoped_release>())
       .def_static("load", &PythonNestedIndex::load, "path"_a, nb::call_guard<nb::gil_scoped_release>());

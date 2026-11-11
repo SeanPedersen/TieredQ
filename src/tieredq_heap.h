@@ -6,10 +6,10 @@
 #include <malloc.h>
 #endif
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 inline void release_freed_heap() {
 #if defined(__GLIBC__)
   malloc_trim(0);
 #endif
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

@@ -28,12 +28,12 @@ altered(s/'include/tieredq/tieredq.h',p/'include/tieredq/tieredq.h',lambda t:t.r
     'class TieredQIndex {\n public:',
     'class TieredQIndex {\n public:\n  void issue4_prepare(const float* queries,size_t rows) const;'))
 method=r'''
-namespace dv {
+namespace tq {
 void TieredQIndex::issue4_prepare(const float* queries,size_t rows) const {
   const ModelQueries model(codec_,queries,rows);
   std::vector<TieredQQuery> weights;
   if (fine_tiers_) weights=fine_query_weights(model.data,rows);
-#ifdef DV_TIEREDQ_X86
+#ifdef TQ_X86
   if (rows==1 && tieredq_detail::fast_scan_backend(*fast_)==tieredq_detail::FastScanBackend::avx512 &&
       tieredq_detail::fast_range_checkpoint_supported(*fast_,scan_codec().tiers())) {
     const auto prepared=fine_tiers_ ? weights : scan_codec().model_query_weights(model.data,1);
@@ -95,7 +95,7 @@ link=[arg for arg in link if not arg.startswith('-Wl,--dependency-file=')]
 name=link[link.index('-o')+1].replace('codec_native','codec_preparation')
 link[link.index('-o')+1]=str(p/name)
 link[link.index('CMakeFiles/codec_native.dir/module.cpp.o')]=str(p/'module.cpp.o')
-link.insert(link.index('tieredq/libdv_tieredq.a'),str(p/'tieredq_index.cpp.o'))
+link.insert(link.index('tieredq/libtieredq.a'),str(p/'tieredq_index.cpp.o'))
 subprocess.run(link,cwd=b,check=True)
 (p/'diagnostic.patch').write_text(''.join(patches))
 (p/'link-command.json').write_text(json.dumps(link,indent=2))

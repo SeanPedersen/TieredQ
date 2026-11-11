@@ -16,7 +16,7 @@
 #include <string>
 #include <unistd.h>
 namespace {
-using namespace dv;
+using namespace tq;
 void require(bool condition,const char* message) { if (!condition) throw std::runtime_error(message); }
 template<class F> bool rejects(F&& action) { try { action(); } catch (const std::runtime_error&) { return true; } return false; }
 constexpr uint32_t dimensions=48,centroids=8;

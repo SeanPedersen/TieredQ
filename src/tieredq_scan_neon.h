@@ -6,7 +6,7 @@
 #include <array>
 #include <utility>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 constexpr size_t neon_block_docs = 16;
 constexpr size_t neon_float_lanes = sizeof(float32x4_t)/sizeof(float);
 constexpr size_t neon_score_vectors = neon_block_docs/neon_float_lanes;
@@ -217,4 +217,4 @@ inline size_t scan_neon(const uint8_t* payload,size_t count,size_t stride,
     return scan_neon_impl<true>(payload,count,stride,q,layout,centroids,scores);
   return scan_neon_impl<false>(payload,count,stride,q,layout,centroids,scores);
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

@@ -37,20 +37,20 @@
 #include <stdexcept>
 #if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
 #include <immintrin.h>
-#define DV_TIEREDQ_X86 1
+#define TQ_X86 1
 #endif
-#ifdef DV_TIEREDQ_X86
+#ifdef TQ_X86
 #include "tieredq_scan_avx512.h"
 #endif
 #if defined(__aarch64__) || defined(_M_ARM64)
 #include "tieredq_scan_neon.h"
-#define DV_TIEREDQ_NEON 1
+#define TQ_NEON 1
 #endif
 #include "tieredq_scan_groups.h"
-namespace dv {
+namespace tq {
 namespace {
 using tieredq_detail::Layout;
-#ifdef DV_TIEREDQ_X86
+#ifdef TQ_X86
 using tieredq_detail::half16;
 #endif
 using tieredq_detail::bad;
@@ -159,7 +159,7 @@ std::vector<float> rotation(int n, uint64_t seed, const tieredq_detail::Training
 bool has_three_byte_codes(const std::vector<TieredQTier>& tiers) {
   return std::any_of(tiers.begin(),tiers.end(),[](const TieredQTier& t) { return t.bits>tieredq_detail::widest_code_bits; });
 }
-#ifdef DV_TIEREDQ_X86
+#ifdef TQ_X86
 // Decode one metadata field for an entire epilogue batch; plane bytes are interleaved into half words.
 template<bool transposed>
 __attribute__((target("avx2,f16c"))) void half8(const uint8_t* base,size_t stride,size_t offset,float* out) {
@@ -408,7 +408,7 @@ TieredQ TieredQ::train_model(TieredQConfig config,const tieredq_detail::Training
     sample.visit([&](auto value) { tieredq_detail::update_centroids_with(value,rows,d,ids.data(),centroids); });
     profile.mark("kmeans_update");
   }
-  const bool spectral_stats=!std::getenv("DV_TIEREDQ_REFERENCE_STATS");
+  const bool spectral_stats=!std::getenv("TQ_REFERENCE_STATS");
   std::vector<double> residual,mean,cov;
   if (k>1) nearest_centroids(sample,rows,d,centroids,k,ids.data());
   profile.mark("kmeans_assign");
@@ -810,10 +810,10 @@ std::vector<TieredQQuery> TieredQ::model_query_weights(const float* vectors,size
 }
 bool TieredQ::kernel_available(TieredQKernel kernel) {
   if (kernel==TieredQKernel::automatic || kernel==TieredQKernel::scalar) return true;
-#ifdef DV_TIEREDQ_NEON
+#ifdef TQ_NEON
   if (kernel==TieredQKernel::neon) return true;
 #endif
-#ifdef DV_TIEREDQ_X86
+#ifdef TQ_X86
   if (kernel==TieredQKernel::avx2) return __builtin_cpu_supports("avx2") && __builtin_cpu_supports("f16c");
   if (kernel==TieredQKernel::avx512) return __builtin_cpu_supports("avx512f");
 #endif
@@ -838,7 +838,7 @@ void TieredQ::score(const uint8_t* payload,size_t count,const TieredQQuery& q,fl
   if (!count) return;
   const size_t stride=bytes_per_vector();
   size_t begin=0;
-#ifdef DV_TIEREDQ_X86
+#ifdef TQ_X86
   if (kernel==TieredQKernel::avx512) {
     begin=scan16<false,4>(payload,count,stride,code_bytes(),tiers_,q,layout,config_.num_centroids,scores);
     begin+=scan16<false>(payload+begin*stride,count-begin,stride,code_bytes(),tiers_,q,layout,config_.num_centroids,scores+begin);
@@ -987,11 +987,11 @@ void TieredQ::score_planes(const uint8_t* block,size_t n,const TieredQQuery& q,f
   if (has_three_byte_codes(tiers_)) kernel=TieredQKernel::scalar;
   const size_t stride=bytes_per_vector(); size_t done=0;
   std::vector<uint8_t> tail;
-#ifdef DV_TIEREDQ_NEON
+#ifdef TQ_NEON
   if (kernel==TieredQKernel::neon && !q.scan_groups.empty())
     done=tieredq_detail::scan_neon(block,n,stride,q,layout,config_.num_centroids,scores);
 #endif
-#ifdef DV_TIEREDQ_X86
+#ifdef TQ_X86
     if (kernel==TieredQKernel::avx512 && !q.scan_groups.empty() && __builtin_cpu_supports("avx512bw")) {
       done=tieredq_detail::scan_grouped<4>(block,n,stride,code_bytes(),q,layout,config_.num_centroids,levels_,scan_plan_,scores);
       done+=tieredq_detail::scan_grouped<1>(block+done*stride,n-done,stride,code_bytes(),q,layout,config_.num_centroids,levels_,scan_plan_,scores+done);
@@ -1031,7 +1031,7 @@ void TieredQ::score_planes_batch(const uint8_t* block,size_t n,const TieredQQuer
   if (!kernel_available(kernel)) bad("requested scoring kernel is unavailable");
   bool geometry=!queries[0].scan_groups.empty();
   for (size_t i=1;i<query_count && geometry;++i) geometry=same_scan_geometry(queries[0],queries[i]);
-#ifdef DV_TIEREDQ_NEON
+#ifdef TQ_NEON
   if (kernel==TieredQKernel::neon && geometry) {
     const size_t stride=bytes_per_vector(), bulk=n/tieredq_detail::neon_block_docs*tieredq_detail::neon_block_docs;
     size_t batched=0;
@@ -1127,4 +1127,4 @@ uint32_t TieredQ::model_id() const {
   const auto data=serialize(); uint32_t h=2166136261u;
   for (auto b:data) { h^=b; h*=16777619u; } return h;
 }
-} // namespace dv
+} // namespace tq

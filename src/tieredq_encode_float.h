@@ -13,12 +13,12 @@
 #include <vector>
 #if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
 #include <immintrin.h>
-#define DV_TIEREDQ_FLOAT_X86 1
+#define TQ_FLOAT_X86 1
 #endif
 #if defined(__aarch64__)
 #include <arm_neon.h>
 #endif
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 constexpr size_t float_panel_width=TieredQPanels::PANEL,float_tile_rows=8;
 // Column panels as packed by pack_panel_values: element (k, c) at (c / PANEL * depth + k) * PANEL + c % PANEL.
 template<class T> struct PanelSpan { const T* data; size_t depth, padded_columns; };
@@ -51,7 +51,7 @@ template<class T> void panel_matrix_scalar(const float* a, size_t rows, size_t l
     }
   }
 }
-#ifdef DV_TIEREDQ_FLOAT_X86
+#ifdef TQ_FLOAT_X86
 __attribute__((target("avx512f"))) inline __m512 load_panel_avx512(const float* p) { return _mm512_loadu_ps(p); }
 __attribute__((target("avx512f"))) inline __m512 load_panel_avx512(const uint16_t* p) {
   return _mm512_cvtph_ps(_mm256_loadu_si256(reinterpret_cast<const __m256i*>(p)));
@@ -200,14 +200,14 @@ template<class T> void panel_matrix(const float* a, size_t rows, size_t lda, Pan
   if (kernel==TieredQKernel::neon) return panel_matrix_neon(a,rows,lda,b,c,ldc);
   if (kernel!=TieredQKernel::automatic) throw std::runtime_error("TieredQ: FP32 encoder kernel unavailable");
 #endif
-#ifdef DV_TIEREDQ_FLOAT_X86
+#ifdef TQ_FLOAT_X86
   static const bool has_avx2 = __builtin_cpu_supports("avx2") && __builtin_cpu_supports("fma") && __builtin_cpu_supports("f16c");
   if (kernel==TieredQKernel::avx512 && __builtin_cpu_supports("avx512f"))
     return panel_matrix_avx512(a,rows,lda,b,c,ldc);
   if (kernel==TieredQKernel::avx2 && has_avx2)
     return panel_matrix_avx2(a,rows,lda,b,c,ldc);
   if (kernel!=TieredQKernel::automatic) throw std::runtime_error("TieredQ: FP32 encoder kernel unavailable");
-  static const bool avx512 = __builtin_cpu_supports("avx512f") && !std::getenv("DV_TIEREDQ_NO_AVX512");
+  static const bool avx512 = __builtin_cpu_supports("avx512f") && !std::getenv("TQ_NO_AVX512");
   if (avx512) return panel_matrix_avx512(a, rows, lda, b, c, ldc);
   if (has_avx2) return panel_matrix_avx2(a, rows, lda, b, c, ldc);
 #endif
@@ -223,4 +223,4 @@ inline void half_matrix(const float* a, size_t rows, size_t lda, const HalfPanel
                         TieredQKernel kernel=TieredQKernel::automatic) {
   panel_matrix(a, rows, lda, b.span(), c, ldc, kernel);
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

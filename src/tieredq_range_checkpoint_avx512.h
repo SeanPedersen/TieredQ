@@ -3,7 +3,7 @@
 #include "tieredq_range_checkpoint.h"
 #include "tieredq_scan_codes_x86.h"
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 constexpr int range_rounding_up=_MM_FROUND_TO_POS_INF|_MM_FROUND_NO_EXC;
 struct FastRangeCheckpoint {
   size_t rank;
@@ -89,4 +89,4 @@ inline void scan_fast_range_avx512(const FastScanCache& cache,const TieredQQuery
   scan_range_code_blocks_avx512(cache,segments,query.weights.data(),centroids.scores(0),centroids.corrections(0),
       first,count,scores,FastRangeCheckpoint{prefix_rank,bounds,threshold});
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

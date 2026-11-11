@@ -7,7 +7,7 @@
 #include <immintrin.h>
 #include <stdexcept>
 
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 constexpr uint32_t window_bits = 32;
 constexpr size_t block_docs = 16, planes_per_window = 4;
 constexpr uint32_t register_book_bits = 6;  // codebooks up to 64 levels live in four registers
@@ -138,4 +138,4 @@ __attribute__((target("avx512f,avx512bw,avx2,fma"))) size_t scan_grouped(const u
   }
   return begin;
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

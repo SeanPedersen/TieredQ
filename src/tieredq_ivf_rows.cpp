@@ -3,7 +3,7 @@
 #include "tieredq/tieredq.h"
 #include "tieredq_fast_rows.h"
 
-namespace dv {
+namespace tq {
 using tieredq_detail::bad;
 namespace { constexpr uint32_t padding_id=UINT32_MAX; }
 
@@ -24,4 +24,4 @@ void TieredQIVFIndex::document_rows(const uint32_t* documents,size_t count,uint8
   tieredq_detail::read_fast_rows(*documents_.fast_,model.levels_,model.tiers_,model.coded_dimensions(),model.code_bytes(),
                                  model.bytes_per_vector(),documents,count,rows);
 }
-} // namespace dv
+} // namespace tq

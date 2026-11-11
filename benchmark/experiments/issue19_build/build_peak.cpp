@@ -33,20 +33,20 @@ int main(int argc,char** argv) {
   if (!sampled) for (size_t i=0;i<sample_rows;++i) std::copy_n(data.data()+order[i]*d,d,sample.data()+i*d);
   long after_copy=hwm_kb();
   const uint32_t code_bits=std::getenv("CODE_BITS") ? uint32_t(std::stoul(std::getenv("CODE_BITS"))) : uint32_t(bits*d);
-  auto config=dv::TieredQConfig::target_code_bits(uint32_t(d),code_bits);
-  if (cosine) config.metric=dv::TieredQMetric::cosine;
+  auto config=tq::TieredQConfig::target_code_bits(uint32_t(d),code_bits);
+  if (cosine) config.metric=tq::TieredQMetric::cosine;
   reset_hwm(); long before_train=hwm_kb();
   const auto train_start=std::chrono::steady_clock::now();
-  auto codec=sampled ? dv::TieredQ::train_sampled(config,data.data(),n,ids.data(),sample_rows,0)
-                     : dv::TieredQ::train(config,sample.data(),sample_rows,0);
+  auto codec=sampled ? tq::TieredQ::train_sampled(config,data.data(),n,ids.data(),sample_rows,0)
+                     : tq::TieredQ::train(config,sample.data(),sample_rows,0);
   const double train_s=std::chrono::duration<double>(std::chrono::steady_clock::now()-train_start).count();
   long train_peak=hwm_kb(), after_train_rss=0;
   { std::ifstream f("/proc/self/status"); std::string k; while (f>>k) if (k=="VmRSS:") { f>>after_train_rss; break; } }
   reset_hwm(); long before_add=hwm_kb();
   const auto add_start=std::chrono::steady_clock::now();
   size_t stored=0;
-  if (ivf) { dv::TieredQIVFIndex index(codec,256); index.build(data.data(),n); stored=index.storage_bytes(); }
-  else { dv::TieredQIndex index(codec); index.add(data.data(),n); stored=index.storage_bytes(); }
+  if (ivf) { tq::TieredQIVFIndex index(codec,256); index.build(data.data(),n); stored=index.storage_bytes(); }
+  else { tq::TieredQIndex index(codec); index.add(data.data(),n); stored=index.storage_bytes(); }
   long add_peak=hwm_kb();
   const double add_s=std::chrono::duration<double>(std::chrono::steady_clock::now()-add_start).count();
   std::printf("n=%zu d=%zu bits=%zu %s %s%s: sample copy %.0f, train peak +%.0f, add/build peak +%.0f, index %.0f bits/vector, train %.2f s, add %.2f s\n",

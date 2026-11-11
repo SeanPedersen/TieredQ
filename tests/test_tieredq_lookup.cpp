@@ -7,29 +7,29 @@
 #include <stdexcept>
 #include <vector>
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-#define DV_TIEREDQ_TEST_X86_LOOKUP 1
+#define TQ_TEST_X86_LOOKUP 1
 #include "tieredq_scan_int8_avx512.h"
 #include "tieredq_lookup_range_avx512.h"
 #include "tieredq_lookup_range_avx2.h"
 #include "tieredq_scan_int8_avx2.h"
 #elif defined(__aarch64__)
-#define DV_TIEREDQ_TEST_NEON_LOOKUP 1
+#define TQ_TEST_NEON_LOOKUP 1
 #include "tieredq_scan_int8_neon.h"
 #include "tieredq_lookup_range_neon.h"
 #endif
-#if defined(DV_TIEREDQ_TEST_X86_LOOKUP) || defined(DV_TIEREDQ_TEST_NEON_LOOKUP)
+#if defined(TQ_TEST_X86_LOOKUP) || defined(TQ_TEST_NEON_LOOKUP)
 #include "tieredq_scan_fast_scalar.h"
 #include "tieredq_fast_scan.h"
 #include "tieredq_train_codebook_data.h"
 namespace {
-using namespace dv;
-using namespace dv::tieredq_detail;
+using namespace tq;
+using namespace tq::tieredq_detail;
 void require(bool condition,const char* message) { if (!condition) throw std::runtime_error(message); }
 // A byte-table range kernel: scores [first, first + count) of one query.
 using LookupRangeKernel=void(*)(const FastScanCache&,const FastScanLookupQuery&,size_t,size_t,float*);
 // Its pruned counterpart: rejected documents score -inf.
 using LookupPrunedKernel=void(*)(const FastScanCache&,const FastScanLookupQuery&,size_t,size_t,float*,const LookupRangeCheckpoint&);
-#ifdef DV_TIEREDQ_TEST_X86_LOOKUP
+#ifdef TQ_TEST_X86_LOOKUP
 void wide_kernel_range_test(bool avx512) {
   constexpr size_t dimensions=5,count=4097,code_bytes=4,stride=9;
   constexpr int level_max=63;
@@ -307,7 +307,7 @@ void wide_additive_backend_test(bool fine) {
   auto same=[&](const std::vector<float>& scores,const char* message) {
     for (size_t i=0;i<reference.size();++i) require(std::fabs(scores[i]-reference[i])<=tolerance*(1+std::fabs(reference[i])),message);
   };
-#ifdef DV_TIEREDQ_TEST_X86_LOOKUP
+#ifdef TQ_TEST_X86_LOOKUP
   std::vector<FastScanQueryX86> x86(query_count);
   for (size_t q=0;q<query_count;++q) x86[q].lookup=queries[q];
   // Grouped calls span full and partial query groups, as the batch drivers issue them.
@@ -331,7 +331,7 @@ void wide_additive_backend_test(bool fine) {
     require(std::fabs(reference[q*count+d]-exact)<=bound,"wide nibble score differs from whole-code levels");
   }
   if (!fine) return;
-#ifdef DV_TIEREDQ_TEST_NEON_LOOKUP
+#ifdef TQ_TEST_NEON_LOOKUP
   lookup_range_checkpoint_test(*cache,tiers,queries,scan_fast_lookup_neon_range,scan_range_lookup_neon);
 #else
   if (__builtin_cpu_supports("avx2"))
@@ -348,13 +348,13 @@ void lookup_kernel_tests(LookupRangeKernel kernel) {
 } // namespace
 #endif
 void tieredq_lookup_tests() {
-#if defined(DV_TIEREDQ_TEST_X86_LOOKUP) || defined(DV_TIEREDQ_TEST_NEON_LOOKUP)
+#if defined(TQ_TEST_X86_LOOKUP) || defined(TQ_TEST_NEON_LOOKUP)
   for (bool fine:{false,true}) wide_additive_backend_test(fine);
 #endif
-#ifdef DV_TIEREDQ_TEST_NEON_LOOKUP
+#ifdef TQ_TEST_NEON_LOOKUP
   lookup_kernel_tests(scan_fast_lookup_neon_range);
 #endif
-#ifdef DV_TIEREDQ_TEST_X86_LOOKUP
+#ifdef TQ_TEST_X86_LOOKUP
   for (bool avx512:{false,true}) {
     const bool available=avx512 ? (__builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512bw"))
         : bool(__builtin_cpu_supports("avx2"));

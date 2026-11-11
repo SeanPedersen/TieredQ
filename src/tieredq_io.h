@@ -14,7 +14,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
-namespace dv::tieredq_detail {
+namespace tq::tieredq_detail {
 constexpr uint32_t codec_file_kind=1,exact_index_file_kind=2,fast_index_file_kind=3,ivf_index_file_kind=4;
 inline void bad(const std::string& message) { throw std::runtime_error("TieredQ: "+message); }
 inline size_t product(size_t a,size_t b) {
@@ -164,4 +164,4 @@ inline File load_file(const std::string& path, uint32_t kind) {
   if (file.header.payload_hash!=checksum(payload.data(),payload.size())) bad("checksum mismatch");
   return {std::move(file.model),std::move(payload),file.header.rows,file.header.kind};
 }
-} // namespace dv::tieredq_detail
+} // namespace tq::tieredq_detail

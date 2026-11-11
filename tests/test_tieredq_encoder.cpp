@@ -6,8 +6,8 @@
 #include <stdexcept>
 
 namespace {
-using namespace dv;
-using namespace dv::tieredq_detail;
+using namespace tq;
+using namespace tq::tieredq_detail;
 void require(bool value,const char* message) { if (!value) throw std::runtime_error(message); }
 
 float accumulate(float sum,float a,float b,TieredQKernel kernel) {
