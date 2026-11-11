@@ -1,6 +1,7 @@
 // Nested IVF serving (#23): IVF lists give back exactly the payload rows the codec encodes, in every fast layout;
 // prefix scan plus suffix rescoring returns the refinement's own ranking of the scanned candidates and beats the
-// prefix scan alone; batch, file-backed and deserialized indexes answer identically with either tier layout; mismatches are rejected.
+// prefix scan alone; batch, file-backed and deserialized indexes answer identically with either tier layout; an exact
+// SQ8 stage ranks the candidates exactly in every metric; mismatches are rejected.
 #include "tieredq/tieredq_nested.h"
 #include <algorithm>
 #include <cmath>
@@ -204,6 +205,78 @@ void external_tier_test(TieredQTierRows tier_rows) {
   require(rejected,"out-of-range candidate id accepted");
 }
 
+// SQ8 codes of data (per-dimension min/max, 255 steps) with their scales and offsets: decoded = code * scale + offset.
+struct SQ8 { std::vector<uint8_t> codes; std::vector<float> scales,offsets; };
+SQ8 sq8(const std::vector<float>& data) {
+  SQ8 out; out.codes.resize(rows*dimensions); out.scales.resize(dimensions); out.offsets.resize(dimensions);
+  for (uint32_t j=0;j<dimensions;++j) {
+    float low=data[j],high=data[j];
+    for (size_t i=0;i<rows;++i) { low=std::min(low,data[i*dimensions+j]); high=std::max(high,data[i*dimensions+j]); }
+    out.scales[j]=std::max(high-low,1e-6f)/255; out.offsets[j]=low+128*out.scales[j];
+    for (size_t i=0;i<rows;++i)
+      out.codes[i*dimensions+j]=uint8_t(int8_t(std::lround((data[i*dimensions+j]-out.offsets[j])/out.scales[j])));
+  }
+  return out;
+}
+
+// With an exact stage over every candidate, the hits are the scanned candidates' exact top k on the SQ8 rows; batch
+// and file-backed rows answer identically, and a narrower final stage still returns k hits.
+void exact_stage_test(TieredQMetric metric) {
+  const auto data=clustered_rows(rows,seed),probes=clustered_rows(queries,seed+1);
+  auto index=nested(data,metric,TieredQTierRows::suffix);
+  const auto store=sq8(data);
+  auto exact_rows=std::make_shared<TieredQSQ8Rows>(std::make_shared<TieredQMemoryRows>(store.codes,dimensions),
+                                                   store.scales,store.offsets);
+  std::vector<float> decoded(rows*dimensions);
+  std::vector<uint32_t> all(rows); std::iota(all.begin(),all.end(),0);
+  exact_rows->decode(all.data(),rows,decoded.data());
+  index.attach_exact(exact_rows,candidates);
+  require(index.has_exact() && index.finals()==candidates,"exact stage not attached");
+  for (size_t q=0;q<queries;++q) {
+    const float* query=probes.data()+q*dimensions;
+    const auto hits=index.search(query,k,nprobe,candidates);
+    auto scanned=index.index().search(query,candidates,nprobe);
+    for (auto& hit:scanned) hit.score=exact(metric,query,decoded.data()+size_t(hit.id)*dimensions);
+    std::stable_sort(scanned.begin(),scanned.end(),[](const TieredQHit& a,const TieredQHit& b) {
+      return a.score!=b.score ? a.score>b.score : a.id<b.id;
+    });
+    require(hits.size()==std::min(k,scanned.size()),"exact stage returned the wrong hit count");
+    for (size_t i=0;i<hits.size();++i) {
+      require(hits[i].id==scanned[i].id,"exact stage hits differ from the exact ranking of the candidates");
+      require(std::abs(hits[i].score-scanned[i].score)<=1e-4f*std::max(1.f,std::abs(scanned[i].score)),
+              "exact stage scores differ from the exact metric");
+    }
+  }
+  const auto single=answers(index,probes);
+  std::vector<float> scores(queries*k); std::vector<uint32_t> ids(queries*k);
+  index.search_batch(probes.data(),queries,k,nprobe,candidates,scores.data(),ids.data());
+  for (size_t q=0;q<queries;++q) for (size_t i=0;i<single[q].size();++i)
+    require(ids[q*k+i]==single[q][i].id && scores[q*k+i]==single[q][i].score,"exact stage batch differs from search");
+
+  const auto path=(std::filesystem::temp_directory_path()/("tieredq_exact_"+std::to_string(::getpid())+".rows")).string();
+  {
+    TieredQRowFileWriter writer(path,dimensions);
+    writer.append(store.codes.data(),rows);
+    writer.finish();
+  }
+  index.attach_exact(std::make_shared<TieredQSQ8Rows>(std::make_shared<TieredQFileRows>(path,TieredQFileReads::cached,4),
+                                                      store.scales,store.offsets),candidates);
+  require(same(answers(index,probes),single),"file-backed exact rows answer differently");
+  std::filesystem::remove(path);
+
+  index.attach_exact(exact_rows,k/2);
+  for (size_t q=0;q<queries;++q)
+    require(index.search(probes.data()+q*dimensions,k,nprobe,candidates).size()==k,"a narrow final stage lost hits");
+  index.attach_exact(nullptr,0);
+  require(!index.has_exact(),"exact stage not detached");
+
+  bool rejected=false;
+  try { TieredQSQ8Rows(std::make_shared<TieredQMemoryRows>(store.codes,dimensions),std::vector<float>(dimensions-1,1),
+                       std::vector<float>(dimensions-1,0)); }
+  catch (const std::runtime_error&) { rejected=true; }
+  require(rejected,"SQ8 rows with the wrong scale count accepted");
+}
+
 void mismatched_prefix_test() {
   const auto data=clustered_rows(rows,seed);
   const auto prefix=train(data,prefix_bits,TieredQMetric::inner_product);
@@ -226,6 +299,7 @@ void tieredq_nested_tests() {
     batch_file_and_serialization_test(tier_rows);
     external_tier_test(tier_rows);
   }
+  for (auto metric:{TieredQMetric::inner_product,TieredQMetric::cosine,TieredQMetric::l2}) exact_stage_test(metric);
   mismatched_prefix_test();
   std::cout<<"nested IVF tests passed\n";
 }

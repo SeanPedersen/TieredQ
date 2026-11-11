@@ -307,14 +307,73 @@ size_t TieredQNestedIVFIndex::rescore(const float* query,const TieredQRefinement
   prefix_rows.resize(found*index_.codec().bytes_per_vector()); suffix_rows.resize(found*refinement_.bytes_per_vector());
   const uint8_t* suffix=candidate_rows(candidates,found,tier_rows,prefix_rows.data(),suffix_rows.data());
   refinement_.score(prefix_rows.data(),suffix,found,refined_query,refined.data());
-  const size_t kept=std::min(k,found);
+  const size_t kept=std::min(k,found),staged=exact_ ? std::min(std::max(k,finals_),found) : kept;
   std::iota(order.begin(),order.end(),uint32_t(0));
-  std::partial_sort(order.begin(),order.begin()+kept,order.end(),[&](uint32_t a,uint32_t b) {
+  std::partial_sort(order.begin(),order.begin()+staged,order.end(),[&](uint32_t a,uint32_t b) {
     return refined[a]!=refined[b] ? refined[a]>refined[b] : candidates[a]<candidates[b];
   });
+  if (exact_) return rescore_exact(query,candidates,order.data(),staged,kept,scores,ids);
   const auto [scale,offset]=index_.codec().score_map(query);
   for (size_t i=0;i<kept;++i) { scores[i]=float(scale*refined[order[i]]+offset); ids[i]=candidates[order[i]]; }
   return kept;
+}
+
+size_t TieredQNestedIVFIndex::rescore_exact(const float* query,const uint32_t* candidates,const uint32_t* order,
+                                            size_t staged,size_t kept,float* scores,uint32_t* ids) const {
+  const size_t d=index_.codec().config().dimensions;
+  const TieredQMetric metric=index_.codec().config().metric;
+  thread_local std::vector<uint32_t> staged_ids;
+  thread_local std::vector<float> rows,exact;
+  staged_ids.resize(staged); rows.resize(staged*d); exact.resize(staged);
+  for (size_t i=0;i<staged;++i) staged_ids[i]=candidates[order[i]];
+  exact_->decode(staged_ids.data(),staged,rows.data());
+  double query_square=0;
+  for (size_t j=0;j<d;++j) query_square+=double(query[j])*query[j];
+  for (size_t i=0;i<staged;++i) {
+    const float* row=rows.data()+i*d;
+    double dot=0,row_norm=0,distance=0;
+    for (size_t j=0;j<d;++j) {
+      dot+=double(query[j])*row[j]; row_norm+=double(row[j])*row[j];
+      const double gap=double(query[j])-row[j]; distance+=gap*gap;
+    }
+    const double norms=std::sqrt(query_square*row_norm);
+    exact[i]=float(metric==TieredQMetric::l2 ? -distance : metric==TieredQMetric::cosine ? (norms>0 ? dot/norms : 0) : dot);
+  }
+  thread_local std::vector<uint32_t> slots;
+  slots.resize(staged);
+  std::iota(slots.begin(),slots.end(),uint32_t(0));
+  std::partial_sort(slots.begin(),slots.begin()+kept,slots.end(),[&](uint32_t a,uint32_t b) {
+    return exact[a]!=exact[b] ? exact[a]>exact[b] : staged_ids[a]<staged_ids[b];
+  });
+  for (size_t i=0;i<kept;++i) { scores[i]=exact[slots[i]]; ids[i]=staged_ids[slots[i]]; }
+  return kept;
+}
+
+void TieredQNestedIVFIndex::attach_exact(std::shared_ptr<const TieredQExactRows> exact,size_t finals) {
+  if (!exact) { exact_.reset(); finals_=0; return; }
+  if (exact->dimensions()!=index_.codec().config().dimensions) bad("exact row width does not match the index");
+  if (exact->rows()!=size()) bad("exact row count does not match the index");
+  if (!finals) bad("the exact stage needs at least one final candidate");
+  exact_=std::move(exact); finals_=finals;
+}
+
+TieredQSQ8Rows::TieredQSQ8Rows(std::shared_ptr<const TieredQRowSource> codes,std::vector<float> scales,
+                               std::vector<float> offsets)
+    : codes_(std::move(codes)),scales_(std::move(scales)),offsets_(std::move(offsets)) {
+  if (!codes_) bad("null SQ8 code source");
+  if (scales_.empty() || offsets_.size()!=scales_.size()) bad("SQ8 needs one scale and one offset per dimension");
+  if (codes_->row_bytes()!=scales_.size()) bad("SQ8 rows must hold one int8 code per dimension");
+  for (size_t j=0;j<scales_.size();++j)
+    if (!std::isfinite(scales_[j]) || !std::isfinite(offsets_[j])) bad("SQ8 scales and offsets must be finite");
+}
+
+void TieredQSQ8Rows::decode(const uint32_t* ids,size_t count,float* out) const {
+  const size_t d=dimensions();
+  thread_local std::vector<uint8_t> codes;
+  codes.resize(count*d);
+  codes_->read(ids,count,codes.data());
+  for (size_t i=0;i<count;++i)
+    for (size_t j=0;j<d;++j) out[i*d+j]=float(int8_t(codes[i*d+j]))*scales_[j]+offsets_[j];
 }
 
 std::vector<TieredQHit> TieredQNestedIVFIndex::search(const float* query,size_t k,size_t nprobe,size_t candidates,

@@ -207,6 +207,48 @@ def test_two_step_search_over_an_external_tier_matches_search(data, layout):
         index.rescore(queries, out_of_range, fetched, k=K)
 
 
+def sq8(vectors):
+    """Per-dimension int8 codes with their scales and offsets: decoded = codes * scales + offsets."""
+    low, high = vectors.min(axis=0), vectors.max(axis=0)
+    scales = (np.maximum(high - low, 1e-6) / 255).astype(np.float32)
+    offsets = (low + 128 * scales).astype(np.float32)
+    codes = np.clip(np.rint((vectors - offsets) / scales), -128, 127).astype(np.int8)
+    return codes, scales, offsets
+
+
+def test_exact_stage_ranks_the_candidates_exactly_from_ram_and_file(data, tmp_path):
+    vectors, queries = data
+    index = nested(vectors, "suffix")
+    index.attach_tier(index.encode_tier(vectors))
+    codes, scales, offsets = sq8(vectors)
+    decoded = codes.astype(np.float32) * scales + offsets
+    assert not index.has_exact
+    index.attach_exact(codes, scales, offsets, finals=CANDIDATES)
+    assert index.has_exact and index.finals == CANDIDATES
+    scores, ids = index.search(queries, k=K, nprobe=NPROBE, candidates=CANDIDATES)
+
+    candidates = index.candidates(queries, CANDIDATES, nprobe=NPROBE)
+    for row, query in enumerate(queries):
+        found = candidates[row][candidates[row] != PADDING_ID]
+        exact = decoded[found].astype(np.float64) @ query.astype(np.float64)
+        order = np.lexsort((found, -exact))[:K]
+        np.testing.assert_array_equal(ids[row], found[order])
+        np.testing.assert_allclose(scores[row], exact[order], rtol=1e-5, atol=1e-5)
+
+    path = tmp_path / "sq8.rows"
+    TieredQNestedIVFIndex.write_sq8_rows(path, codes)
+    for reads in ("cached", "direct"):
+        index.attach_exact(path, scales, offsets, finals=CANDIDATES, reads=reads, queue_depth=8)
+        assert_same(index.search(queries, k=K, nprobe=NPROBE, candidates=CANDIDATES), (scores, ids))
+
+    index.detach_exact()
+    assert not index.has_exact
+    with pytest.raises(RuntimeError, match="exact row"):
+        index.attach_exact(codes[:-1].copy(), scales, offsets, finals=CANDIDATES)
+    with pytest.raises(RuntimeError, match="scale"):
+        index.attach_exact(codes, scales[:-1].copy(), offsets, finals=CANDIDATES)
+
+
 def test_nested_rescoring_beats_the_prefix_scan(data):
     vectors, queries = data
     index = nested(vectors, "suffix")

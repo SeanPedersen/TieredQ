@@ -166,6 +166,27 @@ template<class T,class F> std::vector<T> pack_panel_values(size_t depth, size_t 
   for (size_t c = 0; c < columns; ++c) for (size_t k = 0; k < depth; ++k) data[(c / PANEL * depth + k) * PANEL + c % PANEL] = at(k, c);
   return data;
 }
+// pack_panel_values for columns that are rows of a row-major matrix (column c = row(c)[0..depth)), in blocks of a
+// cache line of each row, so a per-query gather (the router's head re-rank) writes its panels contiguously instead of
+// one element per PANEL-strided store.
+template<class T,class Row> std::vector<T> pack_panel_rows(size_t depth, size_t columns, Row row) {
+  constexpr size_t PANEL = TieredQPanels::PANEL, BLOCK = 64 / sizeof(T);
+  const size_t padded = (columns + PANEL - 1) / PANEL * PANEL;
+  if (columns && depth > std::numeric_limits<size_t>::max() / padded) throw std::runtime_error("TieredQ: size overflow");
+  std::vector<T> data(depth * padded, T(0));
+  const T* sources[PANEL];
+  for (size_t first = 0; first < columns; first += PANEL) {
+    const size_t width = std::min(PANEL, columns - first);
+    for (size_t j = 0; j < width; ++j) sources[j] = row(first + j);
+    T* panel = data.data() + first / PANEL * depth * PANEL;
+    for (size_t k0 = 0; k0 < depth; k0 += BLOCK) {
+      const size_t k1 = std::min(depth, k0 + BLOCK);
+      for (size_t j = 0; j < width; ++j)
+        for (size_t k = k0; k < k1; ++k) panel[k * PANEL + j] = sources[j][k];
+    }
+  }
+  return data;
+}
 template<class F> TieredQPanels pack_panels(size_t depth, size_t columns, F at) {
   TieredQPanels p; p.depth = depth; p.columns = columns;
   p.data = pack_panel_values<float>(depth, columns, at);

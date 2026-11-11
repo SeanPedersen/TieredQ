@@ -161,6 +161,9 @@ index.save("nested.tq")  # IVF, refinement and tier layout; attach the tier agai
   (57% fewer misses), with median batch time per query changing from 2.480 to 2.501 ms
   on one M1 thread with a RAM tier. The 4-bit/dimension control was unchanged.
   Neither IVF constructor exposes the flat index's `mode`, `allocation_power`, or `exact_fast_scores`.
+- `index.attach_exact(codes_or_path, scales, offsets, finals=16)` adds the exact SQ8 final stage (int8 codes in RAM,
+  or a `TieredQNestedIVFIndex.write_sq8_rows(path, codes)` file with `reads="direct", queue_depth=32` on SSD);
+  `detach_exact()` removes it.
 - IVF searches require keyword `nprobe`; nested searches also require
   `candidates >= k`. Results use `2**32 - 1` ids and `-inf` scores for slots
   beyond the rows in the probed lists.
@@ -227,7 +230,8 @@ auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*p
   of exact labels and ran 8.5× faster.
   Exact coarse ranking streams every centroid per query: about 9 ms at 64K × 1024. `build_router()` adds a two-level
   compressed router (#47). It ranks about lists/128 supers exactly, scans the 2-bit TieredQ codes of
-  the probed supers' member centroids, and re-ranks the first 256 lists exactly. The probed supers grow with `nprobe`.
+  the probed supers' member centroids, and re-ranks the first 64 lists exactly (`rerank`; 256 cost 0.1-0.3 ms per query
+  at 64K lists without recall above 0.945). The probed supers grow with `nprobe`.
   Batches route too: at 64K lists, 32-thread batches through the router reached 1.4× the QPS of the exact GEMM ranking.
   `TieredQRouting{mode, super_probes}` forces either path
   or the number of probed supers per search. The router persists with the index (payload version 5).
@@ -299,6 +303,17 @@ auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*p
   writer.finish();
   index.attach_tier(std::make_shared<dv::TieredQFileRows>("tier.rows"));
   auto hits = index.search(query, /*k=*/10, /*nprobe=*/32, /*candidates=*/50);
+  ```
+  An exact final stage (`attach_exact`) rescores the tier's best `finals` candidates with exact vectors, e.g. an SQ8
+  store left on SSD (`TieredQSQ8Rows` over a `TieredQFileRows` of int8 codes, direct reads, queue depth 32). On Qwen
+  8.84M × 1024 at 64K lists, a 6-bit fine tier in RAM plus 16 exact SQ8 rows per query from NVMe matched the in-RAM SQ8
+  re-rank's recall at every nprobe (0.954-0.986) with 7.8 GB of serving RAM instead of 12.2 GB, for about 0.7 ms per
+  query ([hybrid study](ann-prototypes/geometry_ann/results/hartmut-hybrid-20261111/README.md)).
+
+  ```cpp
+  index.attach_exact(std::make_shared<dv::TieredQSQ8Rows>(
+      std::make_shared<dv::TieredQFileRows>("sq8.rows", dv::TieredQFileReads::direct, /*queue_depth=*/32),
+      scales, offsets), /*finals=*/16);
   ```
 - **Flat nested search.** `dv::TieredQNestedIndex` (`<tieredq/tieredq_nested_flat.h>`) scans a narrow prefix for
   every document and rescores the top candidates with an in-RAM suffix tier (a one-list `TieredQNestedIVFIndex`). On

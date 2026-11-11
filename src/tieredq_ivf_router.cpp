@@ -85,8 +85,8 @@ std::vector<uint32_t> CoarseRouter::probe_order(const CoarseQuantizer& coarse,co
   std::vector<std::pair<float,uint32_t>> ranked(head);  // (closeness, list)
   if (head) {
     HalfPanels panels; panels.depth=dimensions_; panels.columns=head;
-    panels.data=pack_panel_values<uint16_t>(dimensions_,head,[&](size_t k,size_t c) {
-      return halves_[size_t(hits[c].id)*dimensions_+k];
+    panels.data=pack_panel_rows<uint16_t>(dimensions_,head,[&](size_t c) {
+      return halves_.data()+size_t(hits[c].id)*dimensions_;
     });
     std::vector<float> dots(panels.padded_columns());
     half_matrix(query,1,dimensions_,panels,dots.data(),dots.size());

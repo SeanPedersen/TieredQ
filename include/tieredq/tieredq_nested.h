@@ -76,6 +76,30 @@ class TieredQRowFileWriter {
   size_t row_bytes_, rows_ = 0;
 };
 
+// Exact input vectors (dimensions() floats, as given to build) for an optional final rescoring stage, decoded by id.
+// decode() is called concurrently from search workers.
+class TieredQExactRows {
+ public:
+  virtual ~TieredQExactRows() = default;
+  virtual size_t dimensions() const = 0;
+  virtual size_t rows() const = 0;
+  // Writes rows ids[0..count) to out (count x dimensions()).
+  virtual void decode(const uint32_t* ids, size_t count, float* out) const = 0;
+};
+
+// Per-dimension int8 scalar quantization (an SQ8 store): row i is codes[i][j] * scales[j] + offsets[j], its int8
+// codes read from a row source of dimensions bytes per row (in RAM or a TieredQFileRows file on SSD).
+class TieredQSQ8Rows final : public TieredQExactRows {
+ public:
+  TieredQSQ8Rows(std::shared_ptr<const TieredQRowSource> codes, std::vector<float> scales, std::vector<float> offsets);
+  size_t dimensions() const override { return scales_.size(); }
+  size_t rows() const override { return codes_->rows(); }
+  void decode(const uint32_t* ids, size_t count, float* out) const override;
+ private:
+  std::shared_ptr<const TieredQRowSource> codes_;
+  std::vector<float> scales_, offsets_;
+};
+
 // What a tier row holds. prefix_and_suffix stores each vector's prefix row (codec().bytes_per_vector()) before its
 // suffix, so a candidate costs one contiguous read. suffix keeps only the suffix and decodes the prefix from the IVF
 // lists, a smaller tier at a few microseconds of decoding per candidate (about 3.4 us at a 1024-bit prefix, d = 1536).
@@ -98,8 +122,14 @@ class TieredQNestedIVFIndex {
   // One tier row per id; rows() must equal size().
   void attach_tier(std::shared_ptr<const TieredQRowSource> tier);
   bool has_tier() const { return tier_ != nullptr; }
-  // The IVF's top `candidates` (k' >= k) by prefix score, rescored by prefix plus suffix; scores are the metric's
-  // (as TieredQIVFIndex::search returns them).
+  // Optional final stage: the tier's best max(k, finals) candidates are rescored with their exact rows (one per
+  // indexed vector, in id order), so the ranking matches the exact vectors' while only a few rows per query are read,
+  // e.g. an SQ8 store left on SSD. Null detaches it.
+  void attach_exact(std::shared_ptr<const TieredQExactRows> exact, size_t finals);
+  bool has_exact() const { return exact_ != nullptr; }
+  size_t finals() const { return finals_; }
+  // The IVF's top `candidates` (k' >= k) by prefix score, rescored by prefix plus suffix (then exactly, with
+  // attach_exact); scores are the metric's (as TieredQIVFIndex::search returns them).
   std::vector<TieredQHit> search(const float* query, size_t k, size_t nprobe, size_t candidates,
                                  TieredQPruning pruning = {}) const;
   // Results are rows x min(k, size()) in row-major order; slots past the probed rows hold id UINT32_MAX and
@@ -126,6 +156,10 @@ class TieredQNestedIVFIndex {
   // Rescores one query's found candidates (best first, with their tier rows) to its top k; returns how many it kept.
   size_t rescore(const float* query, const TieredQRefinementQuery& refined_query, const uint32_t* candidates, size_t found,
                  const uint8_t* tier_rows, size_t k, float* scores, uint32_t* ids) const;
+  // The exact stage of rescore: candidates[order[0..staged)] (best tier score first) by their exact rows, to the top
+  // kept; returns kept.
+  size_t rescore_exact(const float* query, const uint32_t* candidates, const uint32_t* order, size_t staged, size_t kept,
+                       float* scores, uint32_t* ids) const;
   // Rescores row-major candidate lists (depth per query, UINT32_MAX-terminated) into rows x min(k, size()) results.
   void rescore_rows(const float* queries, size_t rows, std::vector<TieredQQuery> weights, const uint32_t* candidates,
                     size_t depth, const uint8_t* tier_rows, size_t k, float* scores, uint32_t* ids) const;
@@ -134,5 +168,7 @@ class TieredQNestedIVFIndex {
   TieredQTierRows tier_rows_;
   std::vector<uint32_t> documents_;  // input id -> stored IVF document (suffix-only tiers)
   std::shared_ptr<const TieredQRowSource> tier_;
+  std::shared_ptr<const TieredQExactRows> exact_;
+  size_t finals_ = 0;
 };
 } // namespace dv

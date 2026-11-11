@@ -358,7 +358,7 @@ struct TieredQBuildStats {
 struct TieredQRouterConfig {
   uint32_t lists_per_super = 128;
   double bits_per_dimension = 2;
-  uint32_t rerank = 256;
+  uint32_t rerank = 64;           // tuned on Qwen 8.84M x 1024 at 64K lists: 256 cost 0.1-0.3 ms, not recall, above 0.945
   double expansion = 64;          // tuned on Qwen 8.84M x 1024 at 64K-128K lists (#47): more costs time, not recall
   uint32_t min_super_probes = 32;
   uint64_t seed = 0;

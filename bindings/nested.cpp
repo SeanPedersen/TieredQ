@@ -25,6 +25,8 @@ using OptionalMatrix = std::optional<Matrix>;
 using IdArray = nb::ndarray<nb::numpy, const uint32_t, nb::c_contig, nb::device::cpu>;
 using ByteArray = nb::ndarray<nb::numpy, const uint8_t, nb::c_contig, nb::device::cpu>;
 using ByteMatrix = nb::ndarray<nb::numpy, const uint8_t, nb::ndim<2>, nb::c_contig, nb::device::cpu>;
+using CodeMatrix = nb::ndarray<nb::numpy, const int8_t, nb::ndim<2>, nb::c_contig, nb::device::cpu>;
+using FloatVector = nb::ndarray<nb::numpy, const float, nb::ndim<1>, nb::c_contig, nb::device::cpu>;
 // Tier rows encoded per write_tier() step, bounding its buffer.
 constexpr size_t tier_write_chunk_rows = 16384;
 
@@ -102,6 +104,26 @@ class PythonNestedIndex {
   void attach_tier(std::shared_ptr<const dv::TieredQRowSource> tier) {
     std::unique_lock lock(mutex_);
     index_.attach_tier(std::move(tier));
+  }
+  void attach_exact(std::shared_ptr<const dv::TieredQRowSource> codes, FloatVector scales, FloatVector offsets,
+                    size_t finals) {
+    auto exact = std::make_shared<dv::TieredQSQ8Rows>(std::move(codes),
+        std::vector<float>(scales.data(), scales.data() + scales.shape(0)),
+        std::vector<float>(offsets.data(), offsets.data() + offsets.shape(0)));
+    std::unique_lock lock(mutex_);
+    index_.attach_exact(std::move(exact), finals);
+  }
+  void detach_exact() {
+    std::unique_lock lock(mutex_);
+    index_.attach_exact(nullptr, 0);
+  }
+  bool has_exact() const {
+    std::shared_lock lock(mutex_);
+    return index_.has_exact();
+  }
+  size_t finals() const {
+    std::shared_lock lock(mutex_);
+    return index_.finals();
   }
   SearchResult search(FloatArray queries, size_t k, size_t nprobe, size_t candidates, Pruning pruning) const {
     const auto shape = query_rows(queries, dimensions());
@@ -227,6 +249,37 @@ void bind_nested(nb::module_& module) {
       }, "path"_a, nb::kw_only(), "reads"_a = "cached", "queue_depth"_a = 1,
          "Serves the tier from a write_tier() file. reads 'direct' bypasses the page cache; queue_depth > 1 keeps\n"
          "that many reads in flight per query (io_uring builds), which SSDs need for throughput.")
+      .def("attach_exact", [](PythonNestedIndex& self, CodeMatrix codes, FloatVector scales, FloatVector offsets,
+                              size_t finals) {
+        nb::gil_scoped_release release;
+        const auto* begin = reinterpret_cast<const uint8_t*>(codes.data());
+        std::vector<uint8_t> data(begin, begin + array_elements(codes.shape(0), codes.shape(1)));
+        self.attach_exact(std::make_shared<dv::TieredQMemoryRows>(std::move(data), codes.shape(1)), scales, offsets, finals);
+      }, "codes"_a.noconvert(), "scales"_a.noconvert(), "offsets"_a.noconvert(), nb::kw_only(), "finals"_a,
+         "Final exact stage from an SQ8 store in RAM (int8 codes, rows x dimensions, in id order; vector =\n"
+         "codes * scales + offsets): each search rescores the tier's best max(k, finals) candidates exactly.")
+      .def("attach_exact", [](PythonNestedIndex& self, const std::filesystem::path& path, FloatVector scales,
+                              FloatVector offsets, size_t finals, const std::string& reads, size_t queue_depth) {
+        const auto mode = parse_reads(reads);
+        nb::gil_scoped_release release;
+        self.attach_exact(std::make_shared<dv::TieredQFileRows>(path.string(), mode, queue_depth), scales, offsets, finals);
+      }, "path"_a, "scales"_a.noconvert(), "offsets"_a.noconvert(), nb::kw_only(), "finals"_a, "reads"_a = "cached",
+         "queue_depth"_a = 1,
+         "Final exact stage from a write_sq8_rows() file, e.g. on SSD with reads='direct' and queue_depth=32, so\n"
+         "only the IVF and the tier stay in RAM.")
+      .def("detach_exact", &PythonNestedIndex::detach_exact, nb::call_guard<nb::gil_scoped_release>())
+      .def_prop_ro("has_exact", &PythonNestedIndex::has_exact, nb::call_guard<nb::gil_scoped_release>())
+      .def_prop_ro("finals", &PythonNestedIndex::finals, nb::call_guard<nb::gil_scoped_release>())
+      .def_static("write_sq8_rows", [](const std::filesystem::path& path, CodeMatrix codes) {
+        nb::gil_scoped_release release;
+        dv::TieredQRowFileWriter writer(path.string(), codes.shape(1));
+        const auto* rows = reinterpret_cast<const uint8_t*>(codes.data());
+        for (size_t first = 0; first < codes.shape(0); first += tier_write_chunk_rows) {
+          const size_t count = std::min(tier_write_chunk_rows, size_t(codes.shape(0)) - first);
+          writer.append(rows + first * codes.shape(1), count);
+        }
+        writer.finish();
+      }, "path"_a, "codes"_a.noconvert(), "Writes int8 SQ8 codes (rows x dimensions, in id order) as a row file for attach_exact(path).")
       .def("search", [](const PythonNestedIndex& self, FloatArray queries, size_t k, size_t nprobe, size_t candidates,
                         Pruning pruning) {
         return released([&] { return self.search(queries, k, nprobe, candidates, pruning); });
