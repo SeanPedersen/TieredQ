@@ -1,0 +1,20 @@
+{
+  "kind": "flat",
+  "bits_per_dim": 4.0,
+  "max_scan_bits": 0,
+  "seed": 0,
+  "rows": 1000000,
+  "dim": 128,
+  "build_s": 1.3123488426208496,
+  "storage_bytes": 69003214,
+  "scalar": false,
+  "points": [
+    {
+      "nprobe": null,
+      "recall": 0.9333,
+      "p50_ms": 17.665454011876136,
+      "p99_ms": 23.156211163150143,
+      "qps": 55.735298231043004
+    }
+  ]
+}

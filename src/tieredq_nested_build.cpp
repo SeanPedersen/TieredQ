@@ -102,22 +102,23 @@ TieredQNestedIVFIndex TieredQNestedIVFIndex::build(const TieredQNestedConfig& co
 
 void TieredQNestedIVFIndex::write_tier(const std::string& path,const TieredQIVFIndex::RowLoader& rows) const {
   if (!rows) bad("null row loader");
-  const size_t d=index_.codec().config().dimensions,stride=tier_bytes_per_vector();
-  const size_t chunk=std::min(size(),tier_write_chunk_rows);
-  TieredQRowFileWriter writer(path,stride);
-  std::vector<uint32_t> ids(chunk);
-  std::vector<float> decoded(product(chunk,d));
-  std::vector<uint8_t> encoded(product(chunk,stride));
-  for (size_t first=0;first<size();first+=chunk) {
-    const size_t n=std::min(chunk,size()-first);
-    std::iota(ids.begin(),ids.begin()+n,uint32_t(first));
-    rows(ids.data(),n,decoded.data());
-    encode_tier(decoded.data(),first,n,encoded.data());
-    writer.append(encoded.data(),n);
+  {
+    const size_t d=index_.codec().config().dimensions,stride=tier_bytes_per_vector();
+    const size_t chunk=std::min(size(),tier_write_chunk_rows);
+    TieredQRowFileWriter writer(path,stride);
+    std::vector<uint32_t> ids(chunk);
+    std::vector<float> decoded(product(chunk,d));
+    std::vector<uint8_t> encoded(product(chunk,stride));
+    for (size_t first=0;first<size();first+=chunk) {
+      const size_t n=std::min(chunk,size()-first);
+      std::iota(ids.begin(),ids.begin()+n,uint32_t(first));
+      rows(ids.data(),n,decoded.data());
+      encode_tier(decoded.data(),first,n,encoded.data());
+      writer.append(encoded.data(),n);
+    }
+    writer.finish();
   }
-  writer.finish();
-  // The parallel tier encoding left about 2.3 MiB idle in each build thread's malloc arena (VIBE arxiv, 32 threads:
-  // +81 MiB resident after the write).
+  // After the buffers above are freed, so the trim can return them.
   tieredq_detail::release_freed_heap();
 }
 } // namespace dv

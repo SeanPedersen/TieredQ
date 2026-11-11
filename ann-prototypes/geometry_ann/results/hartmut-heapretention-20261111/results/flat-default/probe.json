@@ -1,0 +1,74 @@
+{
+  "kind": "flat",
+  "rows": 1344643,
+  "lists": 2048,
+  "storage_bytes": 245104860,
+  "steps": [
+    {
+      "step": "start",
+      "uss_kib": 112.0,
+      "heap_private_kib": 8,
+      "anon_private_kib": 4,
+      "arenas": 32,
+      "arena_in_use_kib": 6366,
+      "arena_free_kib": 25102,
+      "main_arena": {
+        "system_kib": 7132,
+        "free_kib": 982,
+        "in_use_kib": 6149
+      },
+      "thread_arenas_in_use_kib": [
+        7,
+        7,
+        7,
+        7,
+        7,
+        7
+      ]
+    },
+    {
+      "step": "build",
+      "uss_kib": 280904.0,
+      "heap_private_kib": 50260,
+      "anon_private_kib": 230524,
+      "arenas": 32,
+      "arena_in_use_kib": 23275,
+      "arena_free_kib": 67169,
+      "main_arena": {
+        "system_kib": 59868,
+        "free_kib": 40075,
+        "in_use_kib": 19792
+      },
+      "thread_arenas_in_use_kib": [
+        3273,
+        7,
+        7,
+        7,
+        7,
+        7
+      ]
+    },
+    {
+      "step": "second_trim",
+      "uss_kib": 244312.0,
+      "heap_private_kib": 13664,
+      "anon_private_kib": 230528,
+      "arenas": 32,
+      "arena_in_use_kib": 23275,
+      "arena_free_kib": 67169,
+      "main_arena": {
+        "system_kib": 59868,
+        "free_kib": 40075,
+        "in_use_kib": 19792
+      },
+      "thread_arenas_in_use_kib": [
+        3273,
+        7,
+        7,
+        7,
+        7,
+        7
+      ]
+    }
+  ]
+}

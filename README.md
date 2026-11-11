@@ -278,6 +278,13 @@ auto hits = index.search(query, /*k=*/10, /*nprobe=*/16);
 auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*prefix_tiers=*/4});
 ```
 
+- **Memory.** `build()` and `write_tier()` return freed heap to the OS after their buffers are gone. Encoding workers
+  use buffers that the calling thread allocates, because glibc never trims a worker arena's free top (#43, #41).
+  `storage_bytes()` counts the codes, the codec (with its encoder state once built), the coarse centroids, the router,
+  the list offsets and the ids. `TieredQNestedIVFIndex::storage_bytes()` adds the refinement and the id → document
+  map. On VIBE arxiv (k = 100) the nested default's USS growth fell from 0.241 to 0.178 GiB
+  ([study](ann-prototypes/geometry_ann/results/hartmut-nestedram-20261111/README.md),
+  [heap attribution](ann-prototypes/geometry_ann/results/hartmut-heapretention-20261111/README.md)).
 - **Many lists (64K+).** `set_lists(centroids)` fixes the lists to a partition trained elsewhere.
   `build(RowLoader, count)` pulls rows by id in bounded chunks, so a base held as SQ8 codes needs no fp32 copy.
   From `TieredQCoarseTraining::fast_lists` (8,192) lists an index trains its lists with 4 Lloyd iterations on 40

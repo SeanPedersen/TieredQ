@@ -7,6 +7,7 @@
 #include "tieredq_lookup_layout.h"
 #include "training_rng.h"
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
@@ -23,6 +24,7 @@ namespace dv {
 namespace tieredq_detail {
 struct RefinementEncoder {
   std::once_flag once;
+  std::atomic<bool> ready{false};     // set once built, so memory_bytes() reads sizes only then
   TieredQPanels panels;               // model dimensions x positions
   std::vector<float> centroid_dots;   // centroid x padded positions
 };
@@ -36,6 +38,25 @@ constexpr uint32_t max_fine_bits=tieredq_detail::widest_fine_code_bits;
 constexpr size_t lloyd_iterations=60,level_rows=20000,encode_block_rows=256;
 // Rotated prefix blocks must span the finer model's ranks at the same positions (FP16 bases).
 constexpr double span_tolerance=1e-2,centroid_tolerance=1e-4;
+
+// One encoding worker's block buffers.
+struct EncodeScratch {
+  std::vector<float> model_rows,dots,v;
+  std::vector<double> value;
+};
+// Allocated by the calling thread, so glibc frees them into its arena (the main arena for a main-thread build), which
+// release_freed_heap() returns. Allocated by each worker, they ended in the worker's own arena, whose free top
+// malloc_trim never shrinks (#41: 2.3 MiB per build thread after write_tier).
+std::vector<EncodeScratch> encode_scratch(size_t rows,size_t d,size_t panel_stride,size_t positions) {
+  std::vector<EncodeScratch> scratch(static_cast<size_t>(omp_get_max_threads()));
+  for (auto& worker:scratch) {
+    worker.model_rows.resize(product(rows,d));
+    worker.dots.reserve(product(rows,panel_stride));
+    worker.v.reserve(product(rows,positions));
+    worker.value.resize(positions);
+  }
+  return scratch;
+}
 
 uint16_t read_half(const uint8_t* doc) { return uint16_t(doc[0])|uint16_t(doc[1])<<8; }
 void write_half(uint8_t* doc,double value) {
@@ -428,6 +449,18 @@ void TieredQRefinement::prepare() {
   encoder_=std::make_shared<tieredq_detail::RefinementEncoder>();
 }
 
+size_t TieredQRefinement::memory_bytes(const TieredQ& prefix_owner) const {
+  size_t bytes=sizeof(*this)+prefix_.memory_bytes_beyond(prefix_owner)+blocks_.capacity()*sizeof(Block)+runs_.capacity()*sizeof(Run);
+  for (const auto& block:blocks_) bytes+=block.levels.capacity()*sizeof(float);
+  for (const auto& run:runs_) bytes+=run.levels.capacity()*sizeof(float);
+  bytes+=extra_basis_.capacity()*sizeof(uint16_t)+extra_panels_.capacity();
+  for (const auto* v:{&extra_mean_,&extra_sigma_,&extra_panel_scale_,&extra_mean_ratio_,&level_table_}) bytes+=v->capacity()*sizeof(float);
+  bytes+=segments_.capacity()*sizeof(Segment);
+  if (encoder_ && encoder_->ready.load(std::memory_order_acquire))
+    bytes+=encoder_->panels.data.capacity()*sizeof(float)+encoder_->centroid_dots.capacity()*sizeof(float);
+  return bytes;
+}
+
 const tieredq_detail::RefinementEncoder& TieredQRefinement::encoder() const {
   std::call_once(encoder_->once,[&] {
     const size_t d=prefix_.model_dimensions(),m1=prefix_.coded_dimensions(),extra=extra_mean_.size();
@@ -438,15 +471,17 @@ const tieredq_detail::RefinementEncoder& TieredQRefinement::encoder() const {
     });
     state.centroid_dots.resize(product(k,state.panels.padded_columns()));
     tieredq_detail::float_matrix(prefix_.centroids_.data(),k,d,state.panels,state.centroid_dots.data(),state.panels.padded_columns());
+    state.ready.store(true,std::memory_order_release);
   });
   return *encoder_;
 }
 
-void TieredQRefinement::project(const float* model_rows,size_t count,const uint8_t* prefix_rows,std::vector<float>& out) const {
+void TieredQRefinement::project(const float* model_rows,size_t count,const uint8_t* prefix_rows,std::vector<float>& out,
+                                std::vector<float>& dots) const {
   const size_t d=prefix_.model_dimensions(),m1=prefix_.coded_dimensions(),p=positions();
   const auto& state=encoder();
   const size_t stride=state.panels.padded_columns(),prefix_stride=prefix_.bytes_per_vector();
-  std::vector<float> dots(product(count,stride));
+  dots.resize(product(count,stride));
   tieredq_detail::float_matrix(model_rows,count,d,state.panels,dots.data(),stride);
   out.resize(product(count,p));
   for (size_t i=0;i<count;++i) {
@@ -461,8 +496,8 @@ void TieredQRefinement::project(const float* model_rows,size_t count,const uint8
 void TieredQRefinement::fit_levels(const float* model_rows,size_t rows,const std::vector<uint8_t>& prefix_rows) {
   const size_t m1=prefix_.coded_dimensions(),p=positions(),prefix_stride=prefix_.bytes_per_vector();
   const tieredq_detail::Layout layout{prefix_.code_bytes()};
-  std::vector<float> v;
-  project(model_rows,rows,prefix_rows.data(),v);
+  std::vector<float> v,dots;
+  project(model_rows,rows,prefix_rows.data(),v,dots);
   for (size_t e=0;e<extra_mean_.size();++e) {
     double sum=0,square=0;
     for (size_t i=0;i<rows;++i) { const double x=v[i*p+m1+e]; sum+=x; square+=x*x; }
@@ -507,13 +542,13 @@ void TieredQRefinement::encode(const float* rows,size_t count,const uint8_t* pre
   const size_t panel_stride=state.panels.padded_columns();
   for (size_t i=0;i<product(count,inputs);++i) if (!std::isfinite(rows[i])) bad("nonfinite vector data");
   const tieredq_detail::Layout layout{prefix_.code_bytes()};
+  auto scratch=encode_scratch(std::min(encode_block_rows,count),d,panel_stride,p);
 #pragma omp parallel for schedule(dynamic)
   for (size_t first=0;first<count;first+=encode_block_rows) {
     const size_t block_rows=std::min(encode_block_rows,count-first);
-    std::vector<float> model_rows(product(block_rows,d)),v;
+    auto& [model_rows,dots,v,value]=scratch[size_t(omp_get_thread_num())];
     prefix_.lift(rows+first*inputs,block_rows,false,model_rows.data());
-    project(model_rows.data(),block_rows,prefix_rows+first*prefix_stride,v);
-    std::vector<double> value(p);
+    project(model_rows.data(),block_rows,prefix_rows+first*prefix_stride,v,dots);
     for (size_t i=0;i<block_rows;++i) {
       const uint8_t* prefix_doc=prefix_rows+(first+i)*prefix_stride;
       uint8_t* doc=out+(first+i)*stride;

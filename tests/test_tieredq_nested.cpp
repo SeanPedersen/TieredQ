@@ -151,6 +151,10 @@ void batch_file_and_serialization_test(TieredQTierRows tier_rows) {
   auto loaded=TieredQNestedIVFIndex::deserialize(index.serialize());
   loaded.attach_tier(std::make_shared<TieredQFileRows>(path));
   require(loaded.tier_rows()==tier_rows,"deserialized tier layout differs");
+  // Storage counts the refinement and, for suffix-only tiers, the id -> document map beyond the IVF.
+  const size_t id_map=tier_rows==TieredQTierRows::suffix ? rows*sizeof(uint32_t) : 0;
+  require(index.storage_bytes()==index.index().storage_bytes()+index.refinement().memory_bytes(index.index().codec())+id_map &&
+          index.refinement().memory_bytes(index.index().codec())>0,"nested storage misses its refinement or id map");
   require(same(answers(loaded,probes),expected),"file-backed deserialized index differs");
   loaded.attach_tier(std::make_shared<TieredQFileRows>(path,TieredQFileReads::direct));
   require(same(answers(loaded,probes),expected),"direct-read file tier differs");

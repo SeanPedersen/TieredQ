@@ -219,6 +219,13 @@ void TieredQIVFIndex::build(const float* rows,size_t count) {
 }
 
 void TieredQIVFIndex::build(const RowLoader& rows,size_t count) {
+  encode_lists(rows,count);
+  // After encode_lists has freed its buffers: trimming inside it left them resident (#43: 37 MiB on VIBE arxiv at
+  // 2,048 lists).
+  tieredq_detail::release_freed_heap();
+}
+
+void TieredQIVFIndex::encode_lists(const RowLoader& rows,size_t count) {
   if (count>=padding_id) bad("index exceeds uint32 document ids");
   if (count && !rows) bad("null row loader");
   const TieredQ& model=codec();
@@ -281,7 +288,6 @@ void TieredQIVFIndex::build(const RowLoader& rows,size_t count) {
   const auto routing=std::chrono::steady_clock::now();
   refresh_router();
   build_stats_.router_s=seconds_since(routing);
-  tieredq_detail::release_freed_heap();
 }
 
 std::vector<uint32_t> TieredQIVFIndex::list_assignment() const {
@@ -322,8 +328,10 @@ size_t TieredQIVFIndex::stored_documents() const {
   return list_begin_.empty() ? 0 : list_begin_.back()+aligned(list_rows_.back());
 }
 
+// The codec counts too (its encoder state once built), as the router counts its members' codec: about 5 MB at
+// d = 768, which USS growth includes (#43).
 size_t TieredQIVFIndex::storage_bytes() const {
-  return documents_.storage_bytes()+(list_begin_.capacity()+list_rows_.capacity())*sizeof(uint32_t)+
+  return documents_.storage_bytes()+codec().memory_bytes()+(list_begin_.capacity()+list_rows_.capacity())*sizeof(uint32_t)+
       ids_.allocated_bytes()+(coarse_ ? coarse_->allocated_bytes() : 0)+router_bytes();
 }
 

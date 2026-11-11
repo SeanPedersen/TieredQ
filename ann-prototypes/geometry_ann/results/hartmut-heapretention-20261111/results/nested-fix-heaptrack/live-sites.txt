@@ -1,0 +1,10 @@
+4.13G leaked over 1 calls from	default_calloc
+146.09M leaked over 8 calls from	dv::TieredQIndex::reserve_rows(unsigned long)
+6.33M leaked over 44411 calls from	0x7f8a37c55902
+5.64M leaked over 2 calls from	dv::TieredQIVFIndex::id_documents() const
+5.41M leaked over 10 calls from	dv::TieredQ::build_encoder() const
+5.37M leaked over 7798 calls from	_PyObject_Malloc
+3.61M leaked over 42 calls from	std::vector<> dv::tieredq_detail::pack_panel_values<>(unsigned long, unsigned long, dv::tieredq_detail::CoarseQuantizer::from(std::vector<> const&, unsigned long, unsigned long)::{lambda(unsigned long, unsigned long)#1})
+2.23M leaked over 10 calls from	dv::tieredq_detail::EliasFanoLists::encode(std::vector<> const&, unsigned long)
+1.84M leaked over 91 calls from	dv::TieredQIVFIndex::document_rows(unsigned int const*, unsigned long, unsigned char*) const
+1.57M leaked over 80 calls from	std::vector<>::vector(unsigned long, std::allocator<> const&)

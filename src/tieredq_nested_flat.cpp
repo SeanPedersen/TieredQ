@@ -27,7 +27,7 @@ TieredQNestedIndex::TieredQNestedIndex(TieredQ prefix,TieredQRefinement refineme
     : nested_(nested_with_tier(std::move(prefix),std::move(refinement),rows,count,tier_rows)) {}
 
 size_t TieredQNestedIndex::storage_bytes() const {
-  return nested_.index().storage_bytes()+nested_.size()*nested_.tier_bytes_per_vector();
+  return nested_.storage_bytes()+nested_.size()*nested_.tier_bytes_per_vector();
 }
 
 std::vector<TieredQHit> TieredQNestedIndex::search(const float* query,size_t k,size_t candidates) const {

@@ -31,6 +31,8 @@ class TieredQRefinement {
   static TieredQRefinement train(const TieredQ& prefix, uint32_t total_code_bits, const float* sample, size_t rows,
                                  uint64_t seed = 0, bool fine_tiers = false, uint32_t max_tier_bits = 12);
   const TieredQ& prefix() const { return prefix_; }
+  // Allocated bytes, encoder state included once built, beyond the model arrays its prefix shares with prefix_owner.
+  size_t memory_bytes(const TieredQ& prefix_owner) const;
   // Widest combined prefix/suffix code; fine_tiers allows up to max_tier_bits (at most 12).
   uint32_t max_code_bits() const;
   size_t suffix_bits() const { return suffix_bits_; }
@@ -91,6 +93,7 @@ class TieredQRefinement {
   const tieredq_detail::RefinementEncoder& encoder() const;
   void fit_levels(const float* model_rows, size_t rows, const std::vector<uint8_t>& prefix_rows);
   // Centered projections of rows' centroid residuals: prefix ranks then extra ranks, positions() per row.
-  void project(const float* model_rows, size_t count, const uint8_t* prefix_rows, std::vector<float>& out) const;
+  void project(const float* model_rows, size_t count, const uint8_t* prefix_rows, std::vector<float>& out,
+               std::vector<float>& dots) const;
 };
 } // namespace dv

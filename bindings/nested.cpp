@@ -60,7 +60,7 @@ class PythonNestedIndex {
   size_t total_bits() const { return prefix_bits() + index_.refinement().suffix_bits(); }
   uint32_t max_refinement_bits() const { return index_.refinement().max_code_bits(); }
   size_t lists() const { return index_.index().lists(); }
-  size_t storage_bytes() const { return index_.index().storage_bytes(); }
+  size_t storage_bytes() const { return index_.storage_bytes(); }
   const char* tier_rows() const { return tier_rows_name(index_.tier_rows()); }
   size_t tier_bytes_per_vector() const { return index_.tier_bytes_per_vector(); }
   bool has_tier() const {
@@ -228,7 +228,8 @@ void bind_nested(nb::module_& module) {
       .def_prop_ro("max_refinement_bits", &PythonNestedIndex::max_refinement_bits, "Widest combined prefix/suffix code.")
       .def_prop_ro("lists", &PythonNestedIndex::lists)
       .def_prop_ro("has_router", &PythonNestedIndex::has_router)
-      .def_prop_ro("storage_bytes", &PythonNestedIndex::storage_bytes, "In-RAM IVF bytes, excluding the tier.")
+      .def_prop_ro("storage_bytes", &PythonNestedIndex::storage_bytes, "RAM the index holds: IVF, codec, refinement and id map; the tier\n"
+                   "is excluded.")
       .def_prop_ro("tier_rows", &PythonNestedIndex::tier_rows)
       .def_prop_ro("tier_bytes_per_vector", &PythonNestedIndex::tier_bytes_per_vector)
       .def_prop_ro("has_tier", &PythonNestedIndex::has_tier, nb::call_guard<nb::gil_scoped_release>())

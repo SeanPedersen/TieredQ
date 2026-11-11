@@ -151,7 +151,7 @@ void persistence_test(uint32_t lists) {
   const auto loaded=TieredQIVFIndex::load(path);
   std::filesystem::remove(path);
   same(run(loaded,probes,3),expected,"IVF file does not round-trip");
-  require(loaded.storage_bytes()>0 && loaded.size()==rows,"loaded IVF shape");
+  require(loaded.storage_bytes()>loaded.codec().memory_bytes() && loaded.size()==rows,"loaded IVF shape");
   TieredQIVFIndex empty(codec,lists);
   require(TieredQIVFIndex::deserialize(empty.serialize()).size()==0,"empty IVF does not round-trip");
 }

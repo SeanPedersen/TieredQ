@@ -159,6 +159,8 @@ class TieredQNestedIVFIndex {
   const TieredQRefinement& refinement() const { return refinement_; }
   TieredQTierRows tier_rows() const { return tier_rows_; }
   size_t size() const { return index_.size(); }
+  // RAM the index holds, the tier excepted: the IVF, the refinement and the id -> document map.
+  size_t storage_bytes() const;
   size_t tier_bytes_per_vector() const;
   // Tier rows of the input rows with ids [first, first + count) (rows: count x dimensions, as given to build), in id
   // order, for a row source.

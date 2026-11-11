@@ -474,6 +474,8 @@ class TieredQIVFIndex {
   void refresh_router();
   const float* model_rows(const float* rows, size_t first, size_t count, std::vector<float>& buffer) const;
   std::vector<uint32_t> coarse_lists(const RowLoader& rows, size_t count);
+  // build()'s work; build() returns freed heap once this has destroyed its buffers.
+  void encode_lists(const RowLoader& rows, size_t count);
   void write_lists(tieredq_detail::Writer& writer) const;
   template<class Reader> static TieredQIVFIndex read_lists(TieredQ model, Reader& reader);
   // Version 2 payloads store every padded document's id raw; build() wrote them ascending per list.

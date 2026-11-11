@@ -1,0 +1,5 @@
+{"step": "start", "uss_kib": 116.0, "heap_private_kib": 8, "anon_private_kib": 4, "arenas": 32, "arena_in_use_kib": 6668, "arena_free_kib": 3984, "main_arena": {"system_kib": 6592, "free_kib": 142, "in_use_kib": 6449}, "thread_arenas_in_use_kib": [9, 7, 7, 7, 7, 7]}
+{"step": "build", "uss_kib": 152260.0, "heap_private_kib": 780, "anon_private_kib": 151376, "arenas": 32, "arena_in_use_kib": 7273, "arena_free_kib": 4055, "main_arena": {"system_kib": 7268, "free_kib": 215, "in_use_kib": 7052}, "thread_arenas_in_use_kib": [9, 9, 7, 7, 7, 7]}
+{"step": "write_tier", "uss_kib": 155192.0, "heap_private_kib": 612, "anon_private_kib": 154456, "arenas": 32, "arena_in_use_kib": 7274, "arena_free_kib": 3926, "main_arena": {"system_kib": 7140, "free_kib": 86, "in_use_kib": 7053}, "thread_arenas_in_use_kib": [9, 9, 7, 7, 7, 7]}
+{"step": "second_trim", "uss_kib": 155192.0, "heap_private_kib": 612, "anon_private_kib": 154460, "arenas": 32, "arena_in_use_kib": 7275, "arena_free_kib": 3925, "main_arena": {"system_kib": 7140, "free_kib": 85, "in_use_kib": 7054}, "thread_arenas_in_use_kib": [9, 9, 7, 7, 7, 7]}
+storage_bytes 141181 KiB, lists 2048

@@ -245,7 +245,8 @@ Findings:
 - PCA concentrates centroid variance more than the data's (top 128 components: 75% vs 60%). TieredQ at 2 bits/dim
   with an exact re-rank of 256–512 leaves loses no recall. That matches or beats graph routing on latency, with no graph build.
 - TieredQ's default scan width for L2 (8 bits) sends single queries to the generic scan kernel, about 20× slower than the lookup kernel. This
-  is a finding for the library itself.
+  is a finding for the library itself. Checked in `results/hartmut-l2scancap-20261111`: for full L2 indexes a 4-bit cap is
+  1.7–3× faster but loses 0.012–0.10 recall@10 from 2 bits/dim (SIFT1M, Qwen 1M), so L2 keeps the 8-bit width.
 - The remaining routing cost depends on depth (pruning loosens as k grows), not on sorting. Lazy expansion addresses it.
 
 ## Experiment 3 outcome and conclusion (2026-11-10, closed in #44)

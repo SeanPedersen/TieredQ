@@ -236,6 +236,10 @@ TieredQNestedIVFIndex::TieredQNestedIVFIndex(TieredQIVFIndex index,TieredQRefine
   if (tier_rows_==TieredQTierRows::suffix) documents_=index_.id_documents();
 }
 
+size_t TieredQNestedIVFIndex::storage_bytes() const {
+  return index_.storage_bytes()+refinement_.memory_bytes(index_.codec())+documents_.capacity()*sizeof(uint32_t);
+}
+
 size_t TieredQNestedIVFIndex::tier_bytes_per_vector() const {
   const size_t prefix=tier_rows_==TieredQTierRows::prefix_and_suffix ? index_.codec().bytes_per_vector() : 0;
   return prefix+refinement_.bytes_per_vector();
