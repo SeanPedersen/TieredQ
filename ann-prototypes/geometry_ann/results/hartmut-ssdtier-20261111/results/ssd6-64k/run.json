@@ -1,0 +1,1 @@
+{"lists": 65536, "load_s": 5.24, "router_s": 6.21, "ivf_storage_bytes": 2911881072, "router_bytes": 179829640, "tiers": [], "ssd": {"total_bits": 6, "fine": 1, "file_bytes": 4499983003, "write_s": 131.77, "concurrent_reads": true}}
