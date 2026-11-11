@@ -1,0 +1,55 @@
+{
+  "dataset": "arxiv",
+  "index": "/home/sean/experiments/TieredQ-issue53-packedlists-20261111/indexes/arxiv-B.tq",
+  "storage_bytes": 241082740,
+  "points": [
+    {
+      "k": 10,
+      "nprobe": 8,
+      "batch_qps": 49079.27516866244,
+      "single_qps": 2996.0384320338717
+    },
+    {
+      "k": 10,
+      "nprobe": 16,
+      "batch_qps": 31350.27773637855,
+      "single_qps": 2236.89595616453
+    },
+    {
+      "k": 10,
+      "nprobe": 32,
+      "batch_qps": 18103.423441185794,
+      "single_qps": 1465.7613853613361
+    },
+    {
+      "k": 10,
+      "nprobe": 48,
+      "batch_qps": 12278.162614233004,
+      "single_qps": 1110.6210966113838
+    },
+    {
+      "k": 100,
+      "nprobe": 8,
+      "batch_qps": 42038.73909582538,
+      "single_qps": 2689.729594583985
+    },
+    {
+      "k": 100,
+      "nprobe": 16,
+      "batch_qps": 25474.234789085134,
+      "single_qps": 2021.745204522193
+    },
+    {
+      "k": 100,
+      "nprobe": 32,
+      "batch_qps": 14943.584220742254,
+      "single_qps": 1394.5923315633518
+    },
+    {
+      "k": 100,
+      "nprobe": 48,
+      "batch_qps": 12113.996144016564,
+      "single_qps": 1065.344932249221
+    }
+  ]
+}

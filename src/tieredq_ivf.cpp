@@ -26,11 +26,14 @@ using tieredq_detail::CoarseRouter;
 namespace {
 // Version 2 adds the coarse quantizer section; version 3 stores the ids as Elias-Fano lists instead of raw; version 4
 // adds the coarse space (written only for input-space coarse lists, so every other index stays readable as version 3);
-// version 5 always writes the coarse space and adds the router section (written only for indexes with a router).
-constexpr uint32_t raw_ids_payload_version=2,ivf_payload_version=3,coarse_space_payload_version=4,router_payload_version=5;
+// version 5 always writes the coarse space and adds the router section (written only for indexes with a router);
+// version 6 packs the lists back to back (#53) and makes the router section optional. Versions 2-5 start every list
+// on fast_list_alignment, padded with copies of its last row; indexes loaded from them keep that layout and version.
+constexpr uint32_t raw_ids_payload_version=2,ivf_payload_version=3,coarse_space_payload_version=4,router_payload_version=5,
+                   packed_payload_version=6;
 constexpr uint32_t padding_id=UINT32_MAX;
-// Scored documents per scan call at most; calls start on list starts or chunk multiples, both aligned, and chunk
-// multiples are whole lookup blocks.
+// Scored documents per scan call at most; calls start on aligned list heads or chunk multiples, and chunk multiples are
+// whole lookup blocks.
 constexpr size_t ivf_scan_chunk=1024;
 static_assert(ivf_scan_chunk%fast_list_alignment==0 && ivf_scan_chunk%selection_block==0);
 // Coarse training sample: at least the codec's sample size (and the training's rows per list).
@@ -54,6 +57,14 @@ double seconds_since(std::chrono::steady_clock::time_point start) {
 }
 
 size_t aligned(size_t documents) { return (documents+fast_list_alignment-1)/fast_list_alignment*fast_list_alignment; }
+size_t aligned_down(size_t document) { return document/fast_list_alignment*fast_list_alignment; }
+
+// Lists packed back to back (the version 6 layout), else the padded layout of versions 2-5.
+bool packed_lists(const std::vector<uint32_t>& list_begin,const std::vector<uint32_t>& list_rows) {
+  for (size_t list=1;list<list_begin.size();++list)
+    if (list_begin[list]!=list_begin[list-1]+list_rows[list-1]) return false;
+  return true;
+}
 
 // The nprobe nonempty lists with the highest closeness q.c - |c|^2/2 (nearest in model space); ties go to the lower
 // list id.
@@ -250,25 +261,23 @@ void TieredQIVFIndex::encode_lists(const RowLoader& rows,size_t count) {
   }
   std::vector<uint32_t> list_rows(lists,0),list_begin(lists,0);
   for (size_t row=0;row<count;++row) ++list_rows[list_of[row]];
-  size_t padded=0;
-  for (size_t list=0;list<lists;++list) { list_begin[list]=uint32_t(padded); padded+=aligned(list_rows[list]); }
-  if (padded>=padding_id) bad("index exceeds uint32 document ids");
-  // source[doc]: the row stored at doc; padding repeats its list's last row (valid codes for every kernel, never
-  // selected: scans stop at list_rows). Rows fill each list in input order, so every list's ids ascend.
-  std::vector<uint32_t> source(padded),filled(lists,0);
+  for (size_t list=1;list<lists;++list) list_begin[list]=list_begin[list-1]+list_rows[list-1];
+  const size_t stored=aligned(count);
+  if (stored>=padding_id) bad("index exceeds uint32 document ids");
+  // source[doc]: the row stored at doc. Lists are packed; the tail up to an aligned end repeats the last row (valid
+  // codes for every kernel, never selected: scans stop at list_rows). Rows fill each list in input order, so every
+  // list's ids ascend.
+  std::vector<uint32_t> source(stored),filled(lists,0);
   for (size_t row=0;row<count;++row) {
     const size_t list=list_of[row];
     source[list_begin[list]+filled[list]++]=uint32_t(row);
   }
-  for (size_t list=0;list<lists;++list) {
-    const size_t first=list_begin[list],live=list_rows[list];
-    for (size_t doc=first+live;live && doc<first+aligned(live);++doc) source[doc]=source[first+live-1];
-  }
+  std::fill(source.begin()+count,source.end(),count ? source[count-1] : 0);
   // Documents go to the fast storage a chunk at a time, so a build holds one chunk of codes besides it.
   TieredQIndex documents(model,TieredQIndexMode::fast);
   std::vector<uint8_t> chunk_codes;
-  for (size_t first=0;first<padded;first+=ivf_build_chunk) {
-    const size_t n=std::min(ivf_build_chunk,padded-first);
+  for (size_t first=0;first<stored;first+=ivf_build_chunk) {
+    const size_t n=std::min(ivf_build_chunk,stored-first);
     if (coarse_lists_) {
       chunk_rows.resize(product(n,d));
       rows(source.data()+first,n,chunk_rows.data());
@@ -279,7 +288,7 @@ void TieredQIVFIndex::encode_lists(const RowLoader& rows,size_t count) {
       for (size_t i=0;i<n;++i) std::copy_n(encoded.data()+size_t(source[first+i])*stride,stride,chunk_codes.data()+i*stride);
     }
     documents.add_encoded(chunk_codes.data(),n);
-    if (!first) documents.reserve_rows(padded);
+    if (!first) documents.reserve_rows(stored);
   }
   documents_=std::move(documents);
   ids_=tieredq_detail::EliasFanoLists::encode(list_of,lists);
@@ -325,7 +334,7 @@ std::vector<uint32_t> TieredQIVFIndex::hit_rows(const std::vector<TieredQHit>& h
 }
 
 size_t TieredQIVFIndex::stored_documents() const {
-  return list_begin_.empty() ? 0 : list_begin_.back()+aligned(list_rows_.back());
+  return list_begin_.empty() ? 0 : aligned(list_begin_.back()+list_rows_.back());
 }
 
 // The codec counts too (its encoder state once built), as the router counts its members' codec: about 5 MB at
@@ -472,12 +481,14 @@ void TieredQIVFIndex::search_rows(const float* queries,const TieredQQuery* weigh
         // Lists in probe order, nearest first, so the running top-k threshold tightens early for pruned scans.
         auto scan_lists=[&](auto score) {
           for (const uint32_t list:probed) {
-            const size_t first=list_begin_[list],live=list_rows_[list];
-            // Chunks end on absolute chunk boundaries, so block kernels never rescan a block across calls.
-            for (size_t doc=first,end=first+live;doc<end;) {
+            const size_t first=list_begin_[list],end=first+list_rows_[list];
+            if (first==end) continue;
+            // Kernels take aligned starts: a packed list's first chunk also scores the previous list's tail, which
+            // top-k skips. Chunks end on absolute chunk boundaries, so block kernels never rescan a block across calls.
+            for (size_t doc=aligned_down(first);doc<end;) {
               const size_t documents=std::min(end,(doc/ivf_scan_chunk+1)*ivf_scan_chunk)-doc;
               score(doc,documents,chunk.data(),top.threshold());
-              for (size_t block=0;block<documents;block+=selection_block)
+              for (size_t block=first>doc ? first-doc : 0;block<documents;block+=selection_block)
                 top.add(chunk.data()+block,std::min(selection_block,documents-block),doc+block);
               doc+=documents;
             }
@@ -533,10 +544,10 @@ void TieredQIVFIndex::search_rows(const float* queries,const TieredQQuery* weigh
 // Elias-Fano id words, fast payload (with the fine rows of fine-tier models). An unbuilt coarse index has no centroids
 // yet.
 // Version 5 adds, after the ids, the router config flag (+ config) and router flag (+ length and the member index's
-// bytes).
+// bytes); version 6 has the same sections with packed list offsets, and its router config flag may be 0.
 void TieredQIVFIndex::write_lists(tieredq_detail::Writer& writer) const {
-  const uint32_t version=router_config_ ? router_payload_version :
-      input_space_coarse_ ? coarse_space_payload_version : ivf_payload_version;
+  const uint32_t version=packed_lists(list_begin_,list_rows_) ? packed_payload_version :
+      router_config_ ? router_payload_version : input_space_coarse_ ? coarse_space_payload_version : ivf_payload_version;
   writer.u32(version);
   writer.u32(uint32_t(lists()));writer.u32(coarse_lists_ ? 1 : 0);
   if (coarse_lists_) {
@@ -548,8 +559,9 @@ void TieredQIVFIndex::write_lists(tieredq_detail::Writer& writer) const {
   for (size_t list=0;list<lists();++list) { writer.u32(list_begin_[list]);writer.u32(list_rows_[list]); }
   writer.u64(ids_.words().size());
   for (uint64_t word:ids_.words()) writer.u64(word);
-  if (version!=router_payload_version) return;
-  writer.u32(1);
+  if (version<router_payload_version) return;
+  writer.u32(router_config_ ? 1 : 0);
+  if (!router_config_) return;
   CoarseRouter::write_config(writer,*router_config_);
   writer.u32(router_ ? 1 : 0);
   if (!router_) return;
@@ -573,7 +585,7 @@ std::vector<uint8_t> TieredQIVFIndex::serialize() const {
 template<class Reader>
 TieredQIVFIndex TieredQIVFIndex::read_lists(TieredQ model,Reader& reader) {
   const uint32_t version=reader.u32();
-  if (version<raw_ids_payload_version || version>router_payload_version) bad("unsupported IVF payload version");
+  if (version<raw_ids_payload_version || version>packed_payload_version) bad("unsupported IVF payload version");
   const uint32_t lists=reader.u32(),coarse=reader.u32();
   if (coarse>1 || (!coarse && lists!=model.config().num_centroids) || !lists) bad("invalid IVF list count");
   if (version==router_payload_version && !coarse) bad("IVF router needs coarse lists");
@@ -594,14 +606,16 @@ TieredQIVFIndex TieredQIVFIndex::read_lists(TieredQ model,Reader& reader) {
     index.fixed_lists_=true;
   }
   index.size_=size_t(reader.u64());
-  size_t padded=0,live=0;
+  const bool packed=version==packed_payload_version;
+  size_t begin=0,live=0;
   for (size_t list=0;list<lists;++list) {
     index.list_begin_[list]=reader.u32();index.list_rows_[list]=reader.u32();
-    if (index.list_begin_[list]!=padded) bad("invalid IVF list offsets");
-    padded+=aligned(index.list_rows_[list]);live+=index.list_rows_[list];
+    if (index.list_begin_[list]!=begin) bad("invalid IVF list offsets");
+    begin+=packed ? index.list_rows_[list] : aligned(index.list_rows_[list]);live+=index.list_rows_[list];
   }
   if (live!=index.size_) bad("invalid IVF list sizes");
-  if (version==raw_ids_payload_version) index.read_raw_ids(reader,padded);
+  const size_t stored=packed ? aligned(live) : begin;
+  if (version==raw_ids_payload_version) index.read_raw_ids(reader,stored);
   else {
     const uint64_t words=reader.u64();
     if (words>reader.remaining()/sizeof(uint64_t)) bad("truncated IVF ids");
@@ -609,14 +623,18 @@ TieredQIVFIndex TieredQIVFIndex::read_lists(TieredQ model,Reader& reader) {
     for (auto& word:stream) word=reader.u64();
     index.ids_=tieredq_detail::EliasFanoLists::decode(index.list_rows_,std::move(stream));
   }
-  if (version==router_payload_version) index.read_router(reader);
-  index.documents_.read_fast_payload(reader,padded);
+  if (version>=router_payload_version) {
+    const uint32_t configured=reader.u32();
+    if (configured>1 || (version==router_payload_version && !configured) || (configured && !coarse))
+      bad("invalid IVF router section");
+    if (configured) index.read_router(reader);
+  }
+  index.documents_.read_fast_payload(reader,stored);
   return index;
 }
 
 template<class Reader>
 void TieredQIVFIndex::read_router(Reader& reader) {
-  if (reader.u32()!=1) bad("invalid IVF router section");
   router_config_=std::make_shared<const TieredQRouterConfig>(CoarseRouter::read_config(reader));
   const uint32_t built=reader.u32();
   if (built>1 || (built && (!coarse_ || !size_))) bad("invalid IVF router flag");

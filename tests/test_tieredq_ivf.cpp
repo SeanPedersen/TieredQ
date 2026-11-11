@@ -1,10 +1,11 @@
 // IVF over the codec's centroids or a coarse quantizer (beyond the codec's 256-centroid limit): a full probe returns
 // the flat fast index's hits bit for bit in every fast layout and metric, partial probes stay inside the probed
 // lists, unfilled slots are marked, and both persistence paths round-trip. Ids are Elias-Fano lists; version 2 files
-// with raw ids still load.
+// with raw ids still load. Lists are packed (version 6); padded lists of earlier versions load and keep their hits.
 #include "tieredq/tieredq.h"
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -261,6 +262,53 @@ void l2_v3_file_test() {
     for (const auto& hit:again.search(fixture_probes.data()+q*fixture_dimensions,fixture_k,fixture_nprobe)) reloaded.push_back(hit.id);
   require(reloaded==expected,"resaved L2 version 3 index changed its hits");
 }
+// Indexes saved with padded lists (payload versions 4 and 5, tests/fixtures/tieredq_ivf_padded.md) load and return
+// the ids they returned. Rebuilt in place from the same rows, their lists stay fixed, so the packed rebuild (#53) has
+// the same partition and codes: it returns the same ids and scores, stores fewer documents, saves as version 6 and
+// round-trips.
+// The IVF payload version: after the model's length (u64) and bytes.
+uint32_t payload_version(const std::vector<uint8_t>& bytes) {
+  uint64_t model=0; uint32_t version=0;
+  std::memcpy(&model,bytes.data(),sizeof(model));
+  std::memcpy(&version,bytes.data()+sizeof(model)+model,sizeof(version));
+  return version;
+}
+void padded_fixture_test() {
+  constexpr uint32_t packed_version=6;
+  const auto fixtures=std::filesystem::path(__FILE__).parent_path()/"fixtures";
+  constexpr size_t fixture_rows=1200,fixture_dimensions=32,fixture_queries=16,fixture_k=10,fixture_nprobe=6;
+  auto read=[&](const std::string& name,auto& out) {
+    std::ifstream in(fixtures/name,std::ios::binary);
+    in.read(reinterpret_cast<char*>(out.data()),std::streamsize(out.size()*sizeof(out[0])));
+    require(bool(in),"short padded IVF fixture");
+  };
+  std::vector<float> data(fixture_rows*fixture_dimensions),probes(fixture_queries*fixture_dimensions);
+  read("tieredq_ivf_padded.rows",data); read("tieredq_ivf_padded.queries",probes);
+  auto search=[&](const TieredQIVFIndex& index) {
+    Results out{std::vector<float>(fixture_queries*fixture_k),std::vector<uint32_t>(fixture_queries*fixture_k)};
+    index.search_batch(probes.data(),fixture_queries,fixture_k,fixture_nprobe,out.scores.data(),out.ids.data());
+    return out;
+  };
+  for (const std::string name:{"ip2","l2x6"}) {
+    const auto loaded=TieredQIVFIndex::load((fixtures/("tieredq_ivf_padded_"+name+".tq")).string());
+    std::vector<uint32_t> expected(fixture_queries*fixture_k); read("tieredq_ivf_padded_"+name+".ids",expected);
+    const auto padded=search(loaded);
+    require(padded.ids==expected,"padded IVF fixture changed its hits");
+    require(TieredQIVFIndex::deserialize(loaded.serialize()).serialize()==loaded.serialize(),"padded IVF does not resave as is");
+    auto packed=loaded;
+    packed.build(data.data(),fixture_rows);
+    require(packed.list_assignment()==loaded.list_assignment(),"rebuild moved rows between lists");
+    same(search(packed),padded,"packed lists change ids or scores");
+    const auto bytes=packed.serialize();
+    require(payload_version(bytes)==packed_version && payload_version(loaded.serialize())<packed_version,
+            "packed lists do not save as version 6");
+    const auto reloaded=TieredQIVFIndex::deserialize(bytes);
+    same(search(reloaded),padded,"packed IVF does not round-trip");
+    // Both loaded, so neither holds the encoder state a build leaves in its codecs (storage_bytes counts it).
+    require(reloaded.storage_bytes()<loaded.storage_bytes(),"packed lists do not shrink the storage");
+    require(bytes.size()<loaded.serialize().size(),"packed lists do not shrink the payload");
+  }
+}
 // set_lists fixes the partition to given centroids: every row lands in its nearest given centroid's list (L2: input
 // distance; inner product: q.c - |c|^2/2, as list ranking), builds keep those lists, and bad input is rejected.
 void set_lists_test(TieredQMetric metric) {
@@ -401,6 +449,7 @@ void tieredq_ivf_tests() {
   l2_input_space_test();
   for (auto metric:{TieredQMetric::inner_product,TieredQMetric::l2}) set_lists_test(metric);
   l2_v3_file_test();
+  padded_fixture_test();
   for (auto metric:{TieredQMetric::inner_product,TieredQMetric::l2}) for (uint32_t lists:{0u,20u}) for (size_t count:{size_t(rows),size_t(20000)})
     loader_build_test(metric,lists,count);
   std::cout<<"PASS IVF\n";

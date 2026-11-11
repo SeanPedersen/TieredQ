@@ -217,8 +217,7 @@ void bind_ivf(nb::module_& module) {
       .def_prop_ro("metric", &PythonIVFIndex::metric)
       .def_prop_ro("lists", &PythonIVFIndex::lists, nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro("storage_bytes", &PythonIVFIndex::storage_bytes,
-                   "Fast representation (including list padding), codec, coarse centroids, router, list offsets and the id\n"
-                   "map.",
+                   "Fast representation, codec, coarse centroids, router, list offsets and the id map.",
                    nb::call_guard<nb::gil_scoped_release>())
       .def("train_lists", &PythonIVFIndex::train_lists, "sample"_a.noconvert(),
            "Trains the codec (if untrained) and the coarse lists on sample, so later builds keep this partition.",

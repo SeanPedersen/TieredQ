@@ -488,7 +488,7 @@ class TieredQIVFIndex {
   std::vector<uint32_t> hit_rows(const std::vector<TieredQHit>& hits) const;
   size_t stored_documents() const;
   TieredQIndex documents_;
-  std::vector<uint32_t> list_begin_, list_rows_; // first padded document and live rows per list
+  std::vector<uint32_t> list_begin_, list_rows_; // first document and live rows per list (packed, or padded on load)
   tieredq_detail::EliasFanoLists ids_;           // input rows of every list, ascending
   size_t size_ = 0;
   uint32_t coarse_lists_ = 0;                    // 0: lists are the codec's centroids

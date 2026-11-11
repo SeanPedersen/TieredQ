@@ -1,7 +1,7 @@
 // Two-level coarse router of TieredQIVFIndex (#47): probing every super with a head as large as the lists re-ranks
 // every list exactly, so router searches equal exact-ranking searches bit for bit; the automatic probe count keeps
 // recall; automatic batches route like single queries; the router is rebuilt with the
-// lists, persists in payload version 5 through both paths, and is rejected where it cannot apply.
+// lists, persists in payload version 6 through both paths, and is rejected where it cannot apply.
 #include "tieredq/tieredq.h"
 #include <algorithm>
 #include <cmath>

@@ -278,12 +278,15 @@ auto hits = index.search(query, /*k=*/10, /*nprobe=*/16);
 auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*prefix_tiers=*/4});
 ```
 
-- **Memory.** `build()` and `write_tier()` return freed heap to the OS after their buffers are gone. Encoding workers
-  use buffers that the calling thread allocates, because glibc never trims a worker arena's free top (#43, #41).
-  `storage_bytes()` counts the codes, the codec (with its encoder state once built), the coarse centroids, the router,
-  the list offsets and the ids. `TieredQNestedIVFIndex::storage_bytes()` adds the refinement and the id → document
-  map. On VIBE arxiv (k = 100) the nested default's USS growth fell from 0.241 to 0.178 GiB
-  ([study](ann-prototypes/geometry_ann/results/hartmut-nestedram-20261111/README.md),
+- **Layout and memory.** Lists are packed back to back (payload version 6, #53). A scan starts each list on the
+  32-document boundary at or below its first row and skips the previous list's rows there, so no list is padded. Files
+  of versions 2-5, where each list was padded to 32 documents with copies of its last row, still load, and they keep
+  that layout and version when saved again. `build()` and `write_tier()` return freed heap to the OS after their
+  buffers are gone. Encoding workers use buffers that the calling thread allocates, because glibc never trims a worker
+  arena's free top (#43, #41). `storage_bytes()` counts the codes, the codec (with its encoder state once built), the
+  coarse centroids, the router, the list offsets and the ids. `TieredQNestedIVFIndex::storage_bytes()` adds the
+  refinement and the id → document map. On VIBE arxiv (k = 100) the nested default's USS growth fell from 0.241 to
+  0.178 GiB ([study](ann-prototypes/geometry_ann/results/hartmut-nestedram-20261111/README.md),
   [heap attribution](ann-prototypes/geometry_ann/results/hartmut-heapretention-20261111/README.md)).
 - **Many lists (64K+).** `set_lists(centroids)` fixes the lists to a partition trained elsewhere.
   `build(RowLoader, count)` pulls rows by id in bounded chunks, so a base held as SQ8 codes needs no fp32 copy.
@@ -304,7 +307,8 @@ auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*p
   at 64K lists without recall above 0.945). The probed supers grow with `nprobe`.
   Batches route too: at 64K lists, 32-thread batches through the router reached 1.4× the QPS of the exact GEMM ranking.
   `TieredQRouting{mode, super_probes}` forces either path
-  or the number of probed supers per search. The router persists with the index (payload version 5).
+  or the number of probed supers per search. The router persists with the index (payload version 6, or 5 for an index
+  loaded with padded lists).
 
   ```cpp
   dv::TieredQIVFIndex index(codec, /*lists=*/65536);  // trains fast ({4, 256, 16, 40}) and routes by default

@@ -1,0 +1,26 @@
+[  4%] Built target test_training_rng
+[ 35%] Built target dv_tieredq
+[ 40%] Built target tieredq_fast_scan_benchmark
+[ 45%] Built target tieredq_scan_benchmark
+[ 50%] Built target tieredq_example
+[ 52%] Building CXX object CMakeFiles/test_tieredq.dir/tests/test_tieredq_ivf.cpp.o
+[ 54%] Linking CXX executable test_tieredq
+[100%] Built target test_tieredq
+Test project /home/sean/experiments/tieredq-tests/build
+    Start 1: tieredq
+1/2 Test #1: tieredq ..........................   Passed   57.37 sec
+    Start 2: training_rng
+2/2 Test #2: training_rng .....................   Passed    0.01 sec
+
+100% tests passed out of 2
+
+Total Test time (real) =  57.39 sec
+   Building tieredq @ file:///home/sean/experiments/tieredq-tests
+      Built tieredq @ file:///home/sean/experiments/tieredq-tests
+Uninstalled 1 package in 2ms
+Installed 1 package in 20ms
+........................................................................ [ 32%]
+........................................................................ [ 65%]
+........................................................................ [ 98%]
+....                                                                     [100%]
+220 passed in 37.63s
