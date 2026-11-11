@@ -149,11 +149,12 @@ class TieredQNestedIVFIndex {
   // partition learned on earlier data stays fixed). No tier is attached yet: write_tier() or encode_tier() it.
   static TieredQNestedIVFIndex build(const TieredQNestedConfig& config, const TieredQIVFIndex::RowLoader& rows,
                                      size_t count, const float* sample = nullptr, size_t sample_rows = 0);
-  // Candidates a search rescores when none are given: 40 for k <= 10, 4k beyond. With the 1-bit prefix and the 8-bit
+  // Candidates a search rescores when none are given: 40 up to k = 20, 2k beyond. With the 1-bit prefix and the 8-bit
   // tier on SSD, 20 candidates lost about 0.005 recall@10 against 30-40, and 40 kept 0.0008 over 30 from nprobe 1024;
-  // each 10 more reads cost about 0.12 ms (the 2-bit prefix was flat from 20).
+  // each 10 more reads cost about 0.12 ms (the 2-bit prefix was flat from 20). On VIBE arxiv at k = 100, 200
+  // candidates came within 0.001 of 400 at 1.5-2.6x the QPS, and 100 capped recall@100 near 0.905.
   static constexpr size_t default_candidates = 40;
-  static size_t candidates_for(size_t k) { return std::max(default_candidates, 4 * k); }
+  static size_t candidates_for(size_t k) { return std::max(default_candidates, 2 * k); }
   const TieredQIVFIndex& index() const { return index_; }
   const TieredQRefinement& refinement() const { return refinement_; }
   TieredQTierRows tier_rows() const { return tier_rows_; }

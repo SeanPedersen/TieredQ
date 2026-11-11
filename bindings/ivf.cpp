@@ -199,8 +199,8 @@ void bind_ivf(nb::module_& module) {
       }, "dimensions"_a, "code_bits"_a, nb::kw_only(), "lists"_a = nb::none(), "metric"_a = "ip", "fine_tiers"_a = false,
            "exact_fast_scores"_a = false, "max_scan_bits"_a = 0, "coarse_training"_a = nb::none(),
            "router"_a = nb::none(),
-           "lists None (default) picks the count from the first build's rows (4K at 1M rows, 64K at 8.84M; one\n"
-           "list per codec centroid below about 93K rows); lists 0 makes one list per codec centroid at no extra\n"
+           "lists None (default) picks the count from the first build's rows (2K at 1M rows, 64K at 8.84M; one\n"
+           "list per codec centroid below about 143K rows); lists 0 makes one list per codec centroid at no extra\n"
            "storage; otherwise a coarse quantizer with that many lists is trained, by default as TieredQCoarseTraining.automatic(lists) (fast from 8,192 lists),\n"
            "and from TieredQRouterConfig.automatic_lists lists on with the two-level router: coarse_training and\n"
            "router (True, False or a TieredQRouterConfig) override them. metric is 'ip', 'cosine' or 'l2' (scores\n"

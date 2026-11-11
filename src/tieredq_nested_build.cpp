@@ -2,6 +2,7 @@
 // lists through a row loader, so a base held as an SQ8 store (sq8_row_loader) needs no float copy; write_tier()
 // streams the tier rows into a row file the same way.
 #include "tieredq/tieredq_nested.h"
+#include "tieredq_heap.h"
 #include "tieredq_io.h"
 #include "training_rng.h"
 #include <algorithm>
@@ -115,5 +116,8 @@ void TieredQNestedIVFIndex::write_tier(const std::string& path,const TieredQIVFI
     writer.append(encoded.data(),n);
   }
   writer.finish();
+  // The parallel tier encoding left about 2.3 MiB idle in each build thread's malloc arena (VIBE arxiv, 32 threads:
+  // +81 MiB resident after the write).
+  tieredq_detail::release_freed_heap();
 }
 } // namespace dv

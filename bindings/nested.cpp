@@ -214,7 +214,7 @@ void bind_nested(nb::module_& module) {
          "sample, else of the vectors, then indexes the vectors. Vectors are float32 rows, an SQ8 store (codes=\n"
          "int8 rows x dimensions, e.g. a numpy memmap, with float32 scales= and offsets=: vector = codes * scales\n"
          "+ offsets, decoded a chunk at a time) or loader=(ids -> float32 rows) with count= and dimensions=.\n"
-         "The defaults are the low-RAM configuration: lists None picks 4K at 1M rows, 64K at 8.84M (see automatic_lists; 0 keeps one\n"
+         "The defaults are the low-RAM configuration: lists None picks 2K at 1M rows, 64K at 8.84M (see automatic_lists; 0 keeps one\n"
          "list per codec centroid), many lists train fast and get the router (coarse_training and router: True,\n"
          "False or a TieredQRouterConfig override them), and the 8-bit fine-tier suffix ('suffix' tier_rows) is\n"
          "meant for an SSD. max_scan_bits 0 caps prefix scans at 4 bits up to 2 bits per dimension. A given sample\n"
@@ -300,7 +300,7 @@ void bind_nested(nb::module_& module) {
         return released([&] { return self.search(queries, k, nprobe, candidates, pruning); });
       }, "queries"_a.noconvert(), "k"_a = 10, nb::kw_only(), "nprobe"_a, "candidates"_a = nb::none(),
          "pruning"_a = nb::none(),
-         "The IVF's top candidates (>= k; default 40, or 4k beyond k = 10) over nprobe lists, rescored with their\n"
+         "The IVF's top candidates (>= k; default 40, or 2k beyond k = 20) over nprobe lists, rescored with their\n"
          "tier rows; slots past the probed rows hold id 2**32 - 1 and score -inf.")
       .def("candidates", [](const PythonNestedIndex& self, FloatArray queries, size_t k, size_t nprobe,
                             Pruning pruning) {

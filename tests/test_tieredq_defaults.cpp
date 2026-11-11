@@ -49,8 +49,9 @@ bool equal(const std::vector<TieredQHit>& a,const std::vector<TieredQHit>& b) {
 
 void automatic_lists_test() {
   require(TieredQIVFIndex::automatic_lists(30000)==0,"small sets keep the codec's lists");
-  require(TieredQIVFIndex::automatic_lists(200000)==1024,"200K rows get 1K lists");
-  require(TieredQIVFIndex::automatic_lists(1000000)==4096,"1M rows get 4K lists");
+  require(TieredQIVFIndex::automatic_lists(200000)==256,"200K rows get 256 lists");
+  require(TieredQIVFIndex::automatic_lists(1000000)==2048,"1M rows get 2K lists");
+  require(TieredQIVFIndex::automatic_lists(1344643)==2048,"1.34M rows get 2K lists");
   require(TieredQIVFIndex::automatic_lists(8840823)==65536,"8.84M rows get 64K lists");
 }
 
@@ -175,7 +176,8 @@ void nested_build_test(const std::filesystem::path& dir) {
     require(defaulted.size()==given.size(),"default candidates are not 40");
     for (size_t i=0;i<given.size();++i) require(defaulted[i].id==given[i].id && defaulted[i].score==given[i].score,"default candidates are not 40");
   }
-  require(TieredQNestedIVFIndex::candidates_for(50)==200,"k above 10 does not rescore 4k candidates");
+  require(TieredQNestedIVFIndex::candidates_for(20)==40,"k up to 20 does not rescore 40 candidates");
+  require(TieredQNestedIVFIndex::candidates_for(100)==200,"k above 20 does not rescore 2k candidates");
   const auto round_trip=TieredQNestedIVFIndex::deserialize(index.serialize());
   require(round_trip.serialize()==index.serialize() && round_trip.tier_rows()==TieredQTierRows::suffix,"a default nested index does not round-trip");
 }

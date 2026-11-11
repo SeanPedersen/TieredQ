@@ -1,0 +1,10 @@
+tieredq-ivf {'bits_per_dim': 1.75, 'lists': None}: built in 50.7s, 0.304 GB, {'lists': 4096, 'has_router': False, 'storage_bytes': 253902076, 'live_rows': 1344643, 'padding_rows': 62909, 'empty_lists': 0, 'memory_before_kib': {'Anonymous': 4056860, 'AnonHugePages': 0, 'RssAnon': 4056860}, 'memory_after_kib': {'Anonymous': 4369484, 'AnonHugePages': 0, 'RssAnon': 4369492}, 'mapping_growth_kib': {'anon@7f1741d1c000': 232336, '[heap]': 53380, 'anon@7f1862000000': 20700, 'anon@7f19657c0000': 4564, '/usr/lib/libopenblas.so.0.3': 3820, 'anon@7f1800000000': 3288, '/home/sean/experiments/TieredQ-issue41-arxivdefaults-20261111/source/tieredq/.venv/lib/python3.13/site-packages/tieredq/_core.cpython-313-x86_64-linux-gnu.so': 1660, 'other': 3084}, 'k': 10}
+  query=16: recall=0.9003 qps=1961 qps/GB=6447
+  query=24: recall=0.9198 qps=1715 qps/GB=5636
+  query=32: recall=0.9301 qps=1535 qps/GB=5044
+  query=48: recall=0.9393 qps=1263 qps/GB=4150
+  query=64: recall=0.9446 qps=1053 qps/GB=3460
+  query=96: recall=0.9513 qps=826 qps/GB=2716
+  query=128: recall=0.9526 qps=677 qps/GB=2226
+  query=160: recall=0.9539 qps=575 qps/GB=1891
+  query=192: recall=0.9552 qps=498 qps/GB=1638

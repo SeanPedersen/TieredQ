@@ -395,8 +395,10 @@ class TieredQIVFIndex {
   // set_coarse_training(), build_router() and remove_router() override either.
   explicit TieredQIVFIndex(TieredQ codec, uint32_t lists = 0, uint64_t seed = 0);
   // List count for rows vectors: the power of two nearest rows / r, or 0 (codec lists) where that is at most the
-  // codec's 256 centroids. r falls log-linearly from 256 rows per list at 1M rows to 135 at 8.84M (held outside), the
-  // best measured counts on Qwen x 1024 (#52): 4K lists at 1M (ahead of 8K, 16K and 32K, router or not) and 64K at 8.84M.
+  // codec's 256 centroids. r falls log-linearly from 560 rows per list at 1M rows to 135 at 8.84M (held outside),
+  // which gives the best measured counts: 2K lists on Qwen 1M x 1024 (10-15% lower p50 than 4K from recall@10 0.95 to
+  // 0.975, two seeds; 4K beat 8K-32K) and on VIBE arxiv 1.34M x 768 (26-32% more QPS/GB than 4K at k = 100, 14-20% more
+  // QPS at k = 10), and 64K at 8.84M (#52). Codec lists below about 143K rows.
   static uint32_t automatic_lists(size_t rows);
   // Scan cap for an IVF codec trained with config (its max_scan_bits when set): 4 at up to 2 bits per dimension for
   // fast targets without fine tiers, where every tier then scans on the nibble kernels (1.7x RaBitQ's IVF QPS at equal

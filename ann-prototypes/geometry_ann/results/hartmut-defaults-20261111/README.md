@@ -18,7 +18,7 @@ restricted assignment, 40 rows/list.
 
 Decisions: router and fast training from 8,192 lists. From 8K lists up, the router matched recall and was faster, and
 fast training stayed within 0.002 from recall 0.93. At 4K the router was slower and fast training lost up to 0.008.
-4K lists gave the best curve at 1M, so the automatic list count uses 256 rows/list at 1M, falling log-linearly to 135
+4K lists gave the best curve at 1M, so the automatic list count uses 256 rows/list at 1M, falling log-linearly to 135 (superseded: 2K beat 4K at 1M in `../hartmut-qwen1mlists-20261111`, so the rule now uses 560 rows/list at 1M)
 at 8.84M.
 
 ## onebit-64k: 1-bit prefix, 64K lists, all 8.84M rows, 8-bit tier on NVMe (direct, 32 in flight)

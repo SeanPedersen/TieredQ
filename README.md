@@ -165,11 +165,11 @@ What the defaults pick (each is a keyword of `build`):
 | Setting | Default | Notes |
 | --- | --- | --- |
 | `prefix_bits` | 1 per dimension | in RAM; `max_scan_bits=0` caps its scan at 4 bits (nibble kernels) up to 2 bits/dim |
-| `lists` | `None`: automatic | 4K at 1M rows, 64K at 8.84M (`TieredQIVFIndex::automatic_lists`); `0` keeps one list per codec centroid |
+| `lists` | `None`: automatic | 2K at 1M rows, 64K at 8.84M (`TieredQIVFIndex::automatic_lists`); `0` keeps one list per codec centroid |
 | `coarse_training` | `None`: automatic | from 8,192 lists: 4 Lloyd iterations on 40 rows/list, 256 × 16 restricted assignment |
 | `router` | `None`: automatic | the two-level router from 8,192 lists; `True`, `False` or a `TieredQRouterConfig` |
 | `total_bits` | 8 per dimension | the tier: `fine_tiers=True` (up to `max_tier_bits=12`), `tier_rows="suffix"` |
-| `candidates` (search) | 40 | `max(40, 4k)`; the 1-bit prefix lost about 0.005 recall@10 at 20 reads |
+| `candidates` (search) | 40 | `max(40, 2k)`; the 1-bit prefix lost about 0.005 recall@10 at 20 reads; at k = 100, 200 matched 400 |
 
 Measured on 8.84M × 1024 (one pinned core, tier on NVMe with direct reads, 40 candidates): 2.03 GB anonymous RSS,
 about 290 s to build on 32 threads, recall@10 0.944 / 0.951 / 0.963 / 0.968 / 0.977 / 0.984 / 0.991 at 2.2 / 2.4 /
@@ -188,8 +188,8 @@ more than RAM, keep a 6-bit tier in RAM and add `attach_exact` over SQ8 rows on 
 - `TieredQIVFIndex(dimensions, code_bits, *, lists=None, metric="ip", fine_tiers=False, max_scan_bits=0,
   coarse_training=None, router=None)` always uses fast storage. `build(rows)` (or `build(codes=, scales=, offsets=)`,
   or `build(loader=, count=)`) replaces its vectors; only the first `build` or `train_lists(sample)` trains the codec.
-  `lists=None` picks the count from the first build's rows as the nested index does (4K at 1M, 64K at 8.84M; one list
-  per codec centroid below about 93K rows); `lists=0` always keeps the codec's centroids. Call `train_lists` (with an
+  `lists=None` picks the count from the first build's rows as the nested index does (2K at 1M, 64K at 8.84M; one list
+  per codec centroid below about 143K rows); `lists=0` always keeps the codec's centroids. Call `train_lists` (with an
   explicit `lists`) before `build` to fix the partition on a separate sample. From 8,192 lists the index trains
   them fast and builds the router unless `coarse_training` or `router` say otherwise (see Many lists below).
   `max_scan_bits=0` caps the scan at 4 bits up to 2 bits/dim (without fine tiers), as the bit-cap note below measures.
@@ -213,7 +213,7 @@ more than RAM, keep a 6-bit tier in RAM and add `attach_exact` over SQ8 rows on 
 - `index.attach_exact(codes_or_path, scales, offsets, finals=16)` adds the exact SQ8 final stage (int8 codes in RAM,
   or a `TieredQNestedIVFIndex.write_sq8_rows(path, codes)` file with `reads="direct", queue_depth=32` on SSD);
   `detach_exact()` removes it.
-- IVF searches require keyword `nprobe`; nested searches take `candidates >= k` (default `max(40, 4k)`). Results use
+- IVF searches require keyword `nprobe`; nested searches take `candidates >= k` (default `max(40, 2k)`). Results use
   `2**32 - 1` ids and `-inf` scores for slots beyond the rows in the probed lists.
 - File tiers default to `reads="cached"`, with 1 read in flight (32 with `reads="direct"`). Concurrent reads at
   larger queue depths require a build with liburing; otherwise reads stay serial.

@@ -43,7 +43,7 @@ constexpr TieredQCoarseTraining fast_coarse_training{4,256,16,40};
 constexpr size_t codec_list_limit=256;
 // automatic_scan_bits(): codes of up to nibble_bits_per_dimension scan at most nibble_scan_bits per coordinate.
 constexpr uint32_t nibble_bits_per_dimension=2,nibble_scan_bits=4;
-constexpr double small_scale_rows=1e6,large_scale_rows=8840823,small_rows_per_list=256,large_rows_per_list=135;
+constexpr double small_scale_rows=1e6,large_scale_rows=8840823,small_rows_per_list=560,large_rows_per_list=135;
 // Rows lifted into model space at a time while assigning coarse lists.
 constexpr size_t coarse_assign_chunk=65536;
 // Documents encoded (coarse lists) or copied into the fast storage at a time during build.
