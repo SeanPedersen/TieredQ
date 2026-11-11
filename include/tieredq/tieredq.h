@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 #include <utility>
@@ -336,11 +337,21 @@ struct TieredQPruning {
 // lists' centroids into assignment_supers groups: on Qwen 1024-D (500K rows, 32K lists) 256 supers and 16 probes gave
 // 99.0% exact labels at +0.1% objective, 8.5x faster than exact assignment. Rows whose nearest list lies in a probed
 // super get the exact label up to floating-point near-ties (both score the same rounded centroids; exact assignment
-// sums in FP32 BLAS, restricted scoring in the binary16 panel kernel). 0 (default) assigns exactly, via BLAS sgemm.
+// sums in FP32 BLAS, restricted scoring in the binary16 panel kernel). 0 assigns exactly, via BLAS sgemm. Lists that
+// build() trains itself use a seeded sample of max(32,768, sample_rows_per_list x lists) rows (train_lists() takes
+// its own sample). These member defaults are the exact recipe; automatic() is what an index uses unless
+// set_coarse_training() overrides it.
 struct TieredQCoarseTraining {
   uint32_t iterations = 20;
   uint32_t assignment_supers = 0;
   uint32_t assignment_probes = 16;
+  uint32_t sample_rows_per_list = 64;
+  // From fast_lists lists on: 4 iterations on 40 rows per list (Faiss's budget) with 256 x 16 restricted assignment,
+  // the 8.84M x 1024 shipping build (64K lists in 232 s against 1,621 s for Faiss); the exact recipe below. On Qwen 1M x
+  // 1024 (#52) fast training kept recall@10 within 0.002 of the exact recipe from recall 0.93 up at 8K-32K lists and
+  // trained them 25-43x faster (8K: 136 -> 5.5 s); at 4K it lost up to 0.008 (nprobe 64), so smaller counts stay exact.
+  static constexpr uint32_t fast_lists = 8192;
+  static TieredQCoarseTraining automatic(size_t lists);
   void validate() const;
 };
 // Wall seconds of the last build() per phase: list training (0 for given lists), list assignment (0 for codec lists),
@@ -362,6 +373,10 @@ struct TieredQRouterConfig {
   double expansion = 64;          // tuned on Qwen 8.84M x 1024 at 64K-128K lists (#47): more costs time, not recall
   uint32_t min_super_probes = 32;
   uint64_t seed = 0;
+  // Indexes with at least this many coarse lists build the router with this config unless remove_router() opts out.
+  // On Qwen 1M x 1024 (#52) the router matched exact ranking's recall from 8K lists on and was faster (8K: 0.25 ms of
+  // 1.4-3 ms per query; 32K: 2.8 vs 6.1 ms at recall 0.957); at 4K, where every super is probed, it was 0.1 ms slower.
+  static constexpr uint32_t automatic_lists = 8192;
   void validate() const;
 };
 // Per-search choice of coarse ranking. automatic uses the router whenever one is built, for single queries and batches
@@ -375,7 +390,19 @@ struct TieredQRouting {
 };
 class TieredQIVFIndex {
  public:
+  // lists 0: one list per codec centroid. Coarse indexes train their lists as TieredQCoarseTraining::automatic(lists)
+  // says, and from TieredQRouterConfig::automatic_lists lists on build the router at its defaults; explicit
+  // set_coarse_training(), build_router() and remove_router() override either.
   explicit TieredQIVFIndex(TieredQ codec, uint32_t lists = 0, uint64_t seed = 0);
+  // List count for rows vectors: the power of two nearest rows / r, or 0 (codec lists) where that is at most the
+  // codec's 256 centroids. r falls log-linearly from 256 rows per list at 1M rows to 135 at 8.84M (held outside), the
+  // best measured counts on Qwen x 1024 (#52): 4K lists at 1M (ahead of 8K, 16K and 32K, router or not) and 64K at 8.84M.
+  static uint32_t automatic_lists(size_t rows);
+  // Scan cap for an IVF codec trained with config (its max_scan_bits when set): 4 at up to 2 bits per dimension for
+  // fast targets without fine tiers, where every tier then scans on the nibble kernels (1.7x RaBitQ's IVF QPS at equal
+  // recall and memory on OpenAI 100k, about 0.006 recall at full probe); 0 (the codec's automatic cap) otherwise, as
+  // the 4-bit cap loses recall at 4 bits per dimension.
+  static uint32_t automatic_scan_bits(const TieredQConfig& config);
   const TieredQ& codec() const { return documents_.codec(); }
   // Coarse indexes only: trains the lists on sample (rows x config().dimensions, at least one row per list) instead
   // of on a sample of build()'s rows, so a partition learned on earlier data serves later builds unchanged. Loaded
@@ -385,10 +412,11 @@ class TieredQIVFIndex {
   // of training them, e.g. a partition trained elsewhere; build() then only assigns. Centroids are in the coarse
   // space: input vectors for L2 and inner product, normalized vectors for cosine.
   void set_lists(const float* centroids);
-  // Floats per coarse centroid: the input dimensions, plus the lift's one for L2 indexes saved before version 4.
-  // Coarse indexes only: list training iterations and restricted assignment for later train_lists() and build() calls.
+  // Coarse indexes only: list training for later train_lists() and build() calls, overriding the automatic one.
   void set_coarse_training(TieredQCoarseTraining training);
-  const TieredQCoarseTraining& coarse_training() const { return coarse_training_; }
+  // The training later builds use: the one set, else automatic(lists()) (coarse indexes only).
+  TieredQCoarseTraining coarse_training() const;
+  // Floats per coarse centroid: the input dimensions, plus the lift's one for L2 indexes saved before version 4.
   size_t coarse_dimensions() const { return input_space_coarse_ ? codec().config().dimensions : codec().model_dimensions(); }
   void build(const float* rows, size_t count);
   // Fills out (count x config().dimensions floats, row-major) with the input rows ids[0..count), for builds whose rows
@@ -399,6 +427,8 @@ class TieredQIVFIndex {
   // Coarse indexes only: builds the two-level router over the current lists (now when built, otherwise at the next
   // build) and rebuilds it after every later build(), set_lists() or train_lists() and build. Loaded indexes keep theirs.
   void build_router(TieredQRouterConfig config = {});
+  // Drops the router and its config, so searches rank every centroid exactly and later builds add none.
+  void remove_router();
   bool has_router() const { return bool(router_); }
   // Router codes, its super index and the row-major centroid copy for the exact re-rank; included in storage_bytes().
   size_t router_bytes() const;
@@ -460,7 +490,7 @@ class TieredQIVFIndex {
   uint32_t coarse_lists_ = 0;                    // 0: lists are the codec's centroids
   uint64_t seed_ = 0;
   bool fixed_lists_ = false;                     // train_lists() trained coarse_; build() only assigns
-  TieredQCoarseTraining coarse_training_;
+  std::optional<TieredQCoarseTraining> coarse_training_;  // unset: automatic(lists)
   TieredQBuildStats build_stats_;
   // Coarse centroids live in input space (new L2 indexes: plain L2 k-means, assignment and ranking on the input
   // vectors) instead of the codec's model space (inner product, cosine, and L2 indexes saved before payload version 4,

@@ -52,7 +52,7 @@ def test_ivf_scanning_every_list_matches_the_flat_index(data):
     vectors, queries = data
     ivf = TieredQIVFIndex(DIMENSIONS, CODE_BITS)
     ivf.build(vectors)
-    flat = TieredQIndex(DIMENSIONS, CODE_BITS)
+    flat = TieredQIndex(DIMENSIONS, CODE_BITS, fine_tiers=False, max_scan_bits=4)  # the IVF's 2-bit codec defaults
     flat.add(vectors)
     assert len(ivf) == ROWS and ivf.code_bits == flat.code_bits and ivf.metric == "ip"
     scores, ids = ivf.search(queries, k=K, nprobe=ivf.lists)
@@ -295,7 +295,7 @@ def test_nested_fine_suffix_preserves_prefix_and_round_trips(tmp_path, layout, m
     queries = (rng.normal(size=(QUERIES, DIMENSIONS)) * 0.85 ** np.arange(DIMENSIONS)).astype(np.float32)
     options = dict(prefix_bits=prefix_bits, total_bits=8 * DIMENSIONS, lists=LISTS,
                    tier_rows=layout, metric=metric)
-    baseline = TieredQNestedIVFIndex.build(vectors, **options)
+    baseline = TieredQNestedIVFIndex.build(vectors, fine_tiers=False, **options)
     fine = TieredQNestedIVFIndex.build(vectors, fine_tiers=True, **options)
     assert baseline.max_refinement_bits <= 8 < fine.max_refinement_bits <= 12
     ids = fine.candidates(queries, k=CANDIDATES, nprobe=NPROBE)

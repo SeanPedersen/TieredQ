@@ -1,5 +1,5 @@
-// Codec configuration and the seeded training sample shared by the flat, IVF and nested adapters: every index trains
-// on the same rows of its first training batch, so a nested refinement can retrain on exactly its prefix's sample.
+// Codec configuration and the seeded training sample shared by the flat and IVF adapters: every index trains on the
+// same rows of its first training batch (nested builds draw theirs in the library).
 #pragma once
 #include <tieredq/tieredq.h>
 #include <algorithm>
@@ -46,12 +46,14 @@ inline dv::TieredQ train_codec(dv::TieredQConfig config, const float* rows, size
   config.num_centroids = auto_centroids(ids.size());
   return dv::TieredQ::train_sampled(config, rows, count, ids.data(), ids.size(), training_seed);
 }
-// The training sample of rows gathered into one array, for trainers that read contiguous rows.
-inline std::vector<float> training_sample(const float* rows, size_t count, size_t width) {
+// Trains config on the training sample of count rows read through a loader: the same model as train_codec on the
+// float rows they decode to, so float, SQ8 and callable builds train identically.
+inline dv::TieredQ train_codec(dv::TieredQConfig config, const dv::TieredQIVFIndex::RowLoader& rows, size_t count) {
+  if (count < minimum_training_rows) throw std::runtime_error("training needs at least 2 rows");
   const auto ids = training_sample_ids(count);
-  std::vector<float> sample(ids.size() * width);
-  for (size_t i = 0; i < ids.size(); ++i)
-    std::copy_n(rows + size_t(ids[i]) * width, width, sample.data() + i * width);
-  return sample;
+  std::vector<float> sample(ids.size() * config.dimensions);
+  rows(ids.data(), ids.size(), sample.data());
+  config.num_centroids = auto_centroids(ids.size());
+  return dv::TieredQ::train(config, sample.data(), ids.size(), training_seed);
 }
 }  // namespace tieredq_python

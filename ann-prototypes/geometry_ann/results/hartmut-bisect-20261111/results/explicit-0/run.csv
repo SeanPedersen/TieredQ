@@ -1,0 +1,7 @@
+variant,lists,iterations,supers,probes,rows_per_list,routing,tier,nprobe,candidates,recall10,p50_us,p99_us,mean_us,anon_bytes,seed,builder,batch_mismatches
+fast-8k,8192,4,256,16,40,router,ram,16,20,0.8423,1057.9,1200.3,1069.4,1495216128,0,0,0
+fast-8k,8192,4,256,16,40,router,ram,32,20,0.8925,1192.1,1341.9,1200.1,1495216128,0,0,0
+fast-8k,8192,4,256,16,40,router,ram,64,20,0.9281,1439.4,2812.3,1502.1,1495216128,0,0,0
+fast-8k,8192,4,256,16,40,router,ram,128,20,0.9531,2001.5,3122.9,2045.5,1495216128,0,0,0
+fast-8k,8192,4,256,16,40,router,ram,256,20,0.9725,2928.7,3274.3,2961.9,1495216128,0,0,0
+fast-8k,8192,4,256,16,40,router,ram,512,20,0.9843,4845.3,8177.3,4976.7,1495240704,0,0,0

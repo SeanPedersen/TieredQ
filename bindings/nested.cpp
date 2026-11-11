@@ -1,8 +1,12 @@
-// Nested IVF serving (#23, #25): build() trains the prefix codec, the lists and the refinement from one seeded sample
-// (of the vectors, or of an explicit sample=), so they cannot be mismatched. The tier rows are attached separately
-// from RAM or a row file; candidates() and rescore() split a search for tiers kept in an external store. Searches may
-// run concurrently with attach_tier(); the GIL is released for every native call.
+// Nested IVF serving (#23, #25, #52): build() trains the prefix codec, the lists and the refinement from one seeded
+// sample (of the vectors, or of an explicit sample=), so they cannot be mismatched; its defaults are the library's
+// low-RAM configuration (TieredQNestedConfig). Vectors come as float rows, an SQ8 store or a row callable, for build()
+// and write_tier() alike. The tier rows are attached separately from RAM or a row file; candidates() and rescore()
+// split a search for tiers kept in an external store. Searches may run concurrently with attach_tier(); the GIL is
+// released for every native call.
 #include "arrays.h"
+#include "lists.h"
+#include "rows.h"
 #include "training.h"
 #include <nanobind/stl/filesystem.h>
 #include <nanobind/stl/optional.h>
@@ -21,14 +25,14 @@ namespace tieredq_python {
 using namespace nb::literals;
 namespace {
 using Pruning = std::optional<dv::TieredQPruning>;
-using OptionalMatrix = std::optional<Matrix>;
+using OptionalBits = std::optional<uint32_t>;
 using IdArray = nb::ndarray<nb::numpy, const uint32_t, nb::c_contig, nb::device::cpu>;
 using ByteArray = nb::ndarray<nb::numpy, const uint8_t, nb::c_contig, nb::device::cpu>;
 using ByteMatrix = nb::ndarray<nb::numpy, const uint8_t, nb::ndim<2>, nb::c_contig, nb::device::cpu>;
-using CodeMatrix = nb::ndarray<nb::numpy, const int8_t, nb::ndim<2>, nb::c_contig, nb::device::cpu>;
-using FloatVector = nb::ndarray<nb::numpy, const float, nb::ndim<1>, nb::c_contig, nb::device::cpu>;
-// Tier rows encoded per write_tier() step, bounding its buffer.
-constexpr size_t tier_write_chunk_rows = 16384;
+// SQ8 rows copied per write_sq8_rows() step, bounding its buffer.
+constexpr size_t sq8_write_chunk_rows = 16384;
+// Reads in flight for direct-I/O tiers unless given: the NVMe tier's measured setting (#49).
+constexpr size_t direct_queue_depth = 32;
 
 dv::TieredQTierRows parse_tier_rows(const std::string& layout) {
   if (layout=="prefix_and_suffix") return dv::TieredQTierRows::prefix_and_suffix;
@@ -42,25 +46,6 @@ dv::TieredQFileReads parse_reads(const std::string& reads) {
   if (reads=="cached") return dv::TieredQFileReads::cached;
   if (reads=="direct") return dv::TieredQFileReads::direct;
   throw std::invalid_argument("reads must be 'cached' or 'direct'");
-}
-// Trains the prefix, the lists (on sample, when given) and the refinement on one seeded sample, then builds the lists.
-dv::TieredQNestedIVFIndex train_nested(const dv::TieredQConfig& prefix, uint32_t total_bits, uint32_t lists,
-                                       dv::TieredQTierRows tier_rows, Matrix vectors, OptionalMatrix sample, bool fine_tiers, uint32_t max_tier_bits) {
-  const size_t width = prefix.dimensions;
-  const float* training = sample ? sample->data() : vectors.data();
-  const size_t training_rows = sample ? sample->shape(0) : vectors.shape(0);
-  if (training_rows < minimum_training_rows) throw std::runtime_error("training needs at least 2 rows");
-  const auto rows = training_sample(training, training_rows, width);
-  const size_t sampled = rows.size() / width;
-  auto config = prefix;
-  config.num_centroids = auto_centroids(sampled);
-  auto codec = dv::TieredQ::train(config, rows.data(), sampled, training_seed);
-  auto refinement = dv::TieredQRefinement::train(codec, total_bits, rows.data(), sampled, training_seed,
-                                               fine_tiers, max_tier_bits);
-  dv::TieredQIVFIndex index(std::move(codec), lists, training_seed);
-  if (sample) index.train_lists(sample->data(), sample->shape(0));
-  index.build(vectors.data(), vectors.shape(0));
-  return dv::TieredQNestedIVFIndex(std::move(index), std::move(refinement), tier_rows);
 }
 }  // namespace
 
@@ -88,19 +73,11 @@ class PythonNestedIndex {
     index_.encode_tier(rows.data(), first, rows.shape(0), tier.data());
     return tier;
   }
-  void write_tier(const std::filesystem::path& path, Matrix rows) const {
-    require_width(rows.shape(1), dimensions());
-    if (rows.shape(0) != size()) throw std::invalid_argument("write_tier needs one row per indexed vector");
-    const size_t stride = tier_bytes_per_vector();
-    dv::TieredQRowFileWriter writer(path.string(), stride);
-    std::vector<uint8_t> chunk(array_elements(std::min(size(), tier_write_chunk_rows), stride));
-    for (size_t first = 0; first < size(); first += tier_write_chunk_rows) {
-      const size_t count = std::min(tier_write_chunk_rows, size() - first);
-      index_.encode_tier(rows.data() + first * dimensions(), first, count, chunk.data());
-      writer.append(chunk.data(), count);
-    }
-    writer.finish();
+  void write_tier(const std::filesystem::path& path, const RowInput& rows) const {
+    if (rows.count != size()) throw std::invalid_argument("write_tier needs one row per indexed vector");
+    index_.write_tier(path.string(), rows.loader);
   }
+  bool has_router() const { return index_.index().has_router(); }
   void attach_tier(std::shared_ptr<const dv::TieredQRowSource> tier) {
     std::unique_lock lock(mutex_);
     index_.attach_tier(std::move(tier));
@@ -125,12 +102,14 @@ class PythonNestedIndex {
     std::shared_lock lock(mutex_);
     return index_.finals();
   }
-  SearchResult search(FloatArray queries, size_t k, size_t nprobe, size_t candidates, Pruning pruning) const {
+  SearchResult search(FloatArray queries, size_t k, size_t nprobe, std::optional<size_t> candidates,
+                      Pruning pruning) const {
     const auto shape = query_rows(queries, dimensions());
     auto result = empty_result(shape, std::min(k, size()));
     std::shared_lock lock(mutex_);
-    index_.search_batch(queries.data(), shape.rows, k, nprobe, candidates, result.scores.data(), result.ids.data(),
-                        pruning.value_or(dv::TieredQPruning{}));
+    index_.search_batch(queries.data(), shape.rows, k, nprobe,
+                        candidates.value_or(dv::TieredQNestedIVFIndex::candidates_for(k)), result.scores.data(),
+                        result.ids.data(), pruning.value_or(dv::TieredQPruning{}));
     return result;
   }
   SearchResult candidates(FloatArray queries, size_t k, size_t nprobe, Pruning pruning) const {
@@ -196,25 +175,51 @@ nb::tuple released(Search search) {
 void bind_nested(nb::module_& module) {
   nb::class_<PythonNestedIndex>(module, "TieredQNestedIVFIndex",
       "In-RAM IVF over prefix codes whose candidates are rescored with refinement tier rows from RAM or SSD.")
-      .def_static("build", [](Matrix vectors, uint32_t prefix_bits, uint32_t total_bits, uint32_t lists,
-                              const std::string& metric, const std::string& tier_rows, OptionalMatrix sample, bool fine_tiers, uint32_t max_tier_bits) {
-        auto config = dv::TieredQConfig::target_code_bits(uint32_t(vectors.shape(1)), prefix_bits);
+      .def_static("build", [](OptionalMatrix vectors, OptionalCodes codes, OptionalVector scales, OptionalVector offsets,
+                              OptionalLoader loader, OptionalCount count, OptionalCount dimensions,
+                              OptionalBits prefix_bits, OptionalBits total_bits, OptionalBits lists,
+                              const std::string& metric, const std::string& tier_rows, OptionalMatrix sample,
+                              bool fine_tiers, uint32_t max_tier_bits, uint32_t max_scan_bits,
+                              std::optional<dv::TieredQCoarseTraining> coarse_training, nb::handle router) {
+        const size_t width = vectors ? vectors->shape(1) : codes ? codes->shape(1) : dimensions.value_or(0);
+        if (!width) throw std::invalid_argument("loader= needs dimensions=");
+        const auto input = row_input(vectors, codes, scales, offsets, loader, count, width);
+        if (sample) require_width(sample->shape(1), width);
+        dv::TieredQNestedConfig config;
+        config.dimensions = uint32_t(width);
+        config.prefix_bits = prefix_bits.value_or(0);
+        config.total_bits = total_bits.value_or(0);
+        config.lists = lists.value_or(dv::TieredQNestedConfig::automatic_lists);
         config.metric = parse_metric(metric);
-        config.fine_tiers = false;  // The IVF prefix stays independently scannable.
-        config.validate();
-        if (sample) require_width(sample->shape(1), config.dimensions);
-        const auto layout = parse_tier_rows(tier_rows);
+        config.tier_rows = parse_tier_rows(tier_rows);
+        config.fine_tiers = fine_tiers;
+        config.max_tier_bits = max_tier_bits;
+        config.max_scan_bits = max_scan_bits;
+        config.coarse_training = coarse_training;
+        const auto choice = parse_router(router);
+        config.router = choice.use;
+        config.router_config = choice.config;
+        config.seed = training_seed;
         nb::gil_scoped_release release;
-        return std::make_unique<PythonNestedIndex>(train_nested(config, total_bits, lists, layout, vectors, sample, fine_tiers, max_tier_bits));
-      }, "vectors"_a.noconvert(), nb::kw_only(), "prefix_bits"_a, "total_bits"_a, "lists"_a = 0, "metric"_a = "ip",
-         "tier_rows"_a = "prefix_and_suffix", "sample"_a.noconvert() = nb::none(),
-         "fine_tiers"_a = false, "max_tier_bits"_a = 12,
-         "Trains the prefix codec (prefix_bits), the refinement (total_bits, prefix included) and the lists on a\n"
-         "seeded sample of at most 32,768 rows of sample, else of vectors, then indexes vectors. A given sample\n"
+        return std::make_unique<PythonNestedIndex>(dv::TieredQNestedIVFIndex::build(
+            config, input.loader, input.count, sample ? sample->data() : nullptr, sample ? sample->shape(0) : 0));
+      }, "vectors"_a.noconvert() = nb::none(), nb::kw_only(), "codes"_a.noconvert() = nb::none(),
+         "scales"_a.noconvert() = nb::none(), "offsets"_a.noconvert() = nb::none(), "loader"_a = nb::none(),
+         "count"_a = nb::none(), "dimensions"_a = nb::none(), "prefix_bits"_a = nb::none(),
+         "total_bits"_a = nb::none(), "lists"_a = nb::none(), "metric"_a = "ip", "tier_rows"_a = "suffix",
+         "sample"_a.noconvert() = nb::none(), "fine_tiers"_a = true, "max_tier_bits"_a = 12, "max_scan_bits"_a = 0,
+         "coarse_training"_a = nb::none(), "router"_a = nb::none(),
+         "Trains the prefix codec (prefix_bits per vector; default 1 per dimension), the refinement (total_bits,\n"
+         "prefix included; default 8 per dimension) and the lists on a seeded sample of at most 32,768 rows of\n"
+         "sample, else of the vectors, then indexes the vectors. Vectors are float32 rows, an SQ8 store (codes=\n"
+         "int8 rows x dimensions, e.g. a numpy memmap, with float32 scales= and offsets=: vector = codes * scales\n"
+         "+ offsets, decoded a chunk at a time) or loader=(ids -> float32 rows) with count= and dimensions=.\n"
+         "The defaults are the low-RAM configuration: lists None picks 4K at 1M rows, 64K at 8.84M (see automatic_lists; 0 keeps one\n"
+         "list per codec centroid), many lists train fast and get the router (coarse_training and router: True,\n"
+         "False or a TieredQRouterConfig override them), and the 8-bit fine-tier suffix ('suffix' tier_rows) is\n"
+         "meant for an SSD. max_scan_bits 0 caps prefix scans at 4 bits up to 2 bits per dimension. A given sample\n"
          "also trains the lists on all its rows, so a partition learned on earlier data stays fixed. tier_rows\n"
-         "'prefix_and_suffix' reads each candidate in one row; 'suffix' stores a smaller tier and decodes the\n"
-         "prefix from the lists. fine_tiers permits wider suffix refinement (up to max_tier_bits, at most 12)\n"
-         "for inner product/cosine. No tier is attached yet.")
+         "'prefix_and_suffix' reads each candidate in one row. No tier is attached yet.")
       .def("__len__", &PythonNestedIndex::size)
       .def_prop_ro("dimensions", &PythonNestedIndex::dimensions)
       .def_prop_ro("metric", &PythonNestedIndex::metric)
@@ -222,6 +227,7 @@ void bind_nested(nb::module_& module) {
       .def_prop_ro("total_bits", &PythonNestedIndex::total_bits, "Prefix plus suffix code bits candidates rescore with.")
       .def_prop_ro("max_refinement_bits", &PythonNestedIndex::max_refinement_bits, "Widest combined prefix/suffix code.")
       .def_prop_ro("lists", &PythonNestedIndex::lists)
+      .def_prop_ro("has_router", &PythonNestedIndex::has_router)
       .def_prop_ro("storage_bytes", &PythonNestedIndex::storage_bytes, "In-RAM IVF bytes, excluding the tier.")
       .def_prop_ro("tier_rows", &PythonNestedIndex::tier_rows)
       .def_prop_ro("tier_bytes_per_vector", &PythonNestedIndex::tier_bytes_per_vector)
@@ -233,22 +239,31 @@ void bind_nested(nb::module_& module) {
       }, "rows"_a.noconvert(), "first"_a = 0,
          "Tier rows (uint8, rows x tier_bytes_per_vector) of the vectors with ids first.., as given to build();\n"
          "encode a large set in chunks.")
-      .def("write_tier", &PythonNestedIndex::write_tier, "path"_a, "rows"_a.noconvert(),
-           "Encodes every vector given to build() into a row file for attach_tier(path).",
-           nb::call_guard<nb::gil_scoped_release>())
+      .def("write_tier", [](const PythonNestedIndex& self, const std::filesystem::path& path, OptionalMatrix rows,
+                            OptionalCodes codes, OptionalVector scales, OptionalVector offsets, OptionalLoader loader) {
+        const auto input = row_input(rows, codes, scales, offsets, loader,
+                                     loader ? OptionalCount(self.size()) : std::nullopt, self.dimensions());
+        nb::gil_scoped_release release;
+        self.write_tier(path, input);
+      }, "path"_a, "rows"_a.noconvert() = nb::none(), nb::kw_only(), "codes"_a.noconvert() = nb::none(),
+         "scales"_a.noconvert() = nb::none(), "offsets"_a.noconvert() = nb::none(), "loader"_a = nb::none(),
+         "Encodes every vector given to build() (the same rows, SQ8 store or loader) into a row file for\n"
+         "attach_tier(path), a chunk at a time.")
       .def("attach_tier", [](PythonNestedIndex& self, ByteMatrix rows) {
         nb::gil_scoped_release release;
         std::vector<uint8_t> data(rows.data(), rows.data() + array_elements(rows.shape(0), rows.shape(1)));
         self.attach_tier(std::make_shared<dv::TieredQMemoryRows>(std::move(data), rows.shape(1)));
       }, "rows"_a.noconvert(), "Serves the tier from RAM: a copy of encode_tier() rows for every vector, in id order.")
       .def("attach_tier", [](PythonNestedIndex& self, const std::filesystem::path& path, const std::string& reads,
-                             size_t queue_depth) {
+                             OptionalCount queue_depth) {
         const auto mode = parse_reads(reads);
+        const size_t depth = queue_depth.value_or(mode == dv::TieredQFileReads::direct ? direct_queue_depth : 1);
         nb::gil_scoped_release release;
-        self.attach_tier(std::make_shared<dv::TieredQFileRows>(path.string(), mode, queue_depth));
-      }, "path"_a, nb::kw_only(), "reads"_a = "cached", "queue_depth"_a = 1,
+        self.attach_tier(std::make_shared<dv::TieredQFileRows>(path.string(), mode, depth));
+      }, "path"_a, nb::kw_only(), "reads"_a = "cached", "queue_depth"_a = nb::none(),
          "Serves the tier from a write_tier() file. reads 'direct' bypasses the page cache; queue_depth > 1 keeps\n"
-         "that many reads in flight per query (io_uring builds), which SSDs need for throughput.")
+         "that many reads in flight per query (io_uring builds), which SSDs need for throughput (default: 32 for\n"
+         "direct reads, 1 for cached ones).")
       .def("attach_exact", [](PythonNestedIndex& self, CodeMatrix codes, FloatVector scales, FloatVector offsets,
                               size_t finals) {
         nb::gil_scoped_release release;
@@ -274,18 +289,19 @@ void bind_nested(nb::module_& module) {
         nb::gil_scoped_release release;
         dv::TieredQRowFileWriter writer(path.string(), codes.shape(1));
         const auto* rows = reinterpret_cast<const uint8_t*>(codes.data());
-        for (size_t first = 0; first < codes.shape(0); first += tier_write_chunk_rows) {
-          const size_t count = std::min(tier_write_chunk_rows, size_t(codes.shape(0)) - first);
+        for (size_t first = 0; first < codes.shape(0); first += sq8_write_chunk_rows) {
+          const size_t count = std::min(sq8_write_chunk_rows, size_t(codes.shape(0)) - first);
           writer.append(rows + first * codes.shape(1), count);
         }
         writer.finish();
       }, "path"_a, "codes"_a.noconvert(), "Writes int8 SQ8 codes (rows x dimensions, in id order) as a row file for attach_exact(path).")
-      .def("search", [](const PythonNestedIndex& self, FloatArray queries, size_t k, size_t nprobe, size_t candidates,
-                        Pruning pruning) {
+      .def("search", [](const PythonNestedIndex& self, FloatArray queries, size_t k, size_t nprobe,
+                        std::optional<size_t> candidates, Pruning pruning) {
         return released([&] { return self.search(queries, k, nprobe, candidates, pruning); });
-      }, "queries"_a.noconvert(), "k"_a = 10, nb::kw_only(), "nprobe"_a, "candidates"_a, "pruning"_a = nb::none(),
-         "The IVF's top candidates (>= k) over nprobe lists, rescored with their tier rows; slots past the probed\n"
-         "rows hold id 2**32 - 1 and score -inf.")
+      }, "queries"_a.noconvert(), "k"_a = 10, nb::kw_only(), "nprobe"_a, "candidates"_a = nb::none(),
+         "pruning"_a = nb::none(),
+         "The IVF's top candidates (>= k; default 40, or 4k beyond k = 10) over nprobe lists, rescored with their\n"
+         "tier rows; slots past the probed rows hold id 2**32 - 1 and score -inf.")
       .def("candidates", [](const PythonNestedIndex& self, FloatArray queries, size_t k, size_t nprobe,
                             Pruning pruning) {
         SearchResult result;

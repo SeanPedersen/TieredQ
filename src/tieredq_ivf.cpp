@@ -9,7 +9,9 @@
 #include "tieredq_ivf_router.h"
 #include "tieredq_heap.h"
 #include "tieredq_fast_fine.h"
+#include <algorithm>
 #include <bit>
+#include <cmath>
 #include <chrono>
 #include <optional>
 #include <numeric>
@@ -31,8 +33,17 @@ constexpr uint32_t padding_id=UINT32_MAX;
 // multiples are whole lookup blocks.
 constexpr size_t ivf_scan_chunk=1024;
 static_assert(ivf_scan_chunk%fast_list_alignment==0 && ivf_scan_chunk%selection_block==0);
-// Coarse training sample: at least the codec's sample size and ~64 rows per list.
-constexpr size_t coarse_minimum_sample=32768,coarse_rows_per_list=64;
+// Coarse training sample: at least the codec's sample size (and the training's rows per list).
+constexpr size_t coarse_minimum_sample=32768;
+constexpr uint64_t coarse_sample_salt=0x9e3779b97f4a7c15ULL;
+// Fast list training (TieredQCoarseTraining::automatic from fast_lists lists on).
+constexpr TieredQCoarseTraining fast_coarse_training{4,256,16,40};
+// automatic_lists(): the codec's centroids serve as lists up to this many; rows per list fall from small_rows_per_list
+// at small_scale_rows to large_rows_per_list at large_scale_rows, log-linearly in the row count.
+constexpr size_t codec_list_limit=256;
+// automatic_scan_bits(): codes of up to nibble_bits_per_dimension scan at most nibble_scan_bits per coordinate.
+constexpr uint32_t nibble_bits_per_dimension=2,nibble_scan_bits=4;
+constexpr double small_scale_rows=1e6,large_scale_rows=8840823,small_rows_per_list=256,large_rows_per_list=135;
 // Rows lifted into model space at a time while assigning coarse lists.
 constexpr size_t coarse_assign_chunk=65536;
 // Documents encoded (coarse lists) or copied into the fast storage at a time during build.
@@ -62,6 +73,7 @@ TieredQIVFIndex::TieredQIVFIndex(TieredQ codec,uint32_t lists,uint64_t seed)
     : documents_(std::move(codec),TieredQIndexMode::fast),
       coarse_lists_(lists),seed_(seed),
       input_space_coarse_(lists && documents_.codec().config().metric==TieredQMetric::l2) {
+  if (lists>=TieredQRouterConfig::automatic_lists) router_config_=std::make_shared<const TieredQRouterConfig>();
   list_begin_.assign(lists ? lists : documents_.codec().config().num_centroids,0);
   list_rows_.assign(list_begin_.size(),0);
   ids_=tieredq_detail::EliasFanoLists::encode({},list_rows_.size());
@@ -81,12 +93,37 @@ const float* TieredQIVFIndex::coarse_rows(const float* rows,size_t first,size_t 
   return input_space_coarse_ ? rows+first*codec().config().dimensions : model_rows(rows,first,count,buffer);
 }
 
+uint32_t TieredQIVFIndex::automatic_lists(size_t rows) {
+  const double scale=std::clamp(std::log(double(rows)/small_scale_rows)/std::log(large_scale_rows/small_scale_rows),0.0,1.0);
+  const double rows_per_list=small_rows_per_list*std::pow(large_rows_per_list/small_rows_per_list,scale);
+  const auto target=size_t(double(rows)/rows_per_list);
+  if (target<=codec_list_limit) return 0;
+  const size_t below=std::bit_floor(target),above=below*2;
+  const size_t nearest=target-below<=above-target ? below : above;
+  return uint32_t(std::min<size_t>(nearest,size_t(1)<<31));
+}
+
+uint32_t TieredQIVFIndex::automatic_scan_bits(const TieredQConfig& config) {
+  if (config.max_scan_bits) return config.max_scan_bits;
+  const bool nibble=config.target_mode==TieredQIndexMode::fast && !config.fine_tiers &&
+                    config.code_bits<=nibble_bits_per_dimension*uint64_t(config.dimensions);
+  return nibble ? nibble_scan_bits : 0;
+}
+
+TieredQCoarseTraining TieredQCoarseTraining::automatic(size_t lists) {
+  return lists>=fast_lists ? fast_coarse_training : TieredQCoarseTraining{};
+}
+
+TieredQCoarseTraining TieredQIVFIndex::coarse_training() const {
+  return coarse_training_.value_or(TieredQCoarseTraining::automatic(coarse_lists_));
+}
+
 void TieredQIVFIndex::train_lists(const float* sample,size_t rows) {
   if (!coarse_lists_) bad("train_lists needs an index with coarse lists");
   if (!sample && rows) bad("null vector data");
   std::vector<float> lifted;
   coarse_=std::make_shared<const CoarseQuantizer>(tieredq_detail::train_coarse(
-      coarse_rows(sample,0,rows,lifted),rows,coarse_dimensions(),coarse_lists_,seed_,coarse_training_));
+      coarse_rows(sample,0,rows,lifted),rows,coarse_dimensions(),coarse_lists_,seed_,coarse_training()));
   fixed_lists_=true;
   router_.reset();  // routes the previous lists; rebuilt by the next build()
 }
@@ -105,6 +142,7 @@ void TieredQIVFIndex::set_lists(const float* centroids) {
 void TieredQCoarseTraining::validate() const {
   if (!iterations) bad("coarse training needs at least one iteration");
   if (assignment_supers && !assignment_probes) bad("restricted assignment needs at least one probe");
+  if (!sample_rows_per_list) bad("coarse training needs at least one sample row per list");
 }
 
 void TieredQIVFIndex::set_coarse_training(TieredQCoarseTraining training) {
@@ -118,6 +156,11 @@ void TieredQIVFIndex::build_router(TieredQRouterConfig config) {
   config.validate();
   router_config_=std::make_shared<const TieredQRouterConfig>(config);
   refresh_router();
+}
+
+void TieredQIVFIndex::remove_router() {
+  router_config_.reset();
+  router_.reset();
 }
 
 // The router covers the built lists, so an unbuilt index (or one whose lists changed) gets it at the next build().
@@ -135,21 +178,26 @@ std::vector<uint32_t> TieredQIVFIndex::coarse_lists(const RowLoader& rows,size_t
   const size_t d=model.config().dimensions;
   std::vector<float> lifted;
   auto started=std::chrono::steady_clock::now();
+  const TieredQCoarseTraining training=coarse_training();
   if (!fixed_lists_) {
-    const size_t sample_rows=std::min(count,std::max(coarse_minimum_sample,product(coarse_rows_per_list,coarse_lists_)));
-    tieredq_detail::TrainingRng rng(seed_);
+    const size_t sample_rows=std::min(count,std::max(coarse_minimum_sample,product(training.sample_rows_per_list,coarse_lists_)));
+    // Its own seed stream: k-means draws its initial centroids from a TrainingRng(seed_) too, and sharing the engine
+    // outputs that chose the sample cost 0.003-0.006 recall@10 at 64K lists on 8.84M rows (#52). Sorted ids read the
+    // rows in order.
+    tieredq_detail::TrainingRng rng(seed_^coarse_sample_salt);
     const auto picked=rng.choice(count,sample_rows);
-    const std::vector<uint32_t> ids(picked.begin(),picked.end());
+    std::vector<uint32_t> ids(picked.begin(),picked.end());
+    std::sort(ids.begin(),ids.end());
     std::vector<float> sample(product(sample_rows,d));
     rows(ids.data(),sample_rows,sample.data());
     const float* coarse_sample=coarse_rows(sample.data(),0,sample_rows,lifted);
     coarse_=std::make_shared<const CoarseQuantizer>(tieredq_detail::train_coarse(coarse_sample,sample_rows,coarse_dimensions(),
-                                                                                coarse_lists_,seed_,coarse_training_));
+                                                                                coarse_lists_,seed_,training));
   }
   build_stats_.train_s=seconds_since(started);
   started=std::chrono::steady_clock::now();
   // One assigner for every chunk: it holds the FP32 centroids, or the restricted assigner's super grouping.
-  const tieredq_detail::ListAssigner assigner(*coarse_,coarse_training_,seed_);
+  const tieredq_detail::ListAssigner assigner(*coarse_,training,seed_);
   std::vector<uint32_t> lists(count),ids(std::min(coarse_assign_chunk,count));
   std::vector<float> chunk(product(ids.size(),d));
   for (size_t first=0;first<count;first+=coarse_assign_chunk) {
@@ -528,6 +576,7 @@ TieredQIVFIndex TieredQIVFIndex::read_lists(TieredQ model,Reader& reader) {
   if (input_space>1 || (version==coarse_space_payload_version && !input_space)) bad("invalid IVF coarse space");
   if (input_space && model.config().metric!=TieredQMetric::l2) bad("input-space coarse lists need an L2 model");
   TieredQIVFIndex index(std::move(model),coarse ? lists : 0,seed);
+  index.router_config_.reset();  // loaded indexes keep the router (and config) they were saved with, or none
   index.input_space_coarse_=input_space==1;  // earlier L2 payloads keep their model-space lists
   if (trained) {
     const size_t dimensions=index.coarse_dimensions();

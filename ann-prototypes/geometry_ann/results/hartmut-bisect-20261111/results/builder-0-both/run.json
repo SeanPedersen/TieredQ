@@ -1,0 +1,1 @@
+{"rows": 1000000, "prefix_bits": 2048, "realized_prefix_bits": 2048, "total_bits_per_dim": 8, "truth_s": 0.0, "codec_s": 0.87, "refinement_s": 3.38, "variants": [{"tier_file_rows_differing": 0}, {"name": "fast-8k", "builder": 1, "build_s": 23.56}]}

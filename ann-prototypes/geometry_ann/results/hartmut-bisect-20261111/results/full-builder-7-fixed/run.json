@@ -1,0 +1,1 @@
+{"rows": 8840823, "prefix_bits": 2048, "realized_prefix_bits": 2048, "total_bits_per_dim": 8, "truth_s": 0.0, "codec_s": 0.88, "refinement_s": 3.40, "variants": [{"name": "fast-64k", "builder": 1, "build_s": 243.16}]}

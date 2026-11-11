@@ -129,27 +129,76 @@ from tieredq import TieredQIVFIndex, TieredQNestedIVFIndex, TieredQPruning
 
 d = vectors.shape[1]
 queries = vectors[:2]
-ivf = TieredQIVFIndex(dimensions=d, code_bits=2 * d, lists=1024)  # lists=0: one list per codec centroid
+ivf = TieredQIVFIndex(dimensions=d, code_bits=2 * d)  # lists from the row count; lists=0: one per codec centroid
 ivf.build(vectors)  # trains the codec (seeded 32,768-row sample) and the lists, then indexes
 scores, ids = ivf.search(queries, k=10, nprobe=32)
 
-# Prefix codes in an in-RAM IVF; candidates rescored with a 4 bits/dim refinement tier on SSD.
-index = TieredQNestedIVFIndex.build(
-    vectors, prefix_bits=d, total_bits=4 * d, lists=256, fine_tiers=True
-)
+# Low-RAM nested index (the defaults): 1-bit prefix codes in an in-RAM IVF, candidates rescored with an 8-bit tier on SSD.
+index = TieredQNestedIVFIndex.build(vectors)
 index.write_tier("tier.rows", vectors)  # or index.attach_tier(index.encode_tier(vectors)) to keep it in RAM
-index.attach_tier("tier.rows", reads="direct", queue_depth=32)
-scores, ids = index.search(queries, k=10, nprobe=64, candidates=50)
+index.attach_tier("tier.rows", reads="direct")  # 32 reads in flight
+scores, ids = index.search(queries, k=10, nprobe=128)  # 40 candidates by default
 index.save("nested.tq")  # IVF, refinement and tier layout; attach the tier again after load()
 ```
 
-- `TieredQIVFIndex(dimensions, code_bits, *, lists=0, metric="ip", fine_tiers=False)`
-  always uses fast storage. `build(rows)` replaces its vectors; only the first
-  `build` or `train_lists(sample)` trains the codec. Call `train_lists` before
-  `build` to fix the partition on a separate sample.
-- `TieredQNestedIVFIndex.build(vectors, *, prefix_bits, total_bits, lists=0,
-  metric="ip", tier_rows="prefix_and_suffix", sample=None, fine_tiers=False, max_tier_bits=12)` trains a nested index.
-  `prefix_bits` and `total_bits` are budgets per vector, with the prefix included
+#### Low-RAM recipe (large sets)
+
+`TieredQNestedIVFIndex.build` defaults to the configuration that won on recall per GB of serving RAM on
+Qwen/MS MARCO 8.84M × 1024 (#49, #52). A base kept as an SQ8 store (int8 codes with per-dimension scales and offsets,
+e.g. 9 GB instead of 36 GB of float32) builds from a memory map, decoded a chunk at a time:
+
+```python
+import numpy as np
+from tieredq import TieredQNestedIVFIndex
+
+codes = np.memmap("base.i8", dtype=np.int8, mode="r").reshape(-1, 1024)
+store = dict(codes=codes, scales=np.fromfile("scales.f32", np.float32), offsets=np.fromfile("offsets.f32", np.float32))
+index = TieredQNestedIVFIndex.build(**store)       # vector = codes * scales + offsets; same index as the float rows
+index.write_tier("/nvme/tier.rows", **store)
+index.save("nested.tq")
+index.attach_tier("/nvme/tier.rows", reads="direct")
+scores, ids = index.search(query, k=10, nprobe=192)
+```
+
+What the defaults pick (each is a keyword of `build`):
+
+| Setting | Default | Notes |
+| --- | --- | --- |
+| `prefix_bits` | 1 per dimension | in RAM; `max_scan_bits=0` caps its scan at 4 bits (nibble kernels) up to 2 bits/dim |
+| `lists` | `None`: automatic | 4K at 1M rows, 64K at 8.84M (`TieredQIVFIndex::automatic_lists`); `0` keeps one list per codec centroid |
+| `coarse_training` | `None`: automatic | from 8,192 lists: 4 Lloyd iterations on 40 rows/list, 256 × 16 restricted assignment |
+| `router` | `None`: automatic | the two-level router from 8,192 lists; `True`, `False` or a `TieredQRouterConfig` |
+| `total_bits` | 8 per dimension | the tier: `fine_tiers=True` (up to `max_tier_bits=12`), `tier_rows="suffix"` |
+| `candidates` (search) | 40 | `max(40, 4k)`; the 1-bit prefix lost about 0.005 recall@10 at 20 reads |
+
+Measured on 8.84M × 1024 (one pinned core, tier on NVMe with direct reads, 40 candidates): 2.03 GB anonymous RSS,
+about 290 s to build on 32 threads, recall@10 0.944 / 0.951 / 0.963 / 0.968 / 0.977 / 0.984 / 0.991 at 2.2 / 2.4 /
+2.9 / 3.4 / 5.1 / 8.4 / 22 ms (nprobe 96-1024, 4096). The 2-bit prefix (`prefix_bits=2 * d`, `candidates=20`) reaches
+the same recall at 3.35 GB and 2.4-11.6 ms. Faiss IVF-SQ8 with an HNSW quantizer at 128K lists needs 13.6 GB and
+3,052 s; against it the 2-bit prefix was level at 0.95 and 1.16-1.6× faster from 0.963 to 0.99, and the 1-bit prefix is
+another 15-28% faster. Built and served through Python with these defaults only (an SQ8 memmap in, the tier on
+NVMe), the 1-bit index took 302 s and served in 1.72 GB
+([SSD tier study](ann-prototypes/geometry_ann/results/hartmut-ssdtier-20261111/README.md),
+[defaults study](ann-prototypes/geometry_ann/results/hartmut-defaults-20261111/README.md),
+[Python end to end](ann-prototypes/geometry_ann/results/hartmut-pythondefaults-20261111/README.md)). When SQ8 recall matters
+more than RAM, keep a 6-bit tier in RAM and add `attach_exact` over SQ8 rows on SSD (7.84 GB).
+`build` and `write_tier` also take `loader=` (a callable from `uint32` ids to float32 rows) with `count=` (and
+`dimensions=` for `build`).
+
+- `TieredQIVFIndex(dimensions, code_bits, *, lists=None, metric="ip", fine_tiers=False, max_scan_bits=0,
+  coarse_training=None, router=None)` always uses fast storage. `build(rows)` (or `build(codes=, scales=, offsets=)`,
+  or `build(loader=, count=)`) replaces its vectors; only the first `build` or `train_lists(sample)` trains the codec.
+  `lists=None` picks the count from the first build's rows as the nested index does (4K at 1M, 64K at 8.84M; one list
+  per codec centroid below about 93K rows); `lists=0` always keeps the codec's centroids. Call `train_lists` (with an
+  explicit `lists`) before `build` to fix the partition on a separate sample. From 8,192 lists the index trains
+  them fast and builds the router unless `coarse_training` or `router` say otherwise (see Many lists below).
+  `max_scan_bits=0` caps the scan at 4 bits up to 2 bits/dim (without fine tiers), as the bit-cap note below measures.
+  In C++ the caller trains the codec: `TieredQIVFIndex::automatic_scan_bits(config)` and `automatic_lists(rows)` give
+  the same choices.
+- `TieredQNestedIVFIndex.build(vectors=None, *, codes=None, scales=None, offsets=None, loader=None, count=None,
+  dimensions=None, prefix_bits=None, total_bits=None, lists=None, metric="ip", tier_rows="suffix", sample=None,
+  fine_tiers=True, max_tier_bits=12, max_scan_bits=0, coarse_training=None, router=None)` trains a nested index
+  (defaults in the table above). `prefix_bits` and `total_bits` are budgets per vector, with the prefix included
   in `total_bits`. For inner product/cosine, `fine_tiers=True` lets suffix training allocate
   combined prefix/suffix codes wider than 8 bits, up to `max_tier_bits` (8–12).
   The IVF prefix stays fixed; candidates are rescored directly with all suffix bits.
@@ -164,24 +213,26 @@ index.save("nested.tq")  # IVF, refinement and tier layout; attach the tier agai
 - `index.attach_exact(codes_or_path, scales, offsets, finals=16)` adds the exact SQ8 final stage (int8 codes in RAM,
   or a `TieredQNestedIVFIndex.write_sq8_rows(path, codes)` file with `reads="direct", queue_depth=32` on SSD);
   `detach_exact()` removes it.
-- IVF searches require keyword `nprobe`; nested searches also require
-  `candidates >= k`. Results use `2**32 - 1` ids and `-inf` scores for slots
-  beyond the rows in the probed lists.
-- File tiers default to `reads="cached", queue_depth=1`. Concurrent reads at
+- IVF searches require keyword `nprobe`; nested searches take `candidates >= k` (default `max(40, 4k)`). Results use
+  `2**32 - 1` ids and `-inf` scores for slots beyond the rows in the probed lists.
+- File tiers default to `reads="cached"`, with 1 read in flight (32 with `reads="direct"`). Concurrent reads at
   larger queue depths require a build with liburing; otherwise reads stay serial.
   PyPI wheels disable liburing.
 - One `build` trains the prefix, the lists and the refinement from the same seeded sample, so they cannot be
   mismatched. Pass `sample=` to train on earlier data instead; its rows also fix the lists for later builds (as
   `TieredQIVFIndex.train_lists` does).
-- `tier_rows="suffix"` stores a smaller tier and decodes each candidate's prefix from the lists (see the C++ notes).
+- `tier_rows="suffix"` (the default) stores a smaller tier and decodes each candidate's prefix from the lists;
+  `"prefix_and_suffix"` reads each candidate in one row (see the C++ notes).
 - Tier rows kept in another store (a database, an object store): `ids = index.candidates(queries, 50, nprobe=64)`,
   fetch the `encode_tier` rows of those ids (shape `ids.shape + (index.tier_bytes_per_vector,)`; ids of
   `2**32 - 1` are padding), then `scores, ids = index.rescore(queries, ids, rows, k=10)`.
 - `pruning=TieredQPruning(confidence=8)` opts IVF and nested scans into approximate pruning (see below).
-- Many lists: `ivf.set_coarse_training(iterations=10, assignment_supers=256, assignment_probes=16)` before
-  `build` sets the list training and opts into restricted assignment. After `build`, `ivf.build_router()` adds the
-  two-level coarse router, and `search(..., routing="auto" | "router" | "exact", super_probes=0)` selects the coarse
-  ranking (see the C++ notes on many lists).
+- Many lists: from 8,192 lists an index trains them with 4 Lloyd iterations on 40 sample rows per list and restricted
+  assignment (256 supers, 16 probes), and builds the two-level router (`ivf.coarse_training`, `ivf.has_router`).
+  `coarse_training=TieredQCoarseTraining(...)` or `ivf.set_coarse_training(iterations=20, assignment_supers=0, ...)`
+  sets another training; `router=False` or `ivf.remove_router()` drops the router, and `router=TieredQRouterConfig(...)`
+  or `ivf.build_router(...)` configures it. `search(..., routing="auto" | "router" | "exact", super_probes=0)` selects
+  the coarse ranking (see the C++ notes on many lists).
 
 ## C++
 
@@ -222,8 +273,13 @@ auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*p
 
 - **Many lists (64K+).** `set_lists(centroids)` fixes the lists to a partition trained elsewhere.
   `build(RowLoader, count)` pulls rows by id in bounded chunks, so a base held as SQ8 codes needs no fp32 copy.
-  `set_coarse_training({iterations, assignment_supers, assignment_probes})` sets the Lloyd iterations of list
-  training (default 20) and opts into restricted assignment (#48). Each row is then assigned among the members of its
+  From `TieredQCoarseTraining::fast_lists` (8,192) lists an index trains its lists with 4 Lloyd iterations on 40
+  sample rows per list and restricted assignment over 256 supers × 16 probes, and builds the router at its defaults
+  (`TieredQRouterConfig::automatic_lists`, 8,192). Fewer lists keep 20 iterations, exact assignment and 64 rows per list.
+  On Qwen 1M × 1024 the fast training stayed within 0.002 recall@10 of the exact recipe from recall 0.93 up at 8K-32K
+  lists for 25-43× less training time, and the router was faster than exact ranking from 8K lists (#52).
+  `set_coarse_training({iterations, assignment_supers, assignment_probes, sample_rows_per_list})` overrides the
+  training, and `remove_router()` opts out of the router. In restricted assignment (#48) each row is assigned among the members of its
   `assignment_probes` nearest supers, a k-means of the lists' centroids. Rows whose nearest list lies in a probed
   super get the exact label, up to floating-point near-ties. Exact assignment runs as FP32 BLAS `sgemm`, as in
   Faiss; query ranking keeps the binary16 panels. On Qwen 1024-D (500K rows, 32K lists), 256 supers and 16 probes kept 99.0%
@@ -237,10 +293,9 @@ auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*p
   or the number of probed supers per search. The router persists with the index (payload version 5).
 
   ```cpp
-  dv::TieredQIVFIndex index(codec, /*lists=*/65536);
-  index.set_lists(centroids);  // or set_coarse_training({10, 256, 16}) before training lists in build()
-  index.build(loader, count);
-  index.build_router();        // rebuilt by every later build()
+  dv::TieredQIVFIndex index(codec, /*lists=*/65536);  // trains fast ({4, 256, 16, 40}) and routes by default
+  index.set_lists(centroids);  // optional: a partition trained elsewhere
+  index.build(loader, count);  // the router is rebuilt by every later build()
   auto hits = index.search(query, 40, /*nprobe=*/256);
   auto exact = index.search(query, 40, 256, {}, {dv::TieredQRouting::Mode::exact});
   ```
@@ -277,9 +332,9 @@ auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*p
   `dv::TieredQNestedIVFIndex` (`<tieredq/tieredq_nested.h>`) serves this end to end. The prefix codes stay in the
   in-RAM IVF lists. Each candidate's tier row is read by id from a `TieredQRowSource`: `TieredQMemoryRows` in RAM,
   `TieredQFileRows` with one `pread` per candidate on SSD (`TieredQFileReads::direct` bypasses the page cache), or your
-  own store. By default a tier row holds the prefix
-  row and the suffix (`TieredQTierRows::prefix_and_suffix`, one contiguous read). `TieredQTierRows::suffix` stores
-  only the suffix and decodes each candidate's prefix from the IVF lists (`TieredQIVFIndex::document_rows`). That tier
+  own store. `TieredQTierRows::prefix_and_suffix` stores the prefix row and the suffix (one contiguous read). The
+  default, `TieredQTierRows::suffix`, stores only the suffix and decodes each candidate's prefix from the IVF lists
+  (`TieredQIVFIndex::document_rows`). That tier
   is smaller (651 vs 784 B/vector at a 1024-bit prefix, d = 1536) but costs about 3.4 us of decoding per candidate and
   a 4-byte id-to-document map in RAM.
 
@@ -292,7 +347,7 @@ auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*p
                                                /*fine_tiers=*/true, /*max_tier_bits=*/12);
   dv::TieredQIVFIndex ivf(codec);
   ivf.build(data, n);
-  dv::TieredQNestedIVFIndex index(std::move(ivf), std::move(refinement));
+  dv::TieredQNestedIVFIndex index(std::move(ivf), std::move(refinement), dv::TieredQTierRows::prefix_and_suffix);
   dv::TieredQRowFileWriter writer("tier.rows", index.tier_bytes_per_vector());
   std::vector<uint8_t> buffer(chunk * index.tier_bytes_per_vector());
   for (size_t first = 0; first < n; first += chunk) {        // ids in build order
@@ -303,6 +358,20 @@ auto fast = index.search(query, 10, 16, dv::TieredQPruning{/*confidence=*/8, /*p
   writer.finish();
   index.attach_tier(std::make_shared<dv::TieredQFileRows>("tier.rows"));
   auto hits = index.search(query, /*k=*/10, /*nprobe=*/32, /*candidates=*/50);
+  ```
+  `TieredQNestedIVFIndex::build(TieredQNestedConfig, loader, count)` does all of the above with the low-RAM defaults
+  (1-bit prefix with a 4-bit scan cap, automatic lists, fast list training and router, 8-bit fine suffix tier,
+  suffix-only rows; see the Python table), from a `RowLoader`. `sq8_row_loader` decodes an SQ8 store in memory, e.g. a
+  memory-mapped base, so no float copy is made:
+
+  ```cpp
+  auto rows = dv::sq8_row_loader(codes, n, scales, offsets);  // codes: n x d int8, row = codes * scales + offsets
+  dv::TieredQNestedConfig config;
+  config.dimensions = d;                                      // other fields: 0 or unset picks the default
+  auto index = dv::TieredQNestedIVFIndex::build(config, rows, n);
+  index.write_tier("/nvme/tier.rows", rows);
+  index.attach_tier(std::make_shared<dv::TieredQFileRows>("/nvme/tier.rows", dv::TieredQFileReads::direct, 32));
+  auto hits = index.search(query, /*k=*/10, /*nprobe=*/192);  // 40 candidates
   ```
   An exact final stage (`attach_exact`) rescores the tier's best `finals` candidates with exact vectors, e.g. an SQ8
   store left on SSD (`TieredQSQ8Rows` over a `TieredQFileRows` of int8 codes, direct reads, queue depth 32). On Qwen

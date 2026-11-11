@@ -65,6 +65,8 @@ CoarseRouter CoarseRouter::build(const CoarseQuantizer& coarse,const std::vector
   }
   const auto supers=uint32_t(std::max<size_t>(1,count/config.lists_per_super));
   TieredQIVFIndex members(train_member_codec(rows.data(),count,d,config),supers,config.seed);
+  members.set_coarse_training({});  // the supers keep exact training and no router of their own at any list count
+  members.remove_router();
   members.build(rows.data(),count);
   return CoarseRouter(coarse,config,std::move(members),std::move(lists));
 }

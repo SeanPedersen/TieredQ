@@ -317,8 +317,9 @@ TieredQRefinement TieredQRefinement::train(const TieredQ& prefix,uint32_t total_
   auto config=prefix.config();
   config.code_bits=total_code_bits; config.rotate_tiers=false; config.fine_tiers=fine_tiers;
   config.max_tier_bits=max_tier_bits;
-  // Suffix targets come from the finer model's widths; the automatic fast-scan cap would only narrow them.
-  if (!config.max_scan_bits) config.max_scan_bits=max_bits;
+  // Suffix targets come from the finer model's widths; a fast-scan cap would only narrow them. The prefix's own cap is
+  // training-only (persisted models record 0), so a trained prefix and its loaded copy refine alike.
+  config.max_scan_bits=max_bits;
   const auto finer=TieredQ::train(config,sample,rows,seed);
   TieredQRefinement out;
   out.prefix_=prefix;
