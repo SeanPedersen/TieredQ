@@ -16,7 +16,7 @@ The batch pass of `ivf-64k` reported recall 0 at every budget. Debugged in `debu
 index built from the given 64K Lloyd partition (`results/debug-ivf-64k-given`, 10 s build). The quantizer agrees between
 batch and single calls. But with the default `parallel_mode` 0 and more than a few threads, the IVF scan returns one
 repeated distance (1.607) and one id for every slot. That happened at 2 threads with 2 queries, and at 32 threads with
-64 or 750 queries; one thread is always correct. Modes 1, 2 and 3 are correct at every thread count. A 500K-row,
+64 or 750 queries; one thread is always correct. Already reported as faiss#5702 and fixed in Faiss 1.16.0 (#5824); see `hartmut-faissver-20261111`. Modes 1, 2 and 3 are correct at every thread count. A 500K-row,
 4,096-list real-data build was correct in mode 0 (`debug/faiss-batch-repro-real.py`), as was synthetic data
 (`debug/faiss-batch-repro.py`). IVF-HNSW is unaffected, and single-query numbers run on one thread.
 
