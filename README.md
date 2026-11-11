@@ -141,6 +141,13 @@ scores, ids = index.search(queries, k=10, nprobe=128)  # 40 candidates by defaul
 index.save("nested.tq")  # IVF, refinement and tier layout; attach the tier again after load()
 ```
 
+Which index (#27; VIBE arxiv 1.34M × 768 and Qwen 8.84M × 1024, one core):
+
+| Need | Index | Why |
+|---|---|---|
+| Lowest RAM, or recall above about 0.95 | `TieredQNestedIVFIndex` defaults (tier on SSD) | Only the 1-bit prefix is in RAM. It reaches recall@10 0.97-0.998 at 1.3-2.6 ms on arxiv, 0.99 at 8.84M |
+| Latency first, recall within flat's ceiling, RAM to spare | `TieredQIVFIndex` at the fewest bits/dim that reach the target | No SSD reads and about 2× nested's QPS, but recall stops near 0.955 at 1.75 bits/dim (arxiv) |
+
 #### Low-RAM recipe (large sets)
 
 `TieredQNestedIVFIndex.build` defaults to the configuration that won on recall per GB of serving RAM on
