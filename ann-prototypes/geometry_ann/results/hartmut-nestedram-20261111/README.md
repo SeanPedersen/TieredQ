@@ -17,16 +17,20 @@ are freed) it measures **0.178 / 0.183 GiB**.
 | Recall@100 ≥ 0.98, best setting | USS | QPS/GB |
 |---|---:|---:|
 | nested 86f003d, seed 42 / sample 1 | 0.241 / 0.250 GiB | 1,293 / 1,257 (np48: r 0.985 at 312 / 314 QPS) |
-| nested with the fix, seed 42 / sample 1 | 0.178 / 0.183 GiB | 1,614 / 1,482 (np64: r 0.991 at 287 / 271 QPS) |
+| nested with the fix, seed 42 / sample 1, isolated cores | 0.178 / 0.183 GiB | **1,649 / 1,648** (np48: r 0.985 at 293 / 302 QPS) |
+| nested with the fix, loaded host (`results-loaded-host/`) | 0.178 / 0.183 GiB | 1,614 / 1,482 (np64: r 0.991 at 287 / 271 QPS) |
 | rabitq-ivf 4 bits, 2,048 lists (`../hartmut-arxivdefaults-20261111`) | 0.760 GiB | 1,342 (r 0.983, 1,020 QPS) |
 
 Recall is identical with and without the fix at every nprobe, and the two seeds agree within 0.0005.
 
-**QPS caveat.** The `-fix` serves overlapped other load on hartmut: the embeddinggemma worker was at 130% CPU and IO
-pressure averaged 3%. This path makes 200 direct SSD reads per query, and nprobe 48 measured below nprobe 64 (271 and
-206 QPS against 287 and 271). At the 86f003d serves' 312 QPS, the fixed USS would give about 1,750 QPS/GB at r 0.985.
-Either way nested passes rabitq-ivf at ≥ 0.98 (1,482–1,614 against 1,342). A quiet-host rerun of the `-fix` serves
-goes with the #52 quiet-host window.
+**QPS on isolated cores.** The `-fix` serves were rerun in the window of `../hartmut-quiethost-20261111`
+(`results/`), with the production containers pinned off CPUs 2/20 and 19/35. The embeddinggemma worker still ran, at
+about 100-130% CPU on other cores. The first serves (`results-loaded-host/`) shared all cores with it at 130% CPU and
+3% IO pressure. USS and recall are unchanged. At recall@100 ≥ 0.98 the best setting is nprobe 48 for both seeds: r 0.985 at 293 / 302 QPS,
+**1,649 / 1,648 QPS/GB**, 23% above rabitq-ivf's 1,342 at 0.760 GiB. The estimate of about 1,750 QPS/GB (the fixed USS
+at 86f003d's 312 QPS) is not reached: these serves are 3-6% below 86f003d's at nprobe 48 (293 / 302 against
+312 / 314). QPS is still not monotonic in nprobe on this path (200 direct SSD reads per query): nprobe 32 measures
+279 QPS in both seeds, below nprobe 48. At nprobe 64 (r 0.991) it is 1,623 / 1,594 QPS/GB.
 
 What remains of the 0.178 GiB: `storage_bytes` 0.135 GiB (the prefix IVF; the refinement adds 4.9 MB serialized),
 live uncounted state of about 16 MiB (the id → document map, encoder caches, the refinement model; now counted by

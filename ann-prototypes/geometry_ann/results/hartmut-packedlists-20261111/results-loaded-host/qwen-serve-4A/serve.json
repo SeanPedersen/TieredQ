@@ -1,0 +1,55 @@
+{
+  "dataset": "qwen",
+  "index": "/home/sean/experiments/TieredQ-issue53-packedlists-20261111/indexes/qwen-A.tq",
+  "storage_bytes": 1644022444,
+  "points": [
+    {
+      "k": 10,
+      "nprobe": 64,
+      "batch_qps": 12287.749200431454,
+      "single_qps": 966.6652848011803
+    },
+    {
+      "k": 10,
+      "nprobe": 128,
+      "batch_qps": 7430.465993265673,
+      "single_qps": 638.4179401417505
+    },
+    {
+      "k": 10,
+      "nprobe": 256,
+      "batch_qps": 4643.448848259837,
+      "single_qps": 407.3641132659102
+    },
+    {
+      "k": 10,
+      "nprobe": 1024,
+      "batch_qps": 1358.5882548365516,
+      "single_qps": 129.77264550183745
+    },
+    {
+      "k": 100,
+      "nprobe": 64,
+      "batch_qps": 12287.618566527995,
+      "single_qps": 917.1287322388458
+    },
+    {
+      "k": 100,
+      "nprobe": 128,
+      "batch_qps": 7612.923641599473,
+      "single_qps": 624.1581817621505
+    },
+    {
+      "k": 100,
+      "nprobe": 256,
+      "batch_qps": 4359.975634328346,
+      "single_qps": 394.33430568805454
+    },
+    {
+      "k": 100,
+      "nprobe": 1024,
+      "batch_qps": 1358.0898014753895,
+      "single_qps": 127.7975064944127
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "loadavg": [
+    "3.01",
+    "9.22",
+    "8.59"
+  ],
+  "io_pressure": "some avg10=0.03 avg60=0.32 avg300=0.57 total=2692979842",
+  "top": [
+    "133 python",
+    "24.8 llama-server",
+    "5.1 dockerd",
+    "4.6 containerd",
+    "3.5 python"
+  ]
+}

@@ -18,23 +18,23 @@ nested-default-s1: 0.2502 GiB, lists 2048, storage 0.1346 GiB, serialized 0.1392
     nprobe   64 cand 200: recall 0.9915  298 QPS  1191 QPS/GB
     nprobe   96 cand 200: recall 0.9967  277 QPS  1108 QPS/GB
     nprobe  128 cand 200: recall 0.9985  248 QPS  992 QPS/GB
-nested-fix: 0.1777 GiB, lists 2048, storage 0.1346 GiB, serialized 0.1392 GiB, build 38.6 s
-  USS per step KiB {'start': 0.0, 'build': 179188.0, 'write_tier': 183080.0, 'attach_tier': 183084.0}  heap KiB {'arena': 53416, 'in_use': 4201490, 'free': 19521, 'mmapped': 4167596}
-  grown: [('anon@7f3f301f3000', 129076), ('[heap]', 27528), ('anon@7f3fdb600000', 20700), ('/usr/lib/libopenblas.so.0.3', 4148), ('/home/sean/experiments/TieredQ-issue43-heapretention-20261111/.venv-fix/lib/python3.12/site-packages/tieredq/_core.cpython-312-x86_64-linux-gnu.so', 1784), ('other', 3080)] ... 0 regions of 2.0-2.6 MiB = 0.0 MiB
-    nprobe   16 cand 200: recall 0.9259  343 QPS  1931 QPS/GB
-    nprobe   24 cand 200: recall 0.9546  334 QPS  1882 QPS/GB
-    nprobe   32 cand 200: recall 0.9701  325 QPS  1827 QPS/GB
-    nprobe   48 cand 200: recall 0.9849  271 QPS  1525 QPS/GB
-    nprobe   64 cand 200: recall 0.9911  287 QPS  1614 QPS/GB
-    nprobe   96 cand 200: recall 0.9968  263 QPS  1479 QPS/GB
-    nprobe  128 cand 200: recall 0.9984  239 QPS  1347 QPS/GB
-nested-fix-s1: 0.1832 GiB, lists 2048, storage 0.1346 GiB, serialized 0.1392 GiB, build 38.6 s
-  USS per step KiB {'start': 0.0, 'build': -213240.0, 'write_tier': -210380.0, 'attach_tier': -210376.0}  heap KiB {'arena': 54964, 'in_use': 4203123, 'free': 19412, 'mmapped': 4167572}
-  grown: [('anon@7fbd341f9000', 129052), ('[heap]', 29180), ('anon@7fbe0a800000', 20700), ('/usr/lib/libopenblas.so.0.3', 4148), ('/home/sean/experiments/TieredQ-issue43-heapretention-20261111/.venv-fix/lib/python3.12/site-packages/tieredq/_core.cpython-312-x86_64-linux-gnu.so', 1784), ('/home/sean/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/bin/python3.12', 1608)] ... 0 regions of 2.0-2.6 MiB = 0.0 MiB
-    nprobe   16 cand 200: recall 0.9254  343 QPS  1874 QPS/GB
-    nprobe   24 cand 200: recall 0.9547  335 QPS  1830 QPS/GB
-    nprobe   32 cand 200: recall 0.9701  323 QPS  1766 QPS/GB
-    nprobe   48 cand 200: recall 0.9853  206 QPS  1123 QPS/GB
-    nprobe   64 cand 200: recall 0.9915  271 QPS  1482 QPS/GB
-    nprobe   96 cand 200: recall 0.9967  264 QPS  1443 QPS/GB
-    nprobe  128 cand 200: recall 0.9985  244 QPS  1331 QPS/GB
+nested-fix: 0.1778 GiB, lists 2048, storage 0.1346 GiB, serialized 0.1392 GiB, build 38.4 s
+  USS per step KiB {'start': 0.0, 'build': 179280.0, 'write_tier': 183172.0, 'attach_tier': 183176.0}  heap KiB {'arena': 53416, 'in_use': 4201490, 'free': 19521, 'mmapped': 4167596}
+  grown: [('anon@7fc7941f3000', 129076), ('[heap]', 27528), ('anon@7fc8aec00000', 20700), ('/usr/lib/libopenblas.so.0.3', 4148), ('/home/sean/experiments/TieredQ-issue43-heapretention-20261111/.venv-fix/lib/python3.12/site-packages/tieredq/_core.cpython-312-x86_64-linux-gnu.so', 1784), ('other', 3180)] ... 0 regions of 2.0-2.6 MiB = 0.0 MiB
+    nprobe   16 cand 200: recall 0.9259  346 QPS  1947 QPS/GB
+    nprobe   24 cand 200: recall 0.9546  332 QPS  1866 QPS/GB
+    nprobe   32 cand 200: recall 0.9701  279 QPS  1567 QPS/GB
+    nprobe   48 cand 200: recall 0.9849  293 QPS  1649 QPS/GB
+    nprobe   64 cand 200: recall 0.9911  289 QPS  1623 QPS/GB
+    nprobe   96 cand 200: recall 0.9968  265 QPS  1489 QPS/GB
+    nprobe  128 cand 200: recall 0.9984  249 QPS  1400 QPS/GB
+nested-fix-s1: 0.1832 GiB, lists 2048, storage 0.1346 GiB, serialized 0.1392 GiB, build 38.2 s
+  USS per step KiB {'start': 0.0, 'build': -213100.0, 'write_tier': -210216.0, 'attach_tier': -210212.0}  heap KiB {'arena': 57124, 'in_use': 4203124, 'free': 21571, 'mmapped': 4167572}
+  grown: [('anon@7f11bc1f9000', 129052), ('[heap]', 26536), ('anon@7f12e5c00000', 20700), ('/usr/lib/libopenblas.so.0.3', 4148), ('anon@7f1204000000', 2660), ('/home/sean/experiments/TieredQ-issue43-heapretention-20261111/.venv-fix/lib/python3.12/site-packages/tieredq/_core.cpython-312-x86_64-linux-gnu.so', 1784)] ... 0 regions of 2.0-2.6 MiB = 0.0 MiB
+    nprobe   16 cand 200: recall 0.9254  348 QPS  1900 QPS/GB
+    nprobe   24 cand 200: recall 0.9547  325 QPS  1776 QPS/GB
+    nprobe   32 cand 200: recall 0.9701  279 QPS  1522 QPS/GB
+    nprobe   48 cand 200: recall 0.9853  302 QPS  1648 QPS/GB
+    nprobe   64 cand 200: recall 0.9915  292 QPS  1594 QPS/GB
+    nprobe   96 cand 200: recall 0.9967  252 QPS  1377 QPS/GB
+    nprobe  128 cand 200: recall 0.9985  245 QPS  1339 QPS/GB

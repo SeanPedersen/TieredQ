@@ -1,0 +1,11 @@
+cmake_minimum_required(VERSION 3.18)
+project(serve_nested LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 20)
+set(TIEREDQ_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../.." CACHE PATH "TieredQ source tree (a study snapshot sets it)")
+set(TIEREDQ_TESTS OFF CACHE BOOL "" FORCE)
+set(TIEREDQ_EXAMPLES OFF CACHE BOOL "" FORCE)
+add_subdirectory(${TIEREDQ_SOURCE_DIR} tieredq EXCLUDE_FROM_ALL)
+find_package(OpenMP REQUIRED)
+add_executable(serve_nested serve_nested.cpp)
+target_compile_options(serve_nested PRIVATE -O3)  # as the library and the Python wheel: runtime dispatch
+target_link_libraries(serve_nested PRIVATE TieredQ::TieredQ OpenMP::OpenMP_CXX)

@@ -1,0 +1,9 @@
+-- TieredQ LAPACK: OpenBLAS /usr/lib/libopenblas.so;/usr/lib/libopenblas.so
+-- TieredQ io_uring tier reads: 1
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue52-quiethost-20261111/build
+[ 86%] Built target dv_tieredq
+[ 93%] Building CXX object CMakeFiles/serve_nested.dir/serve_nested.cpp.o
+[100%] Linking CXX executable serve_nested
+[100%] Built target serve_nested

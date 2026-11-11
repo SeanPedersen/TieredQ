@@ -1,8 +1,8 @@
-tieredq-nested-ivf {}: built in 38.6s, 0.178 GB, {'lists': 2048, 'has_router': False, 'storage_bytes': 144568892, 'serialized_bytes': 149507052, 'uss_steps_kib': {'start': 0.0, 'build': 179188.0, 'write_tier': 183080.0, 'attach_tier': 183084.0}, 'prefix_bits': 768, 'total_bits': 6137, 'tier_bytes': 908982764, 'tier_bytes_per_vector': 676, 'heap_kib': {'arena': 53416, 'in_use': 4201490, 'free': 19521, 'mmapped': 4167596}, 'memory_before_kib': {'Anonymous': 4056884, 'AnonHugePages': 0, 'RssAnon': 4056884}, 'memory_after_kib': {'Anonymous': 4236352, 'AnonHugePages': 0, 'RssAnon': 4236352}, 'mapping_growth_kib': {'anon@7f3f301f3000': 129076, '[heap]': 27528, 'anon@7f3fdb600000': 20700, '/usr/lib/libopenblas.so.0.3': 4148, '/home/sean/experiments/TieredQ-issue43-heapretention-20261111/.venv-fix/lib/python3.12/site-packages/tieredq/_core.cpython-312-x86_64-linux-gnu.so': 1784, 'other': 3080}, 'k': 100}
-  query=[16, 200]: recall=0.9259 qps=343 qps/GB=1931
-  query=[24, 200]: recall=0.9546 qps=334 qps/GB=1882
-  query=[32, 200]: recall=0.9701 qps=325 qps/GB=1827
-  query=[48, 200]: recall=0.9849 qps=271 qps/GB=1525
-  query=[64, 200]: recall=0.9911 qps=287 qps/GB=1614
-  query=[96, 200]: recall=0.9968 qps=263 qps/GB=1479
-  query=[128, 200]: recall=0.9984 qps=239 qps/GB=1347
+tieredq-nested-ivf {}: built in 38.4s, 0.178 GB, {'lists': 2048, 'has_router': False, 'storage_bytes': 144568892, 'serialized_bytes': 149507052, 'uss_steps_kib': {'start': 0.0, 'build': 179280.0, 'write_tier': 183172.0, 'attach_tier': 183176.0}, 'prefix_bits': 768, 'total_bits': 6137, 'tier_bytes': 908982764, 'tier_bytes_per_vector': 676, 'heap_kib': {'arena': 53416, 'in_use': 4201490, 'free': 19521, 'mmapped': 4167596}, 'memory_before_kib': {'Anonymous': 4056888, 'AnonHugePages': 0, 'RssAnon': 4056888}, 'memory_after_kib': {'Anonymous': 4236356, 'AnonHugePages': 0, 'RssAnon': 4236356}, 'mapping_growth_kib': {'anon@7fc7941f3000': 129076, '[heap]': 27528, 'anon@7fc8aec00000': 20700, '/usr/lib/libopenblas.so.0.3': 4148, '/home/sean/experiments/TieredQ-issue43-heapretention-20261111/.venv-fix/lib/python3.12/site-packages/tieredq/_core.cpython-312-x86_64-linux-gnu.so': 1784, 'other': 3180}, 'k': 100}
+  query=[16, 200]: recall=0.9259 qps=346 qps/GB=1947
+  query=[24, 200]: recall=0.9546 qps=332 qps/GB=1866
+  query=[32, 200]: recall=0.9701 qps=279 qps/GB=1567
+  query=[48, 200]: recall=0.9849 qps=293 qps/GB=1649
+  query=[64, 200]: recall=0.9911 qps=289 qps/GB=1623
+  query=[96, 200]: recall=0.9968 qps=265 qps/GB=1489
+  query=[128, 200]: recall=0.9984 qps=249 qps/GB=1400

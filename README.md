@@ -184,10 +184,13 @@ about 290 s to build on 32 threads, recall@10 0.944 / 0.951 / 0.963 / 0.968 / 0.
 the same recall at 3.35 GB and 2.4-11.6 ms. Faiss IVF-SQ8 with an HNSW quantizer at 128K lists needs 13.6 GB and
 3,052 s; against it the 2-bit prefix was level at 0.95 and 1.16-1.6× faster from 0.963 to 0.99, and the 1-bit prefix is
 another 15-28% faster. Built and served through Python with these defaults only (an SQ8 memmap in, the tier on
-NVMe), the 1-bit index took 302 s and served in 1.72 GB
+NVMe), the 1-bit index takes 336 s and serves in 1.58 GB (after the heap fixes and packed lists; 302 s and 1.72 GB
+before). On the same index Python's p50 is within 2.3% of C++, and 32 threads give 3,746 / 1,068 / 360 QPS at
+recall@10 0.938 / 0.980 / 0.990. This index is 6-10% slower, at 0.003-0.007 lower recall, than the seed-42 index quoted above
 ([SSD tier study](ann-prototypes/geometry_ann/results/hartmut-ssdtier-20261111/README.md),
 [defaults study](ann-prototypes/geometry_ann/results/hartmut-defaults-20261111/README.md),
-[Python end to end](ann-prototypes/geometry_ann/results/hartmut-pythondefaults-20261111/README.md)). When SQ8 recall matters
+[Python end to end](ann-prototypes/geometry_ann/results/hartmut-pythondefaults-20261111/README.md),
+[Python against C++](ann-prototypes/geometry_ann/results/hartmut-quiethost-20261111/README.md)). When SQ8 recall matters
 more than RAM, keep a 6-bit tier in RAM and add `attach_exact` over SQ8 rows on SSD (7.84 GB).
 `build` and `write_tier` also take `loader=` (a callable from `uint32` ids to float32 rows) with `count=` (and
 `dimensions=` for `build`).

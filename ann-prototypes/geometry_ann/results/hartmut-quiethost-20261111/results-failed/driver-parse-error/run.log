@@ -1,0 +1,100 @@
+-- The CXX compiler identification is GNU 16.2.1
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP: TRUE (found version "5.2")
+-- Found BLAS: /usr/lib/libopenblas.so
+-- Found LAPACK: /usr/lib/libopenblas.so;/usr/lib/libopenblas.so
+-- TieredQ LAPACK: OpenBLAS /usr/lib/libopenblas.so;/usr/lib/libopenblas.so
+-- TieredQ io_uring tier reads: 1
+-- Configuring done (1.3s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue52-quiethost-20261111/build
+[  6%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq.cpp.o
+[ 20%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_index.cpp.o
+[ 20%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_elias_fano.cpp.o
+[ 33%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_ivf.cpp.o
+[ 33%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_index_io.cpp.o
+[ 40%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_ivf_router.cpp.o
+[ 46%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_refinement.cpp.o
+[ 53%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_ivf_rows.cpp.o
+[ 60%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_nested.cpp.o
+[ 66%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_nested_build.cpp.o
+[ 73%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_nested_flat.cpp.o
+[ 80%] Building CXX object tieredq/CMakeFiles/dv_tieredq.dir/src/tieredq_blocks.cpp.o
+/home/sean/experiments/TieredQ-issue53-packedlists-20261111/source-packed/tieredq/src/tieredq.cpp: In static member function ‘static dv::TieredQ dv::TieredQ::train(dv::TieredQConfig, const float*, size_t, uint64_t)’:
+/home/sean/experiments/TieredQ-issue53-packedlists-20261111/source-packed/tieredq/src/tieredq.cpp:351:60: warning: missing initializer for member ‘dv::tieredq_detail::TrainingRows::norms’ [-Wmissing-field-initializers]
+  351 |     auto model_sample=tieredq_detail::TrainingRows{sample,d}.normalized(rows);
+      |                                                            ^
+/home/sean/experiments/TieredQ-issue53-packedlists-20261111/source-packed/tieredq/src/tieredq.cpp:356:92: warning: missing initializer for member ‘dv::tieredq_detail::TrainingRows::norms’ [-Wmissing-field-initializers]
+  356 |       model_sample=tieredq_detail::TrainingRows{model_rows.data(),lifted.model_dimensions()};
+      |                                                                                            ^
+/home/sean/experiments/TieredQ-issue53-packedlists-20261111/source-packed/tieredq/src/tieredq.cpp:366:82: warning: missing initializer for member ‘dv::tieredq_detail::TrainingRows::norms’ [-Wmissing-field-initializers]
+  366 |   return train_model(config,tieredq_detail::TrainingRows{sample,config.dimensions},rows,true,seed);
+      |                                                                                  ^
+/home/sean/experiments/TieredQ-issue53-packedlists-20261111/source-packed/tieredq/src/tieredq.cpp: In static member function ‘static dv::TieredQ dv::TieredQ::train_sampled(dv::TieredQConfig, const float*, size_t, const uint32_t*, size_t, uint64_t)’:
+/home/sean/experiments/TieredQ-issue53-packedlists-20261111/source-packed/tieredq/src/tieredq.cpp:381:76: warning: missing initializer for member ‘dv::tieredq_detail::TrainingRows::norms’ [-Wmissing-field-initializers]
+  381 |   const tieredq_detail::TrainingRows rows{data,config.dimensions,sample_ids};
+      |                                                                            ^
+[ 86%] Linking CXX static library libdv_tieredq.a
+[ 86%] Built target dv_tieredq
+[ 93%] Building CXX object CMakeFiles/serve_nested.dir/serve_nested.cpp.o
+/home/sean/experiments/TieredQ-issue52-quiethost-20261111/serve_nested.cpp: In function ‘std::vector<T> {anonymous}::read_vecs(const std::string&, size_t, size_t)’:
+/home/sean/experiments/TieredQ-issue52-quiethost-20261111/serve_nested.cpp:27:26: warning: parentheses were disambiguated as a function declaration [-Wvexing-parse]
+   27 |     std::vector<T> values(size_t(width));
+      |                          ^~~~~~~~~~~~~~~
+/home/sean/experiments/TieredQ-issue52-quiethost-20261111/serve_nested.cpp:27:26: note: replace parentheses with braces to declare a variable
+   27 |     std::vector<T> values(size_t(width));
+      |                          ^~~~~~~~~~~~~~~
+      |                          -
+      |                          {             -
+      |                                        }
+/home/sean/experiments/TieredQ-issue52-quiethost-20261111/serve_nested.cpp: In instantiation of ‘std::vector<T> {anonymous}::read_vecs(const std::string&, size_t, size_t) [with T = float; std::string = std::__cxx11::basic_string<char>; size_t = long unsigned int]’:
+/home/sean/experiments/TieredQ-issue52-quiethost-20261111/serve_nested.cpp:57:40:   required from here
+   57 |   const auto queries = read_vecs<float>(argv[3], count, d);
+      |                        ~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~
+/home/sean/experiments/TieredQ-issue52-quiethost-20261111/serve_nested.cpp:28:44: error: request for member ‘data’ in ‘{anonymous}::values’, which is of non-class type ‘std::vector<float>(size_t)’ {aka ‘std::vector<float>(long unsigned int)’}
+   28 |     in.read(reinterpret_cast<char*>(values.data()), std::streamsize(values.size() * sizeof(T)));
+      |                                     ~~~~~~~^~~~
+/home/sean/experiments/TieredQ-issue52-quiethost-20261111/serve_nested.cpp:28:76: error: request for member ‘size’ in ‘{anonymous}::values’, which is of non-class type ‘std::vector<float>(size_t)’ {aka ‘std::vector<float>(long unsigned int)’}
+   28 |     in.read(reinterpret_cast<char*>(values.data()), std::streamsize(values.size() * sizeof(T)));
+      |                                                                     ~~~~~~~^~~~
+/home/sean/experiments/TieredQ-issue52-quiethost-20261111/serve_nested.cpp:29:34: error: request for member ‘begin’ in ‘{anonymous}::values’, which is of non-class type ‘std::vector<float>(size_t)’ {aka ‘std::vector<float>(long unsigned int)’}
+   29 |     out.insert(out.end(), values.begin(), values.begin() + std::min(keep, values.size()));
+      |                           ~~~~~~~^~~~~
+/home/sean/experiments/TieredQ-issue52-quiethost-20261111/serve_nested.cpp:29:50: error: request for member ‘begin’ in ‘{anonymous}::values’, which is of non-class type ‘std::vector<float>(size_t)’ {aka ‘std::vector<float>(long unsigned int)’}
+   29 |     out.insert(out.end(), values.begin(), values.begin() + std::min(keep, values.size()));
+      |                                           ~~~~~~~^~~~~
+/home/sean/experiments/TieredQ-issue52-quiethost-20261111/serve_nested.cpp:29:82: error: request for member ‘size’ in ‘{anonymous}::values’, which is of non-class type ‘std::vector<float>(size_t)’ {aka ‘std::vector<float>(long unsigned int)’}
+   29 |     out.insert(out.end(), values.begin(), values.begin() + std::min(keep, values.size()));
+      |                                                                           ~~~~~~~^~~~
+/home/sean/experiments/TieredQ-issue52-quiethost-20261111/serve_nested.cpp: In instantiation of ‘std::vector<T> {anonymous}::read_vecs(const std::string&, size_t, size_t) [with T = int; std::string = std::__cxx11::basic_string<char>; size_t = long unsigned int]’:
+/home/sean/experiments/TieredQ-issue52-quiethost-20261111/serve_nested.cpp:58:40:   required from here
+   58 |   const auto truth = read_vecs<int32_t>(argv[4], count, top_k);
+      |                      ~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~
+/home/sean/experiments/TieredQ-issue52-quiethost-20261111/serve_nested.cpp:27:20: error: ambiguating new declaration of ‘std::vector<int, std::allocator<int> > {anonymous}::values(size_t)’
+   27 |     std::vector<T> values(size_t(width));
+      |                    ^~~~~~
+/home/sean/experiments/TieredQ-issue52-quiethost-20261111/serve_nested.cpp:27:20: note: old declaration ‘std::vector<float> {anonymous}::values(size_t)’
+/home/sean/experiments/TieredQ-issue52-quiethost-20261111/serve_nested.cpp:28:44: error: request for member ‘data’ in ‘{anonymous}::values’, which is of non-class type ‘std::vector<int, std::allocator<int> >(size_t)’ {aka ‘std::vector<int, std::allocator<int> >(long unsigned int)’}
+   28 |     in.read(reinterpret_cast<char*>(values.data()), std::streamsize(values.size() * sizeof(T)));
+      |                                     ~~~~~~~^~~~
+/home/sean/experiments/TieredQ-issue52-quiethost-20261111/serve_nested.cpp:28:76: error: request for member ‘size’ in ‘{anonymous}::values’, which is of non-class type ‘std::vector<int, std::allocator<int> >(size_t)’ {aka ‘std::vector<int, std::allocator<int> >(long unsigned int)’}
+   28 |     in.read(reinterpret_cast<char*>(values.data()), std::streamsize(values.size() * sizeof(T)));
+      |                                                                     ~~~~~~~^~~~
+/home/sean/experiments/TieredQ-issue52-quiethost-20261111/serve_nested.cpp:29:34: error: request for member ‘begin’ in ‘{anonymous}::values’, which is of non-class type ‘std::vector<int, std::allocator<int> >(size_t)’ {aka ‘std::vector<int, std::allocator<int> >(long unsigned int)’}
+   29 |     out.insert(out.end(), values.begin(), values.begin() + std::min(keep, values.size()));
+      |                           ~~~~~~~^~~~~
+/home/sean/experiments/TieredQ-issue52-quiethost-20261111/serve_nested.cpp:29:50: error: request for member ‘begin’ in ‘{anonymous}::values’, which is of non-class type ‘std::vector<int, std::allocator<int> >(size_t)’ {aka ‘std::vector<int, std::allocator<int> >(long unsigned int)’}
+   29 |     out.insert(out.end(), values.begin(), values.begin() + std::min(keep, values.size()));
+      |                                           ~~~~~~~^~~~~
+/home/sean/experiments/TieredQ-issue52-quiethost-20261111/serve_nested.cpp:29:82: error: request for member ‘size’ in ‘{anonymous}::values’, which is of non-class type ‘std::vector<int, std::allocator<int> >(size_t)’ {aka ‘std::vector<int, std::allocator<int> >(long unsigned int)’}
+   29 |     out.insert(out.end(), values.begin(), values.begin() + std::min(keep, values.size()));
+      |                                                                           ~~~~~~~^~~~
+make[3]: *** [CMakeFiles/serve_nested.dir/build.make:79: CMakeFiles/serve_nested.dir/serve_nested.cpp.o] Error 1
+make[2]: *** [CMakeFiles/Makefile2:107: CMakeFiles/serve_nested.dir/all] Error 2
+make[1]: *** [CMakeFiles/Makefile2:114: CMakeFiles/serve_nested.dir/rule] Error 2
+make: *** [Makefile:169: serve_nested] Error 2
