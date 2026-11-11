@@ -29,7 +29,7 @@ about 100-130% CPU on other cores. The first serves (`results-loaded-host/`) sha
 3% IO pressure. USS and recall are unchanged. At recall@100 ≥ 0.98 the best setting is nprobe 48 for both seeds: r 0.985 at 293 / 302 QPS,
 **1,649 / 1,648 QPS/GB**, 23% above rabitq-ivf's 1,342 at 0.760 GiB. The estimate of about 1,750 QPS/GB (the fixed USS
 at 86f003d's 312 QPS) is not reached: these serves are 3-6% below 86f003d's at nprobe 48 (293 / 302 against
-312 / 314). QPS is still not monotonic in nprobe on this path (200 direct SSD reads per query): nprobe 32 measures
+312 / 314), a difference within this host's run-to-run spread. QPS is still not monotonic in nprobe on this path (200 direct SSD reads per query): nprobe 32 measures
 279 QPS in both seeds, below nprobe 48. At nprobe 64 (r 0.991) it is 1,623 / 1,594 QPS/GB.
 
 What remains of the 0.178 GiB: `storage_bytes` 0.135 GiB (the prefix IVF; the refinement adds 4.9 MB serialized),

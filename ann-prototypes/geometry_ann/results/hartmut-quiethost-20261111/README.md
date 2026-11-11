@@ -39,16 +39,18 @@ partition.
 The "Py / C++" column compares the mean of the two Python serves with the mean of the two C++ serves. The C++
 reference is `../hartmut-defaults-20261111` onebit-64k: seed 42, explicit C++ calls at 9b158c6, padded lists.
 
-**The 7-14% gap was neither the binding nor host load.** On the same index, Python and C++ are within −0.4% to +2.3%.
+**The 7-14% gap was not the binding.** On the same index, Python and C++ are within −0.4% to +2.3%.
 The same server's two serves differ by up to 10% (C++ at nprobe 1024), so the binding cost is below what this setup
-can resolve. The Python p50 also lands within −4.6% to +3.9% of the earlier serve that ran under load 17-24. The gap
-belongs to the index. This index, served from C++, is 6-10% slower than the seed-42 C++ reference, at 0.003-0.007
-lower recall. Packed lists account for about 1.5% of that (`../hartmut-packedlists-20261111`). The rest is between the
-two builds: partition seed, list training and the source version, which this study does not separate.
+can resolve. The Python p50 also lands within −4.6% to +3.9% of the earlier serve that ran under load 17-24. Served from C++, this
+index is 6-10% slower than the seed-42 C++ reference, at 0.003-0.007 lower recall. Packed lists account for about 1.5%
+of that (`../hartmut-packedlists-20261111`). The rest is not resolved. The reference ran hours earlier with its host
+load unrecorded, and its index is deleted. Host state alone moved this window's serves by up to 10% (the first serves,
+at load 19 after the tier write, against the later ones at load 3-5), and the worker still ran beside them. So the
+rest may be host state as much as a difference between the builds (partition seed, list training, source version).
 
 | | this run (6298356) | `../hartmut-pythondefaults-20261111` (9b158c6) |
 |---|---:|---:|
-| Build, index + tier | 336 s (218 + 117), save 10 s | 302 s (208 + 94) |
+| Build, index + tier | 336 s (218 + 117), save 10 s; ABBA mean 312 s for both versions | 302 s (208 + 94) |
 | Peak build RSS | 20.98 GB | 21.0 GB |
 | Index file / tier file | 1.49 / 7.93 GB | 1.63 / 7.93 GB |
 | Serving RAM (anonymous RSS, Python, 1 thread) | **1.58 GB** | 1.72 GB |
@@ -57,9 +59,9 @@ The serving RAM falls by 8.1% (heap fixes and packed lists), and the index file 
 RSS (3.06 GB) includes the whole file, which the driver keeps as a byte vector. Without it, the driver's RSS is the
 same as Python's.
 
-The build took 11% longer, and most of that is in `write_tier` (+25%, 117 s against 94 s). This run started with load
-4 and the earlier one with load 17-24, so host load does not explain it. Possible causes are the heap fix's encoder
-buffers in `write_tier` (8c9d8db) or the SSD's state. This run does not tell them apart (see "Open").
+This build took 11% longer, most of it in `write_tier` (117 s against 94 s). An ABBA of both versions shows that this
+is host state, not code (`../hartmut-tierwrite-20261111`): build plus tier write averages 312.6 s at 9b158c6 and
+312.0 s at 6298356. 9b158c6's own `write_tier` runs took 94 s and 106 s.
 
 ### Batch QPS of the SSD configuration (32 threads, first measurement)
 
@@ -75,7 +77,6 @@ per second.
 
 ## Open
 
-- `write_tier` time: time A/B of 9b158c6 (the earlier build) against 6298356 on the same host, at 1M rows or the full 8.84M (about 2 × 2 min
-  of tier writes).
-- C++ latency gap to the seed-42 reference: count the rows scanned per query on both builds, which needs no new
-  timing run.
+- C++ latency gap to the seed-42 reference: only an ABBA serve of both indexes in one window, with the services
+  paused, settles it. Not planned, since it changes no code. Until then, quote this run's numbers for the Python
+  default.

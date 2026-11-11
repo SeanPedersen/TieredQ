@@ -1,0 +1,16 @@
+{
+  "options": {},
+  "rows": 8840823,
+  "lists": 65536,
+  "has_router": true,
+  "prefix_bits": 1024,
+  "total_bits": 8161,
+  "tier_rows": "suffix",
+  "tier_bytes_per_vector": 897,
+  "storage_bytes": 1587515600,
+  "build_s": 207.92548074002843,
+  "tier_s": 102.17858695692848,
+  "save_s": 7.7167397000594065,
+  "total_s": 310.1040676969569,
+  "peak_rss_bytes": 20976803840
+}
