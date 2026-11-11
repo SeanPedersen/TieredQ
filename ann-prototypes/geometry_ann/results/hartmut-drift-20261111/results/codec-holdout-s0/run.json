@@ -1,0 +1,54 @@
+{
+  "mode": "codec-holdout",
+  "seed": 0,
+  "held_out": [
+    1,
+    3,
+    6,
+    15,
+    22,
+    26,
+    42,
+    46,
+    52,
+    53,
+    55,
+    57,
+    59,
+    61,
+    68,
+    70,
+    73,
+    83,
+    92,
+    93
+  ],
+  "shifted_rows": 257608,
+  "shifted_queries": 198,
+  "build_s": 31.667213916778564,
+  "largest_list": 2472,
+  "rows_in_lists_over_4x_mean": 0.0,
+  "empty_lists": 0,
+  "points": [
+    {
+      "nprobe": 8,
+      "recall_all": 0.8771000000000001,
+      "recall_shifted": 0.8646464646464647
+    },
+    {
+      "nprobe": 16,
+      "recall_all": 0.9195,
+      "recall_shifted": 0.9161616161616161
+    },
+    {
+      "nprobe": 32,
+      "recall_all": 0.9430999999999999,
+      "recall_shifted": 0.9333333333333333
+    },
+    {
+      "nprobe": 64,
+      "recall_all": 0.9538,
+      "recall_shifted": 0.9454545454545455
+    }
+  ]
+}

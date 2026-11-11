@@ -1,0 +1,54 @@
+{
+  "mode": "lists-holdout",
+  "seed": 2,
+  "held_out": [
+    5,
+    8,
+    9,
+    17,
+    19,
+    21,
+    25,
+    26,
+    29,
+    35,
+    39,
+    54,
+    65,
+    67,
+    70,
+    74,
+    83,
+    91,
+    92,
+    96
+  ],
+  "shifted_rows": 301743,
+  "shifted_queries": 252,
+  "build_s": 32.77761697769165,
+  "largest_list": 4456,
+  "rows_in_lists_over_4x_mean": 0.028197075357548434,
+  "empty_lists": 0,
+  "points": [
+    {
+      "nprobe": 8,
+      "recall_all": 0.8531000000000001,
+      "recall_shifted": 0.8202380952380952
+    },
+    {
+      "nprobe": 16,
+      "recall_all": 0.9048,
+      "recall_shifted": 0.8876984126984127
+    },
+    {
+      "nprobe": 32,
+      "recall_all": 0.9346,
+      "recall_shifted": 0.926984126984127
+    },
+    {
+      "nprobe": 64,
+      "recall_all": 0.95,
+      "recall_shifted": 0.9527777777777778
+    }
+  ]
+}

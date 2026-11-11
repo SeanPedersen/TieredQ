@@ -1,0 +1,54 @@
+{
+  "mode": "random",
+  "seed": 1,
+  "held_out": [
+    2,
+    8,
+    12,
+    22,
+    24,
+    25,
+    28,
+    38,
+    39,
+    41,
+    53,
+    62,
+    71,
+    77,
+    79,
+    83,
+    90,
+    91,
+    96,
+    99
+  ],
+  "shifted_rows": 297945,
+  "shifted_queries": 215,
+  "build_s": 21.90588903427124,
+  "largest_list": 1831,
+  "rows_in_lists_over_4x_mean": 0.0,
+  "empty_lists": 0,
+  "points": [
+    {
+      "nprobe": 8,
+      "recall_all": 0.8755000000000001,
+      "recall_shifted": 0.8734883720930233
+    },
+    {
+      "nprobe": 16,
+      "recall_all": 0.923,
+      "recall_shifted": 0.9237209302325582
+    },
+    {
+      "nprobe": 32,
+      "recall_all": 0.9432,
+      "recall_shifted": 0.9427906976744186
+    },
+    {
+      "nprobe": 64,
+      "recall_all": 0.9551000000000001,
+      "recall_shifted": 0.9572093023255814
+    }
+  ]
+}
