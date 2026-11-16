@@ -94,13 +94,16 @@ a persisted format with the portable scorer. Blocks need no alignment (64-byte s
 lines). A scanner is single-threaded; use one per thread and query. Nibble-lookup blocks end on a short tail block,
 so small lists are not padded to 256 documents; pruned (range-checkpoint) scans do not apply to such views.
 
-Engines that place one row at a time into fixed-size blocks (a Faiss `CodePacker`, #55) use tiles instead: a tile is
-a block of `tile_slots` (256) documents, `tile_bytes()` long (a multiple of 64, so tiles laid end to end stay
-aligned), with its own metadata. Zero a tile, then `write_row(tile, slot, row)` stores one `encode()` row in place,
-replacing what the slot held; `Scanner::score_tile(tile, live, scores)` scores slots `[0, live)` and ignores the rest,
-so a list removes a row by moving its last row into the hole. Tile bytes equal `pack()` of the same 256 rows, tile
-scores equal `score()` of a block packed with the live rows bit for bit, and `rows` / `unpack` with `count =
-tile_slots` read written slots back. After `map_scores`, tile scores equal `TieredQIVFIndex` scores of the same rows.
+Engines that place one row at a time (#55) keep partly filled blocks: a block laid out for `capacity` documents
+(`block_bytes(capacity)`, zeroed first) takes one `encode()` row per `write_row(block, capacity, slot, row)`, which
+replaces what the slot held, and `Scanner::score(block, capacity, live, scores)` scores slots `[0, live)` and ignores
+the rest. So a list grows into spare capacity and removes a row by moving its last row into the hole; re-laying a list
+out for another capacity means reading its rows (`rows` / `unpack` with `count = capacity`) and writing them again.
+A block's bytes equal `pack()` of its `capacity` rows, its scores equal `score()` of a block packed with the live rows
+bit for bit, and after `map_scores` they equal `TieredQIVFIndex` scores of the same rows. Engines with fixed-size
+blocks use one capacity for all, e.g. `tile_slots` (256: one nibble-lookup block, a multiple of 64 bytes long).
+A new scanner copies the format's geometry (about 25 us at 1024 dimensions); `reset(scanner, query)` prepares an
+existing one for another query instead. `faiss-tieredq/` builds a Faiss `IndexIVFTieredQ` on these blocks.
 
 ## Ownership and concurrency
 

@@ -7,8 +7,9 @@
 // - Blocks start at any address; starts on `alignment` bytes keep vector loads within cache lines.
 // - Scores are model-space inner-product estimates, as TieredQ::score returns them; TieredQ::map_scores maps them to
 //   the metric's scores.
-// - Fixed-capacity tiles (#55) serve engines that place one row at a time into fixed-size blocks (a Faiss CodePacker):
-//   a tile is a block of tile_slots documents, filled slot by slot with write_row and scanned with Scanner::score_tile.
+// - Partly filled blocks (#55) serve engines that place one row at a time: a block laid out for `capacity` documents
+//   (block_bytes(capacity)) is filled slot by slot with write_row and scanned over its first `live` slots, so a list
+//   grows into spare capacity and an engine with fixed-size blocks uses one capacity for all (tile_slots).
 #pragma once
 #include "tieredq/tieredq.h"
 #include <cstddef>
@@ -38,14 +39,14 @@ class TieredQFastBlocks {
   // e.g. a scan's candidates whose codes a refinement tier rescores.
   void rows(const uint8_t* block, size_t count, const uint32_t* documents, size_t n, uint8_t* rows) const;
 
-  // A tile is block_bytes(tile_slots) bytes, a multiple of alignment, so tiles laid end to end keep their alignment.
-  // Each carries its own metadata. Zero a tile before its first write_row; slots never written, or vacated by the
-  // caller, are padding that scans skip. rows() and unpack() with count = tile_slots read written slots back exactly.
+  // Zero a block of block_bytes(capacity) bytes before its first write_row; slots never written, or vacated by the
+  // caller, are padding that scans of the first `live` slots skip. rows() and unpack() with count = capacity read
+  // written slots back exactly. A fixed-size tile is a block of tile_slots documents (one nibble-lookup block, no short
+  // tail); block_bytes(tile_slots) is a multiple of alignment, so tiles laid end to end keep their alignment.
   static constexpr size_t tile_slots = 256;
-  size_t tile_bytes() const;
-  // Stores one encode() row in slot (< tile_slots) of tile, replacing what the slot held: the tile's bytes then equal
-  // pack() of the tile's rows wherever pack() writes them.
-  void write_row(uint8_t* tile, size_t slot, const uint8_t* row) const;
+  // Stores one encode() row in slot (< capacity) of a block laid out for capacity documents, replacing what the slot
+  // held: the block's bytes then equal pack() of its capacity rows wherever pack() writes them.
+  void write_row(uint8_t* block, size_t capacity, size_t slot, const uint8_t* row) const;
 
   // One query's prepared tables plus a scan view; not thread-safe, reusable across blocks of this format.
   class Scanner {
@@ -55,9 +56,9 @@ class TieredQFastBlocks {
     Scanner& operator=(Scanner&&) noexcept;
     // Writes count scores for the block's documents (count as packed). The block must outlive the call only.
     void score(const uint8_t* block, size_t count, float* scores);
-    // Writes live scores for slots [0, live) of a tile (live <= tile_slots), equal bit for bit to score() of a block
-    // packed with those rows.
-    void score_tile(const uint8_t* tile, size_t live, float* scores);
+    // Writes live scores for slots [0, live) of a block laid out for capacity documents (live <= capacity), equal bit
+    // for bit to score() of a block packed with those live rows.
+    void score(const uint8_t* block, size_t capacity, size_t live, float* scores);
     struct Impl;
    private:
     friend class TieredQFastBlocks;
@@ -68,9 +69,16 @@ class TieredQFastBlocks {
   Scanner scanner(const float* query) const;
   // From the query's codec().query_weights() prepared by the caller, who reuses them (e.g. TieredQRefinement::query).
   Scanner scanner(const TieredQQuery& weights) const;
+  // Prepares a scanner of these blocks for another query in place, keeping its scan view: a new scanner copies the
+  // format's geometry (about 25 us at 1024 dimensions), so engines that scan many queries reuse scanners.
+  void reset(Scanner& scanner, const float* query) const;
+  void reset(Scanner& scanner, const TieredQQuery& weights) const;
 
  private:
   Scanner make_scanner(const float* model_query, const TieredQQuery* weights) const;
+  void check_weights(const TieredQQuery& weights) const;
+  // query in model space: itself for inner product, otherwise lifted into `lifted`.
+  const float* model_query(const float* query, std::vector<float>& lifted) const;
   static std::shared_ptr<const tieredq_detail::FastRowReader> make_reader(const TieredQ& codec,
                                                                           const tieredq_detail::FastScanCache& geometry);
   static std::shared_ptr<const tieredq_detail::FastTileWriter> make_writer(

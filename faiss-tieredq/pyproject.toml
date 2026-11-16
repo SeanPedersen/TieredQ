@@ -1,0 +1,27 @@
+[build-system]
+requires = ["scikit-build-core>=0.10", "nanobind>=2.4"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "faiss-tieredq"
+version = "0.1.0"
+description = "IndexIVFTieredQ: a Faiss IVF index on TieredQ fast-scan tiles"
+requires-python = ">=3.10"
+license = "MIT"
+dependencies = ["numpy>=1.24"]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.scikit-build]
+minimum-version = "build-system.requires"
+cmake.version = ">=3.24"
+cmake.build-type = "Release"
+wheel.packages = ["python/faiss_tieredq"]
+build-dir = "build/{wheel_tag}"
+
+[tool.scikit-build.cmake.define]
+FAISS_TIEREDQ_TESTS = "OFF"
+
+[tool.pytest.ini_options]
+testpaths = ["tests/python"]

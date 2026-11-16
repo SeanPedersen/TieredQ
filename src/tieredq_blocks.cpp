@@ -2,8 +2,8 @@
 // Block layout for count documents, padded to the format's block granularity (16 documents; nibble lookups keep
 // 256-document blocks and end on a tail block rounded to 16 documents):
 //   factor u16[padded] | correction u16[padded] | centroid u8[padded] | 64-byte aligned codes | read slack
-// A tile is the block of tile_slots documents: whole lookup and level blocks, no short tail. Its scans view all slots
-// and score the first `live`, so the borrowed geometry does not depend on how many slots are filled.
+// A partly filled block keeps the layout of its capacity: scans borrow that geometry and score the first `live` slots,
+// and write_row places a slot by the same shape.
 #include "tieredq/tieredq_blocks.h"
 #include "tieredq_fast_scan.h"
 #include "tieredq_fast_rows.h"
@@ -11,6 +11,7 @@
 #include "tieredq_fast_tile.h"
 #include <cstring>
 #include <numeric>
+#include <type_traits>
 
 namespace tq {
 using tieredq_detail::bad;
@@ -71,7 +72,10 @@ void borrow(FastScanCache& view, const uint8_t* block, size_t count) {
 struct TieredQFastBlocks::Scanner::Impl {
   virtual ~Impl() = default;
   virtual void score(const uint8_t* block, size_t count, float* scores) = 0;
-  virtual void score_tile(const uint8_t* tile, size_t live, float* scores) = 0;
+  virtual void score(const uint8_t* block, size_t capacity, size_t live, float* scores) = 0;
+  // New query tables over the same scan view (model_query in model space, or the caller's weights).
+  virtual void prepare(const TieredQ& codec, const float* model_query, const TieredQQuery* weights) = 0;
+  const FastScanCache* origin = nullptr;  // the TieredQFastBlocks geometry the view copies
 };
 
 namespace {
@@ -79,10 +83,18 @@ template<class Prepared, class Scan>
 struct TypedScanner final : TieredQFastBlocks::Scanner::Impl {
   TypedScanner(std::unique_ptr<FastScanCache> view, Prepared prepared, Scan scan)
       : view_(std::move(view)), prepared_(std::move(prepared)), scan_(std::move(scan)) {}
+  // Preparation reads only the view's geometry (projection, groups, level ranges), never the borrowed block, and the
+  // backend is fixed per geometry, so it yields this scanner's Prepared type again.
+  void prepare(const TieredQ& codec, const float* model_query, const TieredQQuery* weights) override {
+    tieredq_detail::with_fast_scan(*view_, codec, model_query, 1, [&](auto&& prepared, size_t, auto) {
+      if constexpr (std::is_same_v<std::decay_t<decltype(prepared)>, Prepared>) prepared_ = std::move(prepared);
+      else bad("fast block scanner backend changed");
+    }, weights);
+  }
   void score(const uint8_t* block, size_t count, float* scores) override { scan(block, count, count, scores); }
-  void score_tile(const uint8_t* tile, size_t live, float* scores) override {
-    if (live > TieredQFastBlocks::tile_slots) bad("tile slot count out of range");
-    scan(tile, TieredQFastBlocks::tile_slots, live, scores);
+  void score(const uint8_t* block, size_t capacity, size_t live, float* scores) override {
+    if (live > capacity) bad("block live count exceeds its capacity");
+    scan(block, capacity, live, scores);
   }
   // Scores documents [0, scored) of a block laid out for count documents.
   void scan(const uint8_t* block, size_t count, size_t scored, float* scores) {
@@ -106,7 +118,9 @@ TieredQFastBlocks::Scanner::~Scanner() = default;
 TieredQFastBlocks::Scanner::Scanner(Scanner&&) noexcept = default;
 TieredQFastBlocks::Scanner& TieredQFastBlocks::Scanner::operator=(Scanner&&) noexcept = default;
 void TieredQFastBlocks::Scanner::score(const uint8_t* block, size_t count, float* scores) { impl_->score(block, count, scores); }
-void TieredQFastBlocks::Scanner::score_tile(const uint8_t* tile, size_t live, float* scores) { impl_->score_tile(tile, live, scores); }
+void TieredQFastBlocks::Scanner::score(const uint8_t* block, size_t capacity, size_t live, float* scores) {
+  impl_->score(block, capacity, live, scores);
+}
 
 std::shared_ptr<const tieredq_detail::FastRowReader> TieredQFastBlocks::make_reader(const TieredQ& codec, const FastScanCache& geometry) {
   return std::make_shared<const tieredq_detail::FastRowReader>(geometry, codec.levels_, codec.tiers_, codec.coded_dimensions(),
@@ -116,7 +130,7 @@ std::shared_ptr<const tieredq_detail::FastRowReader> TieredQFastBlocks::make_rea
 std::shared_ptr<const tieredq_detail::FastTileWriter> TieredQFastBlocks::make_writer(
     const TieredQ& codec, const std::shared_ptr<const FastScanCache>& geometry) {
   return std::make_shared<const tieredq_detail::FastTileWriter>(geometry, codec.levels_, codec.tiers_, codec.code_bytes(),
-      codec.config().num_centroids, tile_slots, shape_of(*geometry, tile_slots).code_offset);
+      codec.config().num_centroids);
 }
 
 TieredQFastBlocks::TieredQFastBlocks(const TieredQ& codec)
@@ -149,12 +163,11 @@ TieredQFastBlocks::TieredQFastBlocks(const TieredQ& codec, uint32_t format)
 
 size_t TieredQFastBlocks::block_bytes(size_t count) const { return shape_of(*empty_, count).total; }
 
-size_t TieredQFastBlocks::tile_bytes() const { return block_bytes(tile_slots); }
-
-void TieredQFastBlocks::write_row(uint8_t* tile, size_t slot, const uint8_t* row) const {
-  if (!tile || !row) bad("null tile buffer");
-  if (slot >= tile_slots) bad("tile slot out of range");
-  writer_->write(tile, slot, row);
+void TieredQFastBlocks::write_row(uint8_t* block, size_t capacity, size_t slot, const uint8_t* row) const {
+  if (!block || !row) bad("null block buffer");
+  if (slot >= capacity) bad("block slot out of range");
+  const Shape s = shape_of(*empty_, capacity);
+  writer_->write(block, {s.padded, s.code_offset, s.tail_block, s.tail_docs}, slot, row);
 }
 
 void TieredQFastBlocks::pack(const uint8_t* rows, size_t count, uint8_t* block) const {
@@ -207,24 +220,42 @@ TieredQFastBlocks::Scanner TieredQFastBlocks::make_scanner(const float* model_qu
     using Typed = TypedScanner<std::decay_t<decltype(prepared)>, decltype(scan)>;
     impl = std::make_unique<Typed>(std::move(view), std::move(prepared), std::move(scan));
   }, weights);
+  impl->origin = empty_.get();
   return Scanner(std::move(impl));
 }
 
-TieredQFastBlocks::Scanner TieredQFastBlocks::scanner(const TieredQQuery& weights) const {
+void TieredQFastBlocks::check_weights(const TieredQQuery& weights) const {
   if (weights.weights.size() != codec_.coded_dimensions() || weights.centroid_scores.size() != codec_.config().num_centroids)
     bad("fast block query weights shape mismatch");
+}
+
+const float* TieredQFastBlocks::model_query(const float* query, std::vector<float>& lifted) const {
+  if (!query) bad("null query");
+  if (codec_.config().metric == TieredQMetric::inner_product) return query;
+  lifted.resize(codec_.model_dimensions());
+  codec_.lift_queries(query, 1, lifted.data());
+  return lifted.data();
+}
+
+TieredQFastBlocks::Scanner TieredQFastBlocks::scanner(const TieredQQuery& weights) const {
+  check_weights(weights);
   return make_scanner(nullptr, &weights);
 }
 
 TieredQFastBlocks::Scanner TieredQFastBlocks::scanner(const float* query) const {
-  if (!query) bad("null query");
   std::vector<float> lifted;
-  const float* model_query = query;
-  if (codec_.config().metric != TieredQMetric::inner_product) {
-    lifted.resize(codec_.model_dimensions());
-    codec_.lift_queries(query, 1, lifted.data());
-    model_query = lifted.data();
-  }
-  return make_scanner(model_query, nullptr);
+  return make_scanner(model_query(query, lifted), nullptr);
+}
+
+void TieredQFastBlocks::reset(Scanner& scanner, const float* query) const {
+  if (!scanner.impl_ || scanner.impl_->origin != empty_.get()) bad("scanner belongs to other fast blocks");
+  std::vector<float> lifted;
+  scanner.impl_->prepare(codec_, model_query(query, lifted), nullptr);
+}
+
+void TieredQFastBlocks::reset(Scanner& scanner, const TieredQQuery& weights) const {
+  if (!scanner.impl_ || scanner.impl_->origin != empty_.get()) bad("scanner belongs to other fast blocks");
+  check_weights(weights);
+  scanner.impl_->prepare(codec_, nullptr, &weights);
 }
 }  // namespace tq

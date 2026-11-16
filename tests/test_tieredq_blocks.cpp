@@ -1,8 +1,8 @@
 // TieredQFastBlocks: exact pack/unpack round trips and in-place scores equal to the fast index over the same rows,
 // for every format a model admits, at counts that end on short tails; rows() of selected documents and scanners built
-// from caller-prepared query weights. Fixed-capacity tiles (#55): slot-by-slot writes equal pack() byte for byte, their
-// scans equal block scans bit for bit at every fill (padding and vacated slots ignored), and mapped tile scores equal
-// TieredQIVFIndex scores of the same rows, for every metric.
+// from caller-prepared query weights. Partly filled blocks (#55): slot-by-slot writes equal pack() byte for byte at
+// every capacity, scans of the first live slots equal block scans of those rows bit for bit (stale slots ignored), and
+// mapped block scores equal TieredQIVFIndex scores of the same rows, for every metric; reset scanners score as fresh ones.
 #include "tieredq/tieredq.h"
 #include "tieredq/tieredq_blocks.h"
 #include <algorithm>
@@ -39,51 +39,82 @@ std::vector<float> index_scores(const tq::TieredQ& codec, const float* rows, siz
   return scores;
 }
 
-constexpr size_t tile_fills[] = {1, 17, 100, 255, tq::TieredQFastBlocks::tile_slots};
+// Capacities that end on short nibble-lookup tails (17, 100, 300, 513) and on whole blocks (256).
+constexpr size_t capacities[] = {1, 17, 100, 256, 300, 513};
 
 bool same_bits(const std::vector<float>& a, const std::vector<float>& b) {
   return a.size() == b.size() && std::memcmp(a.data(), b.data(), a.size() * sizeof(float)) == 0;
 }
 
-// Rows land in shuffled slot order, each slot first holding another row it then replaces; a fill's scan skips slots
-// past it that hold stale rows.
-void check_tiles(const tq::TieredQ& codec, const tq::TieredQFastBlocks& blocks, const std::vector<float>& data,
-                 const std::vector<float>& query) {
-  constexpr size_t slots = tq::TieredQFastBlocks::tile_slots;
-  const size_t stride = codec.bytes_per_vector(), tile_bytes = blocks.tile_bytes();
-  require(tile_bytes == blocks.block_bytes(slots) && tile_bytes % tq::TieredQFastBlocks::alignment == 0, "tile size is not an aligned block");
-  const auto rows = codec.encode(data.data(), slots);
-  std::vector<uint32_t> order(slots); std::iota(order.begin(), order.end(), 0u);
-  std::shuffle(order.begin(), order.end(), std::mt19937(11));
-  std::vector<uint8_t> buffer(tile_bytes + 1, 0);
-  uint8_t* tile = buffer.data() + 1;  // odd address: tiles need no particular alignment
-  for (uint32_t slot : order) blocks.write_row(tile, slot, rows.data() + (slots - 1 - slot) * stride);
-  for (uint32_t slot : order) blocks.write_row(tile, slot, rows.data() + slot * stride);
-  std::vector<uint8_t> packed(tile_bytes);
-  blocks.pack(rows.data(), slots, packed.data());
-  require(std::equal(packed.begin(), packed.end(), tile), "tile written slot by slot differs from pack()");
-  std::vector<uint8_t> unpacked(slots * stride);
-  blocks.unpack(tile, slots, unpacked.data());
-  require(unpacked == rows, "tile rows differ from the written rows");
+// Rows land in shuffled slot order, each slot first holding another row it then replaces; scans of the first `live`
+// slots skip slots past them that hold stale rows.
+void check_partial_blocks(const tq::TieredQ& codec, const tq::TieredQFastBlocks& blocks, const std::vector<float>& data,
+                          const std::vector<float>& query) {
+  const size_t stride = codec.bytes_per_vector();
+  require(blocks.block_bytes(tq::TieredQFastBlocks::tile_slots) % tq::TieredQFastBlocks::alignment == 0, "tile size is not aligned");
   auto scanner = blocks.scanner(query.data());
-  for (size_t live : tile_fills) {
-    std::vector<uint8_t> block(blocks.block_bytes(live));
-    blocks.pack(rows.data(), live, block.data());
-    std::vector<float> from_tile(live), from_block(live);
-    scanner.score_tile(tile, live, from_tile.data());
-    scanner.score(block.data(), live, from_block.data());
-    require(same_bits(from_tile, from_block), "tile scores differ from block scores");
+  for (size_t capacity : capacities) {
+    const auto rows = codec.encode(data.data(), capacity);
+    std::vector<uint32_t> order(capacity); std::iota(order.begin(), order.end(), 0u);
+    std::shuffle(order.begin(), order.end(), std::mt19937(11));
+    std::vector<uint8_t> buffer(blocks.block_bytes(capacity) + 1, 0);
+    uint8_t* block = buffer.data() + 1;  // odd address: blocks need no particular alignment
+    for (uint32_t slot : order) blocks.write_row(block, capacity, slot, rows.data() + (capacity - 1 - slot) * stride);
+    for (uint32_t slot : order) blocks.write_row(block, capacity, slot, rows.data() + slot * stride);
+    std::vector<uint8_t> packed(blocks.block_bytes(capacity));
+    blocks.pack(rows.data(), capacity, packed.data());
+    require(std::equal(packed.begin(), packed.end(), block), "block written slot by slot differs from pack()");
+    std::vector<uint8_t> unpacked(capacity * stride);
+    blocks.unpack(block, capacity, unpacked.data());
+    require(unpacked == rows, "written rows differ from the rows read back");
+    for (size_t live : {size_t(1), capacity / 3 + 1, capacity - 1, capacity}) {
+      if (!live) continue;
+      std::vector<uint8_t> exact(blocks.block_bytes(live));
+      blocks.pack(rows.data(), live, exact.data());
+      std::vector<float> partial(live), whole(live);
+      scanner.score(block, capacity, live, partial.data());
+      scanner.score(exact.data(), live, whole.data());
+      require(same_bits(partial, whole), "partly filled block scores differ from a block of its live rows");
+    }
+    bool rejected = false;
+    try { blocks.write_row(block, capacity, capacity, rows.data()); } catch (const std::runtime_error&) { rejected = true; }
+    require(rejected, "block slot out of range accepted");
+    rejected = false;
+    try { std::vector<float> scores(capacity + 1); scanner.score(block, capacity, capacity + 1, scores.data()); }
+    catch (const std::runtime_error&) { rejected = true; }
+    require(rejected, "block live count past capacity accepted");
   }
-  bool rejected = false;
-  try { blocks.write_row(tile, slots, rows.data()); } catch (const std::runtime_error&) { rejected = true; }
-  require(rejected, "tile slot out of range accepted");
-  rejected = false;
-  try { std::vector<float> scores(slots + 1); scanner.score_tile(tile, slots + 1, scores.data()); } catch (const std::runtime_error&) { rejected = true; }
-  require(rejected, "tile fill out of range accepted");
 }
 
-// One coarse list holding every row and a full probe: the IVF scan covers the tile's rows with its own kernels.
-void check_tile_ivf_parity(tq::TieredQMetric metric, const std::vector<float>& training, const std::vector<float>& data,
+// A scanner reset to another query (from the query or its weights) scores as a fresh scanner of that query, bit for bit.
+void check_reset(const tq::TieredQ& codec, const tq::TieredQFastBlocks& blocks, const std::vector<float>& data,
+                 const std::vector<float>& query) {
+  constexpr size_t count = 300;
+  const auto rows = codec.encode(data.data(), count);
+  std::vector<uint8_t> block(blocks.block_bytes(count));
+  blocks.pack(rows.data(), count, block.data());
+  const float* other = data.data() + (count + 1) * dimensions;
+  std::vector<float> fresh(count), reset(count), weighted(count);
+  blocks.scanner(other).score(block.data(), count, fresh.data());
+  auto scanner = blocks.scanner(query.data());
+  scanner.score(block.data(), count, reset.data());
+  blocks.reset(scanner, other);
+  scanner.score(block.data(), count, reset.data());
+  require(same_bits(fresh, reset), "reset scanner differs from a fresh scanner");
+  auto from_weights = blocks.scanner(codec.query_weights(query.data()));
+  blocks.reset(from_weights, codec.query_weights(other));
+  from_weights.score(block.data(), count, weighted.data());
+  std::vector<float> fresh_weighted(count);
+  blocks.scanner(codec.query_weights(other)).score(block.data(), count, fresh_weighted.data());
+  require(same_bits(fresh_weighted, weighted), "scanner reset from weights differs from a fresh one");
+  bool rejected = false;
+  const tq::TieredQFastBlocks other_blocks(codec);
+  try { other_blocks.reset(scanner, other); } catch (const std::runtime_error&) { rejected = true; }
+  require(rejected, "scanner reset by other fast blocks accepted");
+}
+
+// One coarse list holding every row and a full probe: the IVF scan covers the block's rows with its own kernels.
+void check_block_ivf_parity(tq::TieredQMetric metric, const std::vector<float>& training, const std::vector<float>& data,
                            const std::vector<float>& query) {
   constexpr size_t live = 200;
   auto config = tq::TieredQConfig::target_code_bits(dimensions, dimensions * 2);
@@ -97,12 +128,13 @@ void check_tile_ivf_parity(tq::TieredQMetric metric, const std::vector<float>& t
   for (const auto& hit : ivf.search(query.data(), live, 1)) expected[hit.id] = hit.score;
   const tq::TieredQFastBlocks blocks(ivf.codec());
   const auto rows = ivf.codec().encode(data.data(), live);
-  std::vector<uint8_t> tile(blocks.tile_bytes(), 0);
-  for (size_t slot = 0; slot < live; ++slot) blocks.write_row(tile.data(), slot, rows.data() + slot * ivf.codec().bytes_per_vector());
+  constexpr size_t capacity = tq::TieredQFastBlocks::tile_slots;
+  std::vector<uint8_t> tile(blocks.block_bytes(capacity), 0);
+  for (size_t slot = 0; slot < live; ++slot) blocks.write_row(tile.data(), capacity, slot, rows.data() + slot * ivf.codec().bytes_per_vector());
   std::vector<float> scores(live);
-  blocks.scanner(query.data()).score_tile(tile.data(), live, scores.data());
+  blocks.scanner(query.data()).score(tile.data(), capacity, live, scores.data());
   ivf.codec().map_scores(query.data(), scores.data(), live);
-  require(same_bits(scores, expected), "mapped tile scores differ from TieredQIVFIndex scores");
+  require(same_bits(scores, expected), "mapped block scores differ from TieredQIVFIndex scores");
 }
 
 void check_format(const tq::TieredQ& codec, const tq::TieredQFastBlocks& blocks, const std::vector<float>& data,
@@ -156,7 +188,8 @@ void tieredq_blocks_tests() {
     const auto codec = tq::TieredQ::train(config, training.data(), training_rows);
     const tq::TieredQFastBlocks native(codec);
     check_format(codec, native, data, query, true);
-    check_tiles(codec, native, data, query);
+    check_partial_blocks(codec, native, data, query);
+    check_reset(codec, native, data, query);
     const tq::TieredQFastBlocks reopened(codec, native.format());
     require(reopened.format() == native.format() && reopened.block_bytes(300) == native.block_bytes(300), "persisted format reopens differently");
     for (uint32_t format : candidate_formats) {
@@ -164,13 +197,14 @@ void tieredq_blocks_tests() {
       try {
         const tq::TieredQFastBlocks portable(codec, format);
         check_format(codec, portable, data, query, false);
-        check_tiles(codec, portable, data, query);
+        check_partial_blocks(codec, portable, data, query);
+        check_reset(codec, portable, data, query);
       }
       catch (const std::runtime_error& e) { if (!std::string(e.what()).ends_with("does not fit this model") && !std::string(e.what()).ends_with("identify this model's codes")) throw; }
     }
   }
   for (auto metric : {tq::TieredQMetric::inner_product, tq::TieredQMetric::cosine, tq::TieredQMetric::l2})
-    check_tile_ivf_parity(metric, training, data, query);
+    check_block_ivf_parity(metric, training, data, query);
   bool rejected = false;
   try { tq::TieredQFastBlocks(tq::TieredQ::train({dimensions, dimensions, centroids}, training.data(), training_rows), 0); }
   catch (const std::runtime_error&) { rejected = true; }

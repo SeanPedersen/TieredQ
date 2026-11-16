@@ -31,7 +31,7 @@ cmake.build-type = "Release"
 wheel.packages = ["python/tieredq"]
 build-dir = "build/{wheel_tag}"
 install.components = ["python"]
-sdist.exclude = ["benchmark/**", "dist/**", ".github/**", "uv.lock"]
+sdist.exclude = ["benchmark/**", "dist/**", ".github/**", "uv.lock", "faiss-tieredq/**"]
 
 [tool.scikit-build.cmake.define]
 TIEREDQ_TESTS = "OFF"
