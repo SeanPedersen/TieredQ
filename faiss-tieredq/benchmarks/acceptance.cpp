@@ -1,9 +1,10 @@
 // #55 acceptance benchmark for IndexIVFTieredQ on one shared partition.
-//   build DATA SEED OUT [BITS_PER_DIMENSION [tieredq]]: Faiss k-means lists (seeded sample, 32 threads), then TieredQIVFIndex with those lists
+//   build DATA SEED OUT [BITS_PER_DIMENSION [CODECS]]: Faiss k-means lists (seeded sample, 32 threads), then TieredQIVFIndex with those lists
 //     (set_lists), IndexIVFTieredQ on TieredQ's codec and TieredQ's row assignment, and Faiss's IndexIVFRaBitQ
-//     (1, 2, 4 bits) and IndexIVFPQFastScan (1 and 2 bits per dimension) on the same lists and assignment. Encoders
+//     (1, 2, 3, 4 bits) and IndexIVFPQFastScan (1 and 2 bits per dimension) on the same lists and assignment. Encoders
 //     train on the same 32,768 rows. Writes every index, the centroids and build.json. BITS_PER_DIMENSION sets
-//     TieredQ's budget (default 1.75 for arxiv, 1 for Qwen); `tieredq` skips Faiss's codecs.
+//     TieredQ's budget (default 1.75 for arxiv, 1 for Qwen); CODECS is `tieredq` (no Faiss codecs) or a comma-separated
+//     subset of Faiss codec names (e.g. rabitq3); default all.
 //   NPROBES (optional, comma-separated) replaces the serve and parity nprobe grid.
 //   serve DATA OUT KIND NAME RESULT: one index in a fresh process: serving RAM (RssAnon growth across load and coarse
 //     setup), then alone on QUERY_CORE with one thread, per nprobe single-query QPS (best of passes), p50, recall@k
@@ -141,7 +142,7 @@ struct FixedAssignment : faiss::Index {
 struct FaissConfig { std::string name; std::function<faiss::IndexIVF*(faiss::Index*, size_t, size_t)> make; };
 std::vector<FaissConfig> faiss_configs(size_t d) {
   std::vector<FaissConfig> configs;
-  for (uint8_t bits : {1, 2, 4})
+  for (uint8_t bits : {1, 2, 3, 4})
     configs.push_back({"rabitq" + std::to_string(bits), [bits](faiss::Index* q, size_t dims, size_t lists) {
       return new faiss::IndexIVFRaBitQ(q, dims, lists, faiss::METRIC_INNER_PRODUCT, true, bits);
     }});
@@ -160,7 +161,7 @@ std::unique_ptr<faiss::Index> fp16_quantizer(size_t d, const std::vector<float>&
   return quantizer;
 }
 
-void build(const Dataset& data, uint64_t seed, const std::string& out, double bits_per_dimension, bool faiss_codecs) {
+void build(const Dataset& data, uint64_t seed, const std::string& out, double bits_per_dimension, const std::string& codecs) {
   std::ostringstream report;
   report << "{\"seed\": " << seed;
   const size_t d = data.d;
@@ -214,7 +215,8 @@ void build(const Dataset& data, uint64_t seed, const std::string& out, double bi
   report << ", \"plugin_add_s\": " << seconds_since(started) << ", \"plugin_storage_bytes\": " << plugin.storage_bytes();
   faiss_tieredq::write_index_tieredq(plugin, out + "/plugin.tqf");
   // Faiss's codecs on the same lists, assignment and training rows.
-  for (const auto& config : faiss_codecs ? faiss_configs(d) : std::vector<FaissConfig>{}) {
+  for (const auto& config : faiss_configs(d)) {
+    if (!codecs.empty() && ("," + codecs + ",").find("," + config.name + ",") == std::string::npos) continue;
     std::unique_ptr<faiss::IndexIVF> index(config.make(fp16_quantizer(d, centroids).release(), d, lists));
     index->own_fields = true;
     started = Clock::now();
@@ -368,8 +370,7 @@ int main(int argc, char** argv) {
   try {
     const std::string mode = argc > 1 ? argv[1] : "";
     if (mode == "build" && argc >= 5 && argc <= 7)
-      build(Dataset(argv[2]), std::stoull(argv[3]), argv[4], argc > 5 ? std::stod(argv[5]) : 0.0,
-            !(argc > 6 && std::string(argv[6]) == "tieredq"));
+      build(Dataset(argv[2]), std::stoull(argv[3]), argv[4], argc > 5 ? std::stod(argv[5]) : 0.0, argc > 6 ? argv[6] : "");
     else if (mode == "serve" && argc == 7) serve(Dataset(argv[2]), argv[3], argv[4], argv[5], argv[6]);
     else if (mode == "parity" && argc == 5) parity(Dataset(argv[2]), argv[3], argv[4]);
     else { std::fprintf(stderr, "usage: see the header of benchmarks/acceptance.cpp\n"); return 2; }
