@@ -5,9 +5,13 @@ out-of-tree plugin: a C++ library built against an installed Faiss (v1.16.0), pl
 
 - **Encoder.** A TieredQ codec (fast target, no fine tiers, the IVF scan cap of
   `TieredQIVFIndex::automatic_scan_bits`) trained on a seeded sample of up to 32,768 training rows. That is the rule
-  TieredQ's own Python build uses, so the same rows train the same codec. `by_residual = false`: codes do not depend on
-  the list, so `merge_from`, `remove_ids`, `reconstruct` and `sa_encode` / `sa_decode` stay exact. `code_size` is
-  `bytes_per_vector()`.
+  TieredQ's own Python build uses, so the same rows train the same codec. By default `by_residual = false`: codes do
+  not depend on the list. `code_size` is `bytes_per_vector()`.
+- **Options, off by default.** `by_residual = true` (inner product only, set before training) encodes rows minus their
+  list's centroid and adds the query's inner product with the centroid, from the coarse distance, to each list's
+  scores. `training_rows` sets the codec's sample size. Neither saved RAM at equal recall on hartmut: residuals lost
+  0.02-0.06 recall@100 on arxiv and about 0.003 recall@10 on Qwen 8.84M, and 8x the training rows gained nothing
+  ([study](../benchmark/results/hartmut-faiss-plugin-20261116/README.md#ram-levers-residual-encoding-and-training-rows-ram-levers)).
 - **Lists.** `TieredQInvertedLists` keeps each list in one `TieredQFastBlocks` block laid out for its capacity: its
   rows rounded up to 16 after a bulk add, growing by half when appends fill it. Fixed 256-document tiles (as Faiss's
   fast-scan indexes use) would pad a 64K-list index of 8.84M rows to about twice its size. Faiss's generic list

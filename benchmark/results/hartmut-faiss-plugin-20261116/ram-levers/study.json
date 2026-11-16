@@ -1,0 +1,118 @@
+{
+  "screen": {
+    "arxiv res 1.25": {
+      "ceiling": 0.85119,
+      "ram_bytes": 180518912,
+      "base_ceiling": 0.91128,
+      "base_ram_bytes": 181866496
+    },
+    "arxiv res 2": {
+      "ceiling": 0.92104,
+      "ram_bytes": 278609920,
+      "base_ceiling": 0.95118,
+      "base_ram_bytes": 279957504
+    },
+    "arxiv res 2.625": {
+      "ceiling": 0.95304,
+      "ram_bytes": 360321024,
+      "base_ceiling": 0.97191,
+      "base_ram_bytes": 360288256
+    },
+    "arxiv rows 1.25": {
+      "ceiling": 0.91264,
+      "ram_bytes": 181866496,
+      "base_ceiling": 0.91128,
+      "base_ram_bytes": 181866496
+    },
+    "arxiv rows 2": {
+      "ceiling": 0.95182,
+      "ram_bytes": 279957504,
+      "base_ceiling": 0.95118,
+      "base_ram_bytes": 279957504
+    },
+    "arxiv rows 2.625": {
+      "ceiling": 0.97201,
+      "ram_bytes": 360288256,
+      "base_ceiling": 0.97191,
+      "base_ram_bytes": 360288256
+    },
+    "arxiv res-rows 1.25": {
+      "ceiling": 0.85482,
+      "ram_bytes": 181882880,
+      "base_ceiling": 0.91128,
+      "base_ram_bytes": 181866496
+    },
+    "arxiv res-rows 2": {
+      "ceiling": 0.92285,
+      "ram_bytes": 278609920,
+      "base_ceiling": 0.95118,
+      "base_ram_bytes": 279957504
+    },
+    "arxiv res-rows 2.625": {
+      "ceiling": 0.95445,
+      "ram_bytes": 360321024,
+      "base_ceiling": 0.97191,
+      "base_ram_bytes": 360288256
+    },
+    "arxiv mean ceiling gain": {
+      "res": -0.03636666666666669,
+      "rows": 0.000699999999999997,
+      "res-rows": -0.034083333333333354
+    },
+    "qwen res 1.5": {
+      "ceiling": 0.921867,
+      "ram_bytes": 2049658880,
+      "base_ceiling": 0.9252,
+      "base_ram_bytes": 2049380352
+    },
+    "qwen res 2.0625": {
+      "ceiling": 0.9468,
+      "ram_bytes": 2722013184,
+      "base_ceiling": 0.950267,
+      "base_ram_bytes": 2721718272
+    },
+    "qwen res 3.25": {
+      "ceiling": 0.974,
+      "ram_bytes": 4141322240,
+      "base_ceiling": 0.974,
+      "base_ram_bytes": 4141043712
+    },
+    "qwen rows 1.5": {
+      "ceiling": 0.921733,
+      "ram_bytes": 2058674176,
+      "base_ceiling": 0.9252,
+      "base_ram_bytes": 2049380352
+    },
+    "qwen rows 2.0625": {
+      "ceiling": 0.947067,
+      "ram_bytes": 2721783808,
+      "base_ceiling": 0.950267,
+      "base_ram_bytes": 2721718272
+    },
+    "qwen rows 3.25": {
+      "ceiling": 0.9712,
+      "ram_bytes": 4141039616,
+      "base_ceiling": 0.974,
+      "base_ram_bytes": 4141043712
+    },
+    "qwen res-rows 1.5": {
+      "ceiling": 0.922133,
+      "ram_bytes": 2049658880,
+      "base_ceiling": 0.9252,
+      "base_ram_bytes": 2049380352
+    },
+    "qwen res-rows 2.0625": {
+      "ceiling": 0.9508,
+      "ram_bytes": 2722041856,
+      "base_ceiling": 0.950267,
+      "base_ram_bytes": 2721718272
+    },
+    "qwen res-rows 3.25": {
+      "ceiling": 0.976533,
+      "ram_bytes": 4141322240,
+      "base_ceiling": 0.974,
+      "base_ram_bytes": 4141043712
+    }
+  },
+  "bisect": {}
+}

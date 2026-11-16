@@ -6,7 +6,8 @@ Remote roots: `/home/sean/experiments/TieredQ-issue55-faiss-20261116` (source 6f
 lock. Faiss v1.16.0 was built from source there (`FAISS_OPT_LEVEL=avx512`, OpenBLAS) and the plugin links
 `faiss_avx512`. The driver is `faiss-tieredq/benchmarks/acceptance.cpp`; `study.py` runs it and `summarize.py` writes
 `REPORT.md`. Run it as `summarize.py results high-bits/results minram/results`. `bisect/bisect.py` wrote
-`bisect/bisect.json`. The per-query hit files stayed on hartmut, and the indexes were removed.
+`bisect/bisect.json`. `ram-levers/` is `TieredQ-issue55-ram-20261116` (source ed853a0). The per-query hit files
+stayed on hartmut, and the indexes were removed.
 
 ## Setup
 
@@ -116,6 +117,36 @@ built and served too, and it reached the target every time.
 - `REPORT.md` merges `minram/` into the frontier tables. There the Qwen rows of `minram/` use the grid up to 4,096, and
   rabitq4's "3 seeds" mixes 2 runs to nprobe 1,024 with 1 to 4,096.
 
+## RAM levers: residual encoding and training rows (`ram-levers/`)
+
+Two plugin options, off by default, tested for more recall at the same RAM. With `by_residual` (`res`), the codec
+encodes each row minus its list's fp16 centroid and scores add the query's inner product with that centroid. With
+`training_rows` (`rows`), the codec trains on 262,144 rows instead of 32,768. `res-rows` uses both. Each ran at the
+bisection's matched budgets, on partition seed 1 and the same nprobe grids, plugin only. The table gives best recall
+against the bisection's plugin (`base`). RAM is equal within 0.1%.
+
+| dataset | bits/dim | base | res | rows | res-rows |
+|---|---|---|---|---|---|
+| arxiv (recall@100) | 1.25 | 0.9113 | 0.8512 | 0.9126 | 0.8548 |
+| | 2 | 0.9512 | 0.9210 | 0.9518 | 0.9228 |
+| | 2.625 | 0.9719 | 0.9530 | 0.9720 | 0.9545 |
+| Qwen (recall@10) | 1.5 | 0.9252 | 0.9219 | 0.9217 | 0.9221 |
+| | 2.0625 | 0.9503 | 0.9468 | 0.9471 | 0.9508 |
+| | 3.25 | 0.9740 | 0.9740 | 0.9712 | 0.9765 |
+
+- **Residual encoding costs recall.** It loses 0.019-0.060 on arxiv and 0.003-0.004 on Qwen at 1.5 and 2.0625 bits,
+  and ties at 3.25. So the smaller in-IVF saving on Qwen (see below) is not a missing residual mode. A likely cause, not
+  measured: TieredQ's allocation exploits the data's few high-variance directions, which the list centroids remove.
+  RaBitQ's random rotation does not depend on them.
+- **More training rows do not help.** They gain at most 0.0014 on arxiv and lose 0.003 on Qwen.
+- **Both together are mixed on Qwen.** They give −0.0031 / +0.0005 / +0.0025. The gain at 3.25 bits is worth about
+  1/8 bit (3% of RAM) at the RaBitQ 4-bit match only. They did not reach the study's 0.002 mean gain, so no
+  bisection ran.
+- **The Qwen differences are not routing noise (`control.json`).** At 2.0625 bits the base plugin, rebuilt and served
+  twice with a serially built HNSW graph and once with 32 threads, gave the same recall at every nprobe as the
+  bisection. Rebuilt res and rows reproduced their screen values and stay below base at every nprobe (−0.0026 to
+  −0.0040).
+
 ## Against the earlier RaBitQ comparisons
 
 | study | search | data | TieredQ at RaBitQ's 1 / 2 / 4-bit recall, against RaBitQ |
@@ -131,9 +162,9 @@ built and served too, and it reached the target every time.
   flat MS MARCO-1M at the same width. Fixed per-row costs explain part of the RAM ratio: the fp16 centroids
   (about 121 bits per row at 64K lists), ids, factors and list padding add about 290 bits per row to the plugin and
   about 280 to RaBitQ (1-bit: 1,187 and 1,306 bits per row in total, against 896 and 1,024 code bits). The rest is
-  in the codes. A likely cause, not tested: Faiss's RaBitQ encodes residuals to the list centroid. TieredQ encodes rows
-  in its global model. Residuals gain more as lists shrink (135 rows per list on Qwen, 650 on arxiv, 1,560 at #6).
-  Building Qwen at fewer lists, or arxiv at 16K, would separate list size from dataset.
+  in the codes. Faiss's RaBitQ encodes residuals to the list centroid and TieredQ does not, but a residual TieredQ
+  codec loses recall on both datasets (see RAM levers above), so that is not what is missing. List size against
+  dataset remains untested.
 - **#41's larger RAM gap is a different comparison.** There, nested TieredQ (1-bit prefix in RAM, 8-bit tier on SSD)
   took 0.18 GiB at recall@100 ≥ 0.98 on arxiv, against 0.760 GiB for VIBE's rabitq-ivf (4 bits, RAM only). Faiss's
   RaBitQ 4-bit on the same data takes 0.523 GiB here. In RAM only, the codec saves about 35-40% on arxiv and
