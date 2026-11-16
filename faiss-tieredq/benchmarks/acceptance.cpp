@@ -1,8 +1,10 @@
 // #55 acceptance benchmark for IndexIVFTieredQ on one shared partition.
-//   build DATA SEED OUT: Faiss k-means lists (seeded sample, 32 threads), then TieredQIVFIndex with those lists
+//   build DATA SEED OUT [BITS_PER_DIMENSION [tieredq]]: Faiss k-means lists (seeded sample, 32 threads), then TieredQIVFIndex with those lists
 //     (set_lists), IndexIVFTieredQ on TieredQ's codec and TieredQ's row assignment, and Faiss's IndexIVFRaBitQ
 //     (1, 2, 4 bits) and IndexIVFPQFastScan (1 and 2 bits per dimension) on the same lists and assignment. Encoders
-//     train on the same 32,768 rows. Writes every index, the centroids and build.json.
+//     train on the same 32,768 rows. Writes every index, the centroids and build.json. BITS_PER_DIMENSION sets
+//     TieredQ's budget (default 1.75 for arxiv, 1 for Qwen); `tieredq` skips Faiss's codecs.
+//   NPROBES (optional, comma-separated) replaces the serve and parity nprobe grid.
 //   serve DATA OUT KIND NAME RESULT: one index in a fresh process: serving RAM (RssAnon growth across load and coarse
 //     setup), then alone on QUERY_CORE with one thread, per nprobe single-query QPS (best of passes), p50, recall@k
 //     and every hit.
@@ -24,6 +26,7 @@
 #include <tieredq/tieredq.h>
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <fcntl.h>
@@ -157,7 +160,7 @@ std::unique_ptr<faiss::Index> fp16_quantizer(size_t d, const std::vector<float>&
   return quantizer;
 }
 
-void build(const Dataset& data, uint64_t seed, const std::string& out) {
+void build(const Dataset& data, uint64_t seed, const std::string& out, double bits_per_dimension, bool faiss_codecs) {
   std::ostringstream report;
   report << "{\"seed\": " << seed;
   const size_t d = data.d;
@@ -180,7 +183,7 @@ void build(const Dataset& data, uint64_t seed, const std::string& out) {
   const auto codec_ids = faiss_tieredq::codec_training_sample(data.rows);
   std::vector<float> codec_rows(codec_ids.size() * d);
   data.gather(codec_ids.data(), codec_ids.size(), codec_rows.data());
-  const uint32_t code_bits = uint32_t(large ? d : d * 7 / 4);
+  const uint32_t code_bits = uint32_t(std::lround(double(d) * (bits_per_dimension > 0 ? bits_per_dimension : large ? 1.0 : 1.75)));
   auto plugin_quantizer = fp16_quantizer(d, centroids);
   faiss_tieredq::IndexIVFTieredQ plugin(plugin_quantizer.release(), d, lists, code_bits, faiss::METRIC_INNER_PRODUCT);
   plugin.own_fields = true;
@@ -211,7 +214,7 @@ void build(const Dataset& data, uint64_t seed, const std::string& out) {
   report << ", \"plugin_add_s\": " << seconds_since(started) << ", \"plugin_storage_bytes\": " << plugin.storage_bytes();
   faiss_tieredq::write_index_tieredq(plugin, out + "/plugin.tqf");
   // Faiss's codecs on the same lists, assignment and training rows.
-  for (const auto& config : faiss_configs(d)) {
+  for (const auto& config : faiss_codecs ? faiss_configs(d) : std::vector<FaissConfig>{}) {
     std::unique_ptr<faiss::IndexIVF> index(config.make(fp16_quantizer(d, centroids).release(), d, lists));
     index->own_fields = true;
     started = Clock::now();
@@ -242,6 +245,12 @@ size_t rss_anon_bytes() {
 }
 
 std::vector<size_t> nprobes(const Dataset& data) {
+  if (const char* given = std::getenv("NPROBES")) {
+    std::vector<size_t> grid;
+    std::stringstream list(given);
+    for (std::string value; std::getline(list, value, ',');) grid.push_back(std::stoul(value));
+    return grid;
+  }
   return data.rows > 4000000 ? std::vector<size_t>{64, 128, 256, 512, 1024} : std::vector<size_t>{8, 16, 32, 48, 64, 96, 128};
 }
 
@@ -358,7 +367,9 @@ void parity(const Dataset& data, const std::string& out, const std::string& resu
 int main(int argc, char** argv) {
   try {
     const std::string mode = argc > 1 ? argv[1] : "";
-    if (mode == "build" && argc == 5) build(Dataset(argv[2]), std::stoull(argv[3]), argv[4]);
+    if (mode == "build" && argc >= 5 && argc <= 7)
+      build(Dataset(argv[2]), std::stoull(argv[3]), argv[4], argc > 5 ? std::stod(argv[5]) : 0.0,
+            !(argc > 6 && std::string(argv[6]) == "tieredq"));
     else if (mode == "serve" && argc == 7) serve(Dataset(argv[2]), argv[3], argv[4], argv[5], argv[6]);
     else if (mode == "parity" && argc == 5) parity(Dataset(argv[2]), argv[3], argv[4]);
     else { std::fprintf(stderr, "usage: see the header of benchmarks/acceptance.cpp\n"); return 2; }
