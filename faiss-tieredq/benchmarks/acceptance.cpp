@@ -6,7 +6,9 @@
 //   serve DATA OUT KIND NAME RESULT: one index in a fresh process: serving RAM (RssAnon growth across load and coarse
 //     setup), then alone on QUERY_CORE with one thread, per nprobe single-query QPS (best of passes), p50, recall@k
 //     and every hit.
-//     64K+ lists rank through an IndexHNSWFlat over the centroids (Faiss and plugin) or TieredQ's own router.
+//     Faiss-side indexes (plugin and Faiss codecs alike) rank lists on binary16 centroids, as TieredQ does: an
+//     IndexScalarQuantizer (QT_fp16) scanned exactly, or for 64K+ lists an IndexHNSWSQ (QT_fp16) over them, where
+//     TieredQ uses its own router. Residual codecs encode against the same fp16 centroids.
 //   parity DATA OUT RESULT: TieredQIVFIndex (exact coarse ranking) against IndexIVFTieredQ (flat quantizer) on the
 //     first parity_queries queries: per nprobe, queries with identical (id, score) sets and with identical scores.
 // DATA holds meta.txt ("rows dimensions k f32|sq8"), queries.f32, truth.i32 (k ids per query) and base.f32, or the
@@ -15,6 +17,7 @@
 #include <faiss/Clustering.h>
 #include <faiss/IndexFlat.h>
 #include <faiss/IndexHNSW.h>
+#include <faiss/IndexScalarQuantizer.h>
 #include <faiss/IndexIVFPQFastScan.h>
 #include <faiss/IndexIVFRaBitQ.h>
 #include <faiss/index_io.h>
@@ -146,8 +149,10 @@ std::vector<FaissConfig> faiss_configs(size_t d) {
   return configs;
 }
 
-std::unique_ptr<faiss::IndexFlatL2> flat_quantizer(size_t d, const std::vector<float>& centroids) {
-  auto quantizer = std::make_unique<faiss::IndexFlatL2>(idx_t(d));
+// Exact L2 ranking of binary16 centroids: TieredQ's coarse ranking precision at half the bytes of an IndexFlatL2.
+std::unique_ptr<faiss::Index> fp16_quantizer(size_t d, const std::vector<float>& centroids) {
+  auto quantizer = std::make_unique<faiss::IndexScalarQuantizer>(idx_t(d), faiss::ScalarQuantizer::QT_fp16, faiss::METRIC_L2);
+  quantizer->train(idx_t(centroids.size() / d), centroids.data());
   quantizer->add(idx_t(centroids.size() / d), centroids.data());
   return quantizer;
 }
@@ -176,7 +181,7 @@ void build(const Dataset& data, uint64_t seed, const std::string& out) {
   std::vector<float> codec_rows(codec_ids.size() * d);
   data.gather(codec_ids.data(), codec_ids.size(), codec_rows.data());
   const uint32_t code_bits = uint32_t(large ? d : d * 7 / 4);
-  auto plugin_quantizer = flat_quantizer(d, centroids);
+  auto plugin_quantizer = fp16_quantizer(d, centroids);
   faiss_tieredq::IndexIVFTieredQ plugin(plugin_quantizer.release(), d, lists, code_bits, faiss::METRIC_INNER_PRODUCT);
   plugin.own_fields = true;
   started = Clock::now();
@@ -207,7 +212,7 @@ void build(const Dataset& data, uint64_t seed, const std::string& out) {
   faiss_tieredq::write_index_tieredq(plugin, out + "/plugin.tqf");
   // Faiss's codecs on the same lists, assignment and training rows.
   for (const auto& config : faiss_configs(d)) {
-    std::unique_ptr<faiss::IndexIVF> index(config.make(flat_quantizer(d, centroids).release(), d, lists));
+    std::unique_ptr<faiss::IndexIVF> index(config.make(fp16_quantizer(d, centroids).release(), d, lists));
     index->own_fields = true;
     started = Clock::now();
     index->train(idx_t(codec_ids.size()), codec_rows.data());
@@ -237,7 +242,7 @@ size_t rss_anon_bytes() {
 }
 
 std::vector<size_t> nprobes(const Dataset& data) {
-  return data.rows > 4000000 ? std::vector<size_t>{64, 128, 256, 512, 1024} : std::vector<size_t>{8, 16, 32, 48, 64};
+  return data.rows > 4000000 ? std::vector<size_t>{64, 128, 256, 512, 1024} : std::vector<size_t>{8, 16, 32, 48, 64, 96, 128};
 }
 
 // One query's top k, ids as int64 and scores as Faiss returns them.
@@ -259,7 +264,8 @@ void serve(const Dataset& data, const std::string& out, const std::string& kind,
     ivf.reset(kind == "plugin" ? faiss_tieredq::read_index_tieredq(out + "/" + name)
                                : dynamic_cast<faiss::IndexIVF*>(faiss::read_index((out + "/" + name).c_str())));
     if (hnsw) {
-      auto graph = std::make_unique<faiss::IndexHNSWFlat>(int(d), int(hnsw_links), faiss::METRIC_L2);
+      auto graph = std::make_unique<faiss::IndexHNSWSQ>(int(d), faiss::ScalarQuantizer::QT_fp16, int(hnsw_links), faiss::METRIC_L2);
+      graph->train(idx_t(centroids.size() / d), centroids.data());
       graph->add(idx_t(centroids.size() / d), centroids.data());
       if (ivf->own_fields) delete ivf->quantizer;
       ivf->quantizer = graph.release();

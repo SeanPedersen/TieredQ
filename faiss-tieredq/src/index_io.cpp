@@ -3,7 +3,7 @@
 // format makes another CPU family scan the blocks with TieredQ's portable scorer.
 //   magic u32 | version u32 | d u64 | nlist u64 | metric u32 | code_bits u32 | cosine u32 | ntotal u64
 //   quantizer: bytes u64, data | codec: bytes u64, data | format u32
-//   per list: count u64, capacity u64, ids i64[count], block u8[block_bytes(capacity)]
+//   wide ids u32 | per list: count u64, capacity u64, ids (u32 or, when wide, i64)[count], block u8[block_bytes(capacity)]
 #include "faiss_tieredq/IndexIVFTieredQ.h"
 #include <faiss/impl/FaissAssert.h>
 #include <faiss/impl/io.h>
@@ -51,10 +51,12 @@ void write_index_tieredq(const IndexIVFTieredQ& index, const std::string& path) 
   file.put_bytes(quantizer.data);
   file.put_bytes(index.codec().serialize());
   file.put(index.blocks().format());
+  file.put<uint32_t>(lists.wide_ids());
   for (size_t list = 0; list < index.nlist; ++list) {
     const auto& stored = lists.lists[list];
-    file.put<uint64_t>(stored.ids.size()); file.put<uint64_t>(stored.capacity);
-    file.write(stored.ids.data(), stored.ids.size() * sizeof(idx_t));
+    file.put<uint64_t>(lists.list_size(list)); file.put<uint64_t>(stored.capacity);
+    if (lists.wide_ids()) file.write(stored.wide_ids.data(), stored.wide_ids.size() * sizeof(idx_t));
+    else file.write(stored.narrow_ids.data(), stored.narrow_ids.size() * sizeof(uint32_t));
     file.write(stored.block.data(), stored.block.nbytes());
   }
 }
@@ -79,14 +81,15 @@ IndexIVFTieredQ* read_index_tieredq(const std::string& path) {
   quantizer.release();
   index->set_codec(codec, format);
   auto& lists = index->lists();
+  if (file.get<uint32_t>()) lists.use_wide_ids();
   for (size_t list = 0; list < nlist; ++list) {
     const auto count = file.get<uint64_t>(), capacity = file.get<uint64_t>();
     FAISS_THROW_IF_NOT_MSG(count <= capacity && capacity % TieredQInvertedLists::capacity_granularity == 0,
                            "invalid IndexIVFTieredQ list");
     lists.set_capacity(list, capacity);
     auto& stored = lists.lists[list];
-    stored.ids.resize(count);
-    file.read(stored.ids.data(), count * sizeof(idx_t));
+    if (lists.wide_ids()) { stored.wide_ids.resize(count); file.read(stored.wide_ids.data(), count * sizeof(idx_t)); }
+    else { stored.narrow_ids.resize(count); file.read(stored.narrow_ids.data(), count * sizeof(uint32_t)); }
     file.read(stored.block.data(), stored.block.nbytes());
   }
   index->ntotal = ntotal;

@@ -11,12 +11,15 @@ out-of-tree plugin: a C++ library built against an installed Faiss (v1.16.0), pl
 - **Lists.** `TieredQInvertedLists` keeps each list in one `TieredQFastBlocks` block laid out for its capacity: its
   rows rounded up to 16 after a bulk add, growing by half when appends fill it. Fixed 256-document tiles (as Faiss's
   fast-scan indexes use) would pad a 64K-list index of 8.84M rows to about twice its size. Faiss's generic list
-  operations (removal, subsets) work through decoded rows (`get_single_code`).
+  operations (subsets, generic updates) work through decoded rows (`get_single_code`). Ids take 32 bits while they fit
+  (Faiss's own lists take 8 bytes per row), and `remove_ids` compacts each list itself.
 - **Search.** `IndexIVF::search_preassigned` with a scanner that scores each probed list in one call of TieredQ's fast
   kernels. Inner product returns TieredQ's score (larger is better), L2 returns squared distances (smaller is better).
   Cosine is inner product over rows and queries that the codec normalizes; normalize the quantizer's inputs too, as
   usual in Faiss. TieredQ scanners are pooled between searches (`TieredQFastBlocks::reset`).
-- **Coarse quantizer.** Any Faiss `Index`: `IndexFlat`, or `IndexHNSWFlat` for 64K+ lists. `add_core` takes
+- **Coarse quantizer.** Any Faiss `Index`. To match TieredQ, rank on binary16 centroids: `IndexScalarQuantizer(QT_fp16)`
+  (131 us per query at 2,048 x 768 on hartmut, against 246 us for `IndexFlatL2` and 134 us for TieredQ's own ranking),
+  or `IndexHNSWSQ(QT_fp16)` for 64K+ lists. `add_core` takes
   precomputed lists, so another index's partition can be reproduced exactly.
 - **Persistence.** `write_index_tieredq` / `read_index_tieredq`, since an out-of-tree type cannot hook into
   `faiss::read_index`. The quantizer is stored inside the file with `faiss::write_index`.

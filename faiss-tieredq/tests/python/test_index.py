@@ -44,7 +44,7 @@ def test_search_orders_by_metric(data, metric):
 
 def test_save_load_and_remove(data, tmp_path):
     rows, queries = data
-    index = build(rows, "ip", quantizer="hnsw")
+    index = build(rows, "ip", quantizer="hnsw_fp16")
     before = index.search(queries, k=K, nprobe=4, ef_search=32)
     path = str(tmp_path / "index.tqf")
     index.save(path)
@@ -61,7 +61,7 @@ def test_save_load_and_remove(data, tmp_path):
 def test_set_centroids_fixes_partition(data):
     rows, queries = data
     centroids = rows[:LISTS].copy()
-    index = IndexIVFTieredQ(DIMENSIONS, LISTS, 2 * DIMENSIONS, metric="l2")
+    index = IndexIVFTieredQ(DIMENSIONS, LISTS, 2 * DIMENSIONS, metric="l2", quantizer="fp16")
     index.set_centroids(centroids)
     index.train(rows)
     index.add(rows)

@@ -37,6 +37,63 @@ std::vector<uint32_t> codec_training_sample(size_t count) {
 TieredQInvertedLists::TieredQInvertedLists(size_t nlist_in, std::shared_ptr<const tq::TieredQFastBlocks> blocks_in)
     : InvertedLists(nlist_in, blocks_in->codec().bytes_per_vector()), blocks(std::move(blocks_in)), lists(nlist_in) {}
 
+size_t TieredQInvertedLists::list_size(size_t list_no) const {
+  return wide_ids_ ? lists[list_no].wide_ids.size() : lists[list_no].narrow_ids.size();
+}
+
+const idx_t* TieredQInvertedLists::get_ids(size_t list_no) const {
+  const auto& list = lists[list_no];
+  if (wide_ids_) return list.wide_ids.data();
+  auto* ids = new idx_t[list.narrow_ids.size()];
+  std::copy(list.narrow_ids.begin(), list.narrow_ids.end(), ids);
+  return ids;
+}
+
+void TieredQInvertedLists::release_ids(size_t, const idx_t* ids) const {
+  if (!wide_ids_) delete[] ids;
+}
+
+idx_t TieredQInvertedLists::get_single_id(size_t list_no, size_t offset) const {
+  FAISS_THROW_IF_NOT(offset < list_size(list_no));
+  return wide_ids_ ? lists[list_no].wide_ids[offset] : idx_t(lists[list_no].narrow_ids[offset]);
+}
+
+void TieredQInvertedLists::admit_ids(const idx_t* ids, size_t n) {
+  if (wide_ids_ || std::all_of(ids, ids + n, [](idx_t id) { return id >= 0 && id <= idx_t(UINT32_MAX); })) return;
+  use_wide_ids();
+}
+
+void TieredQInvertedLists::use_wide_ids() {
+  if (wide_ids_) return;
+  for (auto& list : lists) {
+    list.wide_ids.assign(list.narrow_ids.begin(), list.narrow_ids.end());
+    std::vector<uint32_t>().swap(list.narrow_ids);
+  }
+  wide_ids_ = true;
+}
+
+std::vector<idx_t> TieredQInvertedLists::ids(size_t list_no) const {
+  const auto& list = lists[list_no];
+  return wide_ids_ ? list.wide_ids : std::vector<idx_t>(list.narrow_ids.begin(), list.narrow_ids.end());
+}
+
+void TieredQInvertedLists::append_ids(size_t list_no, const idx_t* ids, size_t n) {
+  auto& list = lists[list_no];
+  if (wide_ids_) list.wide_ids.insert(list.wide_ids.end(), ids, ids + n);
+  else for (size_t i = 0; i < n; ++i) list.narrow_ids.push_back(uint32_t(ids[i]));
+}
+
+void TieredQInvertedLists::set_ids(size_t list_no, size_t offset, const idx_t* ids, size_t n) {
+  auto& list = lists[list_no];
+  if (wide_ids_) std::copy_n(ids, n, list.wide_ids.begin() + offset);
+  else for (size_t i = 0; i < n; ++i) list.narrow_ids[offset + i] = uint32_t(ids[i]);
+}
+
+void TieredQInvertedLists::reserve_ids(size_t list_no, size_t n) {
+  if (wide_ids_) lists[list_no].wide_ids.reserve(n);
+  else lists[list_no].narrow_ids.reserve(n);
+}
+
 const uint8_t* TieredQInvertedLists::get_single_code(size_t list_no, size_t offset) const {
   FAISS_THROW_IF_NOT(offset < list_size(list_no));
   auto* row = new uint8_t[code_size];
@@ -51,9 +108,10 @@ void TieredQInvertedLists::release_codes(size_t list_no, const uint8_t* codes) c
 
 std::vector<uint8_t> TieredQInvertedLists::rows(size_t list_no) const {
   const auto& list = lists[list_no];
-  std::vector<uint8_t> out(list.ids.size() * code_size);
-  if (list.ids.empty()) return out;
-  std::vector<uint32_t> slots(list.ids.size());
+  const size_t size = list_size(list_no);
+  std::vector<uint8_t> out(size * code_size);
+  if (!size) return out;
+  std::vector<uint32_t> slots(size);
   std::iota(slots.begin(), slots.end(), 0u);
   blocks->rows(list.block.data(), list.capacity, slots.data(), slots.size(), out.data());
   return out;
@@ -61,33 +119,37 @@ std::vector<uint8_t> TieredQInvertedLists::rows(size_t list_no) const {
 
 void TieredQInvertedLists::set_capacity(size_t list_no, size_t rows_wanted) {
   auto& list = lists[list_no];
-  const size_t capacity = round_up(rows_wanted, capacity_granularity);
+  const size_t capacity = round_up(rows_wanted, capacity_granularity), size = list_size(list_no);
   if (capacity == list.capacity) return;
-  FAISS_THROW_IF_NOT(capacity >= list.ids.size());
+  FAISS_THROW_IF_NOT(capacity >= size);
   // The layout depends on the capacity, so live rows move by decoding and rewriting them.
   const auto kept = rows(list_no);
   faiss::AlignedTableTightAlloc<uint8_t, tq::TieredQFastBlocks::alignment> block(blocks->block_bytes(capacity));
   std::memset(block.data(), 0, block.nbytes());
-  for (size_t slot = 0; slot < list.ids.size(); ++slot) blocks->write_row(block.data(), capacity, slot, kept.data() + slot * code_size);
+  for (size_t slot = 0; slot < size; ++slot) blocks->write_row(block.data(), capacity, slot, kept.data() + slot * code_size);
   std::swap(list.block.ptr, block.ptr);
   std::swap(list.block.numel, block.numel);
   list.capacity = capacity;
 }
 
+// Faiss calls add_entries serially; update_entries runs per list in parallel (DirectMap::remove_ids) with ids
+// already stored, so admitting them never switches the width there.
 size_t TieredQInvertedLists::add_entries(size_t list_no, size_t n_entry, const idx_t* ids, const uint8_t* codes) {
+  admit_ids(ids, n_entry);
   auto& list = lists[list_no];
-  const size_t offset = list.ids.size();
+  const size_t offset = list_size(list_no);
   if (offset + n_entry > list.capacity) set_capacity(list_no, std::max(offset + n_entry, list.capacity + list.capacity / growth_divisor));
-  list.ids.insert(list.ids.end(), ids, ids + n_entry);
+  append_ids(list_no, ids, n_entry);
   for (size_t i = 0; i < n_entry; ++i) blocks->write_row(list.block.data(), list.capacity, offset + i, codes + i * code_size);
   return offset;
 }
 
 void TieredQInvertedLists::update_entries(size_t list_no, size_t offset, size_t n_entry, const idx_t* ids,
                                           const uint8_t* codes) {
+  FAISS_THROW_IF_NOT(offset + n_entry <= list_size(list_no));
+  admit_ids(ids, n_entry);
   auto& list = lists[list_no];
-  FAISS_THROW_IF_NOT(offset + n_entry <= list.ids.size());
-  std::copy_n(ids, n_entry, list.ids.begin() + offset);
+  set_ids(list_no, offset, ids, n_entry);
   for (size_t i = 0; i < n_entry; ++i) blocks->write_row(list.block.data(), list.capacity, offset + i, codes + i * code_size);
 }
 
@@ -95,13 +157,15 @@ void TieredQInvertedLists::update_entries(size_t list_no, size_t offset, size_t 
 void TieredQInvertedLists::resize(size_t list_no, size_t new_size) {
   auto& list = lists[list_no];
   if (new_size > list.capacity) set_capacity(list_no, new_size);
-  list.ids.resize(new_size);
+  if (wide_ids_) list.wide_ids.resize(new_size);
+  else list.narrow_ids.resize(new_size);
   if (new_size < list.capacity / shrink_divisor) set_capacity(list_no, new_size);
 }
 
 size_t TieredQInvertedLists::allocated_bytes() const {
   size_t bytes = 0;
-  for (const auto& list : lists) bytes += list.block.nbytes() + list.ids.capacity() * sizeof(idx_t);
+  for (const auto& list : lists)
+    bytes += list.block.nbytes() + list.narrow_ids.capacity() * sizeof(uint32_t) + list.wide_ids.capacity() * sizeof(idx_t);
   return bytes;
 }
 
@@ -211,6 +275,7 @@ void IndexIVFTieredQ::add_codes(idx_t n, const uint8_t* codes, const idx_t* list
     for (idx_t i = 0; i < n; ++i) if (list_nos[i] >= 0) order[next[list_nos[i]]++] = i;
   }
   std::vector<size_t> old_size(nlist);
+  lists.admit_ids(ids, size_t(n));
   // Lists are independent, so each thread grows and fills its own.
 #pragma omp parallel for schedule(dynamic, 16)
   for (idx_t list = 0; list < idx_t(nlist); ++list) {
@@ -220,10 +285,11 @@ void IndexIVFTieredQ::add_codes(idx_t n, const uint8_t* codes, const idx_t* list
     const size_t new_size = old_size[list] + size_t(end - begin);
     if (new_size > lists.capacity(list)) lists.set_capacity(list, new_size);
     auto& stored = lists.lists[list];
-    stored.ids.reserve(new_size);
+    lists.reserve_ids(list, new_size);
     for (idx_t r = begin; r < end; ++r) {
-      stored.ids.push_back(ids[order[r]]);
-      blocks_->write_row(stored.block.data(), stored.capacity, stored.ids.size() - 1, codes + order[r] * code_size);
+      const size_t slot = lists.list_size(list);
+      lists.append_ids(list, &ids[order[r]], 1);
+      blocks_->write_row(stored.block.data(), stored.capacity, slot, codes + order[r] * code_size);
     }
   }
   // Hashtable maps key rows by id; array maps by position and reject given ids.
@@ -261,13 +327,43 @@ void IndexIVFTieredQ::merge_from(faiss::Index& other_index, idx_t add_id) {
     const size_t count = from.list_size(list);
     if (!count) continue;
     const auto rows = from.rows(list);
-    std::vector<idx_t> list_nos(count, idx_t(list)), ids(from.lists[list].ids);
+    std::vector<idx_t> list_nos(count, idx_t(list)), ids = from.ids(list);
     for (auto& id : ids) id += add_id;
     add_codes(idx_t(count), rows.data(), list_nos.data(), ids.data());
     from.resize(list, 0);
   }
   ntotal += other.ntotal;
   other.ntotal = 0;
+}
+
+size_t IndexIVFTieredQ::remove_ids(const faiss::IDSelector& sel) {
+  auto& lists = this->lists();
+  if (!direct_map.no()) {
+    lists.use_wide_ids();
+    return IndexIVF::remove_ids(sel);
+  }
+  size_t removed = 0;
+#pragma omp parallel for schedule(dynamic, 16) reduction(+ : removed)
+  for (idx_t list = 0; list < idx_t(nlist); ++list) {
+    auto ids = lists.ids(list);
+    size_t live = ids.size();
+    auto& stored = lists.lists[list];
+    std::vector<uint8_t> row(code_size);
+    for (size_t j = 0; j < live;) {
+      if (!sel.is_member(ids[j])) { ++j; continue; }
+      const uint32_t last = uint32_t(--live);
+      ids[j] = ids[last];
+      if (j == last) continue;
+      lists.blocks->rows(stored.block.data(), stored.capacity, &last, 1, row.data());
+      lists.blocks->write_row(stored.block.data(), stored.capacity, j, row.data());
+    }
+    if (live == ids.size()) continue;
+    removed += ids.size() - live;
+    lists.set_ids(list, 0, ids.data(), live);
+    lists.resize(list, live);
+  }
+  ntotal -= idx_t(removed);
+  return removed;
 }
 
 void IndexIVFTieredQ::reconstruct_from_offset(int64_t list_no, int64_t offset, float* recons) const {

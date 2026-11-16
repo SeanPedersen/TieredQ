@@ -4,7 +4,8 @@
 // - training reproduces the codec TieredQ's Python build trains on the same rows;
 // - lists in blocks of their size rounded up to 16 documents; appends in small batches (growing blocks) search as one
 //   bulk add;
-// - write/read, remove_ids, merge_from, reconstruct (direct map), sa_encode/sa_decode and distance_to_code.
+// - write/read, remove_ids, merge_from, reconstruct (direct map), sa_encode/sa_decode and distance_to_code;
+// - 32-bit ids until one needs 64 bits.
 #include "faiss_tieredq/IndexIVFTieredQ.h"
 #include <faiss/IndexFlat.h>
 #include <faiss/impl/IDSelector.h>
@@ -193,6 +194,34 @@ void check_contract(faiss::MetricType metric, bool cosine, const std::vector<flo
     require(std::fabs(full.distances[i] - reference) <= 0.05f * (1 + std::fabs(reference)), "scan drifts from distance_to_code");
   }
 }
+// Ids start in 32 bits; one past 2^32 switches every list to 64-bit ids, keeping the earlier ones.
+void check_wide_ids(const std::vector<float>& data, const std::vector<float>& query_rows) {
+  const auto path = (std::filesystem::temp_directory_path() / ("faiss_tieredq_wide_" + std::to_string(getpid()) + ".tq")).string();
+  auto index = make_index(faiss::METRIC_INNER_PRODUCT, false);
+  index->train(idx_t(rows), data.data());
+  std::vector<idx_t> ids(rows);
+  for (size_t i = 0; i < rows; ++i) ids[i] = idx_t(i) + (i >= rows / 2 && i % 2 ? (idx_t(1) << 40) : 0);
+  index->add_with_ids(idx_t(rows / 2), data.data(), ids.data());
+  require(!index->lists().wide_ids(), "small ids stored wide");
+  const auto narrow = search(*index, query_rows, lists);
+  index->add_with_ids(idx_t(rows - rows / 2), data.data() + rows / 2 * dimensions, ids.data() + rows / 2);
+  require(index->lists().wide_ids(), "an id past 2^32 kept 32-bit ids");
+  auto reference = make_index(faiss::METRIC_INNER_PRODUCT, false);
+  reference->quantizer->add(idx_t(lists), dynamic_cast<faiss::IndexFlat*>(index->quantizer)->get_xb());
+  reference->set_codec(index->codec());
+  std::vector<idx_t> positions(rows);
+  for (size_t i = 0; i < rows; ++i) positions[i] = idx_t(i);
+  reference->add_with_ids(idx_t(rows), data.data(), positions.data());
+  const auto wide = search(*index, query_rows, lists), expected = search(*reference, query_rows, lists);
+  for (size_t i = 0; i < wide.labels.size(); ++i)
+    require(wide.labels[i] == ids[size_t(expected.labels[i])] && wide.distances[i] == expected.distances[i],
+            "64-bit ids search differently");
+  for (size_t i = 0; i < narrow.labels.size(); ++i) require(narrow.labels[i] < idx_t(rows), "32-bit ids changed");
+  faiss_tieredq::write_index_tieredq(*index, path);
+  std::unique_ptr<IndexIVFTieredQ> loaded(faiss_tieredq::read_index_tieredq(path));
+  std::filesystem::remove(path);
+  require(loaded->lists().wide_ids() && same_hits(search(*loaded, query_rows, lists), wide), "64-bit ids read back differently");
+}
 }  // namespace
 
 int main() {
@@ -203,6 +232,7 @@ int main() {
     check_contract(faiss::METRIC_INNER_PRODUCT, false, data, query_rows);
     check_contract(faiss::METRIC_INNER_PRODUCT, true, data, query_rows);
     check_contract(faiss::METRIC_L2, false, data, query_rows);
+    check_wide_ids(data, query_rows);
     std::puts("OK");
     return 0;
   } catch (const std::exception& e) {

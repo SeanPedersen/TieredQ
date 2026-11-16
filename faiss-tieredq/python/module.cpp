@@ -3,6 +3,7 @@
 #include "faiss_tieredq/IndexIVFTieredQ.h"
 #include <faiss/IndexFlat.h>
 #include <faiss/IndexHNSW.h>
+#include <faiss/IndexScalarQuantizer.h>
 #include <faiss/impl/IDSelector.h>
 #include <nanobind/nanobind.h>
 #include <nanobind/ndarray.h>
@@ -39,9 +40,12 @@ class PythonIndex {
               int hnsw_m) {
     const auto type = parse_metric(metric);
     faiss::Index* coarse = nullptr;
+    constexpr auto fp16 = faiss::ScalarQuantizer::QT_fp16;
     if (quantizer == "flat") coarse = new faiss::IndexFlat(idx_t(dimensions), type);
+    else if (quantizer == "fp16") coarse = new faiss::IndexScalarQuantizer(idx_t(dimensions), fp16, type);
     else if (quantizer == "hnsw") coarse = new faiss::IndexHNSWFlat(int(dimensions), hnsw_m, type);
-    else throw std::invalid_argument("quantizer must be 'flat' or 'hnsw'");
+    else if (quantizer == "hnsw_fp16") coarse = new faiss::IndexHNSWSQ(int(dimensions), fp16, hnsw_m, type);
+    else throw std::invalid_argument("quantizer must be 'flat', 'fp16', 'hnsw' or 'hnsw_fp16'");
     index_ = std::make_unique<faiss_tieredq::IndexIVFTieredQ>(coarse, dimensions, lists, code_bits, type, metric == "cosine");
     index_->own_fields = true;
   }
@@ -59,6 +63,7 @@ class PythonIndex {
     if (centroids.shape(0) != index_->nlist) throw std::invalid_argument("set_centroids needs one centroid per list");
     if (index_->ntotal) throw std::invalid_argument("set_centroids needs an empty index");
     index_->quantizer->reset();
+    index_->quantizer->train(idx_t(centroids.shape(0)), centroids.data());  // fp16 storage: no training
     index_->quantizer->add(idx_t(centroids.shape(0)), centroids.data());
     index_->quantizer->is_trained = true;
   }
@@ -102,7 +107,8 @@ NB_MODULE(_core, module) {
       .def(nb::init<size_t, size_t, uint32_t, const std::string&, const std::string&, int>(), "dimensions"_a, "lists"_a,
            "code_bits"_a, nb::kw_only(), "metric"_a = "ip", "quantizer"_a = "flat", "hnsw_m"_a = 32,
            "metric 'ip', 'cosine' (the codec normalizes; normalize the rows for the quantizer too) or 'l2'; quantizer\n"
-           "'flat' or 'hnsw' (IndexHNSWFlat with hnsw_m links, for 64K+ lists).")
+           "'flat', 'fp16' (binary16 centroids, ranked as TieredQ ranks them, about twice as fast), 'hnsw' or\n"
+           "'hnsw_fp16' (IndexHNSWFlat / IndexHNSWSQ with hnsw_m links, for 64K+ lists).")
       .def("train", &PythonIndex::train, "rows"_a.noconvert(),
            "Trains the quantizer (unless set_centroids fixed it) and the TieredQ codec on a seeded sample of rows.")
       .def("set_centroids", &PythonIndex::set_centroids, "centroids"_a.noconvert())
