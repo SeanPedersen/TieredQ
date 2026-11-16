@@ -5,6 +5,7 @@
 //     train on the same 32,768 rows. Writes every index, the centroids and build.json. BITS_PER_DIMENSION sets
 //     TieredQ's budget (default 1.75 for arxiv, 1 for Qwen); CODECS is `tieredq` (no Faiss codecs) or a comma-separated
 //     subset of Faiss codec names (e.g. rabitq3); default all.
+//   CENTROIDS (optional) is a centroids.f32 of an earlier build of the same data and seed, used instead of k-means.
 //   NPROBES (optional, comma-separated) replaces the serve and parity nprobe grid; RABITQ_QB (optional) sets RaBitQ's
 //   query bits at search (Faiss's default 4; 8 is close to exact).
 //   serve DATA OUT KIND NAME RESULT: one index in a fresh process: serving RAM (RssAnon growth across load and coarse
@@ -162,14 +163,9 @@ std::unique_ptr<faiss::Index> fp16_quantizer(size_t d, const std::vector<float>&
   return quantizer;
 }
 
-void build(const Dataset& data, uint64_t seed, const std::string& out, double bits_per_dimension, const std::string& codecs) {
-  std::ostringstream report;
-  report << "{\"seed\": " << seed;
+// Faiss k-means (L2, as TieredQ's coarse lists are for inner product) on a seeded sample.
+std::vector<float> kmeans_lists(const Dataset& data, size_t lists, size_t points_per_list, bool large, uint64_t seed) {
   const size_t d = data.d;
-  const bool large = data.rows > 4000000;
-  const size_t lists = large ? hnsw_lists : 2048, points_per_list = large ? 40 : 64;
-  // Lists: Faiss k-means (L2, as TieredQ's coarse lists are for inner product) on a seeded sample.
-  auto started = Clock::now();
   const auto sample_ids = seeded_sample(data.rows, lists * points_per_list, seed);
   std::vector<float> sample(sample_ids.size() * d);
   data.gather(sample_ids.data(), sample_ids.size(), sample.data());
@@ -178,7 +174,19 @@ void build(const Dataset& data, uint64_t seed, const std::string& out, double bi
   faiss::Clustering clustering(int(d), int(lists), params);
   faiss::IndexFlatL2 assigner{idx_t(d)};
   clustering.train(idx_t(sample_ids.size()), sample.data(), assigner);
-  const std::vector<float> centroids = clustering.centroids;
+  return clustering.centroids;
+}
+
+void build(const Dataset& data, uint64_t seed, const std::string& out, double bits_per_dimension, const std::string& codecs) {
+  std::ostringstream report;
+  report << "{\"seed\": " << seed;
+  const size_t d = data.d;
+  const bool large = data.rows > 4000000;
+  const size_t lists = large ? hnsw_lists : 2048, points_per_list = large ? 40 : 64;
+  auto started = Clock::now();
+  const std::vector<float> centroids = std::getenv("CENTROIDS") ? read_file<float>(std::getenv("CENTROIDS"))
+                                                                : kmeans_lists(data, lists, points_per_list, large, seed);
+  if (centroids.size() != lists * d) throw std::runtime_error("CENTROIDS does not hold one centroid per list");
   write_file(out + "/centroids.f32", centroids.data(), centroids.size());
   report << ", \"lists\": " << lists << ", \"kmeans_s\": " << seconds_since(started);
   // The codec's training rows, as the plugin's train_encoder (and TieredQ's Python build) draws them.
