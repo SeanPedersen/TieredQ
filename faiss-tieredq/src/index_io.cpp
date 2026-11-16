@@ -1,7 +1,7 @@
 // IndexIVFTieredQ files: a header, the coarse quantizer as faiss::write_index bytes, the TieredQ codec and block format,
 // then every list's ids and block as stored. Native byte order (little endian on the supported platforms); the block
 // format makes another CPU family scan the blocks with TieredQ's portable scorer.
-//   magic u32 | version u32 | d u64 | nlist u64 | metric u32 | code_bits u32 | cosine u32 | ntotal u64
+//   magic u32 | version u32 | d u64 | nlist u64 | metric u32 | code_bits u32 | cosine u32 | by_residual u32 (v2) | ntotal u64
 //   quantizer: bytes u64, data | codec: bytes u64, data | format u32
 //   wide ids u32 | per list: count u64, capacity u64, ids (u32 or, when wide, i64)[count], block u8[block_bytes(capacity)]
 #include "faiss_tieredq/IndexIVFTieredQ.h"
@@ -15,7 +15,7 @@
 namespace faiss_tieredq {
 namespace {
 constexpr uint32_t file_magic = 0x56465154;  // "TQFV"
-constexpr uint32_t file_version = 1;
+constexpr uint32_t file_version = 2;  // 1: no by_residual field (false)
 
 struct File {
   File(const std::string& path, const char* mode) : handle(std::fopen(path.c_str(), mode)) {
@@ -45,7 +45,8 @@ void write_index_tieredq(const IndexIVFTieredQ& index, const std::string& path) 
   File file(path, "wb");
   file.put(file_magic); file.put(file_version);
   file.put<uint64_t>(index.d); file.put<uint64_t>(index.nlist); file.put<uint32_t>(index.metric_type);
-  file.put(index.code_bits); file.put<uint32_t>(index.cosine); file.put<uint64_t>(index.ntotal);
+  file.put(index.code_bits); file.put<uint32_t>(index.cosine); file.put<uint32_t>(index.by_residual);
+  file.put<uint64_t>(index.ntotal);
   faiss::VectorIOWriter quantizer;
   faiss::write_index(index.quantizer, &quantizer);
   file.put_bytes(quantizer.data);
@@ -64,11 +65,13 @@ void write_index_tieredq(const IndexIVFTieredQ& index, const std::string& path) 
 IndexIVFTieredQ* read_index_tieredq(const std::string& path) {
   File file(path, "rb");
   FAISS_THROW_IF_NOT_MSG(file.get<uint32_t>() == file_magic, "not an IndexIVFTieredQ file");
-  FAISS_THROW_IF_NOT_MSG(file.get<uint32_t>() == file_version, "unsupported IndexIVFTieredQ file version");
+  const auto version = file.get<uint32_t>();
+  FAISS_THROW_IF_NOT_MSG(version == 1 || version == file_version, "unsupported IndexIVFTieredQ file version");
   const auto d = file.get<uint64_t>(), nlist = file.get<uint64_t>();
   const auto metric = faiss::MetricType(file.get<uint32_t>());
   const auto code_bits = file.get<uint32_t>();
   const bool cosine = file.get<uint32_t>() != 0;
+  const bool by_residual = version >= 2 && file.get<uint32_t>() != 0;
   const auto ntotal = idx_t(file.get<uint64_t>());
   faiss::VectorIOReader quantizer_bytes;
   quantizer_bytes.data = file.get_bytes();
@@ -78,6 +81,7 @@ IndexIVFTieredQ* read_index_tieredq(const std::string& path) {
   const auto format = file.get<uint32_t>();
   auto index = std::make_unique<IndexIVFTieredQ>(quantizer.get(), d, nlist, code_bits, metric, cosine);
   index->own_fields = true;
+  index->by_residual = by_residual;
   quantizer.release();
   index->set_codec(codec, format);
   auto& lists = index->lists();

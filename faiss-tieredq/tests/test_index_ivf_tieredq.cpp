@@ -5,7 +5,9 @@
 // - lists in blocks of their size rounded up to 16 documents; appends in small batches (growing blocks) search as one
 //   bulk add;
 // - write/read, remove_ids, merge_from, reconstruct (direct map), sa_encode/sa_decode and distance_to_code;
-// - 32-bit ids until one needs 64 bits.
+// - 32-bit ids until one needs 64 bits;
+// - by_residual: scores are the query's inner product with the list centroid plus the codec's score of the residual,
+//   reconstruct adds the centroid back, and write/read and merge_from keep the mode.
 #include "faiss_tieredq/IndexIVFTieredQ.h"
 #include <faiss/IndexFlat.h>
 #include <faiss/impl/IDSelector.h>
@@ -222,6 +224,89 @@ void check_wide_ids(const std::vector<float>& data, const std::vector<float>& qu
   std::filesystem::remove(path);
   require(loaded->lists().wide_ids() && same_hits(search(*loaded, query_rows, lists), wide), "64-bit ids read back differently");
 }
+float dot(const float* a, const float* b) {
+  float sum = 0;
+  for (size_t j = 0; j < dimensions; ++j) sum += a[j] * b[j];
+  return sum;
+}
+
+void check_residual(const std::vector<float>& data, const std::vector<float>& query_rows) {
+  const auto path = (std::filesystem::temp_directory_path() / ("faiss_tieredq_residual_" + std::to_string(getpid()) + ".tq")).string();
+  auto index = make_index(faiss::METRIC_INNER_PRODUCT, false);
+  index->by_residual = true;
+  index->make_direct_map(true);
+  index->train(idx_t(rows), data.data());
+  index->add(idx_t(rows), data.data());
+  require(index->codec().config().metric == tq::TieredQMetric::inner_product, "residual codec is not inner product");
+  // Each row's exact residual score: its list's centroid, the residual's code and the codec's own scoring.
+  std::vector<idx_t> assignment(rows);
+  index->quantizer->assign(idx_t(rows), data.data(), assignment.data());
+  std::vector<float> centroids(rows * dimensions), residual(rows * dimensions);
+  for (size_t row = 0; row < rows; ++row) {
+    index->quantizer->reconstruct(assignment[row], centroids.data() + row * dimensions);
+    for (size_t j = 0; j < dimensions; ++j)
+      residual[row * dimensions + j] = data[row * dimensions + j] - centroids[row * dimensions + j];
+  }
+  const auto codes = index->codec().encode(residual.data(), rows);
+  std::vector<float> decoded(rows * dimensions);
+  index->codec().decode(codes.data(), rows, decoded.data());
+  std::vector<float> rebuilt(dimensions);
+  for (size_t row : {size_t(0), rows / 2, rows - 1}) {
+    index->reconstruct(idx_t(row), rebuilt.data());
+    for (size_t j = 0; j < dimensions; ++j)
+      require(rebuilt[j] == decoded[row * dimensions + j] + centroids[row * dimensions + j], "reconstruct misses the centroid");
+  }
+  std::vector<float> coarse_distance(lists);
+  std::vector<idx_t> coarse_lists(lists);
+  index->quantizer->search(1, query_rows.data(), idx_t(lists), coarse_distance.data(), coarse_lists.data());
+  std::unique_ptr<faiss::InvertedListScanner> scanner(index->get_InvertedListScanner());
+  scanner->set_query(query_rows.data());
+  const auto weights = index->codec().query(query_rows.data());
+  std::vector<float> exact(rows);
+  for (size_t row = 0; row < rows; ++row) {
+    index->codec().score(codes.data() + row * index->code_size, 1, weights, &exact[row]);
+    exact[row] += dot(query_rows.data(), centroids.data() + row * dimensions);
+  }
+  // distance_to_code adds the bias set_list derives from the coarse L2 distance.
+  for (size_t l = 0; l < lists; ++l) {
+    scanner->set_list(coarse_lists[l], coarse_distance[l]);
+    for (size_t row = 0; row < rows; ++row) {
+      if (assignment[row] != coarse_lists[l]) continue;
+      const float got = scanner->distance_to_code(codes.data() + row * index->code_size);
+      require(std::fabs(got - exact[row]) <= 1e-4f * (1 + std::fabs(exact[row])), "residual distance_to_code differs");
+    }
+  }
+  // The scan's fast estimates lie close to the exact scores at full probe.
+  Hits full{std::vector<float>(k), std::vector<idx_t>(k)};
+  faiss::SearchParametersIVF all; all.nprobe = lists;
+  index->search(1, query_rows.data(), idx_t(k), full.distances.data(), full.labels.data(), &all);
+  for (size_t i = 0; i < k; ++i) {
+    const float reference = exact[size_t(full.labels[i])];
+    require(std::fabs(full.distances[i] - reference) <= 0.05f * (1 + std::fabs(reference)), "residual scan drifts from exact");
+  }
+  const auto before = search(*index, query_rows, probes);
+  faiss_tieredq::write_index_tieredq(*index, path);
+  std::unique_ptr<IndexIVFTieredQ> loaded(faiss_tieredq::read_index_tieredq(path));
+  std::filesystem::remove(path);
+  require(loaded->by_residual && same_hits(search(*loaded, query_rows, probes), before), "residual index reads back differently");
+  auto first = make_index(faiss::METRIC_INNER_PRODUCT, false), second = make_index(faiss::METRIC_INNER_PRODUCT, false);
+  for (auto* half : {first.get(), second.get()}) {
+    half->by_residual = true;
+    half->quantizer->add(idx_t(lists), dynamic_cast<faiss::IndexFlat*>(index->quantizer)->get_xb());
+    half->set_codec(index->codec());
+  }
+  first->add(idx_t(rows / 2), data.data());
+  second->add(idx_t(rows - rows / 2), data.data() + rows / 2 * dimensions);
+  first->merge_from(*second, idx_t(rows / 2));
+  require(same_scores(search(*first, query_rows, probes), before), "merged residual index searches differently");
+  bool refused = false;
+  try {
+    auto l2 = make_index(faiss::METRIC_L2, false);
+    l2->by_residual = true;
+    l2->train(idx_t(rows), data.data());
+  } catch (const std::exception&) { refused = true; }
+  require(refused, "by_residual accepted L2");
+}
 }  // namespace
 
 int main() {
@@ -233,6 +318,7 @@ int main() {
     check_contract(faiss::METRIC_INNER_PRODUCT, true, data, query_rows);
     check_contract(faiss::METRIC_L2, false, data, query_rows);
     check_wide_ids(data, query_rows);
+    check_residual(data, query_rows);
     std::puts("OK");
     return 0;
   } catch (const std::exception& e) {

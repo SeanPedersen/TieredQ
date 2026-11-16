@@ -6,6 +6,9 @@
 //     TieredQ's budget (default 1.75 for arxiv, 1 for Qwen); CODECS is `tieredq` (no Faiss codecs) or a comma-separated
 //     subset of Faiss codec names (e.g. rabitq3); default all.
 //   CENTROIDS (optional) is a centroids.f32 of an earlier build of the same data and seed, used instead of k-means.
+//   CODEC_ROWS (optional) sets the codec's training rows (default 32,768) for TieredQ, the plugin and Faiss's codecs.
+//   RESIDUAL=1 (optional) builds the plugin with by_residual: its codec trains on the training rows' residuals to
+//   their lists' fp16 centroids (TieredQ's assignment), and TieredQIVFIndex keeps the non-residual codec.
 //   NPROBES (optional, comma-separated) replaces the serve and parity nprobe grid; RABITQ_QB (optional) sets RaBitQ's
 //   query bits at search (Faiss's default 4; 8 is close to exact).
 //   serve DATA OUT KIND NAME RESULT: one index in a fresh process: serving RAM (RssAnon growth across load and coarse
@@ -190,13 +193,17 @@ void build(const Dataset& data, uint64_t seed, const std::string& out, double bi
   write_file(out + "/centroids.f32", centroids.data(), centroids.size());
   report << ", \"lists\": " << lists << ", \"kmeans_s\": " << seconds_since(started);
   // The codec's training rows, as the plugin's train_encoder (and TieredQ's Python build) draws them.
-  const auto codec_ids = faiss_tieredq::codec_training_sample(data.rows);
+  const size_t training_rows = std::getenv("CODEC_ROWS") ? std::stoul(std::getenv("CODEC_ROWS"))
+                                                         : faiss_tieredq::IndexIVFTieredQ::default_training_rows;
+  const bool residual = std::getenv("RESIDUAL") && std::string(std::getenv("RESIDUAL")) == "1";
+  const auto codec_ids = faiss_tieredq::codec_training_sample(data.rows, training_rows);
   std::vector<float> codec_rows(codec_ids.size() * d);
   data.gather(codec_ids.data(), codec_ids.size(), codec_rows.data());
   const uint32_t code_bits = uint32_t(std::lround(double(d) * (bits_per_dimension > 0 ? bits_per_dimension : large ? 1.0 : 1.75)));
   auto plugin_quantizer = fp16_quantizer(d, centroids);
   faiss_tieredq::IndexIVFTieredQ plugin(plugin_quantizer.release(), d, lists, code_bits, faiss::METRIC_INNER_PRODUCT);
   plugin.own_fields = true;
+  plugin.training_rows = training_rows;
   started = Clock::now();
   plugin.train_encoder(idx_t(codec_ids.size()), codec_rows.data(), nullptr);
   plugin.is_trained = true;
@@ -210,6 +217,17 @@ void build(const Dataset& data, uint64_t seed, const std::string& out, double bi
   tieredq.save(out + "/tieredq.tq");
   const auto assignment32 = tieredq.list_assignment();
   const std::vector<idx_t> assignment(assignment32.begin(), assignment32.end());
+  if (residual) {  // the codec retrains on residuals, which needs the assignment first
+    started = Clock::now();
+    plugin.by_residual = true;
+    std::vector<idx_t> sample_lists(codec_ids.size());
+    for (size_t i = 0; i < codec_ids.size(); ++i) sample_lists[i] = assignment[codec_ids[i]];
+    std::vector<float> sample_residuals(codec_rows.size());
+    for (size_t i = 0; i < codec_ids.size(); ++i)
+      plugin.quantizer->compute_residual(codec_rows.data() + i * d, sample_residuals.data() + i * d, sample_lists[i]);
+    plugin.train_encoder(idx_t(codec_ids.size()), sample_residuals.data(), sample_lists.data());
+    report << ", \"residual_codec_train_s\": " << seconds_since(started);
+  }
   // The plugin on TieredQ's assignment: lists laid out once for their final sizes, rows added a chunk at a time.
   started = Clock::now();
   std::vector<size_t> sizes(lists, 0);

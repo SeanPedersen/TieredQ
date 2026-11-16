@@ -1,7 +1,12 @@
 // IndexIVFTieredQ (#55): a Faiss IVF index whose inverted lists hold TieredQ fast-scan blocks.
 // - Encoder: a TieredQ codec (fast target, no fine tiers, the IVF scan cap) trained on a seeded sample of the training
-//   rows, exactly as TieredQIVFIndex's Python build trains its codec; codes do not depend on the list
-//   (by_residual = false), so merge_from, remove_ids and reconstruct stay exact. code_size is bytes_per_vector().
+//   rows, exactly as TieredQIVFIndex's Python build trains its codec. By default codes do not depend on the list
+//   (by_residual = false). code_size is bytes_per_vector().
+// - by_residual (inner product only, set before training): rows are encoded minus their list's centroid as the
+//   quantizer reconstructs it, and a list's scores add the query's inner product with that centroid, taken from the
+//   coarse distance Faiss hands the scanner (L2: (|q|^2 + |c|^2 - coarse) / 2). The quantizer's distances must be exact
+//   for its reconstructed centroids (flat, scalar quantizer, HNSW over either); a replacement quantizer must hold the
+//   same centroids.
 // - Lists: TieredQInvertedLists keeps each list in one TieredQFastBlocks block laid out for its capacity (its rows
 //   rounded up to 16 documents after a bulk add, growing by half when full), so a list costs what TieredQIVFIndex's
 //   packed lists cost. Fixed 256-document tiles would pad a 64K-list index of 8.84M rows to about twice its size.
@@ -101,6 +106,9 @@ struct IndexIVFTieredQ : faiss::IndexIVF {
 
   uint32_t code_bits = 0;
   bool cosine = false;
+  // Rows of the training set the codec trains on (a seeded sample when there are more).
+  size_t training_rows = default_training_rows;
+  static constexpr size_t default_training_rows = 32768;
 
   // The trained codec; throws before training.
   const tq::TieredQ& codec() const;
@@ -131,17 +139,25 @@ struct IndexIVFTieredQ : faiss::IndexIVF {
 
  private:
   void install(std::shared_ptr<const tq::TieredQFastBlocks> blocks);
+  // by_residual: rows minus their lists' centroids (rows with list < 0 are copied).
+  std::vector<float> residuals(idx_t n, const float* x, const idx_t* list_nos) const;
+  // by_residual: adds each row's list centroid to the decoded rows.
+  void add_centroids(idx_t n, const idx_t* list_nos, float* x) const;
   // Appends codes (code_size each) to their lists, in input order within each list; list_nos[i] < 0 skips row i.
   // Each list grows once, to exactly its new size.
   void add_codes(idx_t n, const uint8_t* codes, const idx_t* list_nos, const idx_t* ids);
   std::shared_ptr<const tq::TieredQFastBlocks> blocks_;
   std::shared_ptr<ScannerPool> scanners_;
+
+ public:
+  // by_residual: squared norms of the quantizer's reconstructed centroids, taken when the codec is installed.
+  std::vector<float> centroid_norms;
 };
 
-// The rows (of count training rows) train_encoder trains the codec on: a seeded sample of at most 32,768, all of them
+// The rows (of count training rows) train_encoder trains the codec on: a seeded sample of at most limit, all of them
 // in order when fewer. Training on just those rows, gathered, gives the same codec (e.g. from a store too large to
 // decode whole).
-std::vector<uint32_t> codec_training_sample(size_t count);
+std::vector<uint32_t> codec_training_sample(size_t count, size_t limit = IndexIVFTieredQ::default_training_rows);
 
 void write_index_tieredq(const IndexIVFTieredQ& index, const std::string& path);
 // The caller owns the returned index (and through it its quantizer).

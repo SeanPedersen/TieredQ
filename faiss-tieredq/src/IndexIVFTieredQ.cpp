@@ -14,7 +14,6 @@ namespace faiss_tieredq {
 namespace {
 // TieredQ's Python adapters train the codec on this seeded sample of the first training batch (bindings/training.h);
 // the same rows give the same codec as a TieredQIVFIndex built from them.
-constexpr size_t training_sample_rows = 32768;
 constexpr uint64_t training_seed = 0;
 constexpr uint32_t maximum_centroids = 256;
 // Rows assigned and encoded per step of add(), bounding the assignment's scratch; codes of the whole add are kept
@@ -26,11 +25,11 @@ constexpr size_t growth_divisor = 2, shrink_divisor = 2;
 size_t round_up(size_t value, size_t multiple) { return (value + multiple - 1) / multiple * multiple; }
 }  // namespace
 
-std::vector<uint32_t> codec_training_sample(size_t count) {
+std::vector<uint32_t> codec_training_sample(size_t count, size_t limit) {
   std::vector<uint32_t> ids(count);
   std::iota(ids.begin(), ids.end(), 0u);
-  if (count > training_sample_rows) std::shuffle(ids.begin(), ids.end(), std::mt19937_64(training_seed));
-  ids.resize(std::min(count, training_sample_rows));
+  if (count > limit) std::shuffle(ids.begin(), ids.end(), std::mt19937_64(training_seed));
+  ids.resize(std::min(count, limit));
   return ids;
 }
 
@@ -215,6 +214,20 @@ TieredQInvertedLists& IndexIVFTieredQ::lists() const {
 void IndexIVFTieredQ::install(std::shared_ptr<const tq::TieredQFastBlocks> blocks) {
   FAISS_THROW_IF_NOT_MSG(ntotal == 0, "the codec of a nonempty IndexIVFTieredQ cannot change");
   FAISS_THROW_IF_NOT_MSG(idx_t(blocks->codec().config().dimensions) == d, "codec dimensions differ from the index's");
+  centroid_norms.clear();
+  if (by_residual) {
+    FAISS_THROW_IF_NOT_MSG(metric_type == faiss::METRIC_INNER_PRODUCT && !cosine,
+                           "by_residual needs METRIC_INNER_PRODUCT without cosine (normalize the rows instead)");
+    FAISS_THROW_IF_NOT_MSG(blocks->codec().config().metric == tq::TieredQMetric::inner_product,
+                           "by_residual needs an inner-product codec");
+    FAISS_THROW_IF_NOT_MSG(quantizer->ntotal == idx_t(nlist), "by_residual needs the quantizer's centroids first");
+    centroid_norms.resize(nlist);
+    std::vector<float> centroid(d);
+    for (size_t list = 0; list < nlist; ++list) {
+      quantizer->reconstruct(idx_t(list), centroid.data());
+      centroid_norms[list] = std::inner_product(centroid.begin(), centroid.end(), centroid.begin(), 0.0f);
+    }
+  }
   blocks_ = std::move(blocks);
   scanners_ = std::make_shared<ScannerPool>(blocks_);
   code_size = blocks_->codec().bytes_per_vector();
@@ -233,14 +246,34 @@ void IndexIVFTieredQ::train_encoder(idx_t n, const float* x, const idx_t*) {
                          : metric_type == faiss::METRIC_L2 ? tq::TieredQMetric::l2 : tq::TieredQMetric::inner_product;
   config.fine_tiers = false;  // fast blocks scan prefix-free codes only
   config.max_scan_bits = tq::TieredQIVFIndex::automatic_scan_bits(config);
-  const auto ids = codec_training_sample(size_t(n));
+  const auto ids = codec_training_sample(size_t(n), training_rows);
   config.num_centroids = std::min(maximum_centroids, uint32_t(ids.size() / 2));
   install(std::make_shared<const tq::TieredQFastBlocks>(
       tq::TieredQ::train_sampled(config, x, size_t(n), ids.data(), ids.size(), training_seed)));
 }
 
+std::vector<float> IndexIVFTieredQ::residuals(idx_t n, const float* x, const idx_t* list_nos) const {
+  std::vector<float> out(x, x + size_t(n) * d);
+#pragma omp parallel for if (n > 1000)
+  for (idx_t i = 0; i < n; ++i)
+    if (list_nos[i] >= 0) quantizer->compute_residual(x + i * d, out.data() + i * d, list_nos[i]);
+  return out;
+}
+
+void IndexIVFTieredQ::add_centroids(idx_t n, const idx_t* list_nos, float* x) const {
+#pragma omp parallel for if (n > 1000)
+  for (idx_t i = 0; i < n; ++i) {
+    if (list_nos[i] < 0) continue;
+    std::vector<float> centroid(d);
+    quantizer->reconstruct(list_nos[i], centroid.data());
+    for (idx_t j = 0; j < d; ++j) x[i * d + j] += centroid[j];
+  }
+}
+
 void IndexIVFTieredQ::encode_vectors(idx_t n, const float* x, const idx_t* list_nos, uint8_t* codes,
                                      bool include_listno) const {
+  std::vector<float> shifted;
+  if (by_residual) { shifted = residuals(n, x, list_nos); x = shifted.data(); }
   if (!include_listno) { codec().encode(x, size_t(n), codes); return; }
   const size_t coarse = coarse_code_size();
   const auto rows = codec().encode(x, size_t(n));
@@ -252,15 +285,20 @@ void IndexIVFTieredQ::encode_vectors(idx_t n, const float* x, const idx_t* list_
   }
 }
 
-void IndexIVFTieredQ::decode_vectors(idx_t n, const uint8_t* codes, const idx_t*, float* x) const {
+void IndexIVFTieredQ::decode_vectors(idx_t n, const uint8_t* codes, const idx_t* list_nos, float* x) const {
   codec().decode(codes, size_t(n), x);
+  if (by_residual) add_centroids(n, list_nos, x);
 }
 
 void IndexIVFTieredQ::sa_decode(idx_t n, const uint8_t* bytes, float* x) const {
   const size_t coarse = coarse_code_size();
   std::vector<uint8_t> rows(size_t(n) * code_size);
-  for (idx_t i = 0; i < n; ++i) std::memcpy(rows.data() + i * code_size, bytes + i * (coarse + code_size) + coarse, code_size);
-  codec().decode(rows.data(), size_t(n), x);
+  std::vector<idx_t> list_nos(n);
+  for (idx_t i = 0; i < n; ++i) {
+    list_nos[i] = decode_listno(bytes + i * (coarse + code_size));
+    std::memcpy(rows.data() + i * code_size, bytes + i * (coarse + code_size) + coarse, code_size);
+  }
+  decode_vectors(n, rows.data(), list_nos.data(), x);
 }
 
 void IndexIVFTieredQ::add_codes(idx_t n, const uint8_t* codes, const idx_t* list_nos, const idx_t* ids) {
@@ -302,7 +340,7 @@ void IndexIVFTieredQ::add_core(idx_t n, const float* x, const idx_t* xids, const
   FAISS_THROW_IF_NOT(is_trained);
   direct_map.check_can_add(xids);
   std::vector<uint8_t> codes(size_t(n) * code_size);
-  codec().encode(x, size_t(n), codes.data());
+  encode_vectors(n, x, precomputed_idx, codes.data());
   std::vector<idx_t> ids(n);
   for (idx_t i = 0; i < n; ++i) ids[i] = xids ? xids[i] : ntotal + i;
   add_codes(n, codes.data(), precomputed_idx, ids.data());
@@ -320,8 +358,9 @@ void IndexIVFTieredQ::add_with_ids(idx_t n, const float* x, const idx_t* xids) {
 void IndexIVFTieredQ::merge_from(faiss::Index& other_index, idx_t add_id) {
   check_compatible_for_merge(other_index);
   auto& other = static_cast<IndexIVFTieredQ&>(other_index);
-  FAISS_THROW_IF_NOT_MSG(other.codec().model_id() == codec().model_id() && other.blocks().format() == blocks().format(),
-                         "can only merge IndexIVFTieredQ with the same codec and block format");
+  FAISS_THROW_IF_NOT_MSG(other.codec().model_id() == codec().model_id() && other.blocks().format() == blocks().format() &&
+                             other.by_residual == by_residual,
+                         "can only merge IndexIVFTieredQ with the same codec, block format and by_residual");
   auto& from = other.lists();
   for (size_t list = 0; list < nlist; ++list) {
     const size_t count = from.list_size(list);
@@ -368,7 +407,8 @@ size_t IndexIVFTieredQ::remove_ids(const faiss::IDSelector& sel) {
 
 void IndexIVFTieredQ::reconstruct_from_offset(int64_t list_no, int64_t offset, float* recons) const {
   faiss::InvertedLists::ScopedCodes row(invlists, size_t(list_no), size_t(offset));
-  codec().decode(row.get(), 1, recons);
+  const idx_t list = list_no;
+  decode_vectors(1, row.get(), &list, recons);
 }
 
 size_t IndexIVFTieredQ::storage_bytes() const { return codec().memory_bytes() + lists().allocated_bytes(); }
