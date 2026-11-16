@@ -5,7 +5,8 @@
 //     train on the same 32,768 rows. Writes every index, the centroids and build.json. BITS_PER_DIMENSION sets
 //     TieredQ's budget (default 1.75 for arxiv, 1 for Qwen); CODECS is `tieredq` (no Faiss codecs) or a comma-separated
 //     subset of Faiss codec names (e.g. rabitq3); default all.
-//   NPROBES (optional, comma-separated) replaces the serve and parity nprobe grid.
+//   NPROBES (optional, comma-separated) replaces the serve and parity nprobe grid; RABITQ_QB (optional) sets RaBitQ's
+//   query bits at search (Faiss's default 4; 8 is close to exact).
 //   serve DATA OUT KIND NAME RESULT: one index in a fresh process: serving RAM (RssAnon growth across load and coarse
 //     setup), then alone on QUERY_CORE with one thread, per nprobe single-query QPS (best of passes), p50, recall@k
 //     and every hit.
@@ -268,7 +269,7 @@ void serve(const Dataset& data, const std::string& out, const std::string& kind,
   std::unique_ptr<tq::TieredQIVFIndex> tieredq;
   std::unique_ptr<faiss::IndexIVF> ivf;
   faiss::SearchParametersHNSW coarse;
-  faiss::SearchParametersIVF params;
+  faiss::IVFRaBitQSearchParameters params;  // a SearchParametersIVF; qb only matters to RaBitQ
   if (kind == "tieredq") {
     tieredq = std::make_unique<tq::TieredQIVFIndex>(tq::TieredQIVFIndex::load(out + "/tieredq.tq"));
   } else {
@@ -284,6 +285,8 @@ void serve(const Dataset& data, const std::string& out, const std::string& kind,
       params.quantizer_params = &coarse;
     }
   }
+  if (const auto* rabitq = dynamic_cast<const faiss::IndexIVFRaBitQ*>(ivf.get()))
+    params.qb = std::getenv("RABITQ_QB") ? uint8_t(std::atoi(std::getenv("RABITQ_QB"))) : rabitq->qb;
   malloc_trim(0);
   const size_t ram = rss_anon_bytes() - before;
   cpu_set_t query_core; CPU_ZERO(&query_core); CPU_SET(std::atoi(std::getenv("QUERY_CORE")), &query_core);
@@ -300,7 +303,8 @@ void serve(const Dataset& data, const std::string& out, const std::string& kind,
           ivf->search(1, q, idx_t(k), scores, ids, &params);
         });
   std::ostringstream report;
-  report << "{\"kind\": \"" << kind << "\", \"name\": \"" << name << "\", \"ram_bytes\": " << ram << ", \"points\": [";
+  report << "{\"kind\": \"" << kind << "\", \"name\": \"" << name << "\", \"ram_bytes\": " << ram
+         << ", \"rabitq_qb\": " << int(params.qb) << ", \"points\": [";
   std::vector<float> scores(queries * k);
   std::vector<idx_t> ids(queries * k);
   for (size_t p = 0; p < nprobes(data).size(); ++p) {
