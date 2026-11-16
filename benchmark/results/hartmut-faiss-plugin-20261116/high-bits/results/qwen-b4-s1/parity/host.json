@@ -1,0 +1,14 @@
+{
+  "loadavg": [
+    "19.32",
+    "21.56",
+    "22.53"
+  ],
+  "top": [
+    "150 ps",
+    "8.6 kworker/u146:32-kcryptd-253:0-1",
+    "7.5 kworker/u146:25-btrfs-endio",
+    "7.5 kworker/u146:23-kcryptd-253:0-1",
+    "6.5 kworker/u146:34-kcryptd-253:0-1"
+  ]
+}

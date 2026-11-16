@@ -1,0 +1,1 @@
+{"queries": 50, "points": [{"nprobe": 64, "same_hits": 50, "same_scores": 50}, {"nprobe": 128, "same_hits": 50, "same_scores": 50}, {"nprobe": 256, "same_hits": 50, "same_scores": 50}, {"nprobe": 512, "same_hits": 50, "same_scores": 50}, {"nprobe": 1024, "same_hits": 50, "same_scores": 50}, {"nprobe": 65536, "same_hits": 50, "same_scores": 50}]}

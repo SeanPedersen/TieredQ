@@ -1,0 +1,14 @@
+{
+  "loadavg": [
+    "1.68",
+    "11.16",
+    "17.77"
+  ],
+  "top": [
+    "100 ps",
+    "7.1 tailscaled",
+    "5.2 dockerd",
+    "4.7 containerd",
+    "3.4 btop"
+  ]
+}

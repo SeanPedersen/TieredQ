@@ -1,0 +1,11 @@
+{
+  "centroids.f32": 6291456,
+  "tieredq.tq": 243971232,
+  "plugin.tqf": 255389353,
+  "rabitq1.faiss": 156908025,
+  "rabitq2.faiss": 302129477,
+  "rabitq4.faiss": 560300933,
+  "pq4fs-m192.faiss": 149291240,
+  "pq4fs-m384.faiss": 281451752,
+  "build.json": 506
+}

@@ -1,0 +1,14 @@
+{
+  "loadavg": [
+    "8.37",
+    "7.63",
+    "9.04"
+  ],
+  "top": [
+    "200 ps",
+    "166 pg_isready",
+    "66.0 obscura",
+    "5.2 dockerd",
+    "4.7 containerd"
+  ]
+}

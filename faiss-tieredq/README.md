@@ -48,5 +48,8 @@ objects from Faiss's SWIG module. `set_centroids` fixes the partition.
 ## Acceptance
 
 `benchmarks/acceptance.cpp` builds `TieredQIVFIndex`, `IndexIVFTieredQ` and Faiss's `IndexIVFRaBitQ` and
-`IndexIVFPQFastScan` on one Faiss k-means partition, the same assignment and the same training rows. It then checks
-parity and serves each index alone on one core. Results: `benchmark/results/hartmut-faiss-plugin-20261116/`.
+`IndexIVFPQFastScan` on one Faiss k-means partition, with the same assignment and training rows. It checks parity and
+serves each index alone on one core. On hartmut (VIBE arxiv k = 100, Qwen/MS MARCO 8.84M k = 10), the plugin returns
+`TieredQIVFIndex`'s ids and scores (at least 49 of 50 queries per nprobe, up to full probe). It uses 0.92-1.03x its RAM
+and gets 0.89-1.52x its single-core QPS at equal nprobe and recall. From recall 0.85 up it needs less RAM than Faiss's
+codecs, or is 3.3x faster at equal RAM (Qwen at 0.95). Details: `benchmark/results/hartmut-faiss-plugin-20261116/`.

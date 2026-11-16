@@ -1,8 +1,12 @@
 # Integrating TieredQ IVF into Faiss and zvec (#6): plan
 
-Status: draft (2026-11-11), against TieredQ b0148dd. The Faiss part is tracked in #55. The TieredQ library changes
-(fixed-capacity tiles and `TieredQ::map_scores`) landed on 2026-11-16 and still need the hartmut non-regression gate;
-the plugin is not started and no PR is open elsewhere. Faiss
+Status (2026-11-16): the Faiss part (#55) is implemented as the out-of-tree plugin `faiss-tieredq/`. It passed the
+acceptance runs (`benchmark/results/hartmut-faiss-plugin-20261116/`). The library changes (partly filled blocks,
+`TieredQ::map_scores`, scanner `reset`) passed the non-regression gate (`benchmark/results/hartmut-issue55-gate-20261116/`).
+No PR is open upstream. Two things changed from the plan below. Lists are per-list blocks at their size rounded to
+16 rows, not 256-document tiles in `BlockInvertedLists`: tiles would double a 64K-list index of 8.84M rows. And the
+Faiss-side coarse quantizer must rank binary16 centroids (`IndexScalarQuantizer` / `IndexHNSWSQ` QT_fp16) to match
+TieredQ's speed. The zvec part is unchanged. Faiss
 signatures below are from the 1.x headers (`IndexIVF.h`, `InvertedLists.h`, `impl/CodePacker.h`); check them against
 the v1.16.0 tag before writing code.
 

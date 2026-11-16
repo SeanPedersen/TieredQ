@@ -1,0 +1,14 @@
+{
+  "loadavg": [
+    "0.90",
+    "5.66",
+    "10.39"
+  ],
+  "top": [
+    "80.0 python3",
+    "11.7 tailscaled",
+    "5.2 tailscaled",
+    "5.2 dockerd",
+    "4.7 containerd"
+  ]
+}
