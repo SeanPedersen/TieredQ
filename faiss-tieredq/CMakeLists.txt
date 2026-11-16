@@ -24,7 +24,15 @@ endif()
 
 add_library(faiss_tieredq STATIC src/IndexIVFTieredQ.cpp src/index_io.cpp)
 set_target_properties(faiss_tieredq PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_include_directories(faiss_tieredq PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+# Faiss exports its include directory on the generic target only; code that includes Faiss's headers is compiled with
+# the ISA of the Faiss variant it links (Faiss's own FAISS_OPT_LEVEL flags). TieredQ keeps its runtime dispatch.
+target_include_directories(faiss_tieredq PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+                           $<TARGET_PROPERTY:faiss,INTERFACE_INCLUDE_DIRECTORIES>)
+if(FAISS_TIEREDQ_FAISS_TARGET STREQUAL "faiss_avx512")
+  target_compile_options(faiss_tieredq PUBLIC -mavx2 -mfma -mf16c -mavx512f -mavx512cd -mavx512vl -mavx512dq -mavx512bw -mpopcnt)
+elseif(FAISS_TIEREDQ_FAISS_TARGET STREQUAL "faiss_avx2")
+  target_compile_options(faiss_tieredq PUBLIC -mavx2 -mfma -mf16c -mpopcnt)
+endif()
 target_compile_options(faiss_tieredq PRIVATE -O3 -Wall -Wextra)
 target_link_libraries(faiss_tieredq PUBLIC ${FAISS_TIEREDQ_FAISS_TARGET} TieredQ::TieredQ OpenMP::OpenMP_CXX)
 
