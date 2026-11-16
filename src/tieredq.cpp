@@ -634,6 +634,13 @@ std::pair<double,double> TieredQ::score_map(const float* query) const {
   double square=0; for (size_t j=0;j<config_.dimensions;++j) square+=double(query[j])*query[j];
   return {2.0*double(lift_scale_)*lift_scale_,-square};
 }
+void TieredQ::map_scores(const float* query,float* scores,size_t count) const {
+  if (!count) return;
+  if (!query || !scores) bad("null score buffer");
+  const auto [scale,offset]=score_map(query);
+  if (scale==1 && offset==0) return;
+  for (size_t i=0;i<count;++i) scores[i]=float(scale*scores[i]+offset);
+}
 void TieredQ::prepare_serving() {
   prepare_lift();
   centroid_half_norms_=half_norms(centroids_,config_.num_centroids,model_dimensions());

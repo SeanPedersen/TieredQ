@@ -31,7 +31,8 @@ Scores are larger-is-better estimates under TieredQConfig::metric: inner
 products (default), cosine similarity (rows and queries are normalized), or for
 L2 the negative squared distance -|q - x|^2. Codec-level score()/score_planes()
 score model space (model_dimensions() wide: normalized or lifted vectors); for
-L2 only TieredQIndex maps those scores to distances. Engines can lift queries
+L2 TieredQIndex maps those scores to distances, and engines apply the same map
+with TieredQ::map_scores(query, scores, count). Engines can lift queries
 once with lift_queries() and use the model_query* functions. Grouped/scalar
 accumulations have established floating-point differences; compare tolerances
 and validate top-k using the same scoring kernel. TieredQIndex::search scans
@@ -92,6 +93,14 @@ words or int8 levels); persist it and reopen stored blocks with `TieredQFastBloc
 a persisted format with the portable scorer. Blocks need no alignment (64-byte starts keep loads within cache
 lines). A scanner is single-threaded; use one per thread and query. Nibble-lookup blocks end on a short tail block,
 so small lists are not padded to 256 documents; pruned (range-checkpoint) scans do not apply to such views.
+
+Engines that place one row at a time into fixed-size blocks (a Faiss `CodePacker`, #55) use tiles instead: a tile is
+a block of `tile_slots` (256) documents, `tile_bytes()` long (a multiple of 64, so tiles laid end to end stay
+aligned), with its own metadata. Zero a tile, then `write_row(tile, slot, row)` stores one `encode()` row in place,
+replacing what the slot held; `Scanner::score_tile(tile, live, scores)` scores slots `[0, live)` and ignores the rest,
+so a list removes a row by moving its last row into the hole. Tile bytes equal `pack()` of the same 256 rows, tile
+scores equal `score()` of a block packed with the live rows bit for bit, and `rows` / `unpack` with `count =
+tile_slots` read written slots back. After `map_scores`, tile scores equal `TieredQIVFIndex` scores of the same rows.
 
 ## Ownership and concurrency
 

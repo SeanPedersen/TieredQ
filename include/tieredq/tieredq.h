@@ -148,6 +148,10 @@ class TieredQ {
   // and call the model_* variants, which take model_dimensions() floats per vector.
   size_t model_dimensions() const;
   void lift_queries(const float* queries, size_t count, float* out) const;
+  // Maps count model-space scores of one input-space query (config().dimensions floats), as score() and
+  // TieredQFastBlocks scanners return them, in place to the metric's scores, exactly as TieredQIndex search does:
+  // unchanged for inner product and cosine, negative squared distances for L2.
+  void map_scores(const float* query, float* scores, size_t count) const;
   TieredQQuery model_query(const float* vector) const;
   TieredQQuery model_query_weights(const float* vector) const;
   std::vector<TieredQQuery> model_query_weights(const float* vectors, size_t rows) const;

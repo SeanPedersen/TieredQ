@@ -135,9 +135,7 @@ struct ModelQueries {
 };
 } // namespace
 void TieredQIndex::finish_scores(const float* query,float* scores,size_t count) const {
-  const auto [scale,offset]=codec_.score_map(query);
-  if (scale==1 && offset==0) return;
-  for (size_t i=0;i<count;++i) scores[i]=float(scale*scores[i]+offset);
+  codec_.map_scores(query,scores,count);
 }
 std::vector<TieredQHit> TieredQIndex::search(const float* vector,size_t k,TieredQKernel kernel) const {
   if (!k || !size()) return {};

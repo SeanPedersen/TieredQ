@@ -1,6 +1,8 @@
 # Integrating TieredQ IVF into Faiss and zvec (#6): plan
 
-Status: draft (2026-11-11), against TieredQ b0148dd. Nothing is implemented and no PR is opened elsewhere. Faiss
+Status: draft (2026-11-11), against TieredQ b0148dd. The Faiss part is tracked in #55. The TieredQ library changes
+(fixed-capacity tiles and `TieredQ::map_scores`) landed on 2026-11-16 and still need the hartmut non-regression gate;
+the plugin is not started and no PR is open elsewhere. Faiss
 signatures below are from the 1.x headers (`IndexIVF.h`, `InvertedLists.h`, `impl/CodePacker.h`); check them against
 the v1.16.0 tag before writing code.
 
@@ -45,8 +47,8 @@ scan variant) store codes in fixed blocks of documents and pack them through a `
 
 | Gap | Why | Change |
 |---|---|---|
-| Fixed-capacity tiles | `TieredQFastBlocks` lays out a whole run: its factor, correction and centroid arrays span all `count` documents before the codes, and the tail tile is shaped by `count`. A `CodePacker` must place one row into a fixed-size, self-contained tile | `TieredQFastBlocks::tile_bytes()`, `write_row(tile, slot, row)` and `score(tile, live, scores)`: a 256-slot tile with its own metadata, padded slots ignored |
-| Score mapping | `Scanner` returns model-space scores. The L2 map (`TieredQ::score_map`) is private | Public `TieredQ::map_scores(query, scores, count)`, or a scanner option that returns metric scores |
+| Fixed-capacity tiles | `TieredQFastBlocks` lays out a whole run: its factor, correction and centroid arrays span all `count` documents before the codes, and the tail tile is shaped by `count`. A `CodePacker` must place one row into a fixed-size, self-contained tile | `TieredQFastBlocks::tile_bytes()`, `write_row(tile, slot, row)` and `Scanner::score_tile(tile, live, scores)` (done): a 256-slot tile with its own metadata, padded slots ignored |
+| Score mapping | `Scanner` returns model-space scores. The L2 map (`TieredQ::score_map`) is private | Public `TieredQ::map_scores(query, scores, count)` (done) |
 | Pruned scans | Range-checkpoint pruning (`TieredQPruning`) is only reachable through `TieredQIVFIndex` | Optional `Scanner::score_top(tile, live, threshold, ...)`. At k = 100 pruning was neutral (#43), so this is a later speed-up |
 
 The tile is the layout #43 measured as fastest (four 64-document chunks per table load). Per-tile metadata adds no

@@ -2,10 +2,13 @@
 // Block layout for count documents, padded to the format's block granularity (16 documents; nibble lookups keep
 // 256-document blocks and end on a tail block rounded to 16 documents):
 //   factor u16[padded] | correction u16[padded] | centroid u8[padded] | 64-byte aligned codes | read slack
+// A tile is the block of tile_slots documents: whole lookup and level blocks, no short tail. Its scans view all slots
+// and score the first `live`, so the borrowed geometry does not depend on how many slots are filled.
 #include "tieredq/tieredq_blocks.h"
 #include "tieredq_fast_scan.h"
 #include "tieredq_fast_rows.h"
 #include "tieredq_fast_fine.h"
+#include "tieredq_fast_tile.h"
 #include <cstring>
 #include <numeric>
 
@@ -68,6 +71,7 @@ void borrow(FastScanCache& view, const uint8_t* block, size_t count) {
 struct TieredQFastBlocks::Scanner::Impl {
   virtual ~Impl() = default;
   virtual void score(const uint8_t* block, size_t count, float* scores) = 0;
+  virtual void score_tile(const uint8_t* tile, size_t live, float* scores) = 0;
 };
 
 namespace {
@@ -75,14 +79,20 @@ template<class Prepared, class Scan>
 struct TypedScanner final : TieredQFastBlocks::Scanner::Impl {
   TypedScanner(std::unique_ptr<FastScanCache> view, Prepared prepared, Scan scan)
       : view_(std::move(view)), prepared_(std::move(prepared)), scan_(std::move(scan)) {}
-  void score(const uint8_t* block, size_t count, float* scores) override {
-    if (!count) return;
+  void score(const uint8_t* block, size_t count, float* scores) override { scan(block, count, count, scores); }
+  void score_tile(const uint8_t* tile, size_t live, float* scores) override {
+    if (live > TieredQFastBlocks::tile_slots) bad("tile slot count out of range");
+    scan(tile, TieredQFastBlocks::tile_slots, live, scores);
+  }
+  // Scores documents [0, scored) of a block laid out for count documents.
+  void scan(const uint8_t* block, size_t count, size_t scored, float* scores) {
+    if (!scored) return;
     if (!block || !scores) bad("null block buffer");
     borrow(*view_, block, count);
     // Kernels score whole vectors of documents; padding lanes land in scratch.
     scratch_.resize(view_->blocks * (view_->lookup ? tieredq_detail::lookup_block_docs : tieredq_detail::fast_scan_block_docs));
-    scan_(prepared_.data(), 1, 0, count, scratch_.data(), scratch_.size());
-    std::copy_n(scratch_.data(), count, scores);
+    scan_(prepared_.data(), 1, 0, scored, scratch_.data(), scratch_.size());
+    std::copy_n(scratch_.data(), scored, scores);
   }
   std::unique_ptr<FastScanCache> view_;  // heap address stays fixed: scan_ refers to it
   Prepared prepared_;
@@ -96,10 +106,17 @@ TieredQFastBlocks::Scanner::~Scanner() = default;
 TieredQFastBlocks::Scanner::Scanner(Scanner&&) noexcept = default;
 TieredQFastBlocks::Scanner& TieredQFastBlocks::Scanner::operator=(Scanner&&) noexcept = default;
 void TieredQFastBlocks::Scanner::score(const uint8_t* block, size_t count, float* scores) { impl_->score(block, count, scores); }
+void TieredQFastBlocks::Scanner::score_tile(const uint8_t* tile, size_t live, float* scores) { impl_->score_tile(tile, live, scores); }
 
 std::shared_ptr<const tieredq_detail::FastRowReader> TieredQFastBlocks::make_reader(const TieredQ& codec, const FastScanCache& geometry) {
   return std::make_shared<const tieredq_detail::FastRowReader>(geometry, codec.levels_, codec.tiers_, codec.coded_dimensions(),
                                                                codec.code_bytes(), codec.bytes_per_vector());
+}
+
+std::shared_ptr<const tieredq_detail::FastTileWriter> TieredQFastBlocks::make_writer(
+    const TieredQ& codec, const std::shared_ptr<const FastScanCache>& geometry) {
+  return std::make_shared<const tieredq_detail::FastTileWriter>(geometry, codec.levels_, codec.tiers_, codec.code_bytes(),
+      codec.config().num_centroids, tile_slots, shape_of(*geometry, tile_slots).code_offset);
 }
 
 TieredQFastBlocks::TieredQFastBlocks(const TieredQ& codec)
@@ -108,6 +125,7 @@ TieredQFastBlocks::TieredQFastBlocks(const TieredQ& codec)
   empty_ = index.make_fast_storage(nullptr, 0);
   format_ = format_of(*empty_);
   reader_ = make_reader(codec_, *empty_);
+  writer_ = make_writer(codec_, empty_);
 }
 
 TieredQFastBlocks::TieredQFastBlocks(const TieredQ& codec, uint32_t format)
@@ -126,9 +144,18 @@ TieredQFastBlocks::TieredQFastBlocks(const TieredQ& codec, uint32_t format)
     for (const auto& codes : fast_rows::level_inverse(*empty_, codec_.levels_, codec_.tiers_))
       for (int16_t code : codes) if (code == fast_rows::ambiguous_code) bad("fast block levels cannot identify this model's codes");
   reader_ = make_reader(codec_, *empty_);
+  writer_ = make_writer(codec_, empty_);
 }
 
 size_t TieredQFastBlocks::block_bytes(size_t count) const { return shape_of(*empty_, count).total; }
+
+size_t TieredQFastBlocks::tile_bytes() const { return block_bytes(tile_slots); }
+
+void TieredQFastBlocks::write_row(uint8_t* tile, size_t slot, const uint8_t* row) const {
+  if (!tile || !row) bad("null tile buffer");
+  if (slot >= tile_slots) bad("tile slot out of range");
+  writer_->write(tile, slot, row);
+}
 
 void TieredQFastBlocks::pack(const uint8_t* rows, size_t count, uint8_t* block) const {
   using namespace tieredq_detail;
