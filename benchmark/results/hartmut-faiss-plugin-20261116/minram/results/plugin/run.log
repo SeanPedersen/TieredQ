@@ -1,0 +1,20 @@
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- Found OpenMP_CXX: -fopenmp (found version "5.2")
+-- TieredQ LAPACK: OpenBLAS /usr/lib/libopenblas.so;/usr/lib/libopenblas.so
+-- TieredQ io_uring tier reads: 1
+-- Configuring done (0.1s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sean/experiments/TieredQ-issue55-minram-20261116/plugin-build
+[ 65%] Built target tieredq
+[ 80%] Built target faiss_tieredq
+[ 90%] Built target test_faiss_tieredq
+[ 95%] Building CXX object CMakeFiles/faiss_tieredq_acceptance.dir/benchmarks/acceptance.cpp.o
+[100%] Linking CXX executable faiss_tieredq_acceptance
+[100%] Built target faiss_tieredq_acceptance
+Test project /home/sean/experiments/TieredQ-issue55-minram-20261116/plugin-build
+    Start 1: test_faiss_tieredq
+1/1 Test #1: test_faiss_tieredq ...............   Passed    7.54 sec
+
+100% tests passed out of 1
+
+Total Test time (real) =   7.54 sec

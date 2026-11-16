@@ -1,10 +1,12 @@
 # #55 acceptance: IndexIVFTieredQ (faiss-tieredq) on hartmut
 
 Remote roots: `/home/sean/experiments/TieredQ-issue55-faiss-20261116` (source 6f75020) and
-`TieredQ-issue55-highbits-20261116` (source ec7beec, `high-bits/`), 2026-11-16, under the shared lock. Faiss v1.16.0
-was built from source there (`FAISS_OPT_LEVEL=avx512`, OpenBLAS) and the plugin links `faiss_avx512`. The driver is
-`faiss-tieredq/benchmarks/acceptance.cpp`; `study.py` runs it and `summarize.py` writes `REPORT.md`. Run it as
-`summarize.py results high-bits/results`. The per-query hit files stayed on hartmut, and the indexes were removed.
+`TieredQ-issue55-highbits-20261116` (source ec7beec, `high-bits/`), `TieredQ-issue55-minram-20261116` (source
+614b87e, `minram/`) and `TieredQ-issue55-bisect-20261116` (source 3623bea, `bisect/`), 2026-11-16, under the shared
+lock. Faiss v1.16.0 was built from source there (`FAISS_OPT_LEVEL=avx512`, OpenBLAS) and the plugin links
+`faiss_avx512`. The driver is `faiss-tieredq/benchmarks/acceptance.cpp`; `study.py` runs it and `summarize.py` writes
+`REPORT.md`. Run it as `summarize.py results high-bits/results minram/results`. `bisect/bisect.py` wrote
+`bisect/bisect.json`. The per-query hit files stayed on hartmut, and the indexes were removed.
 
 ## Setup
 
@@ -77,11 +79,65 @@ Qwen 8.84M uses k = 10; the 2- and 4-bit rows are seed 1 only:
 - **Qwen: TieredQ needs the least RAM at 0.85 and 0.90, with one near-tie at 0.95.** At 0.85 the 1-bit plugin needs 46%
   less RAM than the next index that reaches it, RaBitQ 2-bit, at 13% fewer QPS (755 against 867). At equal RAM (2
   bits) it is 1.25× faster. At 0.90 the 2-bit plugin needs the least RAM and is 3.4× faster than RaBitQ 2-bit. At 0.95, RaBitQ 4-bit (4.62 GiB, 78 QPS) and the plugin at 4 bits (4.69 GiB, 259 QPS) are within
-  1.3% of RAM, and the plugin is 3.3× faster. A 3-bit Qwen configuration, likely below both, was not run. TieredQ's
+  1.3% of RAM, and the plugin is 3.3× faster. The 2.5- and 3-bit runs and the bisection below close this: 0.95 takes
+  2.07 bits/dim (2.54 GiB). TieredQ's
   shipping low-RAM configuration (#52: 1-bit IVF with the 8-bit tier on SSD, about 1.7 GB) belongs to phase 2 here
   (`IndexRefine`).
 - **Under recall 0.81, Faiss's 1-bit codecs use about 40% less RAM on arxiv.** Below the lowest TieredQ budget
   measured, RaBitQ 1-bit is the smallest index.
+
+## RAM at RaBitQ's recall: bisection over TieredQ's bit budget (`bisect/`, `minram/`)
+
+Every Faiss RaBitQ setting sets a target: its best recall over the nprobe grid, with 8-bit queries (its most
+accurate setting; `minram/` shows 8-bit queries reach the same ceiling as the default 4, at 10-25% fewer QPS). The
+grid goes to nprobe 256 of 2,048 lists on arxiv (recall@100) and 4,096 of 65,536 on Qwen (recall@10), on partition
+seed 1. The Qwen runs here reuse the seed-1 centroids (`CENTROIDS`), which gives a byte-identical partition. The
+bisection builds `TieredQIVFIndex` at the budget that interpolation over every measured point predicts, until the
+smallest budget that reaches the target is within 1/8 bit of the largest that misses it. At that budget the plugin was
+built and served too, and it reached the target every time.
+
+| dataset | RaBitQ | target | RaBitQ RAM GiB | TieredQ bits/dim (misses at) | TieredQ GiB (ratio) | plugin GiB (ratio) |
+|---|---|---|---|---|---|---|
+| Qwen | 1 bit | 0.855 | 1.344 | 0.875 (0.75) | 1.345 (1.00) | **1.221 (0.91)** |
+| Qwen | 2 bits | 0.917 | 2.497 | 1.5 (1.4375) | 1.995 (0.80) | **1.909 (0.76)** |
+| Qwen | 3 bits | 0.950 | 3.555 | 2.0625 (2.0) | 2.589 (0.73) | **2.535 (0.71)** |
+| Qwen | 4 bits | 0.971 | 4.618 | 3.25 (3.125) | 3.840 (0.83) | **3.857 (0.84)** |
+| arxiv | 1 bit | 0.817 | 0.144 | 0.6875 (0.5625) | 0.095 (0.66) | **0.100 (0.69)** |
+| arxiv | 2 bits | 0.908 | 0.281 | 1.25 (1.1875) | 0.164 (0.59) | **0.169 (0.60)** |
+| arxiv | 3 bits | 0.950 | 0.402 | 2.0 (1.875) | 0.255 (0.63) | **0.261 (0.65)** |
+| arxiv | 4 bits | 0.970 | 0.523 | 2.625 (2.5) | 0.329 (0.63) | **0.336 (0.64)** |
+
+- **TieredQ IVF needs 31-40% less RAM on arxiv and 16-29% less on Qwen from 2 bits up.** At Qwen 1 bit only the
+  plugin is smaller (9%), through its 32-bit ids and 16-row list padding, not through the codec.
+- **It is also faster there.** Both reach their ceiling at the largest nprobe. At that point the matched plugin serves
+  18-26 QPS against RaBitQ's 9-14 (Qwen) and 213-505 against 71-110 (arxiv).
+- RaBitQ's arxiv ceilings vary by at most 0.0006 over 3 partition seeds (`minram/`), so one seed sets the targets. The
+  TieredQ budgets come from seed 1 alone.
+- `REPORT.md` merges `minram/` into the frontier tables. There the Qwen rows of `minram/` use the grid up to 4,096, and
+  rabitq4's "3 seeds" mixes 2 runs to nprobe 1,024 with 1 to 4,096.
+
+## Against the earlier RaBitQ comparisons
+
+| study | search | data | TieredQ at RaBitQ's 1 / 2 / 4-bit recall, against RaBitQ |
+|---|---|---|---|
+| #4 ([issue4-current](../issue4-current-20261105/benchmark-report.md)), official RaBitQ | flat | 6 datasets, 100K-1M | disk 0.48-0.71×; Gemini-768 0.67 / 0.60 / 0.63, MS MARCO-1M (Cohere-1024) 0.59 / 0.53 / 0.56 |
+| #6 ([issue6-ivf](../issue6-ivf-20261030/README.md)), official RaBitQ IVF | IVF, 64 lists, 1,560 rows/list | OpenAI-1536 100K | at full probe 1,424 code bits (0.93 bits/dim) reach 0.887, above RaBitQ 1-bit (0.826) and near 2-bit (0.912) |
+| this study, Faiss `IndexIVFRaBitQ` | IVF, 2,048 lists, 650 rows/list | arxiv-768 1.34M | RAM 0.66 / 0.59 / 0.63 (3 bits 0.63); bits 0.69 / 0.63 / 0.66 |
+| this study, Faiss `IndexIVFRaBitQ` | IVF, 65,536 lists, 135 rows/list | Qwen-1024 8.84M | RAM 1.00 / 0.80 / 0.83 (3 bits 0.73); bits 0.88 / 0.75 / 0.81 |
+
+- **Arxiv matches the flat results.** Its ratios (0.59-0.66) fall in the flat codec range and next to the flat
+  Gemini-768 rows (0.60-0.67). The in-IVF codec saving holds at 2,048 lists.
+- **Qwen saves less than any flat dataset.** The matched code bits are 0.69-0.88× RaBitQ's, against 0.53-0.59× for
+  flat MS MARCO-1M at the same width. Fixed per-row costs explain part of the RAM ratio: the fp16 centroids
+  (about 121 bits per row at 64K lists), ids, factors and list padding add about 290 bits per row to the plugin and
+  about 280 to RaBitQ (1-bit: 1,187 and 1,306 bits per row in total, against 896 and 1,024 code bits). The rest is
+  in the codes. A likely cause, not tested: Faiss's RaBitQ encodes residuals to the list centroid. TieredQ encodes rows
+  in its global model. Residuals gain more as lists shrink (135 rows per list on Qwen, 650 on arxiv, 1,560 at #6).
+  Building Qwen at fewer lists, or arxiv at 16K, would separate list size from dataset.
+- **#41's larger RAM gap is a different comparison.** There, nested TieredQ (1-bit prefix in RAM, 8-bit tier on SSD)
+  took 0.18 GiB at recall@100 ≥ 0.98 on arxiv, against 0.760 GiB for VIBE's rabitq-ivf (4 bits, RAM only). Faiss's
+  RaBitQ 4-bit on the same data takes 0.523 GiB here. In RAM only, the codec saves about 35-40% on arxiv and
+  20-30% on Qwen. The larger savings come from the SSD tier (phase 2, `IndexRefine`).
 
 ## Superseded first round (`results-v1-fp32-quantizer/`)
 

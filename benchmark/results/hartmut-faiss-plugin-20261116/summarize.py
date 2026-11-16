@@ -11,8 +11,8 @@ from pathlib import Path
 import numpy as np
 
 RESULTS = Path(sys.argv[1] if len(sys.argv) > 1 else "results")
-# Optional: the high-bit study's results (TieredQ and plugin at more bits on the same partitions).
-HIGH_BITS = Path(sys.argv[2]) if len(sys.argv) > 2 else None
+# Optional: further studies' results on the same partitions (TieredQ and plugin at other budgets, more Faiss codecs).
+EXTRA = [Path(arg) for arg in sys.argv[2:]]
 TARGETS = {"arxiv": (0.85, 0.90, 0.95), "qwen": (0.80, 0.85, 0.90, 0.95)}
 DEFAULT_BITS = {"arxiv": "1.75", "qwen": "1"}
 GIB = 2**30
@@ -57,20 +57,20 @@ def frontier(dataset, curves):
     for name, reports in curves.items():
         entries[f"{name} {DEFAULT_BITS[dataset]}b" if name in ("tieredq", "plugin") else name] = reports
     out = []
-    control = HIGH_BITS / f"{dataset}-b{DEFAULT_BITS[dataset]}-s1"
+    control = EXTRA[0] / f"{dataset}-b{DEFAULT_BITS[dataset]}-s1"
     if (control / "serve-tieredq/serve.json").exists():
         rerun, base = load(control / "serve-tieredq/serve.json"), load(RESULTS / f"{dataset}-s1/serve-tieredq/serve.json")
         same = [p["recall"] for p in rerun["points"] if p["nprobe"] in {q["nprobe"] for q in base["points"]}] == \
                [p["recall"] for p in base["points"] if p["nprobe"] in {q["nprobe"] for q in rerun["points"]}]
         out += [f"Partition control ({control.name} against {dataset}-s1): equal TieredQ recall at every shared nprobe: {same}", ""]
-    for bits in sorted({p.name.split("-b")[1].split("-s")[0] for p in HIGH_BITS.glob(f"{dataset}-b*")}, key=float):
+    runs = [r for extra in EXTRA for r in extra.glob(f"{dataset}-b*-s*")]
+    for run in runs:
+        bits = run.name.split("-b")[1].split("-s")[0]
         if bits == DEFAULT_BITS[dataset]:
-            continue
-        runs = sorted(HIGH_BITS.glob(f"{dataset}-b{bits}-s*"))
-        for kind in ("tieredq", "plugin"):
-            reports = [load(r / f"serve-{kind}/serve.json") for r in runs if (r / f"serve-{kind}/serve.json").exists()]
-            if reports:
-                entries[f"{kind} {bits}b"] = reports
+            continue  # the partition control repeats the base study
+        for serve in run.glob("serve-*/serve.json"):
+            name = serve.parent.name.removeprefix("serve-")
+            entries.setdefault(f"{name} {bits}b" if name in ("tieredq", "plugin") else name, []).append(load(serve))
     targets = TARGETS[dataset]
     out += [f"### Recall-per-RAM frontier with the high-bit runs ({dataset}; mean over seeds)", "",
             "| index | seeds | RAM GiB | ceiling | " + " | ".join(f"r ≥ {t}: QPS / QPS/GiB" for t in targets) + " |",
@@ -151,7 +151,7 @@ for dataset in ("arxiv", "qwen"):
             cells += [spread([f[0] for f in found]), spread([f[1] for f in found])]
         lines.append(f"| {name} | {np.mean([r['ram_bytes'] for r in reports]) / GIB:.3f} | {ceiling:.3f} | " + " | ".join(cells) + " |")
     lines.append("")
-    if HIGH_BITS:
+    if EXTRA:
         lines += frontier(dataset, curves)
 Path("REPORT.md").write_text("\n".join(lines) + "\n")
 print("\n".join(lines))

@@ -1,0 +1,74 @@
+{
+  "qwen rabitq1": {
+    "target_recall": 0.855467,
+    "rabitq_ram_bytes": 1442828288,
+    "tieredq_bits_reaching": 0.875,
+    "tieredq_bits_missing": 0.75,
+    "tieredq_ram_bytes": 1443708928,
+    "plugin_ram_bytes": 1311514624,
+    "ram_ratio": 1.0006103567606237
+  },
+  "qwen rabitq2": {
+    "target_recall": 0.916933,
+    "rabitq_ram_bytes": 2681356288,
+    "tieredq_bits_reaching": 1.5,
+    "tieredq_bits_missing": 1.4375,
+    "tieredq_ram_bytes": 2142539776,
+    "plugin_ram_bytes": 2049380352,
+    "ram_ratio": 0.7990507585987767
+  },
+  "qwen rabitq3": {
+    "target_recall": 0.95,
+    "rabitq_ram_bytes": 3817472000,
+    "tieredq_bits_reaching": 2.0625,
+    "tieredq_bits_missing": 2.0,
+    "tieredq_ram_bytes": 2779385856,
+    "plugin_ram_bytes": 2721718272,
+    "ram_ratio": 0.7280697424892704
+  },
+  "qwen rabitq4": {
+    "target_recall": 0.970667,
+    "rabitq_ram_bytes": 4958945280,
+    "tieredq_bits_reaching": 3.25,
+    "tieredq_bits_missing": 3.125,
+    "tieredq_ram_bytes": 4123631616,
+    "plugin_ram_bytes": 4141043712,
+    "ram_ratio": 0.8315541679056399
+  },
+  "arxiv rabitq1": {
+    "target_recall": 0.81701,
+    "rabitq_ram_bytes": 154279936,
+    "tieredq_bits_reaching": 0.6875,
+    "tieredq_bits_missing": 0.5625,
+    "tieredq_ram_bytes": 102318080,
+    "plugin_ram_bytes": 106917888,
+    "ram_ratio": 0.6631975787182074
+  },
+  "arxiv rabitq2": {
+    "target_recall": 0.90829,
+    "rabitq_ram_bytes": 301502464,
+    "tieredq_bits_reaching": 1.25,
+    "tieredq_bits_missing": 1.1875,
+    "tieredq_ram_bytes": 176439296,
+    "plugin_ram_bytes": 181866496,
+    "ram_ratio": 0.5852001793258976
+  },
+  "arxiv rabitq3": {
+    "target_recall": 0.94967,
+    "rabitq_ram_bytes": 431722496,
+    "tieredq_bits_reaching": 2.0,
+    "tieredq_bits_missing": 1.875,
+    "tieredq_ram_bytes": 273457152,
+    "plugin_ram_bytes": 279957504,
+    "ram_ratio": 0.6334095501940209
+  },
+  "arxiv rabitq4": {
+    "target_recall": 0.97024,
+    "rabitq_ram_bytes": 561340416,
+    "tieredq_bits_reaching": 2.625,
+    "tieredq_bits_missing": 2.5,
+    "tieredq_ram_bytes": 352882688,
+    "plugin_ram_bytes": 360288256,
+    "ram_ratio": 0.6286429374078777
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "loadavg": [
+    "28.17",
+    "24.71",
+    "20.18"
+  ],
+  "top": [
+    "300 ps",
+    "5.7 kworker/u146:24-btrfs-endio",
+    "5.2 dockerd",
+    "4.7 containerd",
+    "3.4 btop"
+  ]
+}

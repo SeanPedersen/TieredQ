@@ -1,0 +1,14 @@
+{
+  "loadavg": [
+    "1.74",
+    "3.43",
+    "5.58"
+  ],
+  "top": [
+    "100 ps",
+    "5.2 dockerd",
+    "4.7 containerd",
+    "3.4 btop",
+    "2.4 kwin_wayland"
+  ]
+}

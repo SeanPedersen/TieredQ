@@ -432,6 +432,10 @@ auto fast = index.search(query, 10, 16, tq::TieredQPruning{/*confidence=*/8, /*p
   [issue #19](https://github.com/SeanPedersen/TieredQ/issues/19), [#23](https://github.com/SeanPedersen/TieredQ/issues/23)
   and the [issue #6 eval](benchmark/experiments/issue6_ivf/ivf_eval.cpp)
   ([rerank results](benchmark/results/issue6-ivf-rerank-20261030/README.md)).
+  Against Faiss's `IndexIVFRaBitQ` on one shared partition, TieredQ IVF (the `faiss-tieredq` plugin) reaches each
+  RaBitQ 1-4 bit setting's best recall with 31-40% less RAM on arxiv-768 (2K lists) and 16-29% less on Qwen-1024
+  8.84M (64K lists, from 2 bits; 9% at 1 bit)
+  ([#55 bisection](benchmark/results/hartmut-faiss-plugin-20261116/README.md)).
 
 ## Codec comparison benchmark
 

@@ -1,0 +1,14 @@
+{
+  "loadavg": [
+    "1.71",
+    "2.40",
+    "7.98"
+  ],
+  "top": [
+    "300 runc:[2:INIT]",
+    "200 ps",
+    "5.2 dockerd",
+    "4.7 containerd",
+    "3.4 btop"
+  ]
+}

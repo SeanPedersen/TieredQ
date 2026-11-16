@@ -1,0 +1,14 @@
+{
+  "loadavg": [
+    "6.80",
+    "3.65",
+    "3.29"
+  ],
+  "top": [
+    "5.2 dockerd",
+    "4.7 containerd",
+    "3.4 btop",
+    "2.4 kwin_wayland",
+    "2.0 kworker/u145:19-kcryptd-253:0-1"
+  ]
+}
