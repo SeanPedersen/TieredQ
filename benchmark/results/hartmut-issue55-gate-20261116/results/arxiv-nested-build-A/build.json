@@ -1,0 +1,11 @@
+{
+  "kind": "nested",
+  "dataset": "arxiv",
+  "lists": 2048,
+  "storage_bytes": 157664768,
+  "build_s": 22.490601573023014,
+  "tier_s": 11.457967357942834,
+  "total_s": 33.94856893096585,
+  "file_bytes": 146275060,
+  "peak_rss_bytes": 4847357952
+}

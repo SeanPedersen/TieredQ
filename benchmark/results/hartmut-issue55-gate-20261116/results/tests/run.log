@@ -1,0 +1,30 @@
+[  4%] Built target test_training_rng
+[ 35%] Built target tieredq
+[ 38%] Building CXX object CMakeFiles/tieredq_fast_scan_benchmark.dir/examples/fast_scan_benchmark.cpp.o
+[ 40%] Building CXX object CMakeFiles/tieredq_example.dir/examples/search.cpp.o
+[ 42%] Building CXX object CMakeFiles/tieredq_scan_benchmark.dir/examples/scan_benchmark.cpp.o
+[ 92%] Built target test_tieredq
+[ 95%] Linking CXX executable tieredq_example
+[ 95%] Built target tieredq_example
+[ 97%] Linking CXX executable tieredq_fast_scan_benchmark
+[ 97%] Built target tieredq_fast_scan_benchmark
+[100%] Linking CXX executable tieredq_scan_benchmark
+[100%] Built target tieredq_scan_benchmark
+Test project /home/sean/experiments/tieredq-tests/build
+    Start 1: tieredq
+1/2 Test #1: tieredq ..........................   Passed   55.41 sec
+    Start 2: training_rng
+2/2 Test #2: training_rng .....................   Passed    0.01 sec
+
+100% tests passed out of 2
+
+Total Test time (real) =  55.43 sec
+   Building tieredq @ file:///home/sean/experiments/tieredq-tests
+      Built tieredq @ file:///home/sean/experiments/tieredq-tests
+Uninstalled 1 package in 2ms
+Installed 1 package in 15ms
+........................................................................ [ 32%]
+........................................................................ [ 65%]
+........................................................................ [ 98%]
+....                                                                     [100%]
+220 passed in 37.60s

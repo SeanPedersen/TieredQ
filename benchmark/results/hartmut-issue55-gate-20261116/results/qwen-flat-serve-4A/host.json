@@ -1,0 +1,15 @@
+{
+  "loadavg": [
+    "2.10",
+    "8.34",
+    "13.12"
+  ],
+  "io_pressure": "some avg10=1.29 avg60=1.68 avg300=1.51 total=3673292834",
+  "top": [
+    "5.2 dockerd",
+    "4.7 containerd",
+    "3.4 btop",
+    "2.4 kwin_wayland",
+    "2.2 uvicorn"
+  ]
+}

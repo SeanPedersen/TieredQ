@@ -1,0 +1,11 @@
+{
+  "kind": "nested",
+  "dataset": "qwen",
+  "lists": 65536,
+  "storage_bytes": 1587515600,
+  "build_s": 206.710515989922,
+  "tier_s": 98.04470254399348,
+  "total_s": 304.75521853391547,
+  "file_bytes": 1491348872,
+  "peak_rss_bytes": 20926750720
+}

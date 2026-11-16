@@ -1,0 +1,37 @@
+{
+  "kind": "flat",
+  "dataset": "qwen",
+  "index": "/home/sean/experiments/TieredQ-issue55-gate-20261116/indexes/qwen-flat-1A.tq",
+  "k": 10,
+  "storage_bytes": 1526518260,
+  "loaded_rss_bytes": 1602179072,
+  "served_rss_bytes": 1615265792,
+  "batch_nprobe": 256,
+  "batch_qps": 4535.891157874427,
+  "points": [
+    {
+      "nprobe": 64,
+      "single_qps": 1006.6327180935749,
+      "p50_us": 977.3675119504333,
+      "p95_us": 1063.674554461613
+    },
+    {
+      "nprobe": 128,
+      "single_qps": 672.3783297848727,
+      "p50_us": 1479.5914757996798,
+      "p95_us": 1568.97590495646
+    },
+    {
+      "nprobe": 256,
+      "single_qps": 402.14478798463284,
+      "p50_us": 2471.125510055572,
+      "p95_us": 2637.460723053664
+    },
+    {
+      "nprobe": 1024,
+      "single_qps": 130.59544225916432,
+      "p50_us": 7542.81843546778,
+      "p95_us": 8539.389772340655
+    }
+  ]
+}

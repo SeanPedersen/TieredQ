@@ -1,0 +1,15 @@
+{
+  "loadavg": [
+    "3.95",
+    "7.33",
+    "4.92"
+  ],
+  "io_pressure": "some avg10=4.12 avg60=3.99 avg300=1.77 total=3649742486",
+  "top": [
+    "300 ps",
+    "5.2 dockerd",
+    "4.7 containerd",
+    "3.4 btop",
+    "2.6 kworker/u145:26-iou_exit"
+  ]
+}

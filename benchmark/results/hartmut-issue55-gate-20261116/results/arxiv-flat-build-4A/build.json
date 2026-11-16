@@ -1,0 +1,11 @@
+{
+  "kind": "flat",
+  "dataset": "arxiv",
+  "lists": 2048,
+  "storage_bytes": 244422980,
+  "build_s": 22.03741189802531,
+  "tier_s": 0.0,
+  "total_s": 22.03741189802531,
+  "file_bytes": 243971080,
+  "peak_rss_bytes": 5021794304
+}

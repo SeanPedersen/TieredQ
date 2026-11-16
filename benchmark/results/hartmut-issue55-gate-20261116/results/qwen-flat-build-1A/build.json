@@ -1,0 +1,11 @@
+{
+  "kind": "flat",
+  "dataset": "qwen",
+  "lists": 65536,
+  "storage_bytes": 1541243328,
+  "build_s": 219.95434528193437,
+  "tier_s": 0.0,
+  "total_s": 219.95434528193437,
+  "file_bytes": 1490187028,
+  "peak_rss_bytes": 18859065344
+}

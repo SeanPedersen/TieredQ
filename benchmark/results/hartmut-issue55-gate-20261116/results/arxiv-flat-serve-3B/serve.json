@@ -1,0 +1,37 @@
+{
+  "kind": "flat",
+  "dataset": "arxiv",
+  "index": "/home/sean/experiments/TieredQ-issue55-gate-20261116/indexes/arxiv-flat-1A.tq",
+  "k": 100,
+  "storage_bytes": 241082740,
+  "loaded_rss_bytes": 264146944,
+  "served_rss_bytes": 291115008,
+  "batch_nprobe": 16,
+  "batch_qps": 30500.89235141159,
+  "points": [
+    {
+      "nprobe": 8,
+      "single_qps": 2756.6111035088184,
+      "p50_us": 360.8804545365274,
+      "p95_us": 398.7516858614981
+    },
+    {
+      "nprobe": 16,
+      "single_qps": 2084.968379361797,
+      "p50_us": 479.206966701895,
+      "p95_us": 528.9569613523781
+    },
+    {
+      "nprobe": 32,
+      "single_qps": 1411.1794306681047,
+      "p50_us": 706.2660297378898,
+      "p95_us": 786.1121441237628
+    },
+    {
+      "nprobe": 48,
+      "single_qps": 1088.433192925793,
+      "p50_us": 917.3350408673286,
+      "p95_us": 1003.8557462394238
+    }
+  ]
+}

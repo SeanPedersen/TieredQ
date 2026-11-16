@@ -1,0 +1,37 @@
+{
+  "kind": "nested",
+  "dataset": "qwen",
+  "index": "/home/sean/experiments/TieredQ-issue55-gate-20261116/indexes/qwen-nested-A.tq",
+  "k": 10,
+  "storage_bytes": 1563646212,
+  "loaded_rss_bytes": 1637281792,
+  "served_rss_bytes": 1666695168,
+  "batch_nprobe": 256,
+  "batch_qps": 2698.324581238521,
+  "points": [
+    {
+      "nprobe": 128,
+      "single_qps": 373.673896197149,
+      "p50_us": 2663.5199901647866,
+      "p95_us": 2833.8239120785147
+    },
+    {
+      "nprobe": 256,
+      "single_qps": 269.1572617352973,
+      "p50_us": 3693.573526106775,
+      "p95_us": 3946.7752911150455
+    },
+    {
+      "nprobe": 512,
+      "single_qps": 179.34536213370282,
+      "p50_us": 5515.457014553249,
+      "p95_us": 6084.621575428173
+    },
+    {
+      "nprobe": 1024,
+      "single_qps": 111.32427973095643,
+      "p50_us": 8887.124480679631,
+      "p95_us": 9861.227415967733
+    }
+  ]
+}

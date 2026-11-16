@@ -1,0 +1,1 @@
+{"dimensions": 768, "code_bits": 1344, "format": 2, "rows": 1048576, "queries": 100, "block_ns_per_row": 15.5438, "tile_ns_per_row": 15.0502, "tile_bytes": 44352, "block_bytes": 181403712}
