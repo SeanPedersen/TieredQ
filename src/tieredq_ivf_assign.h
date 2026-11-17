@@ -20,15 +20,16 @@
 
 namespace tq::tieredq_detail {
 // OpenBLAS sizes its own thread pool; within a call it uses the OpenMP thread count, so builds keep their thread budget.
+// BlasThreads(1) keeps each call on its caller's thread, for GEMMs issued from inside an OpenMP parallel region.
 class BlasThreads {
  public:
-  BlasThreads() {
+  explicit BlasThreads(int threads=omp_get_max_threads()) {
 #if defined(__unix__) || defined(__APPLE__)
     set_=reinterpret_cast<void(*)(int)>(dlsym(RTLD_DEFAULT,"openblas_set_num_threads"));
     auto get=reinterpret_cast<int(*)()>(dlsym(RTLD_DEFAULT,"openblas_get_num_threads"));
     if (!set_ || !get) { set_=nullptr; return; }
     previous_=get();
-    set_(omp_get_max_threads());
+    set_(threads);
 #endif
   }
   ~BlasThreads() { if (set_) set_(previous_); }

@@ -148,6 +148,17 @@ Which index (#27; VIBE arxiv 1.34M × 768 and Qwen 8.84M × 1024, one core):
 | Lowest RAM, or recall above about 0.95 | `TieredQNestedIVFIndex` defaults (tier on SSD) | Only the 1-bit prefix is in RAM. It reaches recall@10 0.97-0.998 at 1.3-2.6 ms on arxiv, 0.99 at 8.84M |
 | Latency first, recall within flat's ceiling, RAM to spare | `TieredQIVFIndex` at the fewest bits/dim that reach the target | No SSD reads and about 2× nested's QPS, but recall stops near 0.955 at 1.75 bits/dim (arxiv) |
 
+#### Unquantized IVF and all-rows k-NN graphs
+
+`TieredQIVFFlatIndex(dimensions, *, lists=None, metric="l2", iterations=10, sample_rows_per_list=64, seed=42)` keeps
+float32 rows in k-means lists, with no codec to train. `build(rows)` trains about sqrt(rows) lists by default (a power
+of two). `search(queries, k, nprobe=)` and `knn_graph(k, nprobe=)` run one list-major engine: queries are grouped by
+their nearest list, and each group is scored against every list its members probe in one GEMM. `knn_graph` returns
+every row's k nearest other rows, as UMAP and t-SNE need, with the recall of per-row search at the same `nprobe`.
+On DBpedia 100K x 512 (8 threads) it is 2.5-3x faster than hnswlib at equal recall@15 (0.94: 2.4 s, 0.98: 4.4 s).
+pynndescent is faster still: 1.15-1.7x at 100K and about 7x at 1M
+([#56 study](ann-prototypes/knn_graph/README.md)).
+
 #### Low-RAM recipe (large sets)
 
 `TieredQNestedIVFIndex.build` defaults to the configuration that won on recall per GB of serving RAM on

@@ -58,5 +58,6 @@ inline nb::tuple result_tuple(SearchResult result) {
 }
 void bind_index(nb::module_& module);
 void bind_ivf(nb::module_& module);
+void bind_ivf_flat(nb::module_& module);
 void bind_nested(nb::module_& module);
 }  // namespace tieredq_python

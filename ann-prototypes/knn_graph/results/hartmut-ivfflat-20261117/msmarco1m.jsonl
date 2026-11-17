@@ -1,0 +1,20 @@
+{"name": "pynndescent", "seed": 0, "seconds": 25.955, "recall@15": 0.91803, "threads": 8}
+{"name": "pynndescent-t16-i20-c30", "seed": 0, "seconds": 29.967, "recall@15": 0.93981, "threads": 8}
+{"name": "pynndescent-t32-i30-c60", "seed": 0, "seconds": 44.089, "recall@15": 0.95365, "threads": 8}
+{"name": "pynndescent-n30", "seed": 0, "seconds": 52.158, "recall@15": 0.97892, "threads": 8}
+{"name": "pynndescent-n30-t32-i30-c60", "seed": 0, "seconds": 75.099, "recall@15": 0.98767, "threads": 8}
+{"name": "ivfflat-L512-p8", "seed": 0, "seconds": 172.182, "recall@15": 0.86795, "threads": 8, "build_s": 2.37, "lists": 512, "train_s": 0.824, "assign_s": 0.938, "store_s": 0.606, "join_s": 169.723}
+{"name": "pca128-nnd-c30", "seed": 0, "seconds": 23.152, "recall@15": 0.82193, "threads": 8, "pca_s": 1.467, "graph_s": 19.494, "rerank_s": 2.189}
+{"name": "pca128-nnd-c45", "seed": 0, "seconds": 37.407, "recall@15": 0.88523, "threads": 8, "pca_s": 1.482, "graph_s": 32.672, "rerank_s": 3.249}
+{"name": "pca256-nnd-c30", "seed": 0, "seconds": 29.158, "recall@15": 0.95277, "threads": 8, "pca_s": 1.687, "graph_s": 25.27, "rerank_s": 2.199}
+{"name": "pca256-nnd-c45", "seed": 0, "seconds": 47.004, "recall@15": 0.98086, "threads": 8, "pca_s": 1.667, "graph_s": 42.073, "rerank_s": 3.261}
+{"name": "pca128-ivf-L1024-p8-c30", "seed": 0, "seconds": 16.075, "recall@15": 0.72807, "threads": 8, "pca_s": 1.494, "build_s": 0.944, "lists": 1024, "train_s": 0.517, "assign_s": 0.342, "store_s": 0.085, "join_s": 11.029, "graph_s": 12.006, "rerank_s": 2.573}
+{"name": "pca128-ivf-L1024-p16-c30", "seed": 0, "seconds": 23.271, "recall@15": 0.77445, "threads": 8, "pca_s": 1.487, "build_s": 0.896, "lists": 1024, "train_s": 0.457, "assign_s": 0.346, "store_s": 0.093, "join_s": 18.28, "graph_s": 19.209, "rerank_s": 2.573}
+{"name": "ivfinit-L1024-p1-nnd", "seed": 0, "seconds": 22.345, "recall@15": 0.50286, "threads": 8, "build_s": 4.447, "lists": 1024, "train_s": 2.089, "assign_s": 1.788, "store_s": 0.569, "join_s": 4.821, "init_s": 9.293, "descent_s": 12.937}
+{"name": "pca192-nnd-c30", "seed": 0, "seconds": 26.1, "recall@15": 0.91131, "threads": 8, "pca_s": 1.571, "graph_s": 22.344, "rerank_s": 2.183}
+{"name": "pca192-nnd-c40", "seed": 0, "seconds": 35.822, "recall@15": 0.94601, "threads": 8, "pca_s": 1.581, "graph_s": 31.337, "rerank_s": 2.9}
+{"name": "pca256-nnd-c40", "seed": 0, "seconds": 40.053, "recall@15": 0.97545, "threads": 8, "pca_s": 1.673, "graph_s": 35.476, "rerank_s": 2.9}
+{"name": "pynndescent-t32-i30-c60", "seed": 1, "seconds": 43.569, "recall@15": 0.95393, "threads": 8}
+{"name": "pynndescent-n30", "seed": 1, "seconds": 52.335, "recall@15": 0.97873, "threads": 8}
+{"name": "pca256-nnd-c30", "seed": 1, "seconds": 29.445, "recall@15": 0.95317, "threads": 8, "pca_s": 1.703, "graph_s": 25.505, "rerank_s": 2.23}
+{"name": "pca256-nnd-c45", "seed": 1, "seconds": 48.003, "recall@15": 0.98119, "threads": 8, "pca_s": 1.751, "graph_s": 42.896, "rerank_s": 3.349}
