@@ -5,6 +5,7 @@
 #include "tieredq_fast_scan.h"
 #include "tieredq_index_read.h"
 #include "tieredq_ivf_assign.h"
+#include "tieredq_train_emeans.h"
 #include "tieredq_ivf_coarse.h"
 #include "tieredq_ivf_router.h"
 #include "tieredq_heap.h"
@@ -39,8 +40,10 @@ static_assert(ivf_scan_chunk%fast_list_alignment==0 && ivf_scan_chunk%selection_
 // Coarse training sample: at least the codec's sample size (and the training's rows per list).
 constexpr size_t coarse_minimum_sample=32768;
 constexpr uint64_t coarse_sample_salt=0x9e3779b97f4a7c15ULL;
-// Fast list training (TieredQCoarseTraining::automatic from fast_lists lists on).
-constexpr TieredQCoarseTraining fast_coarse_training{4,256,16,40};
+// TieredQCoarseTraining::automatic (e-means) and ::lloyd recipes: exact below fast_lists lists, restricted from there.
+constexpr TieredQCoarseTraining exact_emeans_training{20,0,16,256,2.5};
+constexpr TieredQCoarseTraining fast_emeans_training{4,256,16,256,2.0,4};
+constexpr TieredQCoarseTraining fast_lloyd_training{4,256,16,40};
 // automatic_lists(): the codec's centroids serve as lists up to this many; rows per list fall from small_rows_per_list
 // at small_scale_rows to large_rows_per_list at large_scale_rows, log-linearly in the row count.
 constexpr size_t codec_list_limit=256;
@@ -122,7 +125,11 @@ uint32_t TieredQIVFIndex::automatic_scan_bits(const TieredQConfig& config) {
 }
 
 TieredQCoarseTraining TieredQCoarseTraining::automatic(size_t lists) {
-  return lists>=fast_lists ? fast_coarse_training : TieredQCoarseTraining{};
+  return lists>=fast_lists ? fast_emeans_training : exact_emeans_training;
+}
+
+TieredQCoarseTraining TieredQCoarseTraining::lloyd(size_t lists) {
+  return lists>=fast_lists ? fast_lloyd_training : TieredQCoarseTraining{};
 }
 
 TieredQCoarseTraining TieredQIVFIndex::coarse_training() const {
@@ -152,6 +159,8 @@ void TieredQIVFIndex::set_lists(const float* centroids) {
 
 void TieredQCoarseTraining::validate() const {
   if (!iterations) bad("coarse training needs at least one iteration");
+  if (emeans_epochs<0) bad("coarse e-means training needs a non-negative epoch budget");
+  if (emeans_probes && !assignment_supers) bad("e-means probes need restricted assignment (assignment_supers > 0)");
   if (assignment_supers && !assignment_probes) bad("restricted assignment needs at least one probe");
   if (!sample_rows_per_list) bad("coarse training needs at least one sample row per list");
 }
@@ -199,11 +208,18 @@ std::vector<uint32_t> TieredQIVFIndex::coarse_lists(const RowLoader& rows,size_t
     const auto picked=rng.choice(count,sample_rows);
     std::vector<uint32_t> ids(picked.begin(),picked.end());
     std::sort(ids.begin(),ids.end());
-    std::vector<float> sample(product(sample_rows,d));
-    rows(ids.data(),sample_rows,sample.data());
-    const float* coarse_sample=coarse_rows(sample.data(),0,sample_rows,lifted);
-    coarse_=std::make_shared<const CoarseQuantizer>(tieredq_detail::train_coarse(coarse_sample,sample_rows,coarse_dimensions(),
-                                                                                coarse_lists_,seed_,training));
+    // Sample positions map to row ids; rows are read (and lifted) a chunk at a time, so e-means never holds the sample.
+    std::vector<uint32_t> chunk_ids;
+    std::vector<float> chunk;
+    const tieredq_detail::TrainingRowSource source=[&](const uint32_t* positions,size_t n,float* out) {
+      chunk_ids.resize(n);
+      for (size_t i=0;i<n;++i) chunk_ids[i]=ids[positions[i]];
+      chunk.resize(product(n,d));
+      rows(chunk_ids.data(),n,chunk.data());
+      std::copy_n(coarse_rows(chunk.data(),0,n,lifted),product(n,coarse_dimensions()),out);
+    };
+    coarse_=std::make_shared<const CoarseQuantizer>(tieredq_detail::train_coarse_rows(source,sample_rows,coarse_dimensions(),
+                                                                                     coarse_lists_,seed_,training));
   }
   build_stats_.train_s=seconds_since(started);
   started=std::chrono::steady_clock::now();

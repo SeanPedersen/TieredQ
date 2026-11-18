@@ -127,3 +127,33 @@ def test_shape_padding_and_validation():
         TieredQIVFFlatIndex(DIMENSIONS, metric="hamming")
     with pytest.raises(RuntimeError):
         TieredQIVFFlatIndex(DIMENSIONS, lists=4).build(data[:2])
+
+
+def test_given_centroids_replace_kmeans():
+    data = rows(5)
+    trained = built(data)
+    given = TieredQIVFFlatIndex(DIMENSIONS, lists=3)  # the centroid count wins over lists
+    assignment = np.asarray(trained.list_assignment())
+    centroids = data[[np.flatnonzero(assignment == l)[0] for l in range(LISTS)]]  # one row of each list
+    given.set_centroids(np.ascontiguousarray(centroids))
+    given.build(data)
+    assert given.lists == LISTS and given.build_stats["train_s"] == 0
+    np.testing.assert_allclose(given.centroids(), centroids, atol=5e-3)  # binary16 of value / row peak
+    nearest = ((data[:, None, :] - centroids[None]) ** 2).sum(-1).argmin(1)
+    assert (np.asarray(given.list_assignment()) == nearest).mean() > 0.98  # centroids are held in binary16
+    given.clear_centroids()
+    given.build(data)
+    assert given.lists == 3
+
+
+def test_emeans_trainer_builds_lists():
+    data = rows(6)
+    index = TieredQIVFFlatIndex(DIMENSIONS, lists=LISTS, trainer="emeans", epochs=2.0, sample_rows_per_list=64)
+    index.build(data)
+    sizes = np.bincount(np.asarray(index.list_assignment()), minlength=LISTS)
+    assert index.lists == LISTS and sizes.min() > 0 and index.build_stats["train_s"] > 0
+    _, ids = index.knn_graph(K, nprobe=LISTS)
+    truth = exhaustive_graph(data)
+    assert sum(len(np.intersect1d(a, b)) for a, b in zip(ids, truth)) >= ROWS * K - ROWS // 100
+    with pytest.raises(ValueError):
+        TieredQIVFFlatIndex(DIMENSIONS, trainer="kmeans++")

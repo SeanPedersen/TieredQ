@@ -57,7 +57,7 @@ def test_router_persists(data, tmp_path):
 
 def test_restricted_assignment_over_every_super_is_exact(data):
     vectors, _ = data
-    exact = built(vectors).list_assignment()
+    exact = built(vectors, assignment_supers=0).list_assignment()  # Lloyd on both sides (automatic is e-means)
     restricted = built(vectors, assignment_supers=16, assignment_probes=16).list_assignment()
     np.testing.assert_array_equal(restricted, exact)
 

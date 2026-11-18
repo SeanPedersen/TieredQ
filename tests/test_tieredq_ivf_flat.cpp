@@ -199,6 +199,33 @@ void padding_and_rejects_test() {
   require(TieredQIVFFlatIndex::automatic_lists(100000)==256 && TieredQIVFFlatIndex::automatic_lists(1000000)==1024,
           "automatic lists");
 }
+// Given centroids replace k-means: their count sets the lists, training is skipped, and each row lands on its nearest
+// given centroid (up to binary16 rounding of the centroids).
+void given_centroids_test() {
+  const auto data=gaussian_rows(rows,11);
+  constexpr size_t given_lists=5;
+  const std::vector<float> centroids(data.begin(),data.begin()+given_lists*dimensions);
+  TieredQIVFFlatConfig config; config.lists=lists;
+  TieredQIVFFlatIndex index(dimensions,config);
+  index.set_centroids(centroids.data(),given_lists);
+  index.build(data.data(),rows);
+  require(index.lists()==given_lists && index.build_stats().train_s==0,"given centroids set the lists");
+  const auto labels=index.list_assignment();
+  size_t nearest_matches=0;
+  for (size_t r=0;r<rows;++r) {
+    size_t nearest=0; double best=-std::numeric_limits<double>::infinity();
+    for (size_t c=0;c<given_lists;++c) {
+      const double value=score(TieredQMetric::l2,data.data()+r*dimensions,centroids.data()+c*dimensions);
+      if (value>best) { best=value; nearest=c; }
+    }
+    nearest_matches+=labels[r]==nearest;
+  }
+  require(nearest_matches>=rows*99/100,"rows go to their nearest given centroid");
+  index.clear_centroids();
+  index.build(data.data(),rows);
+  require(index.lists()==lists,"cleared centroids train k-means again");
+  require(rejects([&] { TieredQIVFFlatIndex(dimensions).set_centroids(nullptr,1); }),"null centroids accepted");
+}
 } // namespace
 
 void tieredq_ivf_flat_tests() {
@@ -209,5 +236,6 @@ void tieredq_ivf_flat_tests() {
   for (auto metric:{TieredQMetric::l2,TieredQMetric::inner_product,TieredQMetric::cosine}) sq8_from_float_test(metric);
   sq8_tiled_lists_test();
   padding_and_rejects_test();
+  given_centroids_test();
   std::cout<<"PASS flat IVF (FP32 and SQ8) and knn_graph\n";
 }

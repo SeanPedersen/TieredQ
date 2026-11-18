@@ -40,40 +40,47 @@ class BlasThreads {
   int previous_=1;
 };
 
-// Exact nearest list per row (ties: lowest list id) by FP32 sgemm over row chunks and centroid tiles.
+// Exact nearest centroid per row (ties: lowest id) by FP32 sgemm over row chunks and centroid tiles: centroids
+// (lists x d, row-major) rank by row.c - half_norms[c], half_norms[c] = |c|^2 / 2.
+inline void nearest_centroids(const float* centroids,const float* half_norms,size_t lists,size_t dimensions,
+                              const float* rows,size_t count,uint32_t* ids) {
+  constexpr size_t chunk_rows=4096,tile_lists=8192;
+  const BlasThreads threads;
+  const auto& linalg=TrainingLinalg::get();
+  const int d=int(dimensions);
+  const size_t tile=std::min(tile_lists,lists);
+  std::vector<float> dots(product(std::min(chunk_rows,count),tile)),best(std::min(chunk_rows,count));
+  for (size_t first=0;first<count;first+=chunk_rows) {
+    const size_t n=std::min(chunk_rows,count-first);
+    std::fill_n(best.begin(),n,-std::numeric_limits<float>::infinity());
+    for (size_t list0=0;list0<lists;list0+=tile) {
+      const size_t m=std::min(tile,lists-list0);
+      // Column-major: dots (m x n) = centroids[list0..)^T x rows^T, so each row's scores are contiguous.
+      const int mi=int(m),ni=int(n); const float one=1,zero=0; const char transposed='T',normal='N';
+      linalg.gemm(&transposed,&normal,&mi,&ni,&d,&one,centroids+list0*dimensions,&d,rows+first*dimensions,&d,&zero,
+                  dots.data(),&mi);
+#pragma omp parallel for schedule(static) if(n>1 && !omp_in_parallel())
+      for (size_t r=0;r<n;++r) {
+        const float* score=dots.data()+r*m;
+        for (size_t j=0;j<m;++j) {
+          const float closeness=score[j]-half_norms[list0+j];
+          if (closeness>best[r]) { best[r]=closeness; ids[first+r]=uint32_t(list0+j); }
+        }
+      }
+    }
+  }
+}
+
+// nearest_centroids() on the coarse quantizer's rounded centroids.
 class BlasAssigner {
  public:
   explicit BlasAssigner(const CoarseQuantizer& coarse) : coarse_(coarse),centroids_(coarse.centroids()) {}
 
   void assign(const float* rows,size_t count,uint32_t* ids) const {
-    const BlasThreads threads;
-    const auto& linalg=TrainingLinalg::get();
-    const int d=int(coarse_.dimensions);
-    const size_t tile=std::min(tile_lists,coarse_.lists);
-    std::vector<float> dots(product(std::min(chunk_rows,count),tile)),best(std::min(chunk_rows,count));
-    for (size_t first=0;first<count;first+=chunk_rows) {
-      const size_t n=std::min(chunk_rows,count-first);
-      std::fill_n(best.begin(),n,-std::numeric_limits<float>::infinity());
-      for (size_t list0=0;list0<coarse_.lists;list0+=tile) {
-        const size_t m=std::min(tile,coarse_.lists-list0);
-        // Column-major: dots (m x n) = centroids[list0..)^T x rows^T, so each row's scores are contiguous.
-        const int mi=int(m),ni=int(n); const float one=1,zero=0; const char transposed='T',normal='N';
-        linalg.gemm(&transposed,&normal,&mi,&ni,&d,&one,centroids_.data()+list0*coarse_.dimensions,&d,
-                    rows+first*coarse_.dimensions,&d,&zero,dots.data(),&mi);
-#pragma omp parallel for schedule(static) if(n>1 && !omp_in_parallel())
-        for (size_t r=0;r<n;++r) {
-          const float* score=dots.data()+r*m;
-          for (size_t j=0;j<m;++j) {
-            const float closeness=score[j]-coarse_.half_norms[list0+j];
-            if (closeness>best[r]) { best[r]=closeness; ids[first+r]=uint32_t(list0+j); }
-          }
-        }
-      }
-    }
+    nearest_centroids(centroids_.data(),coarse_.half_norms.data(),coarse_.lists,coarse_.dimensions,rows,count,ids);
   }
 
  private:
-  static constexpr size_t chunk_rows=4096,tile_lists=8192;
   const CoarseQuantizer& coarse_;
   std::vector<float> centroids_;  // the rounded centroids, row-major
 };
@@ -210,11 +217,4 @@ class ListAssigner {
   std::optional<BlasAssigner> exact_;
 };
 
-inline CoarseQuantizer train_coarse(const float* sample,size_t rows,size_t dimensions,size_t lists,uint64_t seed,
-                                    const TieredQCoarseTraining& training) {
-  return train_coarse(sample,rows,dimensions,lists,seed,training.iterations,
-                      [&](const CoarseQuantizer& q,const float* x,size_t n,uint32_t* ids) {
-                        ListAssigner(q,training,seed).assign(x,n,ids);
-                      });
-}
 } // namespace tq::tieredq_detail

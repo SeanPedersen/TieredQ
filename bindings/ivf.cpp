@@ -33,8 +33,9 @@ class PythonIVFIndex {
   // lists unset: TieredQIVFIndex::automatic_lists() of the first build's rows.
   PythonIVFIndex(uint32_t dimensions, uint32_t code_bits, std::optional<uint32_t> lists, const std::string& metric,
                  bool fine_tiers, bool exact_fast_scores, uint32_t max_scan_bits,
-                 std::optional<tq::TieredQCoarseTraining> training, RouterChoice router)
-      : config_(tq::TieredQConfig::target_code_bits(dimensions, code_bits)), lists_(lists), router_(router) {
+                 std::optional<tq::TieredQCoarseTraining> training, RouterChoice router, uint64_t seed)
+      : config_(tq::TieredQConfig::target_code_bits(dimensions, code_bits)), lists_(lists), router_(router),
+        seed_(seed) {
     config_.metric = parse_metric(metric);
     config_.fine_tiers = fine_tiers;
     if (exact_fast_scores) config_.target_mode = tq::TieredQIndexMode::full;
@@ -119,6 +120,10 @@ class PythonIVFIndex {
     if (require_lists("coarse_training") == 0) throw std::invalid_argument("coarse training needs lists > 0");
     return training_.value_or(tq::TieredQCoarseTraining::automatic(*lists_));
   }
+  tq::TieredQBuildStats build_stats() const {
+    std::shared_lock lock(mutex_);
+    return index_ ? index_->build_stats() : tq::TieredQBuildStats{};
+  }
   std::vector<uint32_t> probe_lists(FloatArray query, size_t nprobe, tq::TieredQRouting routing) const {
     const auto shape = query_rows(query, config_.dimensions);
     if (shape.rows != 1) throw std::invalid_argument("probe_lists takes one query");
@@ -157,7 +162,7 @@ class PythonIVFIndex {
   void emplace(tq::TieredQ codec, size_t rows) {
     if (!lists_) lists_ = tq::TieredQIVFIndex::automatic_lists(rows);
     if (router_.use.value_or(false) && *lists_ == 0) throw std::invalid_argument("a router needs lists > 0");
-    index_.emplace(std::move(codec), *lists_, training_seed);
+    index_.emplace(std::move(codec), *lists_, seed_);
     if (training_) index_->set_coarse_training(*training_);
     if (!given_lists_.empty()) index_->set_lists(given_lists_.data());
     if (router_.use) {
@@ -176,6 +181,7 @@ class PythonIVFIndex {
   RouterChoice router_;
   std::vector<float> given_lists_;
   std::optional<tq::TieredQIVFIndex> index_;
+  uint64_t seed_ = training_seed;  // list sample and training
   mutable std::shared_mutex mutex_;
 };
 
@@ -193,12 +199,12 @@ void bind_ivf(nb::module_& module) {
   nb::class_<PythonIVFIndex>(module, "TieredQIVFIndex", "Fast-mode inverted-file vector index.")
       .def("__init__", [](PythonIVFIndex* self, uint32_t dimensions, uint32_t code_bits, std::optional<uint32_t> lists,
                           const std::string& metric, bool fine_tiers, bool exact_fast_scores, uint32_t max_scan_bits,
-                          std::optional<tq::TieredQCoarseTraining> coarse_training, nb::handle router) {
+                          std::optional<tq::TieredQCoarseTraining> coarse_training, nb::handle router, uint64_t seed) {
         new (self) PythonIVFIndex(dimensions, code_bits, lists, metric, fine_tiers, exact_fast_scores, max_scan_bits,
-                                  coarse_training, parse_router(router));
+                                  coarse_training, parse_router(router), seed);
       }, "dimensions"_a, "code_bits"_a, nb::kw_only(), "lists"_a = nb::none(), "metric"_a = "ip", "fine_tiers"_a = false,
            "exact_fast_scores"_a = false, "max_scan_bits"_a = 0, "coarse_training"_a = nb::none(),
-           "router"_a = nb::none(),
+           "router"_a = nb::none(), "seed"_a = training_seed,
            "lists None (default) picks the count from the first build's rows (2K at 1M rows, 64K at 8.84M; one\n"
            "list per codec centroid below about 143K rows); lists 0 makes one list per codec centroid at no extra\n"
            "storage; otherwise a coarse quantizer with that many lists is trained, by default as TieredQCoarseTraining.automatic(lists) (fast from 8,192 lists),\n"
@@ -210,7 +216,8 @@ void bind_ivf(nb::module_& module) {
            "recall@10 for 0-45% lower QPS on Gemini-768 99k (#32). exact_fast_scores trains Lloyd-Max codebooks\n"
            "scanned in exact FP32 (prunable on AVX-512); max_scan_bits caps the bits per coordinate the scan reads\n"
            "(0: 4 at up to 2 bits per dimension without fine tiers, for the nibble kernels; else as on TieredQIndex).\n"
-           "train_lists, set_lists and set_coarse_training before the first build need an explicit lists.")
+           "train_lists, set_lists and set_coarse_training before the first build need an explicit lists. seed\n"
+           "seeds the list sample and training (the partition alone moves recall@10 by up to 0.0045 at 8.84M).")
       .def("__len__", &PythonIVFIndex::size, nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro("dimensions", &PythonIVFIndex::dimensions)
       .def_prop_ro("code_bits", &PythonIVFIndex::code_bits, nb::call_guard<nb::gil_scoped_release>())
@@ -250,16 +257,29 @@ void bind_ivf(nb::module_& module) {
          "routing 'auto' ranks lists through the router when one is built and exactly otherwise; 'router' and\n"
          "'exact' force either; super_probes > 0 overrides the router's probed supers.")
       .def("set_coarse_training", [](PythonIVFIndex& self, uint32_t iterations, uint32_t assignment_supers,
-                                     uint32_t assignment_probes, uint32_t sample_rows_per_list) {
-        self.set_coarse_training({iterations, assignment_supers, assignment_probes, sample_rows_per_list});
+                                     uint32_t assignment_probes, uint32_t sample_rows_per_list, double emeans_epochs,
+                                     uint32_t emeans_probes) {
+        self.set_coarse_training({iterations, assignment_supers, assignment_probes, sample_rows_per_list,
+                                  emeans_epochs, emeans_probes});
       }, nb::kw_only(), "iterations"_a = tq::TieredQCoarseTraining{}.iterations,
          "assignment_supers"_a = tq::TieredQCoarseTraining{}.assignment_supers,
          "assignment_probes"_a = tq::TieredQCoarseTraining{}.assignment_probes,
          "sample_rows_per_list"_a = tq::TieredQCoarseTraining{}.sample_rows_per_list,
-         "Lloyd iterations of list training, restricted assignment (assignment_supers > 0: each row's nearest\n"
+         "emeans_epochs"_a = tq::TieredQCoarseTraining{}.emeans_epochs,
+         "emeans_probes"_a = tq::TieredQCoarseTraining{}.emeans_probes,
+         "Lloyd iterations (or e-means epochs when emeans_epochs > 0) of list training, restricted assignment\n"
+         "(assignment_supers > 0: each row's nearest\n"
          "list among the members of its assignment_probes nearest supers) and build()'s list-training sample for\n"
          "later train_lists() and build(); overrides the automatic training (see coarse_training).",
          nb::call_guard<nb::gil_scoped_release>())
+      .def_prop_ro("build_stats", [](const PythonIVFIndex& self) {
+        tq::TieredQBuildStats stats;
+        { nb::gil_scoped_release release; stats = self.build_stats(); }
+        nb::dict out;
+        out["train_s"] = stats.train_s; out["assign_s"] = stats.assign_s; out["encode_s"] = stats.encode_s;
+        out["router_s"] = stats.router_s;
+        return out;
+      }, "Wall seconds of the last build: train_s (list training), assign_s, encode_s, router_s.")
       .def_prop_ro("coarse_training", &PythonIVFIndex::coarse_training,
                    "The list training later builds use: the one set, else TieredQCoarseTraining.automatic(lists).",
                    nb::call_guard<nb::gil_scoped_release>())

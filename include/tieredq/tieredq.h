@@ -343,19 +343,31 @@ struct TieredQPruning {
 // super get the exact label up to floating-point near-ties (both score the same rounded centroids; exact assignment
 // sums in FP32 BLAS, restricted scoring in the binary16 panel kernel). 0 assigns exactly, via BLAS sgemm. Lists that
 // build() trains itself use a seeded sample of max(32,768, sample_rows_per_list x lists) rows (train_lists() takes
-// its own sample). These member defaults are the exact recipe; automatic() is what an index uses unless
-// set_coarse_training() overrides it.
+// its own sample). These member defaults are exact Lloyd; automatic() (e-means, #45) is what an index uses unless
+// set_coarse_training() overrides it, and lloyd() is the Lloyd recipe it replaced.
 struct TieredQCoarseTraining {
   uint32_t iterations = 20;
   uint32_t assignment_supers = 0;
   uint32_t assignment_probes = 16;
   uint32_t sample_rows_per_list = 64;
-  // From fast_lists lists on: 4 iterations on 40 rows per list (Faiss's budget) with 256 x 16 restricted assignment,
-  // the 8.84M x 1024 shipping build (64K lists in 232 s against 1,621 s for Faiss); the exact recipe below. On Qwen 1M x
-  // 1024 (#52) fast training kept recall@10 within 0.002 of the exact recipe from recall 0.93 up at 8K-32K lists and
-  // trained them 25-43x faster (8K: 136 -> 5.5 s); at 4K it lost up to 0.008 (nprobe 64), so smaller counts stay exact.
+  // > 0: e-means (mini-batch EMA k-means, #45) for this many passes over the sample instead of Lloyd iterations, with
+  // the same exact or restricted assignment per batch. E-means streams its batches from the build's rows, so its
+  // sample costs no RAM (sample_rows_per_list x lists may cover every row).
+  double emeans_epochs = 0;
+  // E-means' restricted batch assignment probes this many supers (0: assignment_probes); the final assignment of
+  // every row keeps assignment_probes.
+  uint32_t emeans_probes = 0;
+  // Restricted assignment from this many lists on (both recipes below).
   static constexpr uint32_t fast_lists = 8192;
+  // E-means. From fast_lists lists on: 2 epochs over 256 rows per list (every row of 8.84M at 64K lists), batch rows
+  // probing 4 of 256 supers, the final assignment 16. On Qwen/MS MARCO 8.84M x 1024 (64K lists, the #52 shipping
+  // build) against lloyd(): build 179 vs 203 s, peak build RSS 15.4 vs 20.9 GB, recall@10 +0.003-0.009 at equal p50
+  // latency (nprobe 96-1024), same serving RAM. Below: exact e-means, 2.5 epochs over 256 rows per list (1M, 2,048
+  // lists: training 5.9 vs 12.5 s, recall@10 at equal rows scanned equal or higher).
   static TieredQCoarseTraining automatic(size_t lists);
+  // Lloyd. From fast_lists lists on: 4 iterations on 40 rows per list (Faiss's budget) with 256 x 16 restricted
+  // assignment (#52: within 0.002 recall@10 of exact Lloyd at 8K-32K lists on Qwen 1M, 25-43x faster); exact below.
+  static TieredQCoarseTraining lloyd(size_t lists);
   void validate() const;
 };
 // Wall seconds of the last build() per phase: list training (0 for given lists), list assignment (0 for codec lists),

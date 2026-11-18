@@ -1,0 +1,10 @@
+{"tieredq_emeans_profile":{"initialize":0.708472,"order":0.915444,"prepare":0.700629,"load":1.568235,"assign":78.640260,"accumulate":1.724188,"apply":0.674754,"regroup":0.484171,"close":0.011759}}
+{"tieredq_emeans_profile":{"initialize":0.722024,"order":1.375249,"prepare":1.032355,"load":2.384923,"assign":118.099867,"accumulate":2.619736,"apply":1.027194,"regroup":0.665070,"close":0.011800}}
+{"tieredq_emeans_profile":{"initialize":0.807770,"order":0.757972,"prepare":0.586108,"load":1.363453,"assign":65.728140,"accumulate":1.458142,"apply":0.706807,"regroup":0.375447,"close":0.011796}}
+{"tieredq_emeans_profile":{"initialize":0.750764,"order":1.194088,"prepare":0.851372,"load":1.999258,"assign":99.552950,"accumulate":2.205554,"apply":0.974539,"regroup":0.570250,"close":0.011894}}
+{"tieredq_emeans_profile":{"initialize":0.770203,"order":0.742801,"prepare":0.579525,"load":1.337528,"assign":36.557624,"accumulate":1.445836,"apply":0.705667,"regroup":0.378279,"close":0.011911}}
+{"tieredq_emeans_profile":{"initialize":0.728154,"order":1.168810,"prepare":0.842595,"load":2.047696,"assign":54.988228,"accumulate":2.182435,"apply":0.973907,"regroup":0.571287,"close":0.011858}}
+{"tieredq_emeans_profile":{"initialize":0.720160,"order":1.021983,"prepare":0.728973,"load":1.679150,"assign":82.904577,"accumulate":1.830262,"apply":0.856841,"regroup":0.477232,"close":0.012103}}
+{"tieredq_emeans_profile":{"initialize":0.731334,"order":0.746133,"prepare":0.579333,"load":1.343542,"assign":21.561574,"accumulate":1.432865,"apply":0.705309,"regroup":0.377052,"close":0.012041}}
+{"tieredq_emeans_profile":{"initialize":0.758705,"order":1.182257,"prepare":0.874522,"load":2.012351,"assign":32.333980,"accumulate":2.161407,"apply":0.962304,"regroup":0.574205,"close":0.011914}}
+{"tieredq_emeans_profile":{"initialize":0.712979,"order":1.487958,"prepare":1.139156,"load":2.658128,"assign":43.302455,"accumulate":2.905211,"apply":1.238052,"regroup":0.744600,"close":0.011631}}

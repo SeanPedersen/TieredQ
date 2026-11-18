@@ -12,6 +12,7 @@
 #include "tieredq_ivf_assign.h"
 #include "tieredq_ivf_coarse.h"
 #include "tieredq_sq8.h"
+#include "tieredq_train_emeans.h"
 #include "training_rng.h"
 #include <algorithm>
 #include <chrono>
@@ -112,6 +113,7 @@ struct Workspace {
 
 void TieredQIVFFlatConfig::validate() const {
   if (!iterations) bad("IVF-Flat training needs at least one iteration");
+  if (!(epochs>0)) bad("IVF-Flat e-means training needs a positive epoch budget");
   if (!sample_rows_per_list) bad("IVF-Flat training needs at least one sample row per list");
 }
 
@@ -133,6 +135,7 @@ struct TieredQIVFFlatIndex::State {
   std::vector<float> half_norms;    // |x|^2 / 2 per stored (decoded) row (l2), else 0: closeness = q.x - half_norm
   std::vector<uint32_t> ids;        // row number per stored row
   std::vector<size_t> offsets;      // list l holds stored rows [offsets[l], offsets[l + 1])
+  std::vector<float> given_centroids;  // set_centroids(): lists x d, used by build instead of k-means
 
   size_t size() const { return ids.size(); }
   size_t lists() const { return coarse ? coarse->lists : 0; }
@@ -147,24 +150,16 @@ struct TieredQIVFFlatIndex::State {
   void build(const RowReader& input,size_t count,const SQ8Codec* given) {
     const size_t d=dimensions;
     if (count>size_t(missing_id)) bad("IVF-Flat holds at most 2^32 - 1 rows");
-    const size_t list_count=config.lists ? config.lists : automatic_lists(count);
+    const size_t list_count=!given_centroids.empty() ? given_centroids.size()/d
+                            : config.lists ? config.lists : automatic_lists(count);
     if (count<list_count) bad("IVF-Flat training needs at least one row per list");
 
     auto started=std::chrono::steady_clock::now();
-    const size_t sample_rows=std::min(count,product(list_count,config.sample_rows_per_list));
-    tieredq_detail::TrainingRng rng(config.seed^sample_salt);
-    auto picked=rng.choice(count,sample_rows);
-    std::sort(picked.begin(),picked.end());
-    std::vector<float> sample(product(sample_rows,d));
-#pragma omp parallel for schedule(static)
-    for (size_t i=0;i<sample_rows;++i) input.copy(picked[i],sample.data()+i*d);
-    const TieredQCoarseTraining training{config.iterations,0,TieredQCoarseTraining{}.assignment_probes,
-                                         config.sample_rows_per_list};
     coarse=std::make_shared<const CoarseQuantizer>(
-        tieredq_detail::train_coarse(sample.data(),sample_rows,d,list_count,config.seed,training));
+        given_centroids.empty() ? train(input,count,list_count)
+                                : CoarseQuantizer::from(given_centroids,list_count,d));
     centroids=coarse->centroids();
-    sample=std::vector<float>();
-    stats.train_s=seconds_since(started);
+    stats.train_s=given_centroids.empty() ? seconds_since(started) : 0.0;
 
     started=std::chrono::steady_clock::now();
     std::vector<uint32_t> labels(count);
@@ -191,6 +186,23 @@ struct TieredQIVFFlatIndex::State {
     half_norms.resize(count);
     if (sq8()) store_codes(input,given); else store_vectors(input);
     stats.store_s=seconds_since(started);
+  }
+
+  // k-means (Lloyd or e-means) on a seeded sample of sample_rows_per_list rows per list.
+  CoarseQuantizer train(const RowReader& input,size_t count,size_t list_count) const {
+    const size_t d=dimensions;
+    const size_t sample_rows=std::min(count,product(list_count,config.sample_rows_per_list));
+    tieredq_detail::TrainingRng rng(config.seed^sample_salt);
+    auto picked=rng.choice(count,sample_rows);
+    std::sort(picked.begin(),picked.end());
+    const tieredq_detail::TrainingRowSource source=[&](const uint32_t* positions,size_t n,float* out) {
+#pragma omp parallel for schedule(static)
+      for (size_t i=0;i<n;++i) input.copy(picked[positions[i]],out+i*d);
+    };
+    const bool emeans=config.trainer==TieredQIVFFlatTrainer::emeans;
+    const TieredQCoarseTraining training{config.iterations,0,TieredQCoarseTraining{}.assignment_probes,
+                                         config.sample_rows_per_list,emeans ? config.epochs : 0.0};
+    return tieredq_detail::train_coarse_rows(source,sample_rows,d,list_count,config.seed,training);
   }
 
   void store_vectors(const RowReader& input) {
@@ -396,6 +408,12 @@ void TieredQIVFFlatIndex::build(const int8_t* codes,size_t count,const float* sc
   state_->build(rows,count,keep_codes ? &input_codec : nullptr);
 }
 
+void TieredQIVFFlatIndex::set_centroids(const float* centroids,size_t lists) {
+  if (!centroids || !lists) bad("set_centroids needs at least one centroid");
+  state_->given_centroids.assign(centroids,centroids+product(lists,state_->dimensions));
+}
+void TieredQIVFFlatIndex::clear_centroids() { state_->given_centroids=std::vector<float>(); }
+
 void TieredQIVFFlatIndex::search(const float* queries,size_t rows,size_t k,size_t nprobe,float* scores,
                                  uint32_t* ids) const {
   if (!queries && rows) bad("null query data");
@@ -426,6 +444,8 @@ std::vector<uint32_t> TieredQIVFFlatIndex::list_assignment() const {
     for (size_t pos=state_->offsets[l];pos<state_->offsets[l+1];++pos) labels[state_->ids[pos]]=uint32_t(l);
   return labels;
 }
+
+const std::vector<float>& TieredQIVFFlatIndex::centroids() const { return state_->centroids; }
 
 size_t TieredQIVFFlatIndex::storage_bytes() const {
   const State& s=*state_;

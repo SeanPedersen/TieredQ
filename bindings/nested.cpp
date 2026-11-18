@@ -78,6 +78,7 @@ class PythonNestedIndex {
     index_.write_tier(path.string(), rows.loader);
   }
   bool has_router() const { return index_.index().has_router(); }
+  tq::TieredQBuildStats build_stats() const { return index_.index().build_stats(); }
   void attach_tier(std::shared_ptr<const tq::TieredQRowSource> tier) {
     std::unique_lock lock(mutex_);
     index_.attach_tier(std::move(tier));
@@ -180,7 +181,8 @@ void bind_nested(nb::module_& module) {
                               OptionalBits prefix_bits, OptionalBits total_bits, OptionalBits lists,
                               const std::string& metric, const std::string& tier_rows, OptionalMatrix sample,
                               bool fine_tiers, uint32_t max_tier_bits, uint32_t max_scan_bits,
-                              std::optional<tq::TieredQCoarseTraining> coarse_training, nb::handle router) {
+                              std::optional<tq::TieredQCoarseTraining> coarse_training, nb::handle router,
+                              uint64_t seed) {
         const size_t width = vectors ? vectors->shape(1) : codes ? codes->shape(1) : dimensions.value_or(0);
         if (!width) throw std::invalid_argument("loader= needs dimensions=");
         const auto input = row_input(vectors, codes, scales, offsets, loader, count, width);
@@ -199,7 +201,7 @@ void bind_nested(nb::module_& module) {
         const auto choice = parse_router(router);
         config.router = choice.use;
         config.router_config = choice.config;
-        config.seed = training_seed;
+        config.seed = seed;
         nb::gil_scoped_release release;
         return std::make_unique<PythonNestedIndex>(tq::TieredQNestedIVFIndex::build(
             config, input.loader, input.count, sample ? sample->data() : nullptr, sample ? sample->shape(0) : 0));
@@ -208,7 +210,7 @@ void bind_nested(nb::module_& module) {
          "count"_a = nb::none(), "dimensions"_a = nb::none(), "prefix_bits"_a = nb::none(),
          "total_bits"_a = nb::none(), "lists"_a = nb::none(), "metric"_a = "ip", "tier_rows"_a = "suffix",
          "sample"_a.noconvert() = nb::none(), "fine_tiers"_a = true, "max_tier_bits"_a = 12, "max_scan_bits"_a = 0,
-         "coarse_training"_a = nb::none(), "router"_a = nb::none(),
+         "coarse_training"_a = nb::none(), "router"_a = nb::none(), "seed"_a = training_seed,
          "Trains the prefix codec (prefix_bits per vector; default 1 per dimension), the refinement (total_bits,\n"
          "prefix included; default 8 per dimension) and the lists on a seeded sample of at most 32,768 rows of\n"
          "sample, else of the vectors, then indexes the vectors. Vectors are float32 rows, an SQ8 store (codes=\n"
@@ -219,7 +221,8 @@ void bind_nested(nb::module_& module) {
          "False or a TieredQRouterConfig override them), and the 8-bit fine-tier suffix ('suffix' tier_rows) is\n"
          "meant for an SSD. max_scan_bits 0 caps prefix scans at 4 bits up to 2 bits per dimension. A given sample\n"
          "also trains the lists on all its rows, so a partition learned on earlier data stays fixed. tier_rows\n"
-         "'prefix_and_suffix' reads each candidate in one row. No tier is attached yet.")
+         "'prefix_and_suffix' reads each candidate in one row. seed seeds the training samples and the lists. No tier\n"
+         "is attached yet.")
       .def("__len__", &PythonNestedIndex::size)
       .def_prop_ro("dimensions", &PythonNestedIndex::dimensions)
       .def_prop_ro("metric", &PythonNestedIndex::metric)
@@ -228,6 +231,14 @@ void bind_nested(nb::module_& module) {
       .def_prop_ro("max_refinement_bits", &PythonNestedIndex::max_refinement_bits, "Widest combined prefix/suffix code.")
       .def_prop_ro("lists", &PythonNestedIndex::lists)
       .def_prop_ro("has_router", &PythonNestedIndex::has_router)
+      .def_prop_ro("build_stats", [](const PythonNestedIndex& self) {
+        const tq::TieredQBuildStats stats = self.build_stats();
+        nb::dict out;
+        out["train_s"] = stats.train_s; out["assign_s"] = stats.assign_s; out["encode_s"] = stats.encode_s;
+        out["router_s"] = stats.router_s;
+        return out;
+      }, "Wall seconds of the IVF lists' last build (zeros once loaded): train_s (list training), assign_s, encode_s,\n"
+         "router_s.")
       .def_prop_ro("storage_bytes", &PythonNestedIndex::storage_bytes, "RAM the index holds: IVF, codec, refinement and id map; the tier\n"
                    "is excluded.")
       .def_prop_ro("tier_rows", &PythonNestedIndex::tier_rows)

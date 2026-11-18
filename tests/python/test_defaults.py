@@ -7,7 +7,10 @@ import pytest
 from tieredq import TieredQCoarseTraining, TieredQIVFIndex, TieredQNestedIVFIndex, TieredQRouterConfig
 
 DIMENSIONS = 16
-FAST_TRAINING = TieredQCoarseTraining(iterations=4, assignment_supers=256, assignment_probes=16, sample_rows_per_list=40)
+FAST_TRAINING = TieredQCoarseTraining(iterations=4, assignment_supers=256, assignment_probes=16, sample_rows_per_list=256,
+                                      emeans_epochs=2.0, emeans_probes=4)
+EXACT_TRAINING = TieredQCoarseTraining(sample_rows_per_list=256, emeans_epochs=2.5)
+FAST_LLOYD = TieredQCoarseTraining(iterations=4, assignment_supers=256, assignment_probes=16, sample_rows_per_list=40)
 MANY_LISTS = TieredQRouterConfig.automatic_lists
 
 
@@ -91,8 +94,10 @@ def test_nested_defaults_and_round_trip(tmp_path):
 
 
 def test_coarse_training_switches_at_the_threshold():
-    assert TieredQCoarseTraining.automatic(TieredQCoarseTraining.fast_lists - 1) == TieredQCoarseTraining()
+    assert TieredQCoarseTraining.automatic(TieredQCoarseTraining.fast_lists - 1) == EXACT_TRAINING
     assert TieredQCoarseTraining.automatic(TieredQCoarseTraining.fast_lists) == FAST_TRAINING
+    assert TieredQCoarseTraining.lloyd(TieredQCoarseTraining.fast_lists - 1) == TieredQCoarseTraining()
+    assert TieredQCoarseTraining.lloyd(TieredQCoarseTraining.fast_lists) == FAST_LLOYD
     assert TieredQIVFIndex(DIMENSIONS, 32, lists=TieredQCoarseTraining.fast_lists).coarse_training == FAST_TRAINING
     chosen = TieredQCoarseTraining(iterations=9)
     assert TieredQIVFIndex(DIMENSIONS, 32, lists=MANY_LISTS, coarse_training=chosen).coarse_training == chosen

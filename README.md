@@ -150,8 +150,10 @@ Which index (#27; VIBE arxiv 1.34M × 768 and Qwen 8.84M × 1024, one core):
 
 #### Unquantized IVF and all-rows k-NN graphs
 
-`TieredQIVFFlatIndex(dimensions, *, lists=None, metric="l2", storage="fp32", iterations=10, sample_rows_per_list=64,
-seed=42)` keeps rows in k-means lists and scores them exactly in float32. `storage="sq8"` stores int8 codes (a quarter
+`TieredQIVFFlatIndex(dimensions, *, lists=None, metric="l2", storage="fp32", trainer="emeans", iterations=10,
+epochs=2.5, sample_rows_per_list=256, seed=42)` keeps rows in k-means lists (e-means by default, streamed from the rows;
+on MS MARCO 1M at 1,024 lists 1.66 s of training against 2.06 s for `trainer="lloyd"` on 64 rows × 10 iterations,
+with higher recall) and scores them exactly in float32. `storage="sq8"` stores int8 codes (a quarter
 of the bytes) and decodes each probed list into an L2-sized float32 tile before its GEMM. `build(rows)` trains about
 sqrt(rows) lists by default (a power of two); `build(codes=, scales=, offsets=)` takes an SQ8 store (e.g. a numpy
 memmap) without a float copy, and SQ8 storage keeps its codes as they are. `search(queries, k, nprobe=)` and `knn_graph(k, nprobe=)` run one list-major engine: queries are grouped by
@@ -187,7 +189,7 @@ What the defaults pick (each is a keyword of `build`):
 | --- | --- | --- |
 | `prefix_bits` | 1 per dimension | in RAM; `max_scan_bits=0` caps its scan at 4 bits (nibble kernels) up to 2 bits/dim |
 | `lists` | `None`: automatic | 2K at 1M rows, 64K at 8.84M (`TieredQIVFIndex::automatic_lists`); `0` keeps one list per codec centroid |
-| `coarse_training` | `None`: automatic | from 8,192 lists: 4 Lloyd iterations on 40 rows/list, 256 × 16 restricted assignment |
+| `coarse_training` | `None`: automatic | e-means, streamed from the rows; from 8,192 lists 2 epochs over 256 rows/list (all rows at 64K), 256 supers × 4 probes in training, 16 in the final assignment |
 | `router` | `None`: automatic | the two-level router from 8,192 lists; `True`, `False` or a `TieredQRouterConfig` |
 | `total_bits` | 8 per dimension | the tier: `fine_tiers=True` (up to `max_tier_bits=12`), `tier_rows="suffix"` |
 | `candidates` (search) | 40 | `max(40, 2k)`; the 1-bit prefix lost about 0.005 recall@10 at 20 reads; at k = 100, 200 matched 400 |
@@ -253,10 +255,14 @@ more than RAM, keep a 6-bit tier in RAM and add `attach_exact` over SQ8 rows on 
   fetch the `encode_tier` rows of those ids (shape `ids.shape + (index.tier_bytes_per_vector,)`; ids of
   `2**32 - 1` are padding), then `scores, ids = index.rescore(queries, ids, rows, k=10)`.
 - `pruning=TieredQPruning(confidence=8)` opts IVF and nested scans into approximate pruning (see below).
-- Many lists: from 8,192 lists an index trains them with 4 Lloyd iterations on 40 sample rows per list and restricted
-  assignment (256 supers, 16 probes), and builds the two-level router (`ivf.coarse_training`, `ivf.has_router`).
-  `coarse_training=TieredQCoarseTraining(...)` or `ivf.set_coarse_training(iterations=20, assignment_supers=0, ...)`
-  sets another training; `router=False` or `ivf.remove_router()` drops the router, and `router=TieredQRouterConfig(...)`
+- List training: e-means (mini-batch k-means, #45), which streams its batches from the rows and holds no sample.
+  From 8,192 lists it runs 2 epochs over 256 rows per list with restricted assignment (256 supers, 4 probes per batch
+  row, 16 in the final assignment) and the index builds the two-level router (`ivf.coarse_training`,
+  `ivf.has_router`); fewer lists train exactly for 2.5 epochs. On 8.84M × 1024 (64K lists) against the former Lloyd
+  recipe (`TieredQCoarseTraining.lloyd(lists)`: 4 iterations on 40 rows per list) the nested build took 175-179 s
+  instead of 196-203 s at 15.4 instead of 20.9-21.1 GB peak RSS, with 0.001-0.009 more recall@10 at equal latency
+  (2 seeds). `coarse_training=TieredQCoarseTraining(...)` (e.g. `TieredQCoarseTraining.lloyd(lists)`) or
+  `ivf.set_coarse_training(iterations=20, assignment_supers=0, ...)` sets another training; `router=False` or `ivf.remove_router()` drops the router, and `router=TieredQRouterConfig(...)`
   or `ivf.build_router(...)` configures it. `search(..., routing="auto" | "router" | "exact", super_probes=0)` selects
   the coarse ranking (see the C++ notes on many lists).
 
@@ -309,13 +315,19 @@ auto fast = index.search(query, 10, 16, tq::TieredQPruning{/*confidence=*/8, /*p
   [heap attribution](ann-prototypes/geometry_ann/results/hartmut-heapretention-20261111/README.md)).
 - **Many lists (64K+).** `set_lists(centroids)` fixes the lists to a partition trained elsewhere.
   `build(RowLoader, count)` pulls rows by id in bounded chunks, so a base held as SQ8 codes needs no fp32 copy.
-  From `TieredQCoarseTraining::fast_lists` (8,192) lists an index trains its lists with 4 Lloyd iterations on 40
-  sample rows per list and restricted assignment over 256 supers × 16 probes, and builds the router at its defaults
-  (`TieredQRouterConfig::automatic_lists`, 8,192). Fewer lists keep 20 iterations, exact assignment and 64 rows per list.
-  On Qwen 1M × 1024 the fast training stayed within 0.002 recall@10 of the exact recipe from recall 0.93 up at 8K-32K
-  lists for 25-43× less training time, and the router was faster than exact ranking from 8K lists (#52).
-  `set_coarse_training({iterations, assignment_supers, assignment_probes, sample_rows_per_list})` overrides the
-  training, and `remove_router()` opts out of the router. In restricted assignment (#48) each row is assigned among the members of its
+  Lists train by e-means (`TieredQCoarseTraining::automatic`, #45), a port of Faiss's mini-batch e-means that reads
+  each batch through the build's row loader in 32K-row chunks: training holds the centroids, the batch and closing
+  sums and one chunk (about 1.6 GB at 64K × 1024), never a sample. From `TieredQCoarseTraining::fast_lists` (8,192)
+  lists it runs 2 epochs over 256 rows per list with restricted assignment (256 supers; `emeans_probes` 4 per batch
+  row, `assignment_probes` 16 in the final assignment), and the index builds the router at its defaults
+  (`TieredQRouterConfig::automatic_lists`, 8,192); fewer lists train exactly for 2.5 epochs over 256 rows per list.
+  On Qwen/MS MARCO 8.84M × 1024 (64K lists, 2 seeds) it replaced the Lloyd recipe (`TieredQCoarseTraining::lloyd`: 4
+  iterations on 40 rows per list, 256 × 16 restricted; 20 exact iterations on 64 rows below 8,192 lists): nested build
+  175-179 s instead of 196-203 s, peak build RSS 15.4 instead of 20.9-21.1 GB, recall@10 0.001-0.009 higher at equal
+  latency, the same serving RAM. On Qwen 1M × 1024 the fast Lloyd recipe had stayed within 0.002 recall@10 of exact
+  Lloyd at 8K-32K lists for 25-43× less training time, and the router was faster than exact ranking from 8K lists (#52).
+  `set_coarse_training({iterations, assignment_supers, assignment_probes, sample_rows_per_list, emeans_epochs,
+  emeans_probes})` overrides the training (`emeans_epochs` 0 trains by Lloyd), and `remove_router()` opts out of the router. In restricted assignment (#48) each row is assigned among the members of its
   `assignment_probes` nearest supers, a k-means of the lists' centroids. Rows whose nearest list lies in a probed
   super get the exact label, up to floating-point near-ties. Exact assignment runs as FP32 BLAS `sgemm`, as in
   Faiss; query ranking keeps the binary16 panels. On Qwen 1024-D (500K rows, 32K lists), 256 supers and 16 probes kept 99.0%

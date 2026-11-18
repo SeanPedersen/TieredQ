@@ -1,0 +1,11 @@
+{"trainer":"lloyd","budget":4,"rows":2621440,"lists":65536,"supers":256,"probes":16,"seed":0,"train_s":83.11,"anon_peak_gb":11.605,"anon_train_gb":11.595,"heldout":131072,"objective":0.456836,"imbalance":1.9430}
+{"trainer":"emeans","budget":2.5,"rows":4194304,"lists":65536,"supers":256,"probes":16,"seed":0,"train_s":86.90,"anon_peak_gb":1.567,"anon_train_gb":1.549,"heldout":131072,"objective":0.442193,"imbalance":1.8498}
+{"trainer":"emeans","budget":2.5,"rows":6291456,"lists":65536,"supers":256,"probes":16,"seed":0,"train_s":129.44,"anon_peak_gb":1.580,"anon_train_gb":1.554,"heldout":131072,"objective":0.437323,"imbalance":1.8079}
+{"trainer":"emeans","budget":1,"rows":8840823,"lists":65536,"supers":256,"probes":16,"seed":0,"train_s":73.27,"anon_peak_gb":1.590,"anon_train_gb":1.554,"heldout":131072,"objective":0.444308,"imbalance":1.7956}
+{"trainer":"emeans","budget":1.5,"rows":8840823,"lists":65536,"supers":256,"probes":16,"seed":0,"train_s":109.60,"anon_peak_gb":1.593,"anon_train_gb":1.557,"heldout":131072,"objective":0.437629,"imbalance":1.7915}
+{"trainer":"emeans","budget":1,"rows":8840823,"lists":65536,"supers":256,"probes":8,"seed":0,"train_s":44.00,"anon_peak_gb":1.583,"anon_train_gb":1.547,"heldout":131072,"objective":0.445234,"imbalance":1.7880}
+{"trainer":"emeans","budget":1.5,"rows":8840823,"lists":65536,"supers":256,"probes":8,"seed":0,"train_s":65.02,"anon_peak_gb":1.586,"anon_train_gb":1.550,"heldout":131072,"objective":0.438311,"imbalance":1.7769}
+{"trainer":"emeans","budget":1.25,"rows":8840823,"lists":65536,"supers":256,"probes":16,"seed":0,"train_s":91.71,"anon_peak_gb":1.586,"anon_train_gb":1.551,"heldout":131072,"objective":0.439717,"imbalance":1.7997}
+{"trainer":"emeans","budget":1,"rows":8840823,"lists":65536,"supers":256,"probes":4,"seed":0,"train_s":28.97,"anon_peak_gb":1.582,"anon_train_gb":1.546,"heldout":131072,"objective":0.447175,"imbalance":1.7779}
+{"trainer":"emeans","budget":1.5,"rows":8840823,"lists":65536,"supers":256,"probes":4,"seed":0,"train_s":42.37,"anon_peak_gb":1.580,"anon_train_gb":1.545,"heldout":131072,"objective":0.440089,"imbalance":1.7695}
+{"trainer":"emeans","budget":2,"rows":8840823,"lists":65536,"supers":256,"probes":4,"seed":0,"train_s":55.67,"anon_peak_gb":1.583,"anon_train_gb":1.547,"heldout":131072,"objective":0.437808,"imbalance":1.7626}

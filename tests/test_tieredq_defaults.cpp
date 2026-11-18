@@ -31,7 +31,7 @@ TieredQ codec(const std::vector<float>& data,uint32_t max_scan_bits=0) {
 }
 bool same(const TieredQCoarseTraining& a,const TieredQCoarseTraining& b) {
   return a.iterations==b.iterations && a.assignment_supers==b.assignment_supers && a.assignment_probes==b.assignment_probes &&
-         a.sample_rows_per_list==b.sample_rows_per_list;
+         a.sample_rows_per_list==b.sample_rows_per_list && a.emeans_epochs==b.emeans_epochs && a.emeans_probes==b.emeans_probes;
 }
 std::vector<TieredQHit> hits(const TieredQIVFIndex& index,const std::vector<float>& probes,TieredQRouting routing={}) {
   std::vector<TieredQHit> out;
@@ -67,9 +67,11 @@ void scan_cap_test() {
 }
 
 void coarse_training_threshold_test() {
-  const TieredQCoarseTraining exact{},fast{4,256,16,40};
+  const TieredQCoarseTraining exact{20,0,16,256,2.5},fast{4,256,16,256,2.0,4};
   require(same(TieredQCoarseTraining::automatic(TieredQCoarseTraining::fast_lists-1),exact),"few lists train exactly");
   require(same(TieredQCoarseTraining::automatic(TieredQCoarseTraining::fast_lists),fast),"many lists train fast");
+  require(same(TieredQCoarseTraining::lloyd(TieredQCoarseTraining::fast_lists-1),TieredQCoarseTraining{}),"exact Lloyd");
+  require(same(TieredQCoarseTraining::lloyd(TieredQCoarseTraining::fast_lists),{4,256,16,40}),"fast Lloyd");
   const auto data=gaussian_rows(4096,3);
   TieredQIVFIndex many(codec(data),TieredQCoarseTraining::fast_lists);
   require(same(many.coarse_training(),fast),"a many-list index trains fast without being told");
