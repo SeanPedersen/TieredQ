@@ -150,13 +150,16 @@ Which index (#27; VIBE arxiv 1.34M × 768 and Qwen 8.84M × 1024, one core):
 
 #### Unquantized IVF and all-rows k-NN graphs
 
-`TieredQIVFFlatIndex(dimensions, *, lists=None, metric="l2", iterations=10, sample_rows_per_list=64, seed=42)` keeps
-float32 rows in k-means lists, with no codec to train. `build(rows)` trains about sqrt(rows) lists by default (a power
-of two). `search(queries, k, nprobe=)` and `knn_graph(k, nprobe=)` run one list-major engine: queries are grouped by
+`TieredQIVFFlatIndex(dimensions, *, lists=None, metric="l2", storage="fp32", iterations=10, sample_rows_per_list=64,
+seed=42)` keeps rows in k-means lists and scores them exactly in float32. `storage="sq8"` stores int8 codes (a quarter
+of the bytes) and decodes each probed list into an L2-sized float32 tile before its GEMM. `build(rows)` trains about
+sqrt(rows) lists by default (a power of two); `build(codes=, scales=, offsets=)` takes an SQ8 store (e.g. a numpy
+memmap) without a float copy, and SQ8 storage keeps its codes as they are. `search(queries, k, nprobe=)` and `knn_graph(k, nprobe=)` run one list-major engine: queries are grouped by
 their nearest list, and each group is scored against every list its members probe in one GEMM. `knn_graph` returns
 every row's k nearest other rows, as UMAP and t-SNE need, with the recall of per-row search at the same `nprobe`.
 On DBpedia 100K x 512 (8 threads) it is 2.5-3x faster than hnswlib at equal recall@15 (0.94: 2.4 s, 0.98: 4.4 s).
-pynndescent is faster still: 1.15-1.7x at 100K and about 7x at 1M
+On MS MARCO 1M x 1024, SQ8 storage holds the rows in 0.99 GB instead of 3.9 GB and joins 8-17% faster than FP32,
+for 0.002-0.004 recall@15. NN-descent (pynndescent, rinnd) is still faster: 1.7x at 100K and 3.6-5x at 1M
 ([#56 study](ann-prototypes/knn_graph/README.md)).
 
 #### Low-RAM recipe (large sets)

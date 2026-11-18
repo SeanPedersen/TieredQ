@@ -1,0 +1,2 @@
+{"name": "ivfflat-sq8-L512-p8", "seed": 0, "seconds": 85.507, "recall@15": 0.86571, "threads": 8, "build_s": 2.592, "lists": 512, "storage_mb": 987.2, "train_s": 0.759, "assign_s": 0.947, "store_s": 0.886, "join_s": 82.894}
+{"name": "ivfflat-L512-p8", "seed": 0, "seconds": 172.124, "recall@15": 0.86795, "threads": 8, "build_s": 2.342, "lists": 512, "storage_mb": 3916.9, "train_s": 0.801, "assign_s": 0.92, "store_s": 0.62, "join_s": 169.735}

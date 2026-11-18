@@ -1,5 +1,6 @@
-"""Unquantized IVF-Flat binding: knn_graph probing every list is the exhaustive self-excluding k-NN graph, it equals
-search() of the rows at any nprobe, scores follow the metric, and invalid input is rejected."""
+"""IVF-Flat binding: knn_graph probing every list is the exhaustive self-excluding k-NN graph, it equals search() of the
+rows at any nprobe, scores follow the metric, SQ8 storage matches FP32 storage of its decoded rows in a quarter of the
+bytes, and invalid input is rejected."""
 import numpy as np
 import pytest
 
@@ -58,6 +59,53 @@ def test_metric_scores(metric):
     if metric == "cosine":
         expected /= np.linalg.norm(data, axis=1) * np.linalg.norm(top, axis=1)
     np.testing.assert_allclose(scores[:, 0], expected, rtol=1e-3, atol=1e-3)
+
+
+def sq8_store(seed=4):
+    """Codes on power-of-two scales and 1/16-grid offsets, so decoding is exact in float32."""
+    codes = np.random.default_rng(seed).integers(-128, 128, size=(ROWS, DIMENSIONS), dtype=np.int8)
+    scales = np.ldexp(1.0, -(4 + np.arange(DIMENSIONS) % 3)).astype(np.float32)
+    offsets = ((np.arange(DIMENSIONS) - 8) / 16).astype(np.float32)
+    return codes, scales, offsets, codes * scales + offsets
+
+
+@pytest.mark.parametrize("metric", ["l2", "ip"])
+def test_sq8_codes_equal_fp32_of_decoded(metric):
+    codes, scales, offsets, decoded = sq8_store()
+    fp32 = built(decoded, metric)
+    sq8 = TieredQIVFFlatIndex(DIMENSIONS, lists=LISTS, metric=metric, storage="sq8")
+    sq8.build(codes=codes, scales=scales, offsets=offsets)
+    assert sq8.storage == "sq8" and fp32.storage == "fp32"
+    np.testing.assert_array_equal(sq8.list_assignment(), fp32.list_assignment())
+    for left, right in zip(sq8.knn_graph(K, nprobe=3), fp32.knn_graph(K, nprobe=3)):
+        np.testing.assert_array_equal(left, right)
+    for left, right in zip(sq8.search(decoded, K, nprobe=3), fp32.search(decoded, K, nprobe=3)):
+        np.testing.assert_array_equal(left, right)
+    assert sq8.storage_bytes * 2 < fp32.storage_bytes
+
+
+@pytest.mark.parametrize("metric", ["l2", "cosine"])
+def test_sq8_from_float_keeps_recall(metric):
+    data = rows(5)
+    index = TieredQIVFFlatIndex(DIMENSIONS, lists=LISTS, metric=metric, storage="sq8")
+    index.build(data)
+    _, ids = index.knn_graph(K, nprobe=LISTS)
+    _, truth = built(data, metric).knn_graph(K, nprobe=LISTS)
+    hits = sum(len(np.intersect1d(a, b)) for a, b in zip(ids, truth))
+    assert hits >= ROWS * K * 0.95
+
+
+def test_sq8_build_validation():
+    codes, scales, offsets, decoded = sq8_store()
+    index = TieredQIVFFlatIndex(DIMENSIONS, lists=LISTS, storage="sq8")
+    with pytest.raises(ValueError):
+        index.build(decoded, codes=codes, scales=scales, offsets=offsets)
+    with pytest.raises(ValueError):
+        index.build(codes=codes, scales=scales)
+    with pytest.raises(ValueError):
+        index.build(codes=codes, scales=scales[:-1], offsets=offsets[:-1])
+    with pytest.raises(ValueError):
+        TieredQIVFFlatIndex(DIMENSIONS, storage="fp16")
 
 
 def test_shape_padding_and_validation():

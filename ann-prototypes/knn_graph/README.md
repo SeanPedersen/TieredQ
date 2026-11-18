@@ -69,6 +69,52 @@ rest is the join. Before the C++ version, the numpy prototype (`methods.ivf_join
 
 The run was stopped after this point. Larger probe settings cost proportionally more and could not catch up.
 
+## SQ8 row storage, list tiling, and Rust k-NN graph libraries (2026-11-18)
+
+`TieredQIVFFlatIndex(storage="sq8")` keeps rows as int8 codes spanning each dimension's [min, max] and decodes each
+probed list into an FP32 tile before the sgemm. The same pass capped the per-sgemm list tile at 512 KiB (128 rows at
+1,024-d) on both storages; before, each probed list was one sgemm. Compared with rinnd 0.4.4 (lmcinnes, Rust
+NN-descent) and manifolds-rs 0.7.0 (NN-descent and IVF via ann-search-rs), each at its defaults and one or two
+higher-recall settings, Rayon pinned to the same 8 threads. Results: `results/hartmut-ivfflat-sq8-20261118/`
+(`*-libs.jsonl` is the final pass, `*-tile.jsonl` the tile A/B, the plain files the untiled first pass).
+
+**Tiling.** At 1M x 1024 and 512 lists / 8 probes the FP32 join fell from 170 s to 101 s (same recall); SQ8 from
+211 s (1,024-row tiles) to 83 s. At 100K the lists are small enough that tiling changes nothing.
+
+**SQ8 vs FP32** (same window, SQ8 directly after its FP32 twin; time is build plus join):
+
+| set, lists / probes | FP32 | SQ8 | rows FP32 / SQ8 |
+|---|---|---|---|
+| DBpedia 100K, 128 / 32 (seeds 0 / 1) | 4.53 / 4.32 s, 0.982 / 0.981 | 4.36 / 4.32 s, 0.975 / 0.975 | 197 / 50 MB |
+| DBpedia 100K, 256 / 16 | 1.91 / 1.98 s, 0.925 / 0.923 | 1.76 / 1.88 s, 0.921 / 0.919 | 197 / 50 MB |
+| DBpedia 100K, 512 / 32 | 2.33 / 2.35 s, 0.940 / 0.940 | 2.30 / 2.28 s, 0.936 / 0.935 | 198 / 51 MB |
+| MS MARCO 1M, 512 / 8 | 103.5 s, 0.868 | **86.0 s**, 0.866 | 3,917 / 987 MB |
+| MS MARCO 1M, 1024 / 16 | 105.3 s, 0.908 | **93.4 s**, 0.905 | 3,920 / 990 MB |
+| MS MARCO 1M, 1024 / 32 | 176.6 s, 0.946 | **162.2 s**, 0.942 | 3,920 / 990 MB |
+
+SQ8 is a quarter of the row bytes and as fast at 100K, 8-17% faster at 1M (a 4 GB FP32 base streams from DRAM; SQ8
+reads a quarter of it), for 0.002-0.007 recall@15. The loss is the full-range min/max codec re-encoding rows; an SQ8
+store built with `build(codes=...)` keeps its codes and loses nothing beyond the store's own quantization.
+
+**Against the Rust libraries** (wall seconds, recall@15):
+
+| recall@15 | TieredQ IVF-Flat | pynndescent | rinnd | manifolds-rs |
+|---|---|---|---|---|
+| 100K ~0.91 | | **1.21 / 1.24 s** (0.906) | **1.22 / 1.22 s** (0.907) | |
+| 100K ~0.92 | SQ8 256/16: 1.76 / 1.88 s (0.921) | | | NN-descent 2.85 s (0.929), IVF 3.1 s (0.928) |
+| 100K ~0.96 | | | | IVF 2x probes 4.2 s (0.964) |
+| 100K ~0.98 | FP32 128/32: 4.4 s (0.982), SQ8 4.3 s (0.975) | **2.5 s** (n30: 0.979) | 2.6 s (n30: 0.979) | IVF 4x probes 6.0 s (0.985) |
+| 1M ~0.92 | SQ8 1024/16: 93.4 s (0.905) | **25.6 s** (0.918) | 27.9-29.8 s (0.921-0.923) | |
+| 1M ~0.95 | SQ8 1024/32: 162 s (0.942) | 30.5 s (t16: 0.940) | | NN-descent 85 s (0.955), IVF 169 s (0.953) |
+| 1M ~0.98 | | | **54.8 s** (n30: 0.979) | |
+
+- rinnd matches pynndescent within about 10% at both sizes (no speedup over it here, 8 threads, AVX-512).
+- TieredQ IVF-Flat beats manifolds-rs IVF 1.35-1.7x at 100K, but at 1M they are level in time and manifolds-rs is
+  about 0.01 ahead in recall (its e-means partition at 1,000 lists against our 10-iteration k-means at 1,024).
+- NN-descent (pynndescent, rinnd) still wins: 1.7x at 100K / 0.98 and 3.6-5x at 1M. IVF-Flat scores every row of
+  the probed lists; NN-descent only scores neighbours of neighbours. PCA-256 + NN-descent + rerank (above) remains
+  the configuration that beats pynndescent.
+
 ## Earlier dead ends (study.py, 100K)
 
 - Quantized TieredQ IVF (2/4-bit) and nested IVF: 8.0-8.5 s at recall 0.94, of which 3.8-5.3 s is build. Sorting

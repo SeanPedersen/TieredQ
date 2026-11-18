@@ -1,0 +1,13 @@
+{"name": "ivfflat-L512-p8", "seed": 0, "seconds": 103.528, "recall@15": 0.86795, "threads": 8, "build_s": 2.236, "lists": 512, "storage_mb": 3916.9, "train_s": 0.732, "assign_s": 0.903, "store_s": 0.601, "join_s": 101.266}
+{"name": "ivfflat-sq8-L512-p8", "seed": 0, "seconds": 85.981, "recall@15": 0.86571, "threads": 8, "build_s": 2.561, "lists": 512, "storage_mb": 987.2, "train_s": 0.743, "assign_s": 0.911, "store_s": 0.907, "join_s": 83.398}
+{"name": "ivfflat-L1024-p16", "seed": 0, "seconds": 105.302, "recall@15": 0.90753, "threads": 8, "build_s": 4.39, "lists": 1024, "storage_mb": 3920.0, "train_s": 2.013, "assign_s": 1.819, "store_s": 0.557, "join_s": 100.886}
+{"name": "ivfflat-sq8-L1024-p16", "seed": 0, "seconds": 93.376, "recall@15": 0.90503, "threads": 8, "build_s": 4.723, "lists": 1024, "storage_mb": 990.3, "train_s": 2.022, "assign_s": 1.811, "store_s": 0.889, "join_s": 88.629}
+{"name": "ivfflat-L1024-p32", "seed": 0, "seconds": 176.609, "recall@15": 0.94564, "threads": 8, "build_s": 4.371, "lists": 1024, "storage_mb": 3920.0, "train_s": 2.002, "assign_s": 1.81, "store_s": 0.559, "join_s": 172.211}
+{"name": "ivfflat-sq8-L1024-p32", "seed": 0, "seconds": 162.172, "recall@15": 0.94241, "threads": 8, "build_s": 4.949, "lists": 1024, "storage_mb": 990.3, "train_s": 2.123, "assign_s": 1.795, "store_s": 1.031, "join_s": 157.202}
+{"name": "pynndescent", "seed": 0, "seconds": 25.637, "recall@15": 0.91803, "threads": 8}
+{"name": "pynndescent-t16-i20-c30", "seed": 0, "seconds": 30.509, "recall@15": 0.93981, "threads": 8}
+{"name": "rinnd", "seed": 0, "seconds": 29.802, "recall@15": 0.92066, "threads": 8}
+{"name": "rinnd-t16-i20-c30", "seed": 0, "seconds": 27.941, "recall@15": 0.92285, "threads": 8}
+{"name": "rinnd-n30", "seed": 0, "seconds": 54.768, "recall@15": 0.97919, "threads": 8}
+{"name": "mfrs-nndescent", "seed": 0, "seconds": 85.054, "recall@15": 0.95546, "threads": 8}
+{"name": "mfrs-ivf", "seed": 0, "seconds": 169.361, "recall@15": 0.95252, "threads": 8}

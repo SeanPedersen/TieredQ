@@ -143,14 +143,36 @@ def pynndescent_graph(X: np.ndarray, k: int, threads: int, *, seed: int = 0, nei
     return _drop_self(ids.astype(np.int64)[:, : k + 1], np.arange(len(X)), k)
 
 
-def tieredq_ivf_flat(X: np.ndarray, k: int, threads: int, *, probes: int, lists: int | None = None, seed: int = 0):
-    """The library's unquantized IVF and its list-major knn_graph (#56)."""
+def rinnd_graph(X: np.ndarray, k: int, threads: int, *, seed: int = 0, neighbors: int | None = None, **options):
+    """rinnd (lmcinnes): Rust NN-descent with RP-tree init, pynndescent's algorithm. Self is in its graph."""
+    from rinnd import RINND
+
+    width = (neighbors or k) + 1
+    index = RINND(X, metric="euclidean", n_neighbors=width, n_jobs=threads, random_state=seed, graph_only=True,
+                  **options)
+    ids, _ = index.neighbor_graph
+    return _drop_self(np.asarray(ids, dtype=np.int64)[:, : k + 1], np.arange(len(X)), k)
+
+
+def manifolds_graph(X: np.ndarray, k: int, threads: int, *, ann: str, seed: int = 0, **params):
+    """manifolds-rs (ann-search-rs backends): its knn_graph excludes self; Rayon threads come from the environment."""
+    import manifolds_rs as mf
+
+    nn_params = mf.NeighbourParams(**params) if params else None
+    ids, _ = mf.knn_graph(X, k=k, metric="euclidean", ann=ann, nn_params=nn_params, seed=seed)
+    return np.asarray(ids, dtype=np.int64)
+
+
+def tieredq_ivf_flat(X: np.ndarray, k: int, threads: int, *, probes: int, lists: int | None = None, seed: int = 0,
+                     storage: str = "fp32"):
+    """The library's flat IVF (FP32 or SQ8 rows) and its list-major knn_graph (#56)."""
     from tieredq import TieredQIVFFlatIndex
 
     started = time.perf_counter()
-    index = TieredQIVFFlatIndex(X.shape[1], lists=lists, metric="l2", seed=seed)
+    index = TieredQIVFFlatIndex(X.shape[1], lists=lists, metric="l2", seed=seed, storage=storage)
     index.build(X)
     PHASES.update(build_s=round(time.perf_counter() - started, 3), lists=index.lists,
+                  storage_mb=round(index.storage_bytes / 2**20, 1),
                   **{key: round(value, 3) for key, value in index.build_stats.items()})
     started = time.perf_counter()
     _, ids = index.knn_graph(k, nprobe=probes)
@@ -407,6 +429,16 @@ def pca_ivf(X: np.ndarray, k: int, threads: int, *, dims: int, candidates: int, 
     projected = _timed("pca_s", lambda: pca(X, dims, seed))
     found = _timed("graph_s", lambda: tieredq_ivf_flat(projected, candidates, threads, lists=lists, probes=probes,
                                                          seed=seed))
+    return _timed("rerank_s", lambda: rerank(X, found, k))
+
+
+def pca_rerank(X: np.ndarray, k: int, threads: int, *, dims: int, candidates: int, builder: str, seed: int = 0,
+               **options):
+    """Any graph builder on a PCA projection for `candidates` ids, reranked exactly in the full dimension."""
+    builders = {"pynndescent": pynndescent_graph, "rinnd": rinnd_graph, "manifolds": manifolds_graph,
+                "tieredq": tieredq_ivf_flat}
+    projected = _timed("pca_s", lambda: pca(X, dims, seed))
+    found = _timed("graph_s", lambda: builders[builder](projected, candidates, threads, seed=seed, **options))
     return _timed("rerank_s", lambda: rerank(X, found, k))
 
 

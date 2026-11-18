@@ -1,0 +1,18 @@
+{"name": "pca256-nnd-c30", "seed": 0, "seconds": 28.91, "recall@15": 0.95277, "threads": 8, "pca_s": 1.914, "graph_s": 24.787, "rerank_s": 2.203}
+{"name": "pca256-rinnd-c30", "seed": 0, "seconds": 29.981, "recall@15": 0.95233, "threads": 8, "pca_s": 1.773, "graph_s": 25.994, "rerank_s": 2.211}
+{"name": "pca256-mfrs-nnd-c30", "seed": 0, "seconds": 42.78, "recall@15": 0.95937, "threads": 8, "pca_s": 1.746, "graph_s": 38.835, "rerank_s": 2.194}
+{"name": "pca256-mfrs-ivf-p31-c30", "seed": 0, "seconds": 54.102, "recall@15": 0.92919, "threads": 8, "pca_s": 1.741, "graph_s": 50.167, "rerank_s": 2.191}
+{"name": "pca256-mfrs-ivf-p62-c30", "seed": 0, "seconds": 84.752, "recall@15": 0.94859, "threads": 8, "pca_s": 1.751, "graph_s": 80.785, "rerank_s": 2.213}
+{"name": "pca256-tq-sq8-L1024-p16-c30", "seed": 0, "seconds": 32.136, "recall@15": 0.8857, "threads": 8, "pca_s": 1.755, "build_s": 1.46, "lists": 1024, "storage_mb": 253.3, "train_s": 0.672, "assign_s": 0.552, "store_s": 0.236, "join_s": 26.678, "graph_s": 28.168, "rerank_s": 2.209}
+{"name": "pca256-tq-sq8-L1024-p32-c30", "seed": 0, "seconds": 51.454, "recall@15": 0.92292, "threads": 8, "pca_s": 1.744, "build_s": 1.664, "lists": 1024, "storage_mb": 253.3, "train_s": 0.625, "assign_s": 0.539, "store_s": 0.5, "join_s": 45.799, "graph_s": 47.493, "rerank_s": 2.21}
+{"name": "pca256-tq-L1024-p16-c30", "seed": 0, "seconds": 35.224, "recall@15": 0.88602, "threads": 8, "pca_s": 1.775, "build_s": 1.374, "lists": 1024, "storage_mb": 985.7, "train_s": 0.672, "assign_s": 0.545, "store_s": 0.157, "join_s": 29.834, "graph_s": 31.24, "rerank_s": 2.206}
+{"name": "pca256-nnd-c45", "seed": 0, "seconds": 47.5, "recall@15": 0.98086, "threads": 8, "pca_s": 1.743, "graph_s": 42.467, "rerank_s": 3.283}
+{"name": "pca256-rinnd-c45", "seed": 0, "seconds": 48.857, "recall@15": 0.98117, "threads": 8, "pca_s": 1.751, "graph_s": 43.845, "rerank_s": 3.257}
+{"name": "pca256-nnd-c30", "seed": 1, "seconds": 29.147, "recall@15": 0.95317, "threads": 8, "pca_s": 1.737, "graph_s": 25.209, "rerank_s": 2.195}
+{"name": "pca256-rinnd-c30", "seed": 1, "seconds": 29.888, "recall@15": 0.95321, "threads": 8, "pca_s": 1.738, "graph_s": 25.926, "rerank_s": 2.218}
+{"name": "pca256-nnd-c45", "seed": 1, "seconds": 48.249, "recall@15": 0.98119, "threads": 8, "pca_s": 1.748, "graph_s": 43.24, "rerank_s": 3.257}
+{"name": "pca256-rinnd-c45", "seed": 1, "seconds": 49.277, "recall@15": 0.98135, "threads": 8, "pca_s": 1.784, "graph_s": 44.23, "rerank_s": 3.258}
+{"name": "pca128-rinnd-c30", "seed": 0, "seconds": 23.703, "recall@15": 0.82229, "threads": 8, "pca_s": 1.597, "graph_s": 19.901, "rerank_s": 2.202}
+{"name": "pca128-rinnd-c45", "seed": 0, "seconds": 38.837, "recall@15": 0.88514, "threads": 8, "pca_s": 1.603, "graph_s": 33.963, "rerank_s": 3.266}
+{"name": "pca128-tq-sq8-L1024-p16-c30", "seed": 0, "seconds": 21.857, "recall@15": 0.7745, "threads": 8, "pca_s": 1.619, "build_s": 0.837, "lists": 1024, "storage_mb": 130.5, "train_s": 0.383, "assign_s": 0.331, "store_s": 0.123, "join_s": 17.163, "graph_s": 18.029, "rerank_s": 2.207}
+{"name": "pca128-tq-sq8-L1024-p32-c30", "seed": 0, "seconds": 33.562, "recall@15": 0.80174, "threads": 8, "pca_s": 1.592, "build_s": 0.849, "lists": 1024, "storage_mb": 130.5, "train_s": 0.392, "assign_s": 0.333, "store_s": 0.123, "join_s": 28.882, "graph_s": 29.76, "rerank_s": 2.207}

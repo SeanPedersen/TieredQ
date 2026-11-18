@@ -1,0 +1,4 @@
+{"name": "ivfflat-sq8-L128-p32", "seed": 0, "seconds": 4.355, "recall@15": 0.97541, "threads": 8, "build_s": 0.218, "lists": 128, "storage_mb": 50.0, "train_s": 0.15, "assign_s": 0.017, "store_s": 0.05, "join_s": 4.127}
+{"name": "ivfflat-L128-p32", "seed": 0, "seconds": 4.439, "recall@15": 0.98227, "threads": 8, "build_s": 0.208, "lists": 128, "storage_mb": 196.5, "train_s": 0.153, "assign_s": 0.016, "store_s": 0.039, "join_s": 4.224}
+{"name": "ivfflat-sq8-L128-p32", "seed": 1, "seconds": 4.226, "recall@15": 0.97469, "threads": 8, "build_s": 0.152, "lists": 128, "storage_mb": 50.0, "train_s": 0.091, "assign_s": 0.016, "store_s": 0.045, "join_s": 4.069}
+{"name": "ivfflat-L128-p32", "seed": 1, "seconds": 4.255, "recall@15": 0.98145, "threads": 8, "build_s": 0.137, "lists": 128, "storage_mb": 196.5, "train_s": 0.091, "assign_s": 0.016, "store_s": 0.03, "join_s": 4.112}

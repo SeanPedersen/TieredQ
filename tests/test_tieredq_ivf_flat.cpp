@@ -1,6 +1,8 @@
-// Unquantized IVF (#56): probing every list returns the exhaustive ranking for each metric, knn_graph equals a batch
-// search of the stored rows with each row's own id removed (so its recall is per-query IVF's), fewer probes lose
-// recall monotonically, short results are padded, and invalid input is rejected.
+// Flat IVF (#56): probing every list returns the exhaustive ranking for each metric, knn_graph equals a batch search
+// of the stored rows with each row's own id removed (so its recall is per-query IVF's), fewer probes lose recall
+// monotonically, short results are padded, and invalid input is rejected. SQ8 storage built from codes whose decode is
+// exact returns exactly what FP32 storage of the decoded rows returns; built from FP32 rows it keeps near-exact recall
+// in about a quarter of the bytes.
 #include "tieredq/tieredq_ivf_flat.h"
 #include <algorithm>
 #include <cmath>
@@ -97,6 +99,83 @@ void probes_test() {
   require(previous==rows*k,"probing every list differs from itself");
 }
 
+// Codes with power-of-two scales and offsets on a 1/16 grid, so decoding is exact in FP32.
+struct SQ8Store { std::vector<int8_t> codes; std::vector<float> scales,offsets,decoded; };
+SQ8Store sq8_store(uint32_t seed) {
+  std::mt19937 random(seed); std::uniform_int_distribution<int> level(-128,127);
+  SQ8Store store{std::vector<int8_t>(rows*dimensions),std::vector<float>(dimensions),std::vector<float>(dimensions),
+                 std::vector<float>(rows*dimensions)};
+  for (uint32_t j=0;j<dimensions;++j) { store.scales[j]=std::ldexp(1.0f,-int(4+j%3)); store.offsets[j]=float(int(j)-12)/16; }
+  for (size_t i=0;i<rows*dimensions;++i) {
+    store.codes[i]=int8_t(level(random));
+    store.decoded[i]=float(store.codes[i])*store.scales[i%dimensions]+store.offsets[i%dimensions];
+  }
+  return store;
+}
+
+void sq8_codes_equal_fp32_test(TieredQMetric metric) {
+  const auto store=sq8_store(11);
+  TieredQIVFFlatConfig config; config.lists=lists; config.metric=metric;
+  TieredQIVFFlatIndex fp32(dimensions,config);
+  fp32.build(store.decoded.data(),rows);
+  config.storage=TieredQIVFFlatStorage::sq8;
+  TieredQIVFFlatIndex sq8(dimensions,config);
+  sq8.build(store.codes.data(),rows,store.scales.data(),store.offsets.data());
+  require(sq8.list_assignment()==fp32.list_assignment(),"SQ8 build partitions differently");
+  constexpr size_t nprobe=3;
+  std::vector<float> expected_scores(rows*k),scores(rows*k);
+  std::vector<uint32_t> expected(rows*k),ids(rows*k);
+  fp32.knn_graph(k,nprobe,expected_scores.data(),expected.data());
+  sq8.knn_graph(k,nprobe,scores.data(),ids.data());
+  require(ids==expected && scores==expected_scores,"SQ8 knn_graph differs from FP32 of the decoded rows");
+  fp32.search(store.decoded.data(),rows,k,nprobe,expected_scores.data(),expected.data());
+  sq8.search(store.decoded.data(),rows,k,nprobe,scores.data(),ids.data());
+  require(ids==expected && scores==expected_scores,"SQ8 search differs from FP32 of the decoded rows");
+  require(sq8.storage_bytes()*2<fp32.storage_bytes(),"SQ8 storage is not smaller");
+}
+
+// Wide rows split each list into several decoded SQ8 tiles; the ranking still matches FP32 of the decoded rows.
+void sq8_tiled_lists_test() {
+  constexpr uint32_t wide=4096,wide_lists=2; constexpr size_t wide_rows=300;
+  std::mt19937 random(17); std::uniform_int_distribution<int> level(-128,127);
+  std::vector<int8_t> codes(wide_rows*wide); std::vector<float> scales(wide,1.0f/16),offsets(wide,0.0f),decoded(codes.size());
+  for (size_t i=0;i<codes.size();++i) { codes[i]=int8_t(level(random)); decoded[i]=float(codes[i])/16; }
+  TieredQIVFFlatConfig config; config.lists=wide_lists;
+  TieredQIVFFlatIndex fp32(wide,config);
+  fp32.build(decoded.data(),wide_rows);
+  config.storage=TieredQIVFFlatStorage::sq8;
+  TieredQIVFFlatIndex sq8(wide,config);
+  sq8.build(codes.data(),wide_rows,scales.data(),offsets.data());
+  std::vector<float> expected_scores(wide_rows*k),scores(wide_rows*k);
+  std::vector<uint32_t> expected(wide_rows*k),ids(wide_rows*k);
+  fp32.knn_graph(k,1,expected_scores.data(),expected.data());
+  sq8.knn_graph(k,1,scores.data(),ids.data());
+  size_t matches=0;
+  for (size_t r=0;r<wide_rows;++r)
+    for (size_t j=0;j<k;++j)
+      matches+=std::count(expected.begin()+ptrdiff_t(r*k),expected.begin()+ptrdiff_t((r+1)*k),ids[r*k+j]);
+  require(matches>=wide_rows*k-wide_rows/100,"tiled SQ8 lists differ from FP32");
+  for (size_t i=0;i<scores.size();++i)
+    require(std::fabs(scores[i]-expected_scores[i])<=1e-4f*(1+std::fabs(expected_scores[i])),"tiled SQ8 scores differ");
+}
+
+void sq8_from_float_test(TieredQMetric metric) {
+  const auto data=gaussian_rows(rows,13);
+  TieredQIVFFlatConfig config; config.lists=lists; config.metric=metric; config.storage=TieredQIVFFlatStorage::sq8;
+  TieredQIVFFlatIndex index(dimensions,config);
+  index.build(data.data(),rows);
+  std::vector<float> scores(rows*k); std::vector<uint32_t> ids(rows*k);
+  index.knn_graph(k,lists,scores.data(),ids.data());
+  size_t matches=0;
+  for (size_t r=0;r<rows;++r) {
+    const auto truth=exhaustive(metric,data,data.data()+r*dimensions,r);
+    for (size_t j=0;j<k;++j) matches+=std::count(truth.begin(),truth.end(),ids[r*k+j]);
+    const double expected=score(metric,data.data()+r*dimensions,data.data()+size_t(ids[r*k])*dimensions);
+    require(std::fabs(expected-scores[r*k])<=0.05*(1+std::fabs(expected)),"SQ8 score is far from the metric's");
+  }
+  require(matches>=rows*k*95/100,"SQ8 full-probe recall below 0.95");
+}
+
 void padding_and_rejects_test() {
   const auto data=gaussian_rows(8,9);
   TieredQIVFFlatConfig config; config.lists=2;
@@ -115,6 +194,8 @@ void padding_and_rejects_test() {
   require(rejects([] { TieredQIVFFlatIndex(0); }),"zero dimensions accepted");
   require(rejects([] { TieredQIVFFlatConfig bad; bad.iterations=0; TieredQIVFFlatIndex(dimensions,bad); }),"zero iterations accepted");
   require(rejects([&] { TieredQIVFFlatIndex(dimensions).search(data.data(),1,k,1,scores.data(),ids.data()); }),"empty index searched");
+  const std::vector<int8_t> codes(8*dimensions);
+  require(rejects([&] { TieredQIVFFlatIndex(dimensions,config).build(codes.data(),8,nullptr,nullptr); }),"SQ8 build without scales");
   require(TieredQIVFFlatIndex::automatic_lists(100000)==256 && TieredQIVFFlatIndex::automatic_lists(1000000)==1024,
           "automatic lists");
 }
@@ -124,6 +205,9 @@ void tieredq_ivf_flat_tests() {
   for (auto metric:{TieredQMetric::l2,TieredQMetric::inner_product,TieredQMetric::cosine}) exhaustive_test(metric);
   graph_equals_search_test();
   probes_test();
+  for (auto metric:{TieredQMetric::l2,TieredQMetric::inner_product}) sq8_codes_equal_fp32_test(metric);
+  for (auto metric:{TieredQMetric::l2,TieredQMetric::inner_product,TieredQMetric::cosine}) sq8_from_float_test(metric);
+  sq8_tiled_lists_test();
   padding_and_rejects_test();
-  std::cout<<"PASS unquantized IVF and knn_graph\n";
+  std::cout<<"PASS flat IVF (FP32 and SQ8) and knn_graph\n";
 }

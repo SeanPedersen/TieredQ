@@ -38,6 +38,8 @@ IVF_FLAT_GRID = {
     "100k": {128: (4, 8, 16, 32), 256: (8, 16, 32, 64), 512: (16, 32, 64, 128)},
     "1m": {512: (8, 16, 32, 64), 1024: (16, 32, 64, 128), 2048: (32, 64, 128, 256)},
 }
+# SQ8 row storage against FP32 at points of the FP32 grid: (lists, probes).
+IVF_FLAT_SQ8 = {"100k": ((128, 32), (256, 16), (512, 32)), "1m": ((512, 8), (1024, 16), (1024, 32))}
 # Combinations aimed at pynndescent (#56 follow-up), per suite: name -> (builder, options).
 NOVEL = {
     "100k": {
@@ -53,7 +55,31 @@ NOVEL = {
            for p in (8, 16)},
         "ivfinit-L1024-p1-nnd": ("ivf_init_nndescent", dict(lists=1024, probes=1)),
         **{f"pca{d}-nnd-c{c}": ("pca_nndescent", dict(dims=d, candidates=c)) for d, c in ((192, 30), (192, 40), (256, 40))},
+        # The same PCA-256 + exact rerank around each library's builder (pca256-nnd-* is pynndescent's).
+        **{f"pca{d}-rinnd-c{c}": ("pca_rerank", dict(dims=d, candidates=c, builder="rinnd"))
+           for d in (128, 256) for c in (30, 45)},
+        "pca256-mfrs-nnd-c30": ("pca_rerank", dict(dims=256, candidates=30, builder="manifolds", ann="nndescent")),
+        **{f"pca256-mfrs-ivf-p{p}-c30": ("pca_rerank", dict(dims=256, candidates=30, builder="manifolds", ann="ivf",
+                                                             n_list=1000, n_probes=p)) for p in (31, 62)},
+        **{f"pca256-tq{'-sq8' if q == 'sq8' else ''}-L1024-p{p}-c30": (
+            "pca_rerank", dict(dims=256, candidates=30, builder="tieredq", lists=1024, probes=p, storage=q))
+           for q, p in (("sq8", 16), ("sq8", 32), ("fp32", 16))},
+        **{f"pca128-tq-sq8-L1024-p{p}-c30": (
+            "pca_rerank", dict(dims=128, candidates=30, builder="tieredq", lists=1024, probes=p, storage="sq8"))
+           for p in (16, 32)},
     },
+}
+# Rust k-NN graph builders: rinnd (NN-descent) and manifolds-rs (its NN-descent and IVF), name -> options.
+RINND = {
+    "rinnd": {},
+    "rinnd-n30": dict(neighbors=30),
+    "rinnd-t16-i20-c30": dict(n_trees=16, n_iters=20, max_candidates=30),
+}
+MANIFOLDS = {
+    "mfrs-nndescent": dict(ann="nndescent"),
+    "mfrs-ivf": dict(ann="ivf"),
+    "mfrs-ivf-p2x": None,  # twice the default probes, sized per suite in configurations()
+    "mfrs-ivf-p4x": None,
 }
 HNSW = {"hnsw-M8-efc100-ef64": dict(m=8, ef_construction=100, ef=64),
         "hnsw-M16-efc200-ef32": dict(m=16, ef_construction=200, ef=32)}
@@ -64,7 +90,19 @@ def configurations(suite: str) -> dict:
     for lists, probe_grid in IVF_FLAT_GRID[suite].items():
         for probes in probe_grid:
             configs[f"ivfflat-L{lists}-p{probes}"] = partial(methods.tieredq_ivf_flat, lists=lists, probes=probes)
+    for lists, probes in IVF_FLAT_SQ8[suite]:
+        configs[f"ivfflat-sq8-L{lists}-p{probes}"] = partial(methods.tieredq_ivf_flat, lists=lists, probes=probes,
+                                                             storage="sq8")
     configs.update({name: partial(methods.hnswlib_graph, **options) for name, options in HNSW.items()})
+    configs.update({name: partial(methods.rinnd_graph, **options) for name, options in RINND.items()})
+    rows = {"100k": 100_000, "1m": 1_000_000}[suite]
+    lists = int(np.sqrt(rows))  # manifolds-rs defaults: sqrt(n) lists, sqrt(lists) probes
+    default_probes = int(np.sqrt(lists))
+    for name, options in MANIFOLDS.items():
+        if options is None:
+            factor = int(name.rsplit("-p", 1)[1].removesuffix("x"))
+            options = dict(ann="ivf", n_list=lists, n_probes=default_probes * factor)
+        configs[name] = partial(methods.manifolds_graph, **options)
     configs.update({name: partial(getattr(methods, builder), **options)
                     for name, (builder, options) in NOVEL[suite].items()})
     return configs
@@ -87,7 +125,7 @@ def truth(X: np.ndarray, out: Path, k: int, threads: int, sample: int):
 def run_one(args, name: str, seed: int) -> None:
     X = np.ascontiguousarray(np.load(args.data, mmap_mode="r"), dtype=np.float32)
     builder = configurations(args.suite)[name]
-    if "nnd" in name:  # numba JIT: the same builder on a subset, so the timed call compiles nothing
+    if "nnd" in name or name.startswith("pca"):  # numba JIT: the same builder on a subset, so the timed call compiles nothing
         builder(np.ascontiguousarray(X[:NOVEL_WARMUP_ROWS]), args.k, args.threads, seed=seed)
     elif name.startswith("pynndescent"):
         builder(X[:WARMUP_ROWS], args.k, args.threads, seed=seed)
@@ -130,9 +168,14 @@ def main() -> None:
     if not (args.out / "truth.npz").exists():
         truth(np.ascontiguousarray(np.load(args.data), dtype=np.float32), args.out, args.k, TRUTH_THREADS,
               args.truth_rows)
-    wanted = [n for n in configurations(args.suite) if not args.only or n in args.only.split(",")]
+    configs = configurations(args.suite)
+    wanted = args.only.split(",") if args.only else list(configs)  # --only keeps its order (A/B pairs back to back)
+    unknown = set(wanted) - set(configs)
+    if unknown:
+        parser.error(f"unknown configurations: {sorted(unknown)}")
     done = finished(args.out)
-    env = dict(os.environ, OMP_NUM_THREADS=str(args.threads), NUMBA_NUM_THREADS=str(args.threads))
+    env = dict(os.environ, OMP_NUM_THREADS=str(args.threads), NUMBA_NUM_THREADS=str(args.threads),
+               RAYON_NUM_THREADS=str(args.threads))
     for seed in map(int, args.seeds.split(",")):
         for name in wanted:
             if (name, seed) in done:

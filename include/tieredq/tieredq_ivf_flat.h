@@ -1,4 +1,4 @@
-// Unquantized inverted-file index (#56): FP32 rows grouped by k-means list, no codec to train. Its batch engine is
+// Flat inverted-file index (#56): rows grouped by k-means list, scored exactly (no codes ranked approximately). Its batch engine is
 // list-major: queries are grouped by their nearest list, and each group is scored against every list its members
 // probe in one sgemm, instead of one matrix-vector scan per query and list. Recall equals per-query IVF at the same
 // nprobe; the arithmetic runs at GEMM throughput.
@@ -8,6 +8,11 @@
 // 4.4 s, against hnswlib's 0.942 in 5.9 s and 0.980 in 12.8 s. NN-descent (pynndescent) is still faster: 0.946 in
 // 2.0 s and 0.979 in 2.5 s at 100K, and about 7x faster at 1M, as IVF scores every row of the probed lists
 // (ann-prototypes/knn_graph/README.md).
+//
+// Lists are scored in L2-sized tiles of rows (1.7x faster joins than whole-list sgemms at 1M x 1024). Storage sq8
+// keeps the rows as int8 codes with per-dimension scales and offsets (a quarter of FP32's bytes) and decodes each tile
+// into FP32 before its sgemm, so the arithmetic stays FP32 and queries stay FP32 (asymmetric, like Faiss IVF-SQ8). On
+// MS MARCO 1M x 1024 it joined 8-17% faster than FP32 (a quarter of the bytes to stream) for 0.002-0.004 recall@15.
 #pragma once
 #include "tieredq/tieredq.h"
 #include <cstddef>
@@ -16,9 +21,13 @@
 #include <vector>
 
 namespace tq {
+// Row storage: FP32, or SQ8 codes spanning each dimension's [min, max] (or the codes given to build).
+enum class TieredQIVFFlatStorage { fp32, sq8 };
+
 struct TieredQIVFFlatConfig {
   uint32_t lists = 0;  // 0: automatic_lists(rows) at build
   TieredQMetric metric = TieredQMetric::l2;
+  TieredQIVFFlatStorage storage = TieredQIVFFlatStorage::fp32;
   // k-means on a seeded sample of sample_rows_per_list rows per list, exact (BLAS) assignment.
   uint32_t iterations = 10;
   uint32_t sample_rows_per_list = 64;
@@ -40,6 +49,10 @@ class TieredQIVFFlatIndex {
 
   // Trains the lists on rows (count x dimensions) and stores them; replaces earlier content. Ids are row numbers.
   void build(const float* rows, size_t count);
+  // The same from an SQ8 store (count x dimensions int8 codes, row = codes * scales + offsets, dimensions values each),
+  // decoded a chunk at a time, so no FP32 copy of the base is made. sq8 storage keeps the codes as given (cosine
+  // re-encodes the normalized rows); fp32 storage keeps the decoded rows.
+  void build(const int8_t* codes, size_t count, const float* scales, const float* offsets);
 
   // Results are rows x k, best first. Scores: inner product, cosine similarity, or -|q - x|^2; larger is better.
   // Slots past the probed rows hold id UINT32_MAX and score -inf. Work runs on OpenMP workers.
@@ -53,7 +66,7 @@ class TieredQIVFFlatIndex {
   const TieredQIVFFlatConfig& config() const;
   const TieredQIVFFlatBuildStats& build_stats() const;
   std::vector<uint32_t> list_assignment() const;  // each row's list, in row order
-  size_t storage_bytes() const;                   // rows, per-row norms and ids, centroids
+  size_t storage_bytes() const;                   // rows (or codes and their scales), per-row norms and ids, centroids
 
   // About sqrt(rows) lists, a power of two (256 at 100K rows, 1,024 at 1M).
   static uint32_t automatic_lists(size_t rows);

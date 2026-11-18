@@ -1,14 +1,17 @@
-// Unquantized IVF (#56): k-means lists over FP32 rows and the list-major batch engine of tieredq_ivf_flat.h.
+// Flat IVF (#56): k-means lists over FP32 or SQ8 rows and the list-major batch engine of tieredq_ivf_flat.h.
 //
 // A batch runs in three steps. route() ranks every query's nprobe nearest lists (one sgemm per query chunk against
 // the centroids). Queries are then grouped by their nearest list, so a group's members probe mostly the same lists.
 // Each group is one task: for every list any member probes, the members probing it are gathered and scored against
 // the list's rows in one sgemm, and each member keeps its own top k. A task owns its members' results, so workers
-// never share state, and each list's rows are read once per group instead of once per query.
+// never share state, and each list's rows are read once per group instead of once per query. Lists are scored in
+// L2-sized tiles of rows; SQ8 rows are decoded into such an FP32 tile at that read, a cost of about one in (members
+// probing the list) of the sgemm's.
 #include "tieredq/tieredq_ivf_flat.h"
 #include "tieredq_io.h"
 #include "tieredq_ivf_assign.h"
 #include "tieredq_ivf_coarse.h"
+#include "tieredq_sq8.h"
 #include "training_rng.h"
 #include <algorithm>
 #include <chrono>
@@ -21,6 +24,8 @@ namespace tq {
 using tieredq_detail::BlasAssigner;
 using tieredq_detail::BlasThreads;
 using tieredq_detail::CoarseQuantizer;
+using tieredq_detail::SQ8Codec;
+using tieredq_detail::SQ8Range;
 using tieredq_detail::TrainingLinalg;
 using tieredq_detail::bad;
 using tieredq_detail::product;
@@ -29,6 +34,10 @@ namespace {
 constexpr uint64_t sample_salt=0x9e3779b97f4a7c15ULL;
 constexpr size_t group_rows=256;             // queries per task: bounds the gathered block and the per-task results
 constexpr size_t route_budget_floats=size_t(1)<<23;  // closeness buffer of one routing chunk (32 MiB)
+constexpr size_t build_chunk_rows=size_t(1)<<14;     // rows decoded or normalized at a time for assignment
+// FP32 floats of one list tile per sgemm (512 KiB): stays in L2 across the sgemm (and the SQ8 decode before it). On
+// MS MARCO 1M x 1024 at 512 lists, SQ8 joins with such tiles took 83 s against 170 s for whole-list FP32 sgemms.
+constexpr size_t list_tile_floats=size_t(1)<<17;
 constexpr uint32_t missing_id=std::numeric_limits<uint32_t>::max();
 constexpr float missing_score=-std::numeric_limits<float>::infinity();
 
@@ -50,6 +59,37 @@ void dots(const float* a,size_t m,const float* b,size_t n,size_t d,float* out) {
   TrainingLinalg::get().gemm(&transposed,&normal,&mi,&ni,&di,&one,a,&di,b,&di,&zero,out,&mi);
 }
 
+// Rows read as FP32: borrowed FP32 rows, or SQ8 codes decoded on read; build inputs may also normalize on read.
+struct RowReader {
+  size_t d=0;
+  const float* rows=nullptr;
+  const int8_t* codes=nullptr;
+  const SQ8Codec* codec=nullptr;
+  bool unit_rows=false;
+
+  bool borrows() const { return rows && !unit_rows; }
+  // Rows [first, first + count): borrowed when possible, else written to buffer (count x d).
+  const float* read(size_t first,size_t count,float* buffer) const {
+    if (borrows()) return rows+first*d;
+    if (rows) std::copy_n(rows+first*d,count*d,buffer);
+    else codec->decode(codes+first*d,count,buffer);
+    if (unit_rows) for (size_t r=0;r<count;++r) normalize(buffer+r*d,d);
+    return buffer;
+  }
+  void copy(size_t row,float* out) const {
+    const float* source=read(row,1,out);
+    if (source!=out) std::copy_n(source,d,out);
+  }
+  // read() split over the OpenMP workers.
+  const float* read_parallel(size_t first,size_t count,std::vector<float>& buffer) const {
+    if (borrows()) return rows+first*d;
+    buffer.resize(product(count,d));
+#pragma omp parallel for schedule(static)
+    for (size_t r=0;r<count;++r) read(first+r,1,buffer.data()+r*d);
+    return buffer.data();
+  }
+};
+
 // The k best (closeness, id) of one query, best first.
 struct TopK {
   float* scores; uint32_t* ids; size_t k;
@@ -65,7 +105,7 @@ struct TopK {
 struct Workspace {
   std::vector<uint64_t> probes;  // (list << 32) | member, sorted by list
   std::vector<uint32_t> members;
-  std::vector<float> block,closeness,best_scores;
+  std::vector<float> block,list_rows,closeness,best_scores,query;
   std::vector<uint32_t> best_ids;
 };
 } // namespace
@@ -87,25 +127,130 @@ struct TieredQIVFFlatIndex::State {
   TieredQIVFFlatBuildStats stats;
   std::shared_ptr<const CoarseQuantizer> coarse;
   std::vector<float> centroids;     // the coarse quantizer's rounded centroids, row-major, for sgemm routing
-  std::vector<float> vectors;       // rows grouped by list (normalized for cosine)
-  std::vector<float> half_norms;    // |x|^2 / 2 per stored row (l2), else 0: closeness = q.x - half_norm
+  std::vector<float> vectors;       // fp32 storage: rows grouped by list (normalized for cosine)
+  std::vector<int8_t> codes;        // sq8 storage: the same rows as codes
+  SQ8Codec codec;
+  std::vector<float> half_norms;    // |x|^2 / 2 per stored (decoded) row (l2), else 0: closeness = q.x - half_norm
   std::vector<uint32_t> ids;        // row number per stored row
   std::vector<size_t> offsets;      // list l holds stored rows [offsets[l], offsets[l + 1])
 
   size_t size() const { return ids.size(); }
   size_t lists() const { return coarse ? coarse->lists : 0; }
   bool l2() const { return config.metric==TieredQMetric::l2; }
+  bool sq8() const { return config.storage==TieredQIVFFlatStorage::sq8; }
+  RowReader stored() const {
+    if (sq8()) return {dimensions,nullptr,codes.data(),&codec};
+    return {dimensions,vectors.data()};
+  }
+
+  // input: count rows in row order, normalized for cosine. given: input's codec when its codes can be kept as-is.
+  void build(const RowReader& input,size_t count,const SQ8Codec* given) {
+    const size_t d=dimensions;
+    if (count>size_t(missing_id)) bad("IVF-Flat holds at most 2^32 - 1 rows");
+    const size_t list_count=config.lists ? config.lists : automatic_lists(count);
+    if (count<list_count) bad("IVF-Flat training needs at least one row per list");
+
+    auto started=std::chrono::steady_clock::now();
+    const size_t sample_rows=std::min(count,product(list_count,config.sample_rows_per_list));
+    tieredq_detail::TrainingRng rng(config.seed^sample_salt);
+    auto picked=rng.choice(count,sample_rows);
+    std::sort(picked.begin(),picked.end());
+    std::vector<float> sample(product(sample_rows,d));
+#pragma omp parallel for schedule(static)
+    for (size_t i=0;i<sample_rows;++i) input.copy(picked[i],sample.data()+i*d);
+    const TieredQCoarseTraining training{config.iterations,0,TieredQCoarseTraining{}.assignment_probes,
+                                         config.sample_rows_per_list};
+    coarse=std::make_shared<const CoarseQuantizer>(
+        tieredq_detail::train_coarse(sample.data(),sample_rows,d,list_count,config.seed,training));
+    centroids=coarse->centroids();
+    sample=std::vector<float>();
+    stats.train_s=seconds_since(started);
+
+    started=std::chrono::steady_clock::now();
+    std::vector<uint32_t> labels(count);
+    {
+      const BlasAssigner assigner(*coarse);
+      const size_t chunk=input.borrows() ? count : build_chunk_rows;
+      std::vector<float> buffer;
+      for (size_t first=0;first<count;first+=chunk) {
+        const size_t n=std::min(chunk,count-first);
+        assigner.assign(input.read_parallel(first,n,buffer),n,labels.data()+first);
+      }
+    }
+    stats.assign_s=seconds_since(started);
+
+    started=std::chrono::steady_clock::now();
+    offsets.assign(list_count+1,0);
+    for (const uint32_t l:labels) ++offsets[l+1];
+    for (size_t l=0;l<list_count;++l) offsets[l+1]+=offsets[l];
+    ids.resize(count);
+    {
+      auto cursor=offsets;
+      for (size_t r=0;r<count;++r) ids[cursor[labels[r]]++]=uint32_t(r);
+    }
+    half_norms.resize(count);
+    if (sq8()) store_codes(input,given); else store_vectors(input);
+    stats.store_s=seconds_since(started);
+  }
+
+  void store_vectors(const RowReader& input) {
+    const size_t d=dimensions,count=size();
+    codes=std::vector<int8_t>(); codec={};
+    vectors.resize(product(count,d));
+#pragma omp parallel for schedule(static)
+    for (size_t pos=0;pos<count;++pos) {
+      float* row=vectors.data()+pos*d;
+      input.copy(ids[pos],row);
+      half_norms[pos]=l2() ? dot(row,row,d)/2 : 0.0f;
+    }
+  }
+
+  void store_codes(const RowReader& input,const SQ8Codec* given) {
+    const size_t d=dimensions,count=size();
+    vectors=std::vector<float>();
+    codec=given ? *given : trained_codec(input,count);
+    codes.resize(product(count,d));
+#pragma omp parallel
+    {
+      std::vector<float> row(d);
+#pragma omp for schedule(static)
+      for (size_t pos=0;pos<count;++pos) {
+        int8_t* code=codes.data()+pos*d;
+        if (given) std::copy_n(input.codes+size_t(ids[pos])*d,d,code);
+        else { input.copy(ids[pos],row.data()); codec.encode(row.data(),code); }
+        if (!l2()) continue;
+        codec.decode(code,1,row.data());
+        half_norms[pos]=dot(row.data(),row.data(),d)/2;
+      }
+    }
+    if (!l2()) std::fill(half_norms.begin(),half_norms.end(),0.0f);
+  }
+
+  SQ8Codec trained_codec(const RowReader& input,size_t count) const {
+    const size_t d=dimensions;
+    SQ8Range range(d);
+#pragma omp parallel
+    {
+      SQ8Range local(d);
+      std::vector<float> row(d);
+#pragma omp for schedule(static) nowait
+      for (size_t r=0;r<count;++r) { input.copy(r,row.data()); local.add(row.data()); }
+#pragma omp critical
+      range.merge(local);
+    }
+    return SQ8Codec::spanning(range.low,range.high);
+  }
 
   // probes[q * nprobe + p]: query q's p-th nearest list (by q.c - |c|^2/2).
-  std::vector<uint32_t> route(const float* queries,size_t count,size_t nprobe) const {
+  std::vector<uint32_t> route(const RowReader& queries,size_t count,size_t nprobe) const {
     const size_t L=lists(),d=dimensions;
     const size_t chunk=std::max<size_t>(1,std::min(count,route_budget_floats/L));
     std::vector<uint32_t> probes(product(count,nprobe));
-    std::vector<float> closeness(product(chunk,L));
+    std::vector<float> closeness(product(chunk,L)),buffer;
     const BlasThreads threads;
     for (size_t first=0;first<count;first+=chunk) {
       const size_t n=std::min(chunk,count-first);
-      dots(centroids.data(),L,queries+first*d,n,d,closeness.data());
+      dots(centroids.data(),L,queries.read_parallel(first,n,buffer),n,d,closeness.data());
 #pragma omp parallel
       {
         std::vector<uint32_t> order(L);
@@ -125,7 +270,7 @@ struct TieredQIVFFlatIndex::State {
 
   // Batch engine. query_ids (optional): the stored row each query is, excluded from its results and naming its
   // output row; otherwise query q writes output row q.
-  void join(const float* queries,size_t count,size_t k,size_t nprobe,const uint32_t* query_ids,float* scores,
+  void join(const RowReader& queries,size_t count,size_t k,size_t nprobe,const uint32_t* query_ids,float* scores,
             uint32_t* out_ids) const {
     const size_t d=dimensions,L=lists();
     if (!count || !k) return;
@@ -149,11 +294,14 @@ struct TieredQIVFFlatIndex::State {
         tasks.emplace_back(begin,std::min(by_list[l+1],begin+group_rows));
     std::stable_sort(tasks.begin(),tasks.end(),[](const auto& a,const auto& b) { return a.second-a.first>b.second-b.first; });
 
+    const RowReader rows=stored();
+    const size_t list_tile_rows=std::max<size_t>(1,list_tile_floats/d);
     const int threads=omp_get_max_threads();
     const BlasThreads single(1);  // each worker's sgemm stays on its own thread
 #pragma omp parallel num_threads(threads)
     {
       Workspace work;
+      work.query.resize(d);
 #pragma omp for schedule(dynamic,1)
       for (size_t t=0;t<tasks.size();++t) {
         const auto [begin,end]=tasks[t];
@@ -171,25 +319,30 @@ struct TieredQIVFFlatIndex::State {
           work.members.clear();
           for (;run<work.probes.size() && uint32_t(work.probes[run]>>32)==list;++run)
             work.members.push_back(uint32_t(work.probes[run]));
-          const size_t first=offsets[list],m=offsets[list+1]-first,s=work.members.size();
-          if (!m) continue;
+          const size_t list_first=offsets[list],list_rows=offsets[list+1]-list_first,s=work.members.size();
+          if (!list_rows) continue;
           work.block.resize(s*d);
-          for (size_t i=0;i<s;++i)
-            std::copy_n(queries+size_t(grouped[begin+work.members[i]])*d,d,work.block.data()+i*d);
-          work.closeness.resize(s*m);
-          dots(vectors.data()+first*d,m,work.block.data(),s,d,work.closeness.data());
-          for (size_t i=0;i<s;++i) {
-            const uint32_t member=work.members[i];
-            const uint32_t self=query_ids ? query_ids[grouped[begin+member]] : missing_id;
-            TopK best{work.best_scores.data()+member*k,work.best_ids.data()+member*k,k};
-            const float* row=work.closeness.data()+i*m;
-            const float* bias=half_norms.data()+first;
-            float threshold=best.threshold();
-            for (size_t j=0;j<m;++j) {
-              const float score=row[j]-bias[j];
-              if (!(score>threshold) || ids[first+j]==self) continue;
-              best.insert(score,ids[first+j]);
-              threshold=best.threshold();
+          for (size_t i=0;i<s;++i) queries.copy(grouped[begin+work.members[i]],work.block.data()+i*d);
+          const size_t tile=std::min(list_rows,list_tile_rows);
+          if (!rows.borrows()) work.list_rows.resize(tile*d);
+          work.closeness.resize(s*tile);
+          for (size_t tile_first=list_first;tile_first<list_first+list_rows;tile_first+=tile) {
+            const size_t m=std::min(tile,list_first+list_rows-tile_first);
+            dots(rows.read(tile_first,m,work.list_rows.data()),m,work.block.data(),s,d,work.closeness.data());
+            for (size_t i=0;i<s;++i) {
+              const uint32_t member=work.members[i];
+              const uint32_t self=query_ids ? query_ids[grouped[begin+member]] : missing_id;
+              TopK best{work.best_scores.data()+member*k,work.best_ids.data()+member*k,k};
+              const float* row=work.closeness.data()+i*m;
+              const float* bias=half_norms.data()+tile_first;
+              const uint32_t* row_ids=ids.data()+tile_first;
+              float threshold=best.threshold();
+              for (size_t j=0;j<m;++j) {
+                const float score=row[j]-bias[j];
+                if (!(score>threshold) || row_ids[j]==self) continue;
+                best.insert(score,row_ids[j]);
+                threshold=best.threshold();
+              }
             }
           }
         }
@@ -198,7 +351,11 @@ struct TieredQIVFFlatIndex::State {
           const uint32_t q=grouped[begin+member];
           const size_t out=query_ids ? query_ids[q] : q;
           // l2 scores are -|q - x|^2 = 2 (q.x - |x|^2/2) - |q|^2.
-          const float query_norm=l2() ? dot(queries+size_t(q)*d,queries+size_t(q)*d,d) : 0.0f;
+          float query_norm=0;
+          if (l2()) {
+            const float* query=queries.read(q,1,work.query.data());
+            query_norm=dot(query,query,d);
+          }
           for (size_t j=0;j<k;++j) {
             const float closeness=work.best_scores[member*k+j];
             scores[out*k+j]=l2() ? 2*closeness-query_norm : closeness;
@@ -222,77 +379,39 @@ TieredQIVFFlatIndex::TieredQIVFFlatIndex(TieredQIVFFlatIndex&&) noexcept=default
 TieredQIVFFlatIndex& TieredQIVFFlatIndex::operator=(TieredQIVFFlatIndex&&) noexcept=default;
 
 void TieredQIVFFlatIndex::build(const float* input,size_t count) {
-  State& s=*state_;
-  const size_t d=s.dimensions;
   if (!input && count) bad("null vector data");
-  if (count>size_t(missing_id)) bad("IVF-Flat holds at most 2^32 - 1 rows");
-  const size_t lists=s.config.lists ? s.config.lists : automatic_lists(count);
-  if (count<lists) bad("IVF-Flat training needs at least one row per list");
-  const bool cosine=s.config.metric==TieredQMetric::cosine;
-  std::vector<float> normalized;
-  if (cosine) {
-    normalized.assign(input,input+product(count,d));
-#pragma omp parallel for schedule(static)
-    for (size_t r=0;r<count;++r) normalize(normalized.data()+r*d,d);
-    input=normalized.data();
-  }
+  RowReader rows{state_->dimensions,input};
+  rows.unit_rows=state_->config.metric==TieredQMetric::cosine;
+  state_->build(rows,count,nullptr);
+}
 
-  auto started=std::chrono::steady_clock::now();
-  const size_t sample_rows=std::min(count,product(lists,s.config.sample_rows_per_list));
-  tieredq_detail::TrainingRng rng(s.config.seed^sample_salt);
-  auto picked=rng.choice(count,sample_rows);
-  std::sort(picked.begin(),picked.end());
-  std::vector<float> sample(product(sample_rows,d));
-  for (size_t i=0;i<sample_rows;++i) std::copy_n(input+picked[i]*d,d,sample.data()+i*d);
-  const TieredQCoarseTraining training{s.config.iterations,0,TieredQCoarseTraining{}.assignment_probes,
-                                       s.config.sample_rows_per_list};
-  s.coarse=std::make_shared<const CoarseQuantizer>(
-      tieredq_detail::train_coarse(sample.data(),sample_rows,d,lists,s.config.seed,training));
-  s.centroids=s.coarse->centroids();
-  s.stats.train_s=seconds_since(started);
-
-  started=std::chrono::steady_clock::now();
-  std::vector<uint32_t> labels(count);
-  BlasAssigner(*s.coarse).assign(input,count,labels.data());
-  s.stats.assign_s=seconds_since(started);
-
-  started=std::chrono::steady_clock::now();
-  s.offsets.assign(lists+1,0);
-  for (const uint32_t l:labels) ++s.offsets[l+1];
-  for (size_t l=0;l<lists;++l) s.offsets[l+1]+=s.offsets[l];
-  s.ids.resize(count);
-  {
-    auto cursor=s.offsets;
-    for (size_t r=0;r<count;++r) s.ids[cursor[labels[r]]++]=uint32_t(r);
-  }
-  s.vectors.resize(product(count,d));
-  s.half_norms.resize(count);
-  const bool l2=s.l2();
-#pragma omp parallel for schedule(static)
-  for (size_t pos=0;pos<count;++pos) {
-    float* row=s.vectors.data()+pos*d;
-    std::copy_n(input+size_t(s.ids[pos])*d,d,row);
-    s.half_norms[pos]=l2 ? dot(row,row,d)/2 : 0.0f;
-  }
-  s.stats.store_s=seconds_since(started);
+void TieredQIVFFlatIndex::build(const int8_t* codes,size_t count,const float* scales,const float* offsets) {
+  if (!codes && count) bad("null code data");
+  if (!scales || !offsets) bad("SQ8 build needs scales and offsets");
+  const size_t d=state_->dimensions;
+  const SQ8Codec input_codec{std::vector<float>(scales,scales+d),std::vector<float>(offsets,offsets+d)};
+  RowReader rows{d,nullptr,codes,&input_codec};
+  rows.unit_rows=state_->config.metric==TieredQMetric::cosine;
+  const bool keep_codes=state_->sq8() && !rows.unit_rows;
+  state_->build(rows,count,keep_codes ? &input_codec : nullptr);
 }
 
 void TieredQIVFFlatIndex::search(const float* queries,size_t rows,size_t k,size_t nprobe,float* scores,
                                  uint32_t* ids) const {
   if (!queries && rows) bad("null query data");
+  const size_t d=state_->dimensions;
   if (state_->config.metric!=TieredQMetric::cosine) {
-    state_->join(queries,rows,k,nprobe,nullptr,scores,ids);
+    state_->join(RowReader{d,queries},rows,k,nprobe,nullptr,scores,ids);
     return;
   }
-  const size_t d=state_->dimensions;
   std::vector<float> normalized(queries,queries+product(rows,d));
   for (size_t r=0;r<rows;++r) normalize(normalized.data()+r*d,d);
-  state_->join(normalized.data(),rows,k,nprobe,nullptr,scores,ids);
+  state_->join(RowReader{d,normalized.data()},rows,k,nprobe,nullptr,scores,ids);
 }
 
 void TieredQIVFFlatIndex::knn_graph(size_t k,size_t nprobe,float* scores,uint32_t* ids) const {
   // Stored rows are the queries; each excludes itself and answers its own row number.
-  state_->join(state_->vectors.data(),state_->size(),k,nprobe,state_->ids.data(),scores,ids);
+  state_->join(state_->stored(),state_->size(),k,nprobe,state_->ids.data(),scores,ids);
 }
 
 size_t TieredQIVFFlatIndex::size() const { return state_->size(); }
@@ -310,7 +429,8 @@ std::vector<uint32_t> TieredQIVFFlatIndex::list_assignment() const {
 
 size_t TieredQIVFFlatIndex::storage_bytes() const {
   const State& s=*state_;
-  return s.vectors.capacity()*sizeof(float)+s.half_norms.capacity()*sizeof(float)+s.ids.capacity()*sizeof(uint32_t)+
+  return s.vectors.capacity()*sizeof(float)+s.codes.capacity()+s.codec.allocated_bytes()+
+         s.half_norms.capacity()*sizeof(float)+s.ids.capacity()*sizeof(uint32_t)+
          s.offsets.capacity()*sizeof(size_t)+s.centroids.capacity()*sizeof(float)+
          (s.coarse ? s.coarse->allocated_bytes() : 0);
 }

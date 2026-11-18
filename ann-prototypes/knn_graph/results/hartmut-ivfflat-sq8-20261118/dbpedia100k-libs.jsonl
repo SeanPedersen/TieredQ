@@ -1,0 +1,30 @@
+{"name": "ivfflat-L128-p32", "seed": 0, "seconds": 4.527, "recall@15": 0.98227, "threads": 8, "build_s": 0.262, "lists": 128, "storage_mb": 196.5, "train_s": 0.168, "assign_s": 0.055, "store_s": 0.039, "join_s": 4.254}
+{"name": "ivfflat-sq8-L128-p32", "seed": 0, "seconds": 4.357, "recall@15": 0.97541, "threads": 8, "build_s": 0.182, "lists": 128, "storage_mb": 50.0, "train_s": 0.12, "assign_s": 0.016, "store_s": 0.046, "join_s": 4.17}
+{"name": "ivfflat-L256-p16", "seed": 0, "seconds": 1.905, "recall@15": 0.92487, "threads": 8, "build_s": 0.227, "lists": 256, "storage_mb": 196.9, "train_s": 0.17, "assign_s": 0.027, "store_s": 0.03, "join_s": 1.672}
+{"name": "ivfflat-sq8-L256-p16", "seed": 0, "seconds": 1.761, "recall@15": 0.92077, "threads": 8, "build_s": 0.236, "lists": 256, "storage_mb": 50.4, "train_s": 0.163, "assign_s": 0.026, "store_s": 0.046, "join_s": 1.52}
+{"name": "ivfflat-L512-p32", "seed": 0, "seconds": 2.332, "recall@15": 0.94022, "threads": 8, "build_s": 0.502, "lists": 512, "storage_mb": 197.6, "train_s": 0.423, "assign_s": 0.05, "store_s": 0.029, "join_s": 1.823}
+{"name": "ivfflat-sq8-L512-p32", "seed": 0, "seconds": 2.296, "recall@15": 0.93562, "threads": 8, "build_s": 0.574, "lists": 512, "storage_mb": 51.1, "train_s": 0.479, "assign_s": 0.049, "store_s": 0.046, "join_s": 1.716}
+{"name": "pynndescent", "seed": 0, "seconds": 1.206, "recall@15": 0.90623, "threads": 8}
+{"name": "pynndescent-n30", "seed": 0, "seconds": 2.522, "recall@15": 0.97906, "threads": 8}
+{"name": "rinnd", "seed": 0, "seconds": 1.222, "recall@15": 0.90694, "threads": 8}
+{"name": "rinnd-n30", "seed": 0, "seconds": 2.645, "recall@15": 0.97884, "threads": 8}
+{"name": "rinnd-t16-i20-c30", "seed": 0, "seconds": 1.291, "recall@15": 0.91396, "threads": 8}
+{"name": "mfrs-nndescent", "seed": 0, "seconds": 2.854, "recall@15": 0.92908, "threads": 8}
+{"name": "mfrs-ivf", "seed": 0, "seconds": 3.12, "recall@15": 0.92765, "threads": 8}
+{"name": "mfrs-ivf-p2x", "seed": 0, "seconds": 4.225, "recall@15": 0.96333, "threads": 8}
+{"name": "mfrs-ivf-p4x", "seed": 0, "seconds": 6.211, "recall@15": 0.98498, "threads": 8}
+{"name": "ivfflat-L128-p32", "seed": 1, "seconds": 4.324, "recall@15": 0.98145, "threads": 8, "build_s": 0.146, "lists": 128, "storage_mb": 196.5, "train_s": 0.092, "assign_s": 0.016, "store_s": 0.038, "join_s": 4.173}
+{"name": "ivfflat-sq8-L128-p32", "seed": 1, "seconds": 4.322, "recall@15": 0.97469, "threads": 8, "build_s": 0.159, "lists": 128, "storage_mb": 50.0, "train_s": 0.095, "assign_s": 0.016, "store_s": 0.048, "join_s": 4.157}
+{"name": "ivfflat-L256-p16", "seed": 1, "seconds": 1.975, "recall@15": 0.92323, "threads": 8, "build_s": 0.232, "lists": 256, "storage_mb": 196.9, "train_s": 0.167, "assign_s": 0.026, "store_s": 0.04, "join_s": 1.737}
+{"name": "ivfflat-sq8-L256-p16", "seed": 1, "seconds": 1.878, "recall@15": 0.91919, "threads": 8, "build_s": 0.272, "lists": 256, "storage_mb": 50.4, "train_s": 0.2, "assign_s": 0.026, "store_s": 0.046, "join_s": 1.6}
+{"name": "ivfflat-L512-p32", "seed": 1, "seconds": 2.354, "recall@15": 0.93994, "threads": 8, "build_s": 0.488, "lists": 512, "storage_mb": 197.6, "train_s": 0.389, "assign_s": 0.068, "store_s": 0.03, "join_s": 1.858}
+{"name": "ivfflat-sq8-L512-p32", "seed": 1, "seconds": 2.275, "recall@15": 0.93535, "threads": 8, "build_s": 0.528, "lists": 512, "storage_mb": 51.1, "train_s": 0.432, "assign_s": 0.051, "store_s": 0.045, "join_s": 1.741}
+{"name": "pynndescent", "seed": 1, "seconds": 1.239, "recall@15": 0.9069, "threads": 8}
+{"name": "pynndescent-n30", "seed": 1, "seconds": 2.565, "recall@15": 0.97919, "threads": 8}
+{"name": "rinnd", "seed": 1, "seconds": 1.217, "recall@15": 0.90716, "threads": 8}
+{"name": "rinnd-n30", "seed": 1, "seconds": 2.622, "recall@15": 0.97914, "threads": 8}
+{"name": "rinnd-t16-i20-c30", "seed": 1, "seconds": 1.295, "recall@15": 0.91382, "threads": 8}
+{"name": "mfrs-nndescent", "seed": 1, "seconds": 2.865, "recall@15": 0.92911, "threads": 8}
+{"name": "mfrs-ivf", "seed": 1, "seconds": 3.058, "recall@15": 0.9294, "threads": 8}
+{"name": "mfrs-ivf-p2x", "seed": 1, "seconds": 4.1, "recall@15": 0.96461, "threads": 8}
+{"name": "mfrs-ivf-p4x", "seed": 1, "seconds": 5.888, "recall@15": 0.98519, "threads": 8}
