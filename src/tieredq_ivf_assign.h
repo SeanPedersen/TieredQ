@@ -103,7 +103,11 @@ class RestrictedAssigner {
     if (bound_dimensions && bound_dimensions<d && probes_>1) {
       bound_.emplace(coarse,bound_dimensions);
       bound_panels_.reserve(supers_.lists);
-      for (const auto& members:members_) bound_panels_.push_back(bound_->panels(members));
+      member_bound_terms_.reserve(supers_.lists);
+      for (const auto& members:members_) {
+        bound_panels_.push_back(bound_->panels(members));
+        member_bound_terms_.push_back(bound_terms(members));
+      }
       bound_->release_projections();
       member_halves_.resize(supers_.lists);
     }
@@ -128,12 +132,12 @@ class RestrictedAssigner {
       state.best.assign(n*probes_,-std::numeric_limits<float>::infinity());
       state.best_list.assign(n*probes_,std::numeric_limits<uint32_t>::max());
       if (bound_) assign_bounded(chunk,n,state);
-      else score_slots(chunk,n,state,[](size_t) { return true; });
-      for (size_t row=0;row<n;++row) {
-        const uint32_t label=best_of_probes(state,row);
-        if (label==std::numeric_limits<uint32_t>::max()) coarse_.assign(chunk+row*coarse_.dimensions,1,ids+first+row);
-        else ids[first+row]=label;  // only empty probed supers fall back to the exact label
-      }
+      else score_slots(chunk,n,state,0,probes_);
+#pragma omp parallel for schedule(static) if(n>1 && !omp_in_parallel())
+      for (size_t row=0;row<n;++row) ids[first+row]=best_of_probes(state,row);
+      // Only empty probed supers leave no label; those rows fall back to the exact one.
+      for (size_t row=0;row<n;++row)
+        if (ids[first+row]==std::numeric_limits<uint32_t>::max()) coarse_.assign(chunk+row*coarse_.dimensions,1,ids+first+row);
     }
   }
 
@@ -147,6 +151,16 @@ class RestrictedAssigner {
     std::vector<uint32_t> probed,best_list,slots;
   };
   struct Work { uint32_t super; size_t first,count; };
+  // A super's members' |Pc|^2 and |r_c| in member order, contiguous for the vectorized bound.
+  struct BoundTerms { std::vector<float> projected_sq,residual; };
+
+  BoundTerms bound_terms(const std::vector<uint32_t>& members) const {
+    BoundTerms terms{std::vector<float>(members.size()),std::vector<float>(members.size())};
+    for (size_t m=0;m<members.size();++m) {
+      terms.projected_sq[m]=bound_->projected_sq(members[m]); terms.residual[m]=bound_->residual(members[m]);
+    }
+    return terms;
+  }
 
   static CoarseQuantizer cluster(const CoarseQuantizer& coarse,size_t supers,uint64_t seed) {
     const auto centroids=coarse.centroids();
@@ -170,14 +184,20 @@ class RestrictedAssigner {
     }
   }
 
-  // The selected slots (row * probes + p) grouped by super, a counting sort, as work items of GEMM blocks per super.
-  template<class Selected> std::vector<Work> group_slots(size_t n,ChunkState& state,Selected selected) const {
+  // The slots (row * probes + p) of probes [probe_begin, probe_end) grouped by super, a counting sort, as work items of
+  // GEMM blocks per super. It runs on one thread while the others wait, so it walks rows and probes without a division.
+  std::vector<Work> group_slots(size_t n,ChunkState& state,size_t probe_begin,size_t probe_end) const {
     std::vector<size_t> begin(supers_.lists+1,0);
-    for (size_t slot=0;slot<n*probes_;++slot) if (selected(slot)) ++begin[state.probed[slot]+1];
+    for (size_t row=0;row<n;++row)
+      for (size_t p=probe_begin;p<probe_end;++p) ++begin[state.probed[row*probes_+p]+1];
     std::partial_sum(begin.begin(),begin.end(),begin.begin());
     state.slots.resize(begin[supers_.lists]);
     auto fill=begin;
-    for (size_t slot=0;slot<n*probes_;++slot) if (selected(slot)) state.slots[fill[state.probed[slot]]++]=uint32_t(slot);
+    for (size_t row=0;row<n;++row)
+      for (size_t p=probe_begin;p<probe_end;++p) {
+        const size_t slot=row*probes_+p;
+        state.slots[fill[state.probed[slot]]++]=uint32_t(slot);
+      }
     std::vector<Work> work;
     for (uint32_t s=0;s<supers_.lists;++s)
       for (size_t at=begin[s];at<begin[s+1];at+=CoarseQuantizer::block_rows)
@@ -185,8 +205,8 @@ class RestrictedAssigner {
     return work;
   }
 
-  template<class Selected> void score_slots(const float* chunk,size_t n,ChunkState& state,Selected selected) const {
-    const auto work=group_slots(n,state,selected);
+  void score_slots(const float* chunk,size_t n,ChunkState& state,size_t probe_begin,size_t probe_end) const {
+    const auto work=group_slots(n,state,probe_begin,probe_end);
 #pragma omp parallel for schedule(dynamic) if(work.size()>1 && !omp_in_parallel())
     for (size_t item=0;item<work.size();++item)
       score_block(chunk,work[item].super,state.slots.data()+work[item].first,work[item].count,state.best,state.best_list);
@@ -196,7 +216,7 @@ class RestrictedAssigner {
     const size_t d=coarse_.dimensions,dp=bound_->dimensions();
     state.projected.resize(product(n,dp)); state.projected_sq.resize(n); state.residual.resize(n); state.limit.resize(n);
     { const BlasThreads threads; bound_->project(chunk,n,state.projected.data()); }
-    score_slots(chunk,n,state,[&](size_t slot) { return slot%probes_==0; });
+    score_slots(chunk,n,state,0,1);
 #pragma omp parallel for schedule(static) if(n>1 && !omp_in_parallel())
     for (size_t row=0;row<n;++row) {
       const float row_sq=ProjectionBound::squared_norm(chunk+row*d,d);
@@ -208,7 +228,7 @@ class RestrictedAssigner {
       state.limit[row]=list==std::numeric_limits<uint32_t>::max() ? std::numeric_limits<float>::infinity()
           : row_sq-2*state.best[slot]+bound_slack*(row_sq+2*coarse_.half_norms[list]);
     }
-    const auto work=group_slots(n,state,[&](size_t slot) { return slot%probes_!=0; });
+    const auto work=group_slots(n,state,1,probes_);
 #pragma omp parallel for schedule(dynamic) if(work.size()>1 && !omp_in_parallel())
     for (size_t item=0;item<work.size();++item)
       score_bounded_block(chunk,work[item].super,state.slots.data()+work[item].first,work[item].count,state);
@@ -256,17 +276,19 @@ class RestrictedAssigner {
     for (size_t i=0;i<count;++i) std::copy_n(state.projected.data()+size_t(slots[i]/probes_)*dp,dp,gathered.data()+i*dp);
     float_matrix(gathered.data(),count,dp,bound_panels_[s],dots.data(),width);
     const uint16_t* halves=member_halves_[s].data();
+    const BoundTerms& terms=member_bound_terms_[s];
+    std::vector<uint32_t> survivors(members.size());
     for (size_t i=0;i<count;++i) {
       const size_t row=slots[i]/probes_;
       const float* x=chunk+row*d;
-      const float projected_sq=state.projected_sq[row],residual=state.residual[row],limit=state.limit[row];
+      const BoundRow bound{state.projected_sq[row],state.residual[row],state.limit[row]};
+      const size_t found=bound_survivors(bound,dots.data()+i*width,terms.projected_sq.data(),terms.residual.data(),
+                                         members.size(),survivors.data());
       float best=-std::numeric_limits<float>::infinity();
       uint32_t label=std::numeric_limits<uint32_t>::max();
-      for (size_t m=0;m<members.size();++m) {
-        const uint32_t list=members[m];
-        const float gap=residual-bound_->residual(list);
-        if (projected_sq+bound_->projected_sq(list)-2*dots[i*width+m]+gap*gap>=limit) continue;
-        const float value=half_row_dot(x,halves+m*d,d)*coarse_.scales[list]-coarse_.half_norms[list];
+      for (size_t at=0;at<found;++at) {
+        const uint32_t m=survivors[at],list=members[m];
+        const float value=half_row_dot(x,halves+size_t(m)*d,d)*coarse_.scales[list]-coarse_.half_norms[list];
         if (value>best || (value==best && list<label)) { best=value; label=list; }
       }
       state.best[slots[i]]=best; state.best_list[slots[i]]=label;
@@ -280,6 +302,7 @@ class RestrictedAssigner {
   size_t probes_;
   std::optional<ProjectionBound> bound_;
   std::vector<TieredQPanels> bound_panels_;     // per super: its members' projections
+  std::vector<BoundTerms> member_bound_terms_;
   // Per super, its members' binary16 rows contiguous for rescoring survivors: a panel column spans d / 2 cache lines
   // where a row spans d / 32 (gathering columns made the bounded assignment slower than the unbounded one).
   std::vector<std::vector<uint16_t>> member_halves_;

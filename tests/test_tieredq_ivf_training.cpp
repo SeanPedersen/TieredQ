@@ -6,6 +6,7 @@
 #include "tieredq_ivf_bound.h"
 #include <cmath>
 #include <iostream>
+#include <limits>
 #include <random>
 #include <stdexcept>
 #include <vector>
@@ -71,6 +72,24 @@ void half_row_dot_test() {
   }
 }
 
+// The SIMD bound selects exactly the scalar bound's survivors (tails, bounds equal to the limit, NaN terms).
+void bound_survivors_test() {
+  std::mt19937 random(29); std::normal_distribution<float> normal;
+  for (size_t count:{size_t(1),size_t(15),size_t(16),size_t(37),size_t(288)}) {
+    std::vector<float> dots(count),member_sq(count),member_residual(count);
+    for (size_t m=0;m<count;++m) { dots[m]=normal(random); member_sq[m]=std::fabs(normal(random)); member_residual[m]=std::fabs(normal(random)); }
+    if (count>2) member_sq[2]=std::numeric_limits<float>::quiet_NaN();
+    const tieredq_detail::BoundRow row{1.0f,0.5f,3.0f};
+    // A member whose bound lands exactly on the limit is pruned by both.
+    dots[0]=0; member_residual[0]=0.5f; member_sq[0]=2.0f;
+    std::vector<uint32_t> simd(count),scalar(count);
+    const size_t simd_found=tieredq_detail::bound_survivors(row,dots.data(),member_sq.data(),member_residual.data(),count,simd.data());
+    const size_t scalar_found=tieredq_detail::bound_survivors_scalar(row,dots.data(),member_sq.data(),member_residual.data(),count,scalar.data());
+    simd.resize(simd_found); scalar.resize(scalar_found);
+    require(simd==scalar,"the SIMD bound survivors differ from the scalar ones");
+  }
+}
+
 void training_options_test() {
   const auto data=gaussian_rows(rows,17);
   const auto model=codec(TieredQMetric::l2,data);
@@ -97,6 +116,7 @@ void tieredq_ivf_training_tests() {
   for (auto metric:{TieredQMetric::inner_product,TieredQMetric::l2}) restricted_assignment_test(metric);
   for (auto metric:{TieredQMetric::inner_product,TieredQMetric::l2}) assignment_bound_test(metric);
   half_row_dot_test();
+  bound_survivors_test();
   training_options_test();
   std::cout<<"PASS IVF coarse training\n";
 }

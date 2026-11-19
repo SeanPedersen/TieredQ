@@ -3,12 +3,14 @@
 //   |x - c|^2 = |P(x - c)|^2 + |r_x - r_c|^2 >= |Px|^2 + |Pc|^2 - 2 Px.Pc + (|r_x| - |r_c|)^2,
 // for any orthonormal P, so a candidate whose bound exceeds a known distance can never be the nearest list. The
 // basis only decides how tight the bound is. Candidates are scored on their d' projected coordinates (FP32 panels,
-// one GEMM per block of rows) and only survivors are rescored in full, on contiguous binary16 rows.
+// one GEMM per block of rows) and only survivors are rescored in full, on contiguous binary16 rows. The bound is
+// evaluated for 16 candidates per AVX-512 compare on per-super |Pc|^2 and |r_c| stored in member order (#58).
 #pragma once
 #include "tieredq_encode_float.h"
 #include "tieredq_ivf_coarse.h"
 #include "tieredq_train_linalg.h"
 #include <algorithm>
+#include <bit>
 #include <cmath>
 #include <cstdlib>
 #include <vector>
@@ -42,6 +44,51 @@ inline float half_row_dot(const float* row,const uint16_t* halves,size_t depth) 
   if (avx512) return half_row_dot_avx512(row,halves,depth);
 #endif
   return half_row_dot_scalar(row,halves,depth);
+}
+
+// A row's side of the bound: |Px|^2, |r_x| and the squared distance a candidate must beat.
+struct BoundRow { float projected_sq,residual,limit; };
+
+// Writes the members m < count whose bound |Px|^2 + |Pc|^2 - 2 Px.Pc + (|r_x| - |r_c|)^2 is below the limit, in
+// ascending order, and returns how many there are. dots[m] = Px.Pc; member_sq and member_residual are in member order.
+inline size_t bound_survivors_scalar(const BoundRow& row,const float* dots,const float* member_sq,
+                                     const float* member_residual,size_t count,uint32_t* survivors) {
+  size_t found=0;
+  for (size_t m=0;m<count;++m) {
+    const float gap=row.residual-member_residual[m];
+    if (row.projected_sq+member_sq[m]-2*dots[m]+gap*gap>=row.limit) continue;
+    survivors[found++]=uint32_t(m);
+  }
+  return found;
+}
+#ifdef TQ_FLOAT_X86
+// Same operations in the same order as the scalar bound (builds use -ffp-contract=off), so survivors are identical.
+__attribute__((target("avx512f,bmi"))) inline size_t bound_survivors_avx512(const BoundRow& row,const float* dots,
+    const float* member_sq,const float* member_residual,size_t count,uint32_t* survivors) {
+  constexpr size_t lanes=16;
+  const __m512 projected_sq=_mm512_set1_ps(row.projected_sq),residual=_mm512_set1_ps(row.residual),
+               limit=_mm512_set1_ps(row.limit),two=_mm512_set1_ps(2);
+  size_t found=0;
+  for (size_t m=0;m<count;m+=lanes) {
+    const __mmask16 valid=count-m>=lanes ? __mmask16(0xFFFF) : __mmask16((1u<<(count-m))-1);
+    const __m512 gap=_mm512_sub_ps(residual,_mm512_maskz_loadu_ps(valid,member_residual+m));
+    const __m512 bound=_mm512_add_ps(_mm512_sub_ps(_mm512_add_ps(projected_sq,_mm512_maskz_loadu_ps(valid,member_sq+m)),
+                                                   _mm512_mul_ps(two,_mm512_maskz_loadu_ps(valid,dots+m))),
+                                     _mm512_mul_ps(gap,gap));
+    // Not >= (unordered included) is the scalar `continue` inverted, so a NaN bound survives in both.
+    for (uint32_t mask=_mm512_mask_cmp_ps_mask(valid,bound,limit,_CMP_NGE_UQ);mask;mask&=mask-1)
+      survivors[found++]=uint32_t(m)+uint32_t(std::countr_zero(mask));
+  }
+  return found;
+}
+#endif
+inline size_t bound_survivors(const BoundRow& row,const float* dots,const float* member_sq,const float* member_residual,
+                              size_t count,uint32_t* survivors) {
+#ifdef TQ_FLOAT_X86
+  static const bool avx512=__builtin_cpu_supports("avx512f") && !std::getenv("TQ_NO_AVX512");
+  if (avx512) return bound_survivors_avx512(row,dots,member_sq,member_residual,count,survivors);
+#endif
+  return bound_survivors_scalar(row,dots,member_sq,member_residual,count,survivors);
 }
 
 // The projection of the bound: basis, per list |Pc|^2 and |r_c|, and projections of rows on demand.

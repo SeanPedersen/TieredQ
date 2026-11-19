@@ -1,0 +1,59 @@
+== A
+bound 224: 8840823 rows, 32 threads, setup 2.40 s, assign loop 35.92 s (row loading 1.47 s)
+  probe supers               3.88 s     5214.5 GFLOP    1345.2 GFLOP/s
+  project rows               2.77 s     4055.7 GFLOP    1464.4 GFLOP/s
+  first probe (full)         5.78 s     6321.9 GFLOP    1092.9 GFLOP/s
+  limits                     0.68 s        0.0 GFLOP       0.0 GFLOP/s
+  bounded probes            20.22 s    20115.2 GFLOP     994.8 GFLOP/s
+    of which bound GEMM      9.40 s    19105.5 GFLOP    2032.6 GFLOP/s
+    of which scan+rescore    10.82 s     1009.7 GFLOP      93.3 GFLOP/s
+  candidates 4478.9 per row, survivors 55.77 per row (1.25%)
+  reduce + fallback          0.28 s        0.0 GFLOP       0.0 GFLOP/s
+  assignment total          34.46 s    35707.4 GFLOP    1036.3 GFLOP/s
+peaks (32 threads): sgemm 4096x4096x1024 1660.5 GFLOP/s, binary16 panel kernel (depth 1024) 2329.6 GFLOP/s, FP32 panel kernel (depth 224) 2214.9 GFLOP/s
+peak RSS 9857988 KB
+== B
+bound 224: 8840823 rows, 32 threads, setup 2.44 s, assign loop 30.88 s (row loading 1.22 s)
+  probe supers               3.82 s     5214.5 GFLOP    1364.1 GFLOP/s
+  project rows               2.72 s     4055.7 GFLOP    1489.0 GFLOP/s
+  first probe (full)         5.82 s     6321.9 GFLOP    1085.7 GFLOP/s
+  limits                     0.66 s        0.0 GFLOP       0.0 GFLOP/s
+  bounded probes            15.72 s    20115.2 GFLOP    1279.3 GFLOP/s
+    of which bound GEMM     10.49 s    19105.5 GFLOP    1820.7 GFLOP/s
+    of which scan+rescore     5.23 s     1009.7 GFLOP     193.0 GFLOP/s
+      of which bound select     1.24 s (clock reads per slot included)
+  candidates 4478.9 per row, survivors 55.77 per row (1.25%)
+  reduce + fallback          0.29 s        0.0 GFLOP       0.0 GFLOP/s
+  assignment total          29.66 s    35707.4 GFLOP    1204.0 GFLOP/s
+peaks (32 threads): sgemm 4096x4096x1024 1743.8 GFLOP/s, binary16 panel kernel (depth 1024) 2365.2 GFLOP/s, FP32 panel kernel (depth 224) 2292.7 GFLOP/s
+peak RSS 9874472 KB
+== B
+bound 224: 8840823 rows, 32 threads, setup 2.48 s, assign loop 30.93 s (row loading 1.24 s)
+  probe supers               3.79 s     5214.5 GFLOP    1375.1 GFLOP/s
+  project rows               2.75 s     4055.7 GFLOP    1475.7 GFLOP/s
+  first probe (full)         5.85 s     6321.9 GFLOP    1081.5 GFLOP/s
+  limits                     0.64 s        0.0 GFLOP       0.0 GFLOP/s
+  bounded probes            15.71 s    20115.2 GFLOP    1280.5 GFLOP/s
+    of which bound GEMM     10.52 s    19105.5 GFLOP    1816.9 GFLOP/s
+    of which scan+rescore     5.19 s     1009.7 GFLOP     194.4 GFLOP/s
+      of which bound select     1.23 s (clock reads per slot included)
+  candidates 4478.9 per row, survivors 55.77 per row (1.25%)
+  reduce + fallback          0.31 s        0.0 GFLOP       0.0 GFLOP/s
+  assignment total          29.69 s    35707.4 GFLOP    1202.6 GFLOP/s
+peaks (32 threads): sgemm 4096x4096x1024 1702.0 GFLOP/s, binary16 panel kernel (depth 1024) 2354.4 GFLOP/s, FP32 panel kernel (depth 224) 2298.1 GFLOP/s
+peak RSS 9876000 KB
+== A
+bound 224: 8840823 rows, 32 threads, setup 2.46 s, assign loop 35.83 s (row loading 1.22 s)
+  probe supers               3.86 s     5214.5 GFLOP    1349.4 GFLOP/s
+  project rows               2.71 s     4055.7 GFLOP    1499.2 GFLOP/s
+  first probe (full)         5.81 s     6321.9 GFLOP    1089.0 GFLOP/s
+  limits                     0.64 s        0.0 GFLOP       0.0 GFLOP/s
+  bounded probes            20.46 s    20115.2 GFLOP     982.9 GFLOP/s
+    of which bound GEMM      9.44 s    19105.5 GFLOP    2023.8 GFLOP/s
+    of which scan+rescore    11.02 s     1009.7 GFLOP      91.6 GFLOP/s
+  candidates 4478.9 per row, survivors 55.77 per row (1.25%)
+  reduce + fallback          0.28 s        0.0 GFLOP       0.0 GFLOP/s
+  assignment total          34.61 s    35707.4 GFLOP    1031.8 GFLOP/s
+peaks (32 threads): sgemm 4096x4096x1024 1741.8 GFLOP/s, binary16 panel kernel (depth 1024) 2309.1 GFLOP/s, FP32 panel kernel (depth 224) 2306.7 GFLOP/s
+peak RSS 9858760 KB
+DONE

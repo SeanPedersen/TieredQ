@@ -361,7 +361,8 @@ struct TieredQCoarseTraining {
   // by an exact lower bound on this many principal directions of the centroids, rescoring only members it cannot rule
   // out. Labels stay those of unbounded restricted assignment up to floating-point near-ties. On Qwen/MS MARCO
   // 8.84M x 1024 (64K lists, 256 x 16) 224 rescored 1.3% of the other probes' candidates: final assignment 38 vs 53 s,
-  // build 160 vs 175 s on 2 seeds, recall@10 identical at every nprobe (#45). It pays only when a row's candidates
+  // build 160 vs 175 s on 2 seeds, recall@10 identical at every nprobe (#45); with the bound evaluated 16 candidates
+  // per AVX-512 compare and parallel slot grouping, 29 s and build 152 s (#58). It pays only when a row's candidates
   // (assignment_probes x lists / assignment_supers) far outnumber the bound's dimensions: on MS MARCO 1M x 1024 it
   // slowed assignment at 8K lists (4.6 -> 7.6 s, ~512 candidates) and 32K (8.8 -> 11.9 s, ~2K). 0 scores every
   // member in full.

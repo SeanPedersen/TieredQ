@@ -1,0 +1,79 @@
+== d'=224
+bound 224: 8840823 rows, 32 threads, setup 2.38 s, assign loop 27.23 s (row loading 1.23 s)
+  probe supers               3.92 s     5214.5 GFLOP    1330.1 GFLOP/s
+  project rows               2.74 s     4055.7 GFLOP    1477.6 GFLOP/s
+  first probe (full)         3.54 s     6321.9 GFLOP    1787.4 GFLOP/s
+  limits                     0.63 s        0.0 GFLOP       0.0 GFLOP/s
+  bounded probes            14.48 s    20115.2 GFLOP    1389.3 GFLOP/s
+    of which bound GEMM      9.34 s    19105.5 GFLOP    2045.2 GFLOP/s
+    of which scan+rescore     5.14 s     1009.7 GFLOP     196.6 GFLOP/s
+      of which bound select     1.11 s (clock reads per slot included)
+  candidates 4478.9 per row, survivors 55.77 per row (1.25%)
+  reduce + fallback          0.03 s        0.0 GFLOP       0.0 GFLOP/s
+  assignment total          26.00 s    35707.4 GFLOP    1373.3 GFLOP/s
+== d'=128
+bound 128: 8840823 rows, 32 threads, setup 2.34 s, assign loop 43.08 s (row loading 1.25 s)
+  probe supers               3.88 s     5214.5 GFLOP    1342.9 GFLOP/s
+  project rows               2.11 s     2317.6 GFLOP    1099.7 GFLOP/s
+  first probe (full)         3.47 s     6321.9 GFLOP    1822.1 GFLOP/s
+  limits                     0.60 s        0.0 GFLOP       0.0 GFLOP/s
+  bounded probes            31.54 s    20771.5 GFLOP     658.6 GFLOP/s
+    of which bound GEMM      5.30 s    10917.4 GFLOP    2061.0 GFLOP/s
+    of which scan+rescore    26.24 s     9854.1 GFLOP     375.5 GFLOP/s
+      of which bound select     1.67 s (clock reads per slot included)
+  candidates 4478.9 per row, survivors 544.25 per row (12.15%)
+  reduce + fallback          0.03 s        0.0 GFLOP       0.0 GFLOP/s
+  assignment total          41.83 s    34625.5 GFLOP     827.7 GFLOP/s
+== d'=160
+bound 160: 8840823 rows, 32 threads, setup 2.34 s, assign loop 31.48 s (row loading 1.23 s)
+  probe supers               3.99 s     5214.5 GFLOP    1307.2 GFLOP/s
+  project rows               2.35 s     2897.0 GFLOP    1233.6 GFLOP/s
+  first probe (full)         3.63 s     6321.9 GFLOP    1743.0 GFLOP/s
+  limits                     0.61 s        0.0 GFLOP       0.0 GFLOP/s
+  bounded probes            19.40 s    18097.8 GFLOP     933.0 GFLOP/s
+    of which bound GEMM      6.59 s    13646.8 GFLOP    2070.5 GFLOP/s
+    of which scan+rescore    12.81 s     4451.0 GFLOP     347.5 GFLOP/s
+      of which bound select     1.37 s (clock reads per slot included)
+  candidates 4478.9 per row, survivors 245.83 per row (5.49%)
+  reduce + fallback          0.02 s        0.0 GFLOP       0.0 GFLOP/s
+  assignment total          30.25 s    32531.2 GFLOP    1075.6 GFLOP/s
+== d'=192
+bound 192: 8840823 rows, 32 threads, setup 2.39 s, assign loop 28.55 s (row loading 1.24 s)
+  probe supers               3.93 s     5214.5 GFLOP    1325.5 GFLOP/s
+  project rows               2.54 s     3476.4 GFLOP    1367.6 GFLOP/s
+  first probe (full)         3.52 s     6321.9 GFLOP    1793.8 GFLOP/s
+  limits                     0.63 s        0.0 GFLOP       0.0 GFLOP/s
+  bounded probes            16.09 s    18423.7 GFLOP    1144.9 GFLOP/s
+    of which bound GEMM      8.05 s    16376.1 GFLOP    2033.7 GFLOP/s
+    of which scan+rescore     8.04 s     2047.6 GFLOP     254.7 GFLOP/s
+      of which bound select     1.21 s (clock reads per slot included)
+  candidates 4478.9 per row, survivors 113.09 per row (2.52%)
+  reduce + fallback          0.03 s        0.0 GFLOP       0.0 GFLOP/s
+  assignment total          27.32 s    33436.5 GFLOP    1224.0 GFLOP/s
+== d'=256
+bound 256: 8840823 rows, 32 threads, setup 2.35 s, assign loop 27.58 s (row loading 1.23 s)
+  probe supers               4.13 s     5214.5 GFLOP    1264.1 GFLOP/s
+  project rows               2.98 s     4635.1 GFLOP    1553.4 GFLOP/s
+  first probe (full)         3.72 s     6321.9 GFLOP    1700.8 GFLOP/s
+  limits                     0.66 s        0.0 GFLOP       0.0 GFLOP/s
+  bounded probes            14.14 s    22374.4 GFLOP    1582.4 GFLOP/s
+    of which bound GEMM     10.62 s    21834.8 GFLOP    2056.0 GFLOP/s
+    of which scan+rescore     3.52 s      539.6 GFLOP     153.3 GFLOP/s
+      of which bound select     1.03 s (clock reads per slot included)
+  candidates 4478.9 per row, survivors 29.80 per row (0.67%)
+  reduce + fallback          0.03 s        0.0 GFLOP       0.0 GFLOP/s
+  assignment total          26.35 s    38546.0 GFLOP    1463.0 GFLOP/s
+== d'=224
+bound 224: 8840823 rows, 32 threads, setup 2.46 s, assign loop 27.20 s (row loading 1.22 s)
+  probe supers               3.91 s     5214.5 GFLOP    1332.6 GFLOP/s
+  project rows               2.73 s     4055.7 GFLOP    1487.5 GFLOP/s
+  first probe (full)         3.54 s     6321.9 GFLOP    1787.9 GFLOP/s
+  limits                     0.64 s        0.0 GFLOP       0.0 GFLOP/s
+  bounded probes            14.49 s    20115.2 GFLOP    1388.7 GFLOP/s
+    of which bound GEMM      9.34 s    19105.5 GFLOP    2045.8 GFLOP/s
+    of which scan+rescore     5.15 s     1009.7 GFLOP     196.2 GFLOP/s
+      of which bound select     1.11 s (clock reads per slot included)
+  candidates 4478.9 per row, survivors 55.77 per row (1.25%)
+  reduce + fallback          0.03 s        0.0 GFLOP       0.0 GFLOP/s
+  assignment total          25.98 s    35707.4 GFLOP    1374.4 GFLOP/s
+DONE

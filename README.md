@@ -331,7 +331,9 @@ auto fast = index.search(query, 10, 16, tq::TieredQPruning{/*confidence=*/8, /*p
   other probes' members on their projections onto the centroids' top 224 principal directions, plus the residual
   norms, rescoring only members whose bound beats that first distance. On Qwen/MS MARCO 8.84M × 1024 (64K lists) it
   rescored 1.3% of those candidates: assignment 38 vs 53 s, build 160 vs 175 s on 2 seeds, recall@10 identical at
-  every nprobe. With fewer candidates per row the projection costs more than it saves (MS MARCO 1M: assignment 4.6 ->
+  every nprobe. Evaluating the bound for 16 candidates per AVX-512 compare and grouping rows by super without a serial
+  per-slot division brought the assignment to 29 s and the build to 152 s, labels unchanged
+  ([#58 results](ann-prototypes/geometry_ann/results/hartmut-bound-scan-20261119/README.md)). With fewer candidates per row the projection costs more than it saves (MS MARCO 1M: assignment 4.6 ->
   7.6 s at 8K lists, 8.8 -> 11.9 s at 32K), so smaller list counts score every candidate. `set_coarse_training({iterations, assignment_supers, assignment_probes, sample_rows_per_list, emeans_epochs,
   emeans_probes, assignment_bound_dimensions})` overrides the training (`emeans_epochs` 0 trains by Lloyd), and `remove_router()` opts out of the router. In restricted assignment (#48) each row is assigned among the members of its
   `assignment_probes` nearest supers, a k-means of the lists' centroids. Rows whose nearest list lies in a probed
