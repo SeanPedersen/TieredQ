@@ -1,0 +1,14 @@
+WARNING: Logging before InitGoogleLogging() is written to STDERR
+I20261119 18:08:20.038795 140151448891200 ivf.hpp:235] Loading IVF...
+I20261119 18:08:20.038893 140151448891200 ivf.hpp:240] 	Loading meta data...
+I20261119 18:08:20.128640 140151448891200 ivf.hpp:196] Initializing done... num_points: 1344643
+I20261119 18:08:20.380163 140151448891200 ivf.hpp:265] Index loaded
+nprobe 8 qps 1689.99 recall 0.74514
+nprobe 16 qps 1418.59 recall 0.79655
+nprobe 32 qps 1127.96 recall 0.8261
+nprobe 48 qps 957.989 recall 0.83675
+nprobe 64 qps 836.938 recall 0.8419
+nprobe 96 qps 682.363 recall 0.84603
+nprobe 128 qps 582.684 recall 0.84799
+nprobe 192 qps 460.026 recall 0.84968
+nprobe 256 qps 381.248 recall 0.85016

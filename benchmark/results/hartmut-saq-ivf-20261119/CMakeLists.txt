@@ -1,0 +1,20 @@
+cmake_minimum_required(VERSION 3.20)
+project(saq_ivf LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_BUILD_TYPE Release)
+set(SAQ /home/sean/experiments/TieredQ-saq-20261027-upstream)
+set(TIEREDQ /home/sean/experiments/TieredQ-issue55-bisect-20261116)
+find_package(glog REQUIRED CONFIG PATHS ${CMAKE_SOURCE_DIR}/glog-install NO_DEFAULT_PATH)
+find_package(fmt REQUIRED)
+find_package(OpenMP REQUIRED)
+
+# Same numerical policy as the 2026-10-27 single-cluster SAQ study (explicit flags instead of upstream -Ofast).
+add_executable(saq_ivf saq_ivf.cpp)
+target_include_directories(saq_ivf PRIVATE ${SAQ}/saqlib /home/sean/experiments/TieredQ-saq-20261027-gflags-build/include)
+target_compile_options(saq_ivf PRIVATE -O3 -march=native -ffp-contract=off)
+target_link_libraries(saq_ivf PRIVATE glog::glog fmt::fmt OpenMP::OpenMP_CXX)
+
+add_executable(export_assignment export_assignment.cpp)
+target_include_directories(export_assignment PRIVATE ${TIEREDQ}/source/tieredq/include)
+target_compile_options(export_assignment PRIVATE -O2 -march=native)
+target_link_libraries(export_assignment PRIVATE ${TIEREDQ}/plugin-build/tieredq/libtieredq.a openblas OpenMP::OpenMP_CXX)
