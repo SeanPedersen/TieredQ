@@ -50,5 +50,19 @@ SAQ's bit plans (PCA dims → bits): 1 bit `64×5, 192×2, 512×0`; 2 bits `64×
   faster at 2 bits but 0.86× / 0.76× at 3 / 4 bits; SAQ's variance pruning makes it 1.3-2× faster at nprobe 256. At recall 0.95: SAQ 3 bits (0.448 GiB) about 890 QPS (nprobe 48), plugin 2.5
   bits (0.320 GiB) 763 QPS (nprobe 64). At 0.97: SAQ 3 bits 536 QPS (nprobe 128, 0.448 GiB), plugin 3 bits 368 (0.381
   GiB). SAQ is faster at high recall, TieredQ is smaller.
+- **TieredQ builds 1.7-2.3x faster** (32 threads, shared k-means of about 3 s excluded from both):
+
+  | bits (SAQ / TieredQ) | SAQ construct | SAQ + PCA | TieredQ codec train + build |
+  |---|---|---|---|
+  | 1 / 1.75 | 33.5 s | 54.5 s | 0.9 + 12.2 = 13.1 s |
+  | 2 / 2 | 30.2 s | 51.6 s | 0.9 + 12.8 = 13.8 s |
+  | 3 / 3 | 30.1 s | 50.9 s | 1.0 + 16.4 = 17.4 s |
+  | 4 / 4 | 35.6 s | 56.4 s | 1.0 + 20.3 = 21.3 s |
+
+  SAQ's construct takes the row assignment as input (upstream computes it beforehand in `python/ivf.py` with Faiss
+  k-means over all rows); TieredQ's build includes assigning every row. SAQ's PCA is this driver's (Eigen, fp64
+  covariance over all rows; upstream uses Faiss `PCAMatrix` in Python); TieredQ trains its codec, rotation included,
+  on 32,768 rows. SAQ's construct splits into about 9 s of setup and bit planning and 21-26 s of quantization.
+  TieredQ times are from the #55 builds of the same partition.
 - Single seed, one dataset (arxiv); Qwen 8.84M at 65K lists is not run (SAQ's IVF has no HNSW coarse quantizer
   above 20,000 lists).
