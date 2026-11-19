@@ -1,0 +1,21 @@
+{
+  "training": {},
+  "seed": 0,
+  "rows": 8840823,
+  "lists": 65536,
+  "has_router": true,
+  "prefix_bits": 1024,
+  "total_bits": 8161,
+  "storage_bytes": 1587658796,
+  "build_stats": {
+    "train_s": 62.415149928,
+    "assign_s": 36.909734014,
+    "encode_s": 49.592351861,
+    "router_s": 6.298679044
+  },
+  "build_s": 159.5718732518144,
+  "tier_s": 102.31717668520287,
+  "save_s": 7.980162477819249,
+  "total_s": 261.88904993701726,
+  "peak_rss_bytes": 15418208256
+}

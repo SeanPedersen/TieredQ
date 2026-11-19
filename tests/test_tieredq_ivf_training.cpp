@@ -1,7 +1,9 @@
 // Coarse training options of TieredQIVFIndex (#48): restricted assignment that probes every super equals exact
-// (BLAS) assignment label for label on data without near-ties, few probes keep almost every exact label, the iteration count changes the trained
-// lists, and invalid options or codec-list indexes are rejected.
+// (BLAS) assignment label for label on data without near-ties, few probes keep almost every exact label, the assignment
+// bound (#45) keeps every restricted label, the iteration count changes the trained lists, and invalid options or
+// codec-list indexes are rejected.
 #include "tieredq/tieredq.h"
+#include "tieredq_ivf_bound.h"
 #include <cmath>
 #include <iostream>
 #include <random>
@@ -46,6 +48,29 @@ void restricted_assignment_test(TieredQMetric metric) {
   require(agree<rows,"12 of 32 supers never miss a label");
 }
 
+// The bound prunes without changing a label: every bound width, including one that cannot prune (the full width).
+void assignment_bound_test(TieredQMetric metric) {
+  const auto data=gaussian_rows(rows,13);
+  TieredQCoarseTraining few; few.assignment_supers=32; few.assignment_probes=12;
+  const auto restricted=labels(metric,data,few);
+  for (uint32_t bound:{4u,8u,16u,dimensions}) {
+    TieredQCoarseTraining bounded=few; bounded.assignment_bound_dimensions=bound;
+    require(labels(metric,data,bounded)==restricted,"the assignment bound changes restricted labels");
+  }
+}
+
+// The SIMD binary16 row dot of the bound's rescoring equals the scalar one (lengths with and without a tail).
+void half_row_dot_test() {
+  std::mt19937 random(23); std::normal_distribution<float> normal;
+  for (size_t depth:{size_t(5),size_t(32),size_t(37),size_t(1024)}) {
+    std::vector<float> row(depth); std::vector<uint16_t> halves(depth);
+    for (size_t k=0;k<depth;++k) { row[k]=normal(random); halves[k]=tieredq_detail::half_encode(normal(random)); }
+    const float simd=tieredq_detail::half_row_dot(row.data(),halves.data(),depth);
+    const float scalar=tieredq_detail::half_row_dot_scalar(row.data(),halves.data(),depth);
+    require(std::fabs(simd-scalar)<=1e-4f*(1+std::fabs(scalar)),"the binary16 row dot differs from the scalar one");
+  }
+}
+
 void training_options_test() {
   const auto data=gaussian_rows(rows,17);
   const auto model=codec(TieredQMetric::l2,data);
@@ -64,10 +89,14 @@ void training_options_test() {
   require(rejects([&] { TieredQCoarseTraining bad; bad.assignment_supers=8; bad.assignment_probes=0; ivf.set_coarse_training(bad); }),
           "zero probes accepted");
   require(rejects([&] { TieredQIVFIndex plain(model); plain.set_coarse_training({}); }),"coarse training on codec lists accepted");
+  require(rejects([&] { TieredQCoarseTraining bad; bad.assignment_bound_dimensions=8; ivf.set_coarse_training(bad); }),
+          "an assignment bound without restricted assignment accepted");
 }
 } // namespace
 void tieredq_ivf_training_tests() {
   for (auto metric:{TieredQMetric::inner_product,TieredQMetric::l2}) restricted_assignment_test(metric);
+  for (auto metric:{TieredQMetric::inner_product,TieredQMetric::l2}) assignment_bound_test(metric);
+  half_row_dot_test();
   training_options_test();
   std::cout<<"PASS IVF coarse training\n";
 }

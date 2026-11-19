@@ -326,8 +326,14 @@ auto fast = index.search(query, 10, 16, tq::TieredQPruning{/*confidence=*/8, /*p
   175-179 s instead of 196-203 s, peak build RSS 15.4 instead of 20.9-21.1 GB, recall@10 0.001-0.009 higher at equal
   latency, the same serving RAM. On Qwen 1M × 1024 the fast Lloyd recipe had stayed within 0.002 recall@10 of exact
   Lloyd at 8K-32K lists for 25-43× less training time, and the router was faster than exact ranking from 8K lists (#52).
-  `set_coarse_training({iterations, assignment_supers, assignment_probes, sample_rows_per_list, emeans_epochs,
-  emeans_probes})` overrides the training (`emeans_epochs` 0 trains by Lloyd), and `remove_router()` opts out of the router. In restricted assignment (#48) each row is assigned among the members of its
+  From `TieredQCoarseTraining::bounded_lists` (65,536) lists the final assignment of every row prunes its restricted
+  candidates by an exact lower bound (`assignment_bound_dimensions` 224, both recipes, #45): each row scores its first probed super in full, then the
+  other probes' members on their projections onto the centroids' top 224 principal directions, plus the residual
+  norms, rescoring only members whose bound beats that first distance. On Qwen/MS MARCO 8.84M × 1024 (64K lists) it
+  rescored 1.3% of those candidates: assignment 38 vs 53 s, build 160 vs 175 s on 2 seeds, recall@10 identical at
+  every nprobe. With fewer candidates per row the projection costs more than it saves (MS MARCO 1M: assignment 4.6 ->
+  7.6 s at 8K lists, 8.8 -> 11.9 s at 32K), so smaller list counts score every candidate. `set_coarse_training({iterations, assignment_supers, assignment_probes, sample_rows_per_list, emeans_epochs,
+  emeans_probes, assignment_bound_dimensions})` overrides the training (`emeans_epochs` 0 trains by Lloyd), and `remove_router()` opts out of the router. In restricted assignment (#48) each row is assigned among the members of its
   `assignment_probes` nearest supers, a k-means of the lists' centroids. Rows whose nearest list lies in a probed
   super get the exact label, up to floating-point near-ties. Exact assignment runs as FP32 BLAS `sgemm`, as in
   Faiss; query ranking keeps the binary16 panels. On Qwen 1024-D (500K rows, 32K lists), 256 supers and 16 probes kept 99.0%

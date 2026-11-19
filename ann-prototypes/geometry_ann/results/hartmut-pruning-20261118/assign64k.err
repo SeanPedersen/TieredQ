@@ -1,0 +1,6 @@
+{"prune_dims":192,"rescored_fraction":0.0253}
+{"prune_dims":128,"rescored_fraction":0.1216}
+{"prune_dims":224,"rescored_fraction":0.0125}
+{"prune_dims":256,"rescored_fraction":0.0067}
+{"prune_dims":160,"rescored_fraction":0.0550}
+{"prune_dims":192,"rescored_fraction":0.0253}

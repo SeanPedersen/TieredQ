@@ -5,7 +5,8 @@
 
 TieredQIVFIndex (L2, 2 bits per dimension, router off so both route exactly) is built on all rows with Lloyd list
 training (TieredQCoarseTraining.lloyd: exact below 8,192 lists, from there 4 iterations on 40 rows per list with 256 x 16
-restricted assignment), its automatic training ("auto", e-means since #45), or native e-means on the Lloyd recipe's
+restricted assignment), its automatic training ("auto", e-means since #45; "auto-nobound" without the final assignment's
+bound), or native e-means on the Lloyd recipe's
 assignment, exact or restricted. build_s is the whole build; train_s, assign_s and encode_s its phases. Per nprobe: recall@10 of the queries and rows scanned per query (sizes of the lists probe_lists names).
 Each configuration runs in its own process; results append to OUT.jsonl.
 """
@@ -27,6 +28,7 @@ K = 10
 CONFIGS = {
     "lloyd-auto": None,
     "auto": "auto",
+    "auto-nobound": "auto-nobound",
     "emeans-s64-e2.5": (64, 2.5, 0),    # 160 row passes per list, as the fast recipe's 40 rows x 4 iterations
     "emeans-s256-e2.5": (256, 2.5, 0),  # TieredQIVFFlatIndex's winner (the sample is capped at all rows)
     "emeans-s256-e2-p4": (256, 2, 4),   # the 8.84M / 64K winner: streamed, 4 probes in training, 16 in the final pass
@@ -40,6 +42,17 @@ def lloyd_training(lists: int):
     lloyd = TieredQCoarseTraining.lloyd(lists)
     return dict(iterations=lloyd.iterations, assignment_supers=lloyd.assignment_supers,
                 assignment_probes=lloyd.assignment_probes, sample_rows_per_list=lloyd.sample_rows_per_list)
+
+
+def unbounded_automatic_training(lists: int):
+    """The automatic recipe with assignment_bound_dimensions 0 (every probed member scored in full)."""
+    from tieredq import TieredQCoarseTraining
+
+    automatic = TieredQCoarseTraining.automatic(lists)
+    return dict(iterations=automatic.iterations, assignment_supers=automatic.assignment_supers,
+                assignment_probes=automatic.assignment_probes, sample_rows_per_list=automatic.sample_rows_per_list,
+                emeans_epochs=automatic.emeans_epochs, emeans_probes=automatic.emeans_probes,
+                assignment_bound_dimensions=0)
 
 
 def emeans_training(lists: int, per_list: int, epochs: float, probes: int):
@@ -75,6 +88,8 @@ def main() -> None:
                                 router=False, seed=args.seed)
         if config is None:
             index.set_coarse_training(**lloyd_training(args.lists))
+        elif config == "auto-nobound":
+            index.set_coarse_training(**unbounded_automatic_training(args.lists))
         elif config != "auto":
             index.set_coarse_training(**emeans_training(args.lists, *config))
         index.build(X)

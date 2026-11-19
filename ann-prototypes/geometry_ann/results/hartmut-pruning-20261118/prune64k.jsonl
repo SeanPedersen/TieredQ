@@ -1,0 +1,6 @@
+{"prune_dims":0,"trainer":"emeans","budget":2,"rows":8840823,"lists":65536,"supers":256,"probes":4,"seed":0,"train_s":55.13,"anon_peak_gb":1.583,"anon_train_gb":1.547,"heldout":131072,"objective":0.437808,"imbalance":1.7626}
+{"prune_dims":128,"trainer":"emeans","budget":2,"rows":8840823,"lists":65536,"supers":256,"probes":4,"seed":0,"train_s":76.06,"anon_peak_gb":1.761,"anon_train_gb":1.725,"heldout":131072,"objective":0.437618,"imbalance":1.7612}
+{"prune_dims":192,"trainer":"emeans","budget":2,"rows":8840823,"lists":65536,"supers":256,"probes":4,"seed":0,"train_s":56.93,"anon_peak_gb":1.787,"anon_train_gb":1.751,"heldout":131072,"objective":0.437618,"imbalance":1.7612}
+{"prune_dims":128,"trainer":"emeans","budget":2,"rows":8840823,"lists":65536,"supers":256,"probes":4,"seed":0,"train_s":76.01,"anon_peak_gb":1.768,"anon_train_gb":1.732,"heldout":131072,"objective":0.437618,"imbalance":1.7612}
+{"prune_dims":0,"trainer":"emeans","budget":2,"rows":8840823,"lists":65536,"supers":256,"probes":4,"seed":0,"train_s":55.48,"anon_peak_gb":1.584,"anon_train_gb":1.548,"heldout":131072,"objective":0.437808,"imbalance":1.7626}
+DONE

@@ -1,0 +1,387 @@
+// Coarse assignment at build time (#48). Exact assignment runs as FP32 BLAS sgemm on the rounded centroids, the way
+// Faiss assigns (1.3-1.5x the binary16 panel kernel's single-thread throughput on AVX2 and AVX-512); the panels stay for
+// query ranking, which streams the centroids once per query. Restricted assignment: each row's nearest list among the members of its probes nearest supers (k-means
+// of the lists' centroids), instead of among every list. Rows probing the same super are scored together against that
+// super's members through the coarse binary16 GEMM, so the work is about probes / supers of exact assignment while
+// staying GEMM-shaped. Members keep the coarse quantizer's rounded centroids, scales and norms, so a row whose nearest
+// list lies in a probed super gets the exact label up to floating-point near-ties (the panel kernel and BLAS sum in
+// different orders).
+#pragma once
+#include "tieredq/tieredq.h"
+#include "tieredq_encode_float.h"
+#include "tieredq_ivf_coarse.h"
+#include "tieredq_train_linalg.h"
+#include <limits>
+#include <numeric>
+#include <optional>
+#include <cstdio>
+#include <cstdlib>
+#include <atomic>
+#include <immintrin.h>
+#if defined(__unix__) || defined(__APPLE__)
+#include <dlfcn.h>
+#endif
+
+namespace tq::tieredq_detail {
+// OpenBLAS sizes its own thread pool; within a call it uses the OpenMP thread count, so builds keep their thread budget.
+// BlasThreads(1) keeps each call on its caller's thread, for GEMMs issued from inside an OpenMP parallel region.
+class BlasThreads {
+ public:
+  explicit BlasThreads(int threads=omp_get_max_threads()) {
+#if defined(__unix__) || defined(__APPLE__)
+    set_=reinterpret_cast<void(*)(int)>(dlsym(RTLD_DEFAULT,"openblas_set_num_threads"));
+    auto get=reinterpret_cast<int(*)()>(dlsym(RTLD_DEFAULT,"openblas_get_num_threads"));
+    if (!set_ || !get) { set_=nullptr; return; }
+    previous_=get();
+    set_(threads);
+#endif
+  }
+  ~BlasThreads() { if (set_) set_(previous_); }
+  BlasThreads(const BlasThreads&)=delete;
+  BlasThreads& operator=(const BlasThreads&)=delete;
+ private:
+  void (*set_)(int)=nullptr;
+  int previous_=1;
+};
+
+// Exact nearest centroid per row (ties: lowest id) by FP32 sgemm over row chunks and centroid tiles: centroids
+// (lists x d, row-major) rank by row.c - half_norms[c], half_norms[c] = |c|^2 / 2.
+inline void nearest_centroids(const float* centroids,const float* half_norms,size_t lists,size_t dimensions,
+                              const float* rows,size_t count,uint32_t* ids) {
+  constexpr size_t chunk_rows=4096,tile_lists=8192;
+  const BlasThreads threads;
+  const auto& linalg=TrainingLinalg::get();
+  const int d=int(dimensions);
+  const size_t tile=std::min(tile_lists,lists);
+  std::vector<float> dots(product(std::min(chunk_rows,count),tile)),best(std::min(chunk_rows,count));
+  for (size_t first=0;first<count;first+=chunk_rows) {
+    const size_t n=std::min(chunk_rows,count-first);
+    std::fill_n(best.begin(),n,-std::numeric_limits<float>::infinity());
+    for (size_t list0=0;list0<lists;list0+=tile) {
+      const size_t m=std::min(tile,lists-list0);
+      // Column-major: dots (m x n) = centroids[list0..)^T x rows^T, so each row's scores are contiguous.
+      const int mi=int(m),ni=int(n); const float one=1,zero=0; const char transposed='T',normal='N';
+      linalg.gemm(&transposed,&normal,&mi,&ni,&d,&one,centroids+list0*dimensions,&d,rows+first*dimensions,&d,&zero,
+                  dots.data(),&mi);
+#pragma omp parallel for schedule(static) if(n>1 && !omp_in_parallel())
+      for (size_t r=0;r<n;++r) {
+        const float* score=dots.data()+r*m;
+        for (size_t j=0;j<m;++j) {
+          const float closeness=score[j]-half_norms[list0+j];
+          if (closeness>best[r]) { best[r]=closeness; ids[first+r]=uint32_t(list0+j); }
+        }
+      }
+    }
+  }
+}
+
+// nearest_centroids() on the coarse quantizer's rounded centroids.
+class BlasAssigner {
+ public:
+  explicit BlasAssigner(const CoarseQuantizer& coarse) : coarse_(coarse),centroids_(coarse.centroids()) {}
+
+  void assign(const float* rows,size_t count,uint32_t* ids) const {
+    nearest_centroids(centroids_.data(),coarse_.half_norms.data(),coarse_.lists,coarse_.dimensions,rows,count,ids);
+  }
+
+ private:
+  const CoarseQuantizer& coarse_;
+  std::vector<float> centroids_;  // the rounded centroids, row-major
+};
+
+// EXPERIMENT (#45 pruning prototype): x . (binary16 row) in FP32.
+__attribute__((target("avx512f,fma"))) inline float dot_half_avx512(const float* x,const uint16_t* h,size_t d) {
+  __m512 s0=_mm512_setzero_ps(),s1=_mm512_setzero_ps();
+  size_t j=0;
+  for (;j+32<=d;j+=32) {
+    s0=_mm512_fmadd_ps(_mm512_loadu_ps(x+j),_mm512_cvtph_ps(_mm256_loadu_si256(reinterpret_cast<const __m256i*>(h+j))),s0);
+    s1=_mm512_fmadd_ps(_mm512_loadu_ps(x+j+16),_mm512_cvtph_ps(_mm256_loadu_si256(reinterpret_cast<const __m256i*>(h+j+16))),s1);
+  }
+  float sum=_mm512_reduce_add_ps(_mm512_add_ps(s0,s1));
+  for (;j<d;++j) sum+=x[j]*half_decode(h[j]);
+  return sum;
+}
+
+class RestrictedAssigner {
+ public:
+  RestrictedAssigner(const CoarseQuantizer& coarse,size_t supers,size_t probes,uint64_t seed)
+      : coarse_(coarse),supers_(cluster(coarse,std::min(supers,coarse.lists),seed)),
+        probes_(std::clamp<size_t>(probes,1,supers_.lists)) {
+    const size_t d=coarse.dimensions;
+    std::vector<uint32_t> owner(coarse.lists);
+    supers_.assign(coarse.centroids().data(),coarse.lists,owner.data());
+    members_.assign(supers_.lists,{});
+    for (uint32_t c=0;c<coarse.lists;++c) members_[owner[c]].push_back(c);
+    panels_.resize(supers_.lists);
+    if (const char* dims=std::getenv("TQ_PRUNE_ASSIGN_DIMS")) prune_dims_=std::min<size_t>(std::stoul(dims),d);  // EXPERIMENT
+    if (prune_dims_) { half_rows_.resize(supers_.lists); projected_panels_.resize(supers_.lists); fit_basis(); }
+    for (size_t s=0;s<supers_.lists;++s) {
+      const auto& members=members_[s];
+      std::vector<uint16_t> halves(product(members.size(),d));
+      for (size_t m=0;m<members.size();++m) coarse.half_row(members[m],halves.data()+m*d);
+      panels_[s].depth=d; panels_[s].columns=members.size();
+      panels_[s].data=pack_panel_values<uint16_t>(d,members.size(),[&](size_t k,size_t m) { return halves[m*d+k]; });
+      if (prune_dims_) half_rows_[s]=std::move(halves);
+    }
+    if (prune_dims_) project_members();
+  }
+  ~RestrictedAssigner() {
+    if (prune_dims_ && candidates_) std::fprintf(stderr,"{\"prune_dims\":%zu,\"rescored_fraction\":%.4f}\n",prune_dims_,
+                                                 double(rescored_.load())/double(candidates_.load()));
+  }
+
+  // Nearest list per row among the probed supers' members; ties keep the lowest list id, as exact assignment does.
+  void assign(const float* rows,size_t count,uint32_t* ids) const {
+    if (prune_dims_ && probes_>1) { assign_pruned(rows,count,ids); return; }
+    std::vector<float> super_closeness,best_closeness;
+    std::vector<uint32_t> probed,slot_order,best_list;
+    for (size_t first=0;first<count;first+=chunk_rows) {
+      const size_t n=std::min(chunk_rows,count-first);
+      const float* chunk=rows+first*coarse_.dimensions;
+      probe_supers(chunk,n,super_closeness,probed);
+      // Slots (row * probes + p) grouped by super: a counting sort, then work items of whole GEMM blocks per super.
+      std::vector<size_t> group_begin(supers_.lists+1,0);
+      for (size_t slot=0;slot<n*probes_;++slot) ++group_begin[probed[slot]+1];
+      std::partial_sum(group_begin.begin(),group_begin.end(),group_begin.begin());
+      slot_order.resize(n*probes_);
+      {
+        auto fill=group_begin;
+        for (size_t slot=0;slot<n*probes_;++slot) slot_order[fill[probed[slot]]++]=uint32_t(slot);
+      }
+      struct Work { uint32_t super; size_t first,count; };
+      std::vector<Work> work;
+      for (uint32_t s=0;s<supers_.lists;++s)
+        for (size_t at=group_begin[s];at<group_begin[s+1];at+=CoarseQuantizer::block_rows)
+          work.push_back({s,at,std::min(CoarseQuantizer::block_rows,group_begin[s+1]-at)});
+      best_closeness.assign(n*probes_,-std::numeric_limits<float>::infinity());
+      best_list.assign(n*probes_,std::numeric_limits<uint32_t>::max());
+#pragma omp parallel for schedule(dynamic) if(work.size()>1 && !omp_in_parallel())
+      for (size_t item=0;item<work.size();++item) score_block(chunk,work[item].super,slot_order.data()+work[item].first,
+                                                              work[item].count,best_closeness,best_list);
+      for (size_t row=0;row<n;++row) {
+        float best=-std::numeric_limits<float>::infinity();
+        uint32_t label=std::numeric_limits<uint32_t>::max();
+        for (size_t p=0;p<probes_;++p) {
+          const size_t slot=row*probes_+p;
+          if (best_closeness[slot]>best || (best_closeness[slot]==best && best_list[slot]<label)) {
+            best=best_closeness[slot]; label=best_list[slot];
+          }
+        }
+        // Only empty probed supers: fall back to the exact label.
+        if (label==std::numeric_limits<uint32_t>::max()) coarse_.assign(chunk+row*coarse_.dimensions,1,&label);
+        ids[first+row]=label;
+      }
+    }
+  }
+
+ private:
+  static constexpr size_t chunk_rows=32768,super_iterations=6;
+  static constexpr float prune_margin=1e-4f;
+
+  // EXPERIMENT: top prune_dims_ principal directions of the rounded centroids (rows of basis_).
+  void fit_basis() {
+    const size_t d=coarse_.dimensions,lists=coarse_.lists; const int di=int(d);
+    const auto centroids=coarse_.centroids();
+    std::vector<double> mean(d,0.0);
+    for (size_t c=0;c<lists;++c) for (size_t j=0;j<d;++j) mean[j]+=centroids[c*d+j];
+    for (auto& v:mean) v/=double(lists);
+    auto covariance=TrainingLinalg::get().covariance_chunked(di,lists,[&](size_t r0,size_t n,double* out) {
+      for (size_t i=0;i<n;++i) for (size_t j=0;j<d;++j) out[i*d+j]=double(centroids[(r0+i)*d+j])-mean[j];
+    });
+    std::vector<double> values(d);
+    const char jobz='V',uplo='L'; int lwork=-1,liwork=-1,info=0; double wq=0; int iwq=0;
+    TrainingLinalg::get().eigen(&jobz,&uplo,&di,covariance.data(),&di,values.data(),&wq,&lwork,&iwq,&liwork,&info);
+    lwork=int(wq); liwork=iwq;
+    std::vector<double> work(static_cast<size_t>(lwork)); std::vector<int> iwork(static_cast<size_t>(liwork));
+    TrainingLinalg::get().eigen(&jobz,&uplo,&di,covariance.data(),&di,values.data(),work.data(),&lwork,iwork.data(),&liwork,&info);
+    if (info) bad("pruning basis eigendecomposition failed");
+    basis_.resize(product(prune_dims_,d));
+    for (size_t k=0;k<prune_dims_;++k) for (size_t j=0;j<d;++j) basis_[k*d+j]=float(covariance[(d-1-k)*d+j]);
+  }
+  // EXPERIMENT: per super, the members' projections as FP32 panels, their squared norms and residual norms.
+  void project_members() {
+    const size_t d=coarse_.dimensions,dp=prune_dims_;
+    const auto centroids=coarse_.centroids();
+    std::vector<float> projected(product(coarse_.lists,dp));
+    {
+      const BlasThreads threads;
+      const int mi=int(dp),ni=int(coarse_.lists),di=int(d); const float one=1,zero=0; const char transposed='T',normal='N';
+      TrainingLinalg::get().gemm(&transposed,&normal,&mi,&ni,&di,&one,basis_.data(),&di,centroids.data(),&di,&zero,
+                                 projected.data(),&mi);
+    }
+    projected_sq_.resize(coarse_.lists); residual_norm_.resize(coarse_.lists);
+    for (size_t c=0;c<coarse_.lists;++c) {
+      float sq=0; for (size_t j=0;j<dp;++j) sq+=projected[c*dp+j]*projected[c*dp+j];
+      projected_sq_[c]=sq; residual_norm_[c]=std::sqrt(std::max(2*coarse_.half_norms[c]-sq,0.0f));
+    }
+    for (size_t s=0;s<supers_.lists;++s) {
+      const auto& members=members_[s];
+      projected_panels_[s]=pack_panels(dp,members.size(),[&](size_t k,size_t m) { return projected[size_t(members[m])*dp+k]; });
+    }
+  }
+
+  // EXPERIMENT: exact restricted assignment with pruning. The first probed super is scored in full (an upper bound per
+  // row); the other probes score |P(x-c)|^2 + (|r_x| - |r_c|)^2 <= |x-c|^2 in d' dimensions and rescore only
+  // candidates below the bound with a full binary16 dot product.
+  void assign_pruned(const float* rows,size_t count,uint32_t* ids) const {
+    const size_t d=coarse_.dimensions,dp=prune_dims_;
+    std::vector<float> super_closeness,best_closeness,row_projected,row_sq,row_psq,row_residual,upper;
+    std::vector<uint32_t> probed,best_list;
+    for (size_t first=0;first<count;first+=chunk_rows) {
+      const size_t n=std::min(chunk_rows,count-first);
+      const float* chunk=rows+first*d;
+      probe_supers(chunk,n,super_closeness,probed);
+      row_projected.resize(product(n,dp)); row_sq.resize(n); row_psq.resize(n); row_residual.resize(n); upper.resize(n);
+      {
+        const BlasThreads threads;
+        const int mi=int(dp),ni=int(n),di=int(d); const float one=1,zero=0; const char transposed='T',normal='N';
+        TrainingLinalg::get().gemm(&transposed,&normal,&mi,&ni,&di,&one,basis_.data(),&di,chunk,&di,&zero,
+                                   row_projected.data(),&mi);
+      }
+#pragma omp parallel for schedule(static)
+      for (size_t r=0;r<n;++r) {
+        const float* x=chunk+r*d; const float* px=row_projected.data()+r*dp;
+        float sq=0,psq=0; for (size_t j=0;j<d;++j) sq+=x[j]*x[j]; for (size_t j=0;j<dp;++j) psq+=px[j]*px[j];
+        row_sq[r]=sq; row_psq[r]=psq; row_residual[r]=std::sqrt(std::max(sq-psq,0.0f));
+      }
+      best_closeness.assign(n*probes_,-std::numeric_limits<float>::infinity());
+      best_list.assign(n*probes_,std::numeric_limits<uint32_t>::max());
+      struct Work { uint32_t super; size_t first,count; };
+      auto group=[&](bool first_probe,std::vector<uint32_t>& slots,std::vector<Work>& work) {
+        std::vector<size_t> begin(supers_.lists+1,0);
+        for (size_t slot=0;slot<n*probes_;++slot) if ((slot%probes_==0)==first_probe) ++begin[probed[slot]+1];
+        std::partial_sum(begin.begin(),begin.end(),begin.begin());
+        slots.resize(begin[supers_.lists]);
+        auto cursor=begin;
+        for (size_t slot=0;slot<n*probes_;++slot) if ((slot%probes_==0)==first_probe) slots[cursor[probed[slot]]++]=uint32_t(slot);
+        for (uint32_t s=0;s<supers_.lists;++s)
+          for (size_t at=begin[s];at<begin[s+1];at+=CoarseQuantizer::block_rows)
+            work.push_back({s,at,std::min(CoarseQuantizer::block_rows,begin[s+1]-at)});
+      };
+      std::vector<uint32_t> first_slots,other_slots; std::vector<Work> first_work,other_work;
+      group(true,first_slots,first_work);
+#pragma omp parallel for schedule(dynamic) if(first_work.size()>1 && !omp_in_parallel())
+      for (size_t item=0;item<first_work.size();++item)
+        score_block(chunk,first_work[item].super,first_slots.data()+first_work[item].first,first_work[item].count,
+                    best_closeness,best_list);
+      for (size_t r=0;r<n;++r) upper[r]=row_sq[r]-2*best_closeness[r*probes_]+prune_margin;
+      group(false,other_slots,other_work);
+      size_t rescored=0,candidates=0;
+#pragma omp parallel for schedule(dynamic) reduction(+:rescored,candidates) if(other_work.size()>1 && !omp_in_parallel())
+      for (size_t item=0;item<other_work.size();++item) {
+        const uint32_t s=other_work[item].super;
+        const uint32_t* slots=other_slots.data()+other_work[item].first;
+        const size_t cnt=other_work[item].count;
+        const auto& members=members_[s];
+        if (members.empty()) continue;
+        const size_t width=projected_panels_[s].padded_columns();
+        std::vector<float> gathered(product(cnt,dp)),dots(product(cnt,width));
+        for (size_t i=0;i<cnt;++i) std::copy_n(row_projected.data()+size_t(slots[i]/probes_)*dp,dp,gathered.data()+i*dp);
+        float_matrix(gathered.data(),cnt,dp,projected_panels_[s],dots.data(),width);
+        const uint16_t* halves=half_rows_[s].data();
+        candidates+=cnt*members.size();
+        for (size_t i=0;i<cnt;++i) {
+          const size_t r=slots[i]/probes_;
+          const float* x=chunk+r*d;
+          const float base=row_psq[r],rx=row_residual[r],bound_limit=upper[r];
+          float best=-std::numeric_limits<float>::infinity();
+          uint32_t label=std::numeric_limits<uint32_t>::max();
+          for (size_t m=0;m<members.size();++m) {
+            const uint32_t list=members[m];
+            const float gap=rx-residual_norm_[list];
+            if (base+projected_sq_[list]-2*dots[i*width+m]+gap*gap>=bound_limit) continue;
+            ++rescored;
+            const float value=dot_half_avx512(x,halves+m*d,d)*coarse_.scales[list]-coarse_.half_norms[list];
+            if (value>best || (value==best && list<label)) { best=value; label=list; }
+          }
+          best_closeness[slots[i]]=best; best_list[slots[i]]=label;
+        }
+      }
+      rescored_+=rescored; candidates_+=candidates;
+      for (size_t row=0;row<n;++row) {
+        float best=-std::numeric_limits<float>::infinity();
+        uint32_t label=std::numeric_limits<uint32_t>::max();
+        for (size_t p=0;p<probes_;++p) {
+          const size_t slot=row*probes_+p;
+          if (best_closeness[slot]>best || (best_closeness[slot]==best && best_list[slot]<label)) {
+            best=best_closeness[slot]; label=best_list[slot];
+          }
+        }
+        if (label==std::numeric_limits<uint32_t>::max()) coarse_.assign(chunk+row*d,1,&label);
+        ids[first+row]=label;
+      }
+    }
+  }
+
+  static CoarseQuantizer cluster(const CoarseQuantizer& coarse,size_t supers,uint64_t seed) {
+    const auto centroids=coarse.centroids();
+    return train_coarse(centroids.data(),coarse.lists,coarse.dimensions,supers,seed,super_iterations);
+  }
+
+  // probed[row * probes + p]: the row's p-th nearest super.
+  void probe_supers(const float* chunk,size_t n,std::vector<float>& closeness,std::vector<uint32_t>& probed) const {
+    closeness.resize(product(n,supers_.lists));
+    supers_.closeness(chunk,n,closeness.data());
+    probed.resize(n*probes_);
+#pragma omp parallel for schedule(static) if(n>1 && !omp_in_parallel())
+    for (size_t row=0;row<n;++row) {
+      const float* score=closeness.data()+row*supers_.lists;
+      std::vector<uint32_t> order(supers_.lists);
+      std::iota(order.begin(),order.end(),0u);
+      std::partial_sort(order.begin(),order.begin()+probes_,order.end(),[&](uint32_t a,uint32_t b) {
+        return score[a]>score[b] || (score[a]==score[b] && a<b);
+      });
+      std::copy_n(order.begin(),probes_,probed.begin()+row*probes_);
+    }
+  }
+
+  // The best member of super s for each of count slots.
+  void score_block(const float* chunk,uint32_t s,const uint32_t* slots,size_t count,std::vector<float>& best_closeness,
+                   std::vector<uint32_t>& best_list) const {
+    const auto& members=members_[s];
+    if (members.empty()) return;
+    const size_t d=coarse_.dimensions,width=panels_[s].padded_columns();
+    std::vector<float> gathered(product(count,d)),dots(product(count,width));
+    for (size_t i=0;i<count;++i) std::copy_n(chunk+size_t(slots[i]/probes_)*d,d,gathered.data()+i*d);
+    half_matrix(gathered.data(),count,d,panels_[s],dots.data(),width);
+    for (size_t i=0;i<count;++i) {
+      float best=-std::numeric_limits<float>::infinity();
+      uint32_t label=std::numeric_limits<uint32_t>::max();
+      for (size_t m=0;m<members.size();++m) {
+        const uint32_t list=members[m];
+        const float value=dots[i*width+m]*coarse_.scales[list]-coarse_.half_norms[list];
+        if (value>best || (value==best && list<label)) { best=value; label=list; }
+      }
+      best_closeness[slots[i]]=best; best_list[slots[i]]=label;
+    }
+  }
+
+  const CoarseQuantizer& coarse_;
+  CoarseQuantizer supers_;
+  std::vector<std::vector<uint32_t>> members_;  // list ids per super, ascending
+  std::vector<HalfPanels> panels_;              // per super: its members' rounded centroids
+  size_t probes_;
+  size_t prune_dims_=0;                          // EXPERIMENT
+  std::vector<float> basis_,projected_sq_,residual_norm_;
+  std::vector<std::vector<uint16_t>> half_rows_;
+  std::vector<TieredQPanels> projected_panels_;
+  mutable std::atomic<size_t> rescored_{0},candidates_{0};
+};
+
+// Labels rows with the coarse quantizer's nearest list: exactly (BLAS), or restricted when training sets supers.
+class ListAssigner {
+ public:
+  ListAssigner(const CoarseQuantizer& coarse,const TieredQCoarseTraining& training,uint64_t seed) {
+    if (training.assignment_supers) restricted_.emplace(coarse,training.assignment_supers,training.assignment_probes,seed);
+    else exact_.emplace(coarse);
+  }
+  void assign(const float* rows,size_t count,uint32_t* ids) const {
+    if (restricted_) restricted_->assign(rows,count,ids);
+    else exact_->assign(rows,count,ids);
+  }
+ private:
+  std::optional<RestrictedAssigner> restricted_;
+  std::optional<BlasAssigner> exact_;
+};
+
+} // namespace tq::tieredq_detail

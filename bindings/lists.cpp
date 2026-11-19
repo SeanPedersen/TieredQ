@@ -13,38 +13,45 @@ void bind_lists(nb::module_& module) {
       "Coarse list training of IVF builds: Lloyd iterations, restricted assignment (assignment_supers > 0: each row's\n"
       "nearest list among the members of its assignment_probes nearest supers) and the sample rows per list that\n"
       "build() trains on; emeans_epochs > 0 trains by e-means for that many passes instead of Lloyd iterations,\n"
-      "streaming its batches (no sample in RAM), its batch assignment probing emeans_probes supers (0: assignment_probes). The\n"
-      "defaults are exact Lloyd; indexes use automatic(lists) (e-means) unless given one; lloyd(lists) is the Lloyd recipe.")
+      "streaming its batches (no sample in RAM), its batch assignment probing emeans_probes supers (0: assignment_probes).\n"
+      "assignment_bound_dimensions > 0 prunes restricted assignment by an exact lower bound on that many principal\n"
+      "directions (same labels up to near-ties). The defaults are exact Lloyd; indexes use automatic(lists) (e-means) unless given one; lloyd(lists) is the Lloyd recipe.")
       .def("__init__", [](Training* training, uint32_t iterations, uint32_t assignment_supers, uint32_t assignment_probes,
-                          uint32_t sample_rows_per_list, double emeans_epochs, uint32_t emeans_probes) {
+                          uint32_t sample_rows_per_list, double emeans_epochs, uint32_t emeans_probes,
+                          uint32_t assignment_bound_dimensions) {
         new (training) Training{iterations, assignment_supers, assignment_probes, sample_rows_per_list, emeans_epochs,
-                                emeans_probes};
+                                emeans_probes, assignment_bound_dimensions};
         training->validate();
       }, nb::kw_only(), "iterations"_a = exact.iterations, "assignment_supers"_a = exact.assignment_supers,
          "assignment_probes"_a = exact.assignment_probes, "sample_rows_per_list"_a = exact.sample_rows_per_list,
-         "emeans_epochs"_a = exact.emeans_epochs, "emeans_probes"_a = exact.emeans_probes)
+         "emeans_epochs"_a = exact.emeans_epochs, "emeans_probes"_a = exact.emeans_probes,
+         "assignment_bound_dimensions"_a = exact.assignment_bound_dimensions)
       .def_rw("iterations", &Training::iterations)
       .def_rw("assignment_supers", &Training::assignment_supers)
       .def_rw("assignment_probes", &Training::assignment_probes)
       .def_rw("sample_rows_per_list", &Training::sample_rows_per_list)
       .def_rw("emeans_epochs", &Training::emeans_epochs)
       .def_rw("emeans_probes", &Training::emeans_probes)
+      .def_rw("assignment_bound_dimensions", &Training::assignment_bound_dimensions)
       .def_static("automatic", &Training::automatic, "lists"_a,
                   "The training an index with this many lists uses by default: e-means, restricted from fast_lists lists on.")
       .def_static("lloyd", &Training::lloyd, "lists"_a,
                   "The Lloyd recipe automatic() replaced (#45): fast from fast_lists lists on, else exact.")
       .def_ro_static("fast_lists", &Training::fast_lists)
+      .def_ro_static("bounded_lists", &Training::bounded_lists)
       .def("__eq__", [](const Training& a, const Training& b) {
         return a.iterations == b.iterations && a.assignment_supers == b.assignment_supers &&
                a.assignment_probes == b.assignment_probes && a.sample_rows_per_list == b.sample_rows_per_list &&
-               a.emeans_epochs == b.emeans_epochs && a.emeans_probes == b.emeans_probes;
+               a.emeans_epochs == b.emeans_epochs && a.emeans_probes == b.emeans_probes &&
+               a.assignment_bound_dimensions == b.assignment_bound_dimensions;
       })
       .def("__repr__", [](const Training& t) {
         return "TieredQCoarseTraining(iterations=" + std::to_string(t.iterations) + ", assignment_supers=" +
                std::to_string(t.assignment_supers) + ", assignment_probes=" + std::to_string(t.assignment_probes) +
                ", sample_rows_per_list=" + std::to_string(t.sample_rows_per_list) +
                ", emeans_epochs=" + std::to_string(t.emeans_epochs) +
-               ", emeans_probes=" + std::to_string(t.emeans_probes) + ")";
+               ", emeans_probes=" + std::to_string(t.emeans_probes) +
+               ", assignment_bound_dimensions=" + std::to_string(t.assignment_bound_dimensions) + ")";
       });
 
   using Router = tq::TieredQRouterConfig;

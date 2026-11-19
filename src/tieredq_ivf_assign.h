@@ -9,6 +9,7 @@
 #pragma once
 #include "tieredq/tieredq.h"
 #include "tieredq_encode_float.h"
+#include "tieredq_ivf_bound.h"
 #include "tieredq_ivf_coarse.h"
 #include "tieredq_train_linalg.h"
 #include <limits>
@@ -85,9 +86,12 @@ class BlasAssigner {
   std::vector<float> centroids_;  // the rounded centroids, row-major
 };
 
+// Restricted assignment: each row's nearest list among the members of its probes nearest supers (a k-means of the
+// lists' centroids). With bound_dimensions > 0 (tieredq_ivf_bound.h) the first probed super is scored in full, giving
+// each row a distance to beat, and the other probes' members only where their exact lower bound is below it.
 class RestrictedAssigner {
  public:
-  RestrictedAssigner(const CoarseQuantizer& coarse,size_t supers,size_t probes,uint64_t seed)
+  RestrictedAssigner(const CoarseQuantizer& coarse,size_t supers,size_t probes,uint64_t seed,size_t bound_dimensions=0)
       : coarse_(coarse),supers_(cluster(coarse,std::min(supers,coarse.lists),seed)),
         probes_(std::clamp<size_t>(probes,1,supers_.lists)) {
     const size_t d=coarse.dimensions;
@@ -95,6 +99,14 @@ class RestrictedAssigner {
     supers_.assign(coarse.centroids().data(),coarse.lists,owner.data());
     members_.assign(supers_.lists,{});
     for (uint32_t c=0;c<coarse.lists;++c) members_[owner[c]].push_back(c);
+    // A bound as wide as the rows costs more than it saves, and one probe leaves nothing to prune.
+    if (bound_dimensions && bound_dimensions<d && probes_>1) {
+      bound_.emplace(coarse,bound_dimensions);
+      bound_panels_.reserve(supers_.lists);
+      for (const auto& members:members_) bound_panels_.push_back(bound_->panels(members));
+      bound_->release_projections();
+      member_halves_.resize(supers_.lists);
+    }
     panels_.resize(supers_.lists);
     for (size_t s=0;s<supers_.lists;++s) {
       const auto& members=members_[s];
@@ -102,54 +114,39 @@ class RestrictedAssigner {
       for (size_t m=0;m<members.size();++m) coarse.half_row(members[m],halves.data()+m*d);
       panels_[s].depth=d; panels_[s].columns=members.size();
       panels_[s].data=pack_panel_values<uint16_t>(d,members.size(),[&](size_t k,size_t m) { return halves[m*d+k]; });
+      if (bound_) member_halves_[s]=std::move(halves);
     }
   }
 
   // Nearest list per row among the probed supers' members; ties keep the lowest list id, as exact assignment does.
   void assign(const float* rows,size_t count,uint32_t* ids) const {
-    std::vector<float> super_closeness,best_closeness;
-    std::vector<uint32_t> probed,slot_order,best_list;
+    ChunkState state;
     for (size_t first=0;first<count;first+=chunk_rows) {
       const size_t n=std::min(chunk_rows,count-first);
       const float* chunk=rows+first*coarse_.dimensions;
-      probe_supers(chunk,n,super_closeness,probed);
-      // Slots (row * probes + p) grouped by super: a counting sort, then work items of whole GEMM blocks per super.
-      std::vector<size_t> group_begin(supers_.lists+1,0);
-      for (size_t slot=0;slot<n*probes_;++slot) ++group_begin[probed[slot]+1];
-      std::partial_sum(group_begin.begin(),group_begin.end(),group_begin.begin());
-      slot_order.resize(n*probes_);
-      {
-        auto fill=group_begin;
-        for (size_t slot=0;slot<n*probes_;++slot) slot_order[fill[probed[slot]]++]=uint32_t(slot);
-      }
-      struct Work { uint32_t super; size_t first,count; };
-      std::vector<Work> work;
-      for (uint32_t s=0;s<supers_.lists;++s)
-        for (size_t at=group_begin[s];at<group_begin[s+1];at+=CoarseQuantizer::block_rows)
-          work.push_back({s,at,std::min(CoarseQuantizer::block_rows,group_begin[s+1]-at)});
-      best_closeness.assign(n*probes_,-std::numeric_limits<float>::infinity());
-      best_list.assign(n*probes_,std::numeric_limits<uint32_t>::max());
-#pragma omp parallel for schedule(dynamic) if(work.size()>1 && !omp_in_parallel())
-      for (size_t item=0;item<work.size();++item) score_block(chunk,work[item].super,slot_order.data()+work[item].first,
-                                                              work[item].count,best_closeness,best_list);
+      probe_supers(chunk,n,state.closeness,state.probed);
+      state.best.assign(n*probes_,-std::numeric_limits<float>::infinity());
+      state.best_list.assign(n*probes_,std::numeric_limits<uint32_t>::max());
+      if (bound_) assign_bounded(chunk,n,state);
+      else score_slots(chunk,n,state,[](size_t) { return true; });
       for (size_t row=0;row<n;++row) {
-        float best=-std::numeric_limits<float>::infinity();
-        uint32_t label=std::numeric_limits<uint32_t>::max();
-        for (size_t p=0;p<probes_;++p) {
-          const size_t slot=row*probes_+p;
-          if (best_closeness[slot]>best || (best_closeness[slot]==best && best_list[slot]<label)) {
-            best=best_closeness[slot]; label=best_list[slot];
-          }
-        }
-        // Only empty probed supers: fall back to the exact label.
-        if (label==std::numeric_limits<uint32_t>::max()) coarse_.assign(chunk+row*coarse_.dimensions,1,&label);
-        ids[first+row]=label;
+        const uint32_t label=best_of_probes(state,row);
+        if (label==std::numeric_limits<uint32_t>::max()) coarse_.assign(chunk+row*coarse_.dimensions,1,ids+first+row);
+        else ids[first+row]=label;  // only empty probed supers fall back to the exact label
       }
     }
   }
 
  private:
   static constexpr size_t chunk_rows=32768,super_iterations=6;
+  // Relative slack on the bound for FP32 rounding of both expansions: pruning keeps exact labels up to near-ties.
+  static constexpr float bound_slack=1e-5f;
+
+  struct ChunkState {
+    std::vector<float> closeness,best,projected,projected_sq,residual,limit;
+    std::vector<uint32_t> probed,best_list,slots;
+  };
+  struct Work { uint32_t super; size_t first,count; };
 
   static CoarseQuantizer cluster(const CoarseQuantizer& coarse,size_t supers,uint64_t seed) {
     const auto centroids=coarse.centroids();
@@ -173,6 +170,62 @@ class RestrictedAssigner {
     }
   }
 
+  // The selected slots (row * probes + p) grouped by super, a counting sort, as work items of GEMM blocks per super.
+  template<class Selected> std::vector<Work> group_slots(size_t n,ChunkState& state,Selected selected) const {
+    std::vector<size_t> begin(supers_.lists+1,0);
+    for (size_t slot=0;slot<n*probes_;++slot) if (selected(slot)) ++begin[state.probed[slot]+1];
+    std::partial_sum(begin.begin(),begin.end(),begin.begin());
+    state.slots.resize(begin[supers_.lists]);
+    auto fill=begin;
+    for (size_t slot=0;slot<n*probes_;++slot) if (selected(slot)) state.slots[fill[state.probed[slot]]++]=uint32_t(slot);
+    std::vector<Work> work;
+    for (uint32_t s=0;s<supers_.lists;++s)
+      for (size_t at=begin[s];at<begin[s+1];at+=CoarseQuantizer::block_rows)
+        work.push_back({s,at,std::min(CoarseQuantizer::block_rows,begin[s+1]-at)});
+    return work;
+  }
+
+  template<class Selected> void score_slots(const float* chunk,size_t n,ChunkState& state,Selected selected) const {
+    const auto work=group_slots(n,state,selected);
+#pragma omp parallel for schedule(dynamic) if(work.size()>1 && !omp_in_parallel())
+    for (size_t item=0;item<work.size();++item)
+      score_block(chunk,work[item].super,state.slots.data()+work[item].first,work[item].count,state.best,state.best_list);
+  }
+
+  void assign_bounded(const float* chunk,size_t n,ChunkState& state) const {
+    const size_t d=coarse_.dimensions,dp=bound_->dimensions();
+    state.projected.resize(product(n,dp)); state.projected_sq.resize(n); state.residual.resize(n); state.limit.resize(n);
+    { const BlasThreads threads; bound_->project(chunk,n,state.projected.data()); }
+    score_slots(chunk,n,state,[&](size_t slot) { return slot%probes_==0; });
+#pragma omp parallel for schedule(static) if(n>1 && !omp_in_parallel())
+    for (size_t row=0;row<n;++row) {
+      const float row_sq=ProjectionBound::squared_norm(chunk+row*d,d);
+      const float projected_sq=ProjectionBound::squared_norm(state.projected.data()+row*dp,dp);
+      state.projected_sq[row]=projected_sq;
+      state.residual[row]=std::sqrt(std::max(row_sq-projected_sq,0.0f));
+      const size_t slot=row*probes_;
+      const uint32_t list=state.best_list[slot];
+      state.limit[row]=list==std::numeric_limits<uint32_t>::max() ? std::numeric_limits<float>::infinity()
+          : row_sq-2*state.best[slot]+bound_slack*(row_sq+2*coarse_.half_norms[list]);
+    }
+    const auto work=group_slots(n,state,[&](size_t slot) { return slot%probes_!=0; });
+#pragma omp parallel for schedule(dynamic) if(work.size()>1 && !omp_in_parallel())
+    for (size_t item=0;item<work.size();++item)
+      score_bounded_block(chunk,work[item].super,state.slots.data()+work[item].first,work[item].count,state);
+  }
+
+  uint32_t best_of_probes(const ChunkState& state,size_t row) const {
+    float best=-std::numeric_limits<float>::infinity();
+    uint32_t label=std::numeric_limits<uint32_t>::max();
+    for (size_t p=0;p<probes_;++p) {
+      const size_t slot=row*probes_+p;
+      if (state.best[slot]>best || (state.best[slot]==best && state.best_list[slot]<label)) {
+        best=state.best[slot]; label=state.best_list[slot];
+      }
+    }
+    return label;
+  }
+
   // The best member of super s for each of count slots.
   void score_block(const float* chunk,uint32_t s,const uint32_t* slots,size_t count,std::vector<float>& best_closeness,
                    std::vector<uint32_t>& best_list) const {
@@ -194,18 +247,51 @@ class RestrictedAssigner {
     }
   }
 
+  // score_block for slots beyond the first probe: bounds on the projected panels, full rescoring of survivors only.
+  void score_bounded_block(const float* chunk,uint32_t s,const uint32_t* slots,size_t count,ChunkState& state) const {
+    const auto& members=members_[s];
+    if (members.empty()) return;
+    const size_t d=coarse_.dimensions,dp=bound_->dimensions(),width=bound_panels_[s].padded_columns();
+    std::vector<float> gathered(product(count,dp)),dots(product(count,width));
+    for (size_t i=0;i<count;++i) std::copy_n(state.projected.data()+size_t(slots[i]/probes_)*dp,dp,gathered.data()+i*dp);
+    float_matrix(gathered.data(),count,dp,bound_panels_[s],dots.data(),width);
+    const uint16_t* halves=member_halves_[s].data();
+    for (size_t i=0;i<count;++i) {
+      const size_t row=slots[i]/probes_;
+      const float* x=chunk+row*d;
+      const float projected_sq=state.projected_sq[row],residual=state.residual[row],limit=state.limit[row];
+      float best=-std::numeric_limits<float>::infinity();
+      uint32_t label=std::numeric_limits<uint32_t>::max();
+      for (size_t m=0;m<members.size();++m) {
+        const uint32_t list=members[m];
+        const float gap=residual-bound_->residual(list);
+        if (projected_sq+bound_->projected_sq(list)-2*dots[i*width+m]+gap*gap>=limit) continue;
+        const float value=half_row_dot(x,halves+m*d,d)*coarse_.scales[list]-coarse_.half_norms[list];
+        if (value>best || (value==best && list<label)) { best=value; label=list; }
+      }
+      state.best[slots[i]]=best; state.best_list[slots[i]]=label;
+    }
+  }
+
   const CoarseQuantizer& coarse_;
   CoarseQuantizer supers_;
   std::vector<std::vector<uint32_t>> members_;  // list ids per super, ascending
   std::vector<HalfPanels> panels_;              // per super: its members' rounded centroids
   size_t probes_;
+  std::optional<ProjectionBound> bound_;
+  std::vector<TieredQPanels> bound_panels_;     // per super: its members' projections
+  // Per super, its members' binary16 rows contiguous for rescoring survivors: a panel column spans d / 2 cache lines
+  // where a row spans d / 32 (gathering columns made the bounded assignment slower than the unbounded one).
+  std::vector<std::vector<uint16_t>> member_halves_;
 };
 
 // Labels rows with the coarse quantizer's nearest list: exactly (BLAS), or restricted when training sets supers.
 class ListAssigner {
  public:
   ListAssigner(const CoarseQuantizer& coarse,const TieredQCoarseTraining& training,uint64_t seed) {
-    if (training.assignment_supers) restricted_.emplace(coarse,training.assignment_supers,training.assignment_probes,seed);
+    if (training.assignment_supers)
+      restricted_.emplace(coarse,training.assignment_supers,training.assignment_probes,seed,
+                          training.assignment_bound_dimensions);
     else exact_.emplace(coarse);
   }
   void assign(const float* rows,size_t count,uint32_t* ids) const {

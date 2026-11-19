@@ -258,15 +258,16 @@ void bind_ivf(nb::module_& module) {
          "'exact' force either; super_probes > 0 overrides the router's probed supers.")
       .def("set_coarse_training", [](PythonIVFIndex& self, uint32_t iterations, uint32_t assignment_supers,
                                      uint32_t assignment_probes, uint32_t sample_rows_per_list, double emeans_epochs,
-                                     uint32_t emeans_probes) {
+                                     uint32_t emeans_probes, uint32_t assignment_bound_dimensions) {
         self.set_coarse_training({iterations, assignment_supers, assignment_probes, sample_rows_per_list,
-                                  emeans_epochs, emeans_probes});
+                                  emeans_epochs, emeans_probes, assignment_bound_dimensions});
       }, nb::kw_only(), "iterations"_a = tq::TieredQCoarseTraining{}.iterations,
          "assignment_supers"_a = tq::TieredQCoarseTraining{}.assignment_supers,
          "assignment_probes"_a = tq::TieredQCoarseTraining{}.assignment_probes,
          "sample_rows_per_list"_a = tq::TieredQCoarseTraining{}.sample_rows_per_list,
          "emeans_epochs"_a = tq::TieredQCoarseTraining{}.emeans_epochs,
          "emeans_probes"_a = tq::TieredQCoarseTraining{}.emeans_probes,
+         "assignment_bound_dimensions"_a = tq::TieredQCoarseTraining{}.assignment_bound_dimensions,
          "Lloyd iterations (or e-means epochs when emeans_epochs > 0) of list training, restricted assignment\n"
          "(assignment_supers > 0: each row's nearest\n"
          "list among the members of its assignment_probes nearest supers) and build()'s list-training sample for\n"

@@ -357,13 +357,25 @@ struct TieredQCoarseTraining {
   // E-means' restricted batch assignment probes this many supers (0: assignment_probes); the final assignment of
   // every row keeps assignment_probes.
   uint32_t emeans_probes = 0;
+  // > 0 (restricted assignment only): rows score their first probed super in full and the other probes' members first
+  // by an exact lower bound on this many principal directions of the centroids, rescoring only members it cannot rule
+  // out. Labels stay those of unbounded restricted assignment up to floating-point near-ties. On Qwen/MS MARCO
+  // 8.84M x 1024 (64K lists, 256 x 16) 224 rescored 1.3% of the other probes' candidates: final assignment 38 vs 53 s,
+  // build 160 vs 175 s on 2 seeds, recall@10 identical at every nprobe (#45). It pays only when a row's candidates
+  // (assignment_probes x lists / assignment_supers) far outnumber the bound's dimensions: on MS MARCO 1M x 1024 it
+  // slowed assignment at 8K lists (4.6 -> 7.6 s, ~512 candidates) and 32K (8.8 -> 11.9 s, ~2K). 0 scores every
+  // member in full.
+  uint32_t assignment_bound_dimensions = 0;
   // Restricted assignment from this many lists on (both recipes below).
   static constexpr uint32_t fast_lists = 8192;
+  // The final assignment bounds on 224 dimensions from this many lists on (both recipes).
+  static constexpr uint32_t bounded_lists = 65536;
   // E-means. From fast_lists lists on: 2 epochs over 256 rows per list (every row of 8.84M at 64K lists), batch rows
   // probing 4 of 256 supers, the final assignment 16. On Qwen/MS MARCO 8.84M x 1024 (64K lists, the #52 shipping
   // build) against lloyd(): build 179 vs 203 s, peak build RSS 15.4 vs 20.9 GB, recall@10 +0.003-0.009 at equal p50
-  // latency (nprobe 96-1024), same serving RAM. Below: exact e-means, 2.5 epochs over 256 rows per list (1M, 2,048
-  // lists: training 5.9 vs 12.5 s, recall@10 at equal rows scanned equal or higher).
+  // latency (nprobe 96-1024), same serving RAM. From bounded_lists the final assignment bounds on 224 dimensions. Below:
+  // exact e-means, 2.5 epochs over 256 rows per list (1M, 2,048 lists: training 5.9 vs 12.5 s, recall@10 at equal
+  // rows scanned equal or higher).
   static TieredQCoarseTraining automatic(size_t lists);
   // Lloyd. From fast_lists lists on: 4 iterations on 40 rows per list (Faiss's budget) with 256 x 16 restricted
   // assignment (#52: within 0.002 recall@10 of exact Lloyd at 8K-32K lists on Qwen 1M, 25-43x faster); exact below.

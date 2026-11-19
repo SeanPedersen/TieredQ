@@ -1,0 +1,29 @@
+{
+  "training": {
+    "iterations": 4,
+    "assignment_supers": 256,
+    "assignment_probes": 16,
+    "sample_rows_per_list": 256,
+    "emeans_epochs": 2.0,
+    "emeans_probes": 4,
+    "assignment_bound_dimensions": 0
+  },
+  "seed": 0,
+  "rows": 8840823,
+  "lists": 65536,
+  "has_router": true,
+  "prefix_bits": 1024,
+  "total_bits": 8161,
+  "storage_bytes": 1587658796,
+  "build_stats": {
+    "train_s": 62.230442603,
+    "assign_s": 53.500978799,
+    "encode_s": 49.383332331,
+    "router_s": 6.113324548
+  },
+  "build_s": 175.55425375304185,
+  "tier_s": 95.09087827289477,
+  "save_s": 7.9366968451067805,
+  "total_s": 270.6451320259366,
+  "peak_rss_bytes": 15353237504
+}

@@ -42,6 +42,7 @@ constexpr size_t coarse_minimum_sample=32768;
 constexpr uint64_t coarse_sample_salt=0x9e3779b97f4a7c15ULL;
 // TieredQCoarseTraining::automatic (e-means) and ::lloyd recipes: exact below fast_lists lists, restricted from there.
 constexpr TieredQCoarseTraining exact_emeans_training{20,0,16,256,2.5};
+constexpr uint32_t fast_bound_dimensions=224;
 constexpr TieredQCoarseTraining fast_emeans_training{4,256,16,256,2.0,4};
 constexpr TieredQCoarseTraining fast_lloyd_training{4,256,16,40};
 // automatic_lists(): the codec's centroids serve as lists up to this many; rows per list fall from small_rows_per_list
@@ -124,12 +125,18 @@ uint32_t TieredQIVFIndex::automatic_scan_bits(const TieredQConfig& config) {
   return nibble ? nibble_scan_bits : 0;
 }
 
+// The recipe's fast training with the final assignment's bound switched on from bounded_lists lists.
+static TieredQCoarseTraining bounded(TieredQCoarseTraining training,size_t lists) {
+  if (lists>=TieredQCoarseTraining::bounded_lists) training.assignment_bound_dimensions=fast_bound_dimensions;
+  return training;
+}
+
 TieredQCoarseTraining TieredQCoarseTraining::automatic(size_t lists) {
-  return lists>=fast_lists ? fast_emeans_training : exact_emeans_training;
+  return lists>=fast_lists ? bounded(fast_emeans_training,lists) : exact_emeans_training;
 }
 
 TieredQCoarseTraining TieredQCoarseTraining::lloyd(size_t lists) {
-  return lists>=fast_lists ? fast_lloyd_training : TieredQCoarseTraining{};
+  return lists>=fast_lists ? bounded(fast_lloyd_training,lists) : TieredQCoarseTraining{};
 }
 
 TieredQCoarseTraining TieredQIVFIndex::coarse_training() const {
@@ -162,6 +169,7 @@ void TieredQCoarseTraining::validate() const {
   if (emeans_epochs<0) bad("coarse e-means training needs a non-negative epoch budget");
   if (emeans_probes && !assignment_supers) bad("e-means probes need restricted assignment (assignment_supers > 0)");
   if (assignment_supers && !assignment_probes) bad("restricted assignment needs at least one probe");
+  if (assignment_bound_dimensions && !assignment_supers) bad("an assignment bound needs restricted assignment (assignment_supers > 0)");
   if (!sample_rows_per_list) bad("coarse training needs at least one sample row per list");
 }
 

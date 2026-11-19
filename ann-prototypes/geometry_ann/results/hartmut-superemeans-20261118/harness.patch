@@ -1,0 +1,96 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 473ee3b..9c7f0f3 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -26,3 +26,12 @@ target_link_libraries(kmeans PRIVATE superkmeans Threads::Threads)
+ 
+ add_executable(emeans src/emeans.cpp)
+ target_link_libraries(emeans PRIVATE superkmeans Threads::Threads)
++
++# TieredQ e-means in the same harness
++find_package(OpenMP REQUIRED)
++find_package(BLAS REQUIRED)
++add_executable(tq_emeans src/tq_emeans.cpp)
++target_include_directories(tq_emeans PRIVATE ${CMAKE_SOURCE_DIR}/../source/include ${CMAKE_SOURCE_DIR}/../source/src)
++target_compile_features(tq_emeans PRIVATE cxx_std_20)
++target_compile_options(tq_emeans PRIVATE -O3 -ffp-contract=off)
++target_link_libraries(tq_emeans PRIVATE superkmeans OpenMP::OpenMP_CXX ${BLAS_LIBRARIES} ${CMAKE_DL_LIBS})
+diff --git a/src/bench_utils.h b/src/bench_utils.h
+index a1979eb..d01752e 100644
+--- a/src/bench_utils.h
++++ b/src/bench_utils.h
+@@ -26,6 +26,8 @@ struct Dataset {
+ inline const std::unordered_map<std::string, Dataset> DATASETS = {
+     {"openai5m", {5'000'000, 1536}},
+     {"cohere", {10'000'000, 1024}},
++    {"qwen2m", {2'000'000, 1024}},
++    {"qwen4m", {4'000'000, 1024}},
+ };
+ 
+ inline constexpr size_t N_QUERIES = 1000;
+diff --git a/src/emeans.cpp b/src/emeans.cpp
+index 71666fe..0869180 100644
+--- a/src/emeans.cpp
++++ b/src/emeans.cpp
+@@ -7,6 +7,7 @@
+ #include <vector>
+ 
+ #include "bench_utils.h"
++#include "peak_rss.h"
+ #include "superkmeans/superemeans.h"
+ 
+ // e-means (pruning=false) and SuperEMeans (pruning=true).
+@@ -36,16 +37,18 @@ int main(int argc, char* argv[]) {
+     skmeans::SuperEMeansConfig config;
+     config.iters = epochs;
+     config.verbose = true;
+-    config.n_threads = skmeans::ResolveNumThreads(0);
++    config.n_threads = skmeans::ResolveNumThreads(repro::Threads());
+     config.unrotate_centroids = true;
+     config.use_blas_only = !pruning;
+ 
+     auto emeans = skmeans::SuperEMeans<skmeans::Quantization::f32>(n_clusters, d, config);
+     repro::Timer timer;
++    const repro::PeakRss rss;
+     timer.Tic();
+     std::vector<float> centroids = emeans.Train(data.get(), n);
+     timer.Toc();
+     printf("\nTraining completed in %.1f s\n", timer.Seconds());
++    rss.Print();
+     printf("Batch size: %zu | Initial step: %f\n", emeans.GetBatchSize(), emeans.GetInitialStep());
+ 
+     std::vector<uint32_t> last_pass(emeans.assignments.get(), emeans.assignments.get() + n);
+diff --git a/src/kmeans.cpp b/src/kmeans.cpp
+index d2a1a22..1b8886e 100644
+--- a/src/kmeans.cpp
++++ b/src/kmeans.cpp
+@@ -7,6 +7,7 @@
+ #include <vector>
+ 
+ #include "bench_utils.h"
++#include "peak_rss.h"
+ #include "superkmeans/superkmeans.h"
+ 
+ // Lloyd's k-means (pruning=false) and SuperKMeans (pruning=true).
+@@ -36,7 +37,7 @@ int main(int argc, char* argv[]) {
+     skmeans::SuperKMeansConfig config;
+     config.iters = iterations;
+     config.verbose = true;
+-    config.n_threads = skmeans::ResolveNumThreads(0);
++    config.n_threads = skmeans::ResolveNumThreads(repro::Threads());
+     config.unrotate_centroids = true;
+     config.early_termination = false;
+     config.sampling_fraction = 1.0f;
+@@ -45,10 +46,12 @@ int main(int argc, char* argv[]) {
+ 
+     auto kmeans = skmeans::SuperKMeans(n_clusters, d, config);
+     repro::Timer timer;
++    const repro::PeakRss rss;
+     timer.Tic();
+     std::vector<float> centroids = kmeans.Train(data.get(), n);
+     timer.Toc();
+     printf("\nTraining completed in %.1f s\n", timer.Seconds());
++    rss.Print();
+ 
+     auto assignments = kmeans.AssignTrainingPoints(data.get(), centroids.data(), n, n_clusters);
+     const double wcss =

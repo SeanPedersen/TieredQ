@@ -1,0 +1,9 @@
+{"unused_threshold":0.1,"trainer":"emeans","budget":2,"rows":8840823,"lists":65536,"supers":256,"probes":4,"seed":0,"train_s":60.89,"anon_peak_gb":1.583,"anon_train_gb":1.547,"heldout":131072,"objective":0.437808,"imbalance":1.7626}
+{"unused_threshold":0.3,"trainer":"emeans","budget":2,"rows":8840823,"lists":65536,"supers":256,"probes":4,"seed":0,"train_s":55.00,"anon_peak_gb":1.585,"anon_train_gb":1.549,"heldout":131072,"objective":0.438720,"imbalance":1.6711}
+{"unused_threshold":0.2,"trainer":"emeans","budget":2,"rows":8840823,"lists":65536,"supers":256,"probes":4,"seed":0,"train_s":56.21,"anon_peak_gb":1.584,"anon_train_gb":1.548,"heldout":131072,"objective":0.437847,"imbalance":1.7157}
+{"unused_threshold":0.1,"trainer":"emeans","budget":2,"rows":8840823,"lists":65536,"supers":256,"probes":4,"seed":7,"train_s":55.79,"anon_peak_gb":1.582,"anon_train_gb":1.546,"heldout":131072,"objective":0.437765,"imbalance":1.7569}
+{"unused_threshold":0.3,"trainer":"emeans","budget":2,"rows":8840823,"lists":65536,"supers":256,"probes":4,"seed":7,"train_s":55.77,"anon_peak_gb":1.580,"anon_train_gb":1.544,"heldout":131072,"objective":0.438944,"imbalance":1.6747}
+DONE
+{"unused_threshold":0.4,"trainer":"emeans","budget":2,"rows":8840823,"lists":65536,"supers":256,"probes":4,"seed":0,"train_s":55.45,"anon_peak_gb":1.582,"anon_train_gb":1.546,"heldout":131072,"objective":0.441110,"imbalance":1.6471}
+{"unused_threshold":0.5,"trainer":"emeans","budget":2,"rows":8840823,"lists":65536,"supers":256,"probes":4,"seed":0,"train_s":55.95,"anon_peak_gb":1.584,"anon_train_gb":1.549,"heldout":131072,"objective":0.447238,"imbalance":1.6891}
+DONE2

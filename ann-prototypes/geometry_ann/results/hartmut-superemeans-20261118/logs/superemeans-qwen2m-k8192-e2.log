@@ -1,0 +1,157 @@
+=== superemeans | qwen2m (n=2000000, d=1024) | k=8192 | 2 epochs ===
+Sampling data...
+Using 2000000 vectors
+Front dimensions (d') = 128
+Trailing dimensions (d'') = 768
+Batch size = 65536, initial step = 0.379822
+Epoch 1/2 | Objective: 1.13717e+06 | Split: 2526 [BLAS-only]
+Epoch 2/2 | Objective: 1.0713e+06 | Split: 22 | Not Pruned %: 4.32757 | d': 128 -> 83
+
+========== PROFILER RESULTS ==========
+search                                      37.579s (90.615%) [62 calls]
+rotator                                      2.194s (5.291%) [3 calls]
+emeans_gather                                0.753s (1.816%) [62 calls]
+F32::UpdateCentroids                         0.581s (1.402%) [63 calls]
+emeans_finalize                              0.209s (0.504%)
+emeans_ema                                   0.062s (0.151%) [62 calls]
+unrotator                                    0.048s (0.115%)
+generating_centroids                         0.028s (0.066%)
+emeans_revive                                0.017s (0.041%) [12 calls]
+allocator                                    0.000s (0.000%) [2 calls]
+-------------------------------------------
+TOTAL                                       41.472s
+===========================================
+
+Training completed in 43.8 s
+Peak RSS: 15.84 GB | training overhead: 8.20 GB
+Batch size: 65536 | Initial step: 0.379822
+
+  [last_pass labels] WCSS: 1058297.82
+
+--- Recall@10 ---
+Recall@   1 ( 0.01% centroids,      300 avg vectors): 0.5260 ± 0.3399
+Recall@   2 ( 0.02% centroids,      604 avg vectors): 0.6657 ± 0.3113
+Recall@   8 ( 0.10% centroids,     2431 avg vectors): 0.8303 ± 0.2281
+Recall@  16 ( 0.20% centroids,     4825 avg vectors): 0.8845 ± 0.1811
+Recall@  24 ( 0.30% centroids,     7215 avg vectors): 0.9086 ± 0.1566
+Recall@  32 ( 0.40% centroids,     9600 avg vectors): 0.9240 ± 0.1404
+Recall@  40 ( 0.50% centroids,    11984 avg vectors): 0.9341 ± 0.1278
+Recall@  49 ( 0.60% centroids,    14687 avg vectors): 0.9399 ± 0.1212
+Recall@  57 ( 0.70% centroids,    17046 avg vectors): 0.9460 ± 0.1117
+Recall@  65 ( 0.80% centroids,    19443 avg vectors): 0.9495 ± 0.1074
+Recall@  73 ( 0.90% centroids,    21839 avg vectors): 0.9535 ± 0.1018
+Recall@  81 ( 1.00% centroids,    24230 avg vectors): 0.9573 ± 0.0954
+Recall@ 102 ( 1.25% centroids,    30543 avg vectors): 0.9636 ± 0.0852
+Recall@ 122 ( 1.50% centroids,    36574 avg vectors): 0.9699 ± 0.0744
+Recall@ 143 ( 1.75% centroids,    42900 avg vectors): 0.9743 ± 0.0661
+Recall@ 163 ( 2.00% centroids,    48943 avg vectors): 0.9777 ± 0.0611
+Recall@ 184 ( 2.25% centroids,    55289 avg vectors): 0.9795 ± 0.0567
+Recall@ 204 ( 2.50% centroids,    61383 avg vectors): 0.9815 ± 0.0534
+Recall@ 225 ( 2.75% centroids,    67737 avg vectors): 0.9831 ± 0.0511
+Recall@ 245 ( 3.00% centroids,    73799 avg vectors): 0.9844 ± 0.0486
+Recall@ 266 ( 3.25% centroids,    80181 avg vectors): 0.9851 ± 0.0472
+Recall@ 286 ( 3.50% centroids,    86242 avg vectors): 0.9862 ± 0.0455
+Recall@ 307 ( 3.75% centroids,    92651 avg vectors): 0.9877 ± 0.0422
+Recall@ 327 ( 4.00% centroids,    98721 avg vectors): 0.9888 ± 0.0400
+Recall@ 348 ( 4.25% centroids,   105096 avg vectors): 0.9893 ± 0.0392
+Recall@ 368 ( 4.50% centroids,   111138 avg vectors): 0.9899 ± 0.0381
+Recall@ 389 ( 4.75% centroids,   117532 avg vectors): 0.9903 ± 0.0371
+Recall@ 409 ( 5.00% centroids,   123636 avg vectors): 0.9913 ± 0.0334
+Recall@ 819 (10.00% centroids,   247515 avg vectors): 0.9964 ± 0.0202
+
+--- Recall@100 ---
+Recall@   1 ( 0.01% centroids,      300 avg vectors): 0.3949 ± 0.2485
+Recall@   2 ( 0.02% centroids,      604 avg vectors): 0.5324 ± 0.2530
+Recall@   8 ( 0.10% centroids,     2431 avg vectors): 0.7360 ± 0.2114
+Recall@  16 ( 0.20% centroids,     4825 avg vectors): 0.8120 ± 0.1732
+Recall@  24 ( 0.30% centroids,     7215 avg vectors): 0.8461 ± 0.1541
+Recall@  32 ( 0.40% centroids,     9600 avg vectors): 0.8685 ± 0.1396
+Recall@  40 ( 0.50% centroids,    11984 avg vectors): 0.8828 ± 0.1297
+Recall@  49 ( 0.60% centroids,    14687 avg vectors): 0.8952 ± 0.1207
+Recall@  57 ( 0.70% centroids,    17046 avg vectors): 0.9043 ± 0.1126
+Recall@  65 ( 0.80% centroids,    19443 avg vectors): 0.9114 ± 0.1068
+Recall@  73 ( 0.90% centroids,    21839 avg vectors): 0.9171 ± 0.1012
+Recall@  81 ( 1.00% centroids,    24230 avg vectors): 0.9228 ± 0.0965
+Recall@ 102 ( 1.25% centroids,    30543 avg vectors): 0.9339 ± 0.0857
+Recall@ 122 ( 1.50% centroids,    36574 avg vectors): 0.9418 ± 0.0783
+Recall@ 143 ( 1.75% centroids,    42900 avg vectors): 0.9479 ± 0.0728
+Recall@ 163 ( 2.00% centroids,    48943 avg vectors): 0.9528 ± 0.0682
+Recall@ 184 ( 2.25% centroids,    55289 avg vectors): 0.9569 ± 0.0637
+Recall@ 204 ( 2.50% centroids,    61383 avg vectors): 0.9603 ± 0.0596
+Recall@ 225 ( 2.75% centroids,    67737 avg vectors): 0.9635 ± 0.0563
+Recall@ 245 ( 3.00% centroids,    73799 avg vectors): 0.9658 ± 0.0535
+Recall@ 266 ( 3.25% centroids,    80181 avg vectors): 0.9677 ± 0.0514
+Recall@ 286 ( 3.50% centroids,    86242 avg vectors): 0.9698 ± 0.0489
+Recall@ 307 ( 3.75% centroids,    92651 avg vectors): 0.9716 ± 0.0465
+Recall@ 327 ( 4.00% centroids,    98721 avg vectors): 0.9735 ± 0.0439
+Recall@ 348 ( 4.25% centroids,   105096 avg vectors): 0.9748 ± 0.0421
+Recall@ 368 ( 4.50% centroids,   111138 avg vectors): 0.9760 ± 0.0412
+Recall@ 389 ( 4.75% centroids,   117532 avg vectors): 0.9774 ± 0.0383
+Recall@ 409 ( 5.00% centroids,   123636 avg vectors): 0.9784 ± 0.0368
+Recall@ 819 (10.00% centroids,   247515 avg vectors): 0.9902 ± 0.0198
+RESULT algorithm=superemeans dataset=qwen2m n_clusters=8192 iterations=2 labels=last_pass train_s=43.8 wcss=1058297.82 recall100_1pct=0.9228 vectors_1pct=24230 recall100_090pct=0.9171 vectors_090pct=21839
+
+  [assign labels] WCSS: 1057051.44
+
+--- Recall@10 ---
+Recall@   1 ( 0.01% centroids,      298 avg vectors): 0.5283 ± 0.3419
+Recall@   2 ( 0.02% centroids,      600 avg vectors): 0.6677 ± 0.3111
+Recall@   8 ( 0.10% centroids,     2418 avg vectors): 0.8321 ± 0.2274
+Recall@  16 ( 0.20% centroids,     4802 avg vectors): 0.8852 ± 0.1813
+Recall@  24 ( 0.30% centroids,     7180 avg vectors): 0.9087 ± 0.1579
+Recall@  32 ( 0.40% centroids,     9556 avg vectors): 0.9237 ± 0.1419
+Recall@  40 ( 0.50% centroids,    11932 avg vectors): 0.9338 ± 0.1297
+Recall@  49 ( 0.60% centroids,    14622 avg vectors): 0.9390 ± 0.1238
+Recall@  57 ( 0.70% centroids,    16974 avg vectors): 0.9447 ± 0.1142
+Recall@  65 ( 0.80% centroids,    19363 avg vectors): 0.9482 ± 0.1100
+Recall@  73 ( 0.90% centroids,    21753 avg vectors): 0.9527 ± 0.1041
+Recall@  81 ( 1.00% centroids,    24138 avg vectors): 0.9568 ± 0.0968
+Recall@ 102 ( 1.25% centroids,    30432 avg vectors): 0.9632 ± 0.0861
+Recall@ 122 ( 1.50% centroids,    36442 avg vectors): 0.9695 ± 0.0747
+Recall@ 143 ( 1.75% centroids,    42750 avg vectors): 0.9739 ± 0.0664
+Recall@ 163 ( 2.00% centroids,    48773 avg vectors): 0.9770 ± 0.0626
+Recall@ 184 ( 2.25% centroids,    55102 avg vectors): 0.9790 ± 0.0582
+Recall@ 204 ( 2.50% centroids,    61174 avg vectors): 0.9812 ± 0.0549
+Recall@ 225 ( 2.75% centroids,    67511 avg vectors): 0.9828 ± 0.0522
+Recall@ 245 ( 3.00% centroids,    73557 avg vectors): 0.9841 ± 0.0498
+Recall@ 266 ( 3.25% centroids,    79921 avg vectors): 0.9848 ± 0.0487
+Recall@ 286 ( 3.50% centroids,    85965 avg vectors): 0.9859 ± 0.0466
+Recall@ 307 ( 3.75% centroids,    92354 avg vectors): 0.9872 ± 0.0433
+Recall@ 327 ( 4.00% centroids,    98406 avg vectors): 0.9886 ± 0.0411
+Recall@ 348 ( 4.25% centroids,   104765 avg vectors): 0.9892 ± 0.0401
+Recall@ 368 ( 4.50% centroids,   110795 avg vectors): 0.9897 ± 0.0391
+Recall@ 389 ( 4.75% centroids,   117170 avg vectors): 0.9901 ± 0.0381
+Recall@ 409 ( 5.00% centroids,   123256 avg vectors): 0.9910 ± 0.0346
+Recall@ 819 (10.00% centroids,   246806 avg vectors): 0.9959 ± 0.0218
+
+--- Recall@100 ---
+Recall@   1 ( 0.01% centroids,      298 avg vectors): 0.3958 ± 0.2483
+Recall@   2 ( 0.02% centroids,      600 avg vectors): 0.5339 ± 0.2529
+Recall@   8 ( 0.10% centroids,     2418 avg vectors): 0.7367 ± 0.2110
+Recall@  16 ( 0.20% centroids,     4802 avg vectors): 0.8127 ± 0.1728
+Recall@  24 ( 0.30% centroids,     7180 avg vectors): 0.8466 ± 0.1539
+Recall@  32 ( 0.40% centroids,     9556 avg vectors): 0.8687 ± 0.1394
+Recall@  40 ( 0.50% centroids,    11932 avg vectors): 0.8830 ± 0.1296
+Recall@  49 ( 0.60% centroids,    14622 avg vectors): 0.8955 ± 0.1205
+Recall@  57 ( 0.70% centroids,    16974 avg vectors): 0.9044 ± 0.1127
+Recall@  65 ( 0.80% centroids,    19363 avg vectors): 0.9114 ± 0.1069
+Recall@  73 ( 0.90% centroids,    21753 avg vectors): 0.9171 ± 0.1013
+Recall@  81 ( 1.00% centroids,    24138 avg vectors): 0.9229 ± 0.0965
+Recall@ 102 ( 1.25% centroids,    30432 avg vectors): 0.9340 ± 0.0858
+Recall@ 122 ( 1.50% centroids,    36442 avg vectors): 0.9419 ± 0.0783
+Recall@ 143 ( 1.75% centroids,    42750 avg vectors): 0.9480 ± 0.0728
+Recall@ 163 ( 2.00% centroids,    48773 avg vectors): 0.9528 ± 0.0682
+Recall@ 184 ( 2.25% centroids,    55102 avg vectors): 0.9568 ± 0.0638
+Recall@ 204 ( 2.50% centroids,    61174 avg vectors): 0.9603 ± 0.0598
+Recall@ 225 ( 2.75% centroids,    67511 avg vectors): 0.9634 ± 0.0565
+Recall@ 245 ( 3.00% centroids,    73557 avg vectors): 0.9658 ± 0.0537
+Recall@ 266 ( 3.25% centroids,    79921 avg vectors): 0.9677 ± 0.0515
+Recall@ 286 ( 3.50% centroids,    85965 avg vectors): 0.9699 ± 0.0490
+Recall@ 307 ( 3.75% centroids,    92354 avg vectors): 0.9717 ± 0.0465
+Recall@ 327 ( 4.00% centroids,    98406 avg vectors): 0.9736 ± 0.0441
+Recall@ 348 ( 4.25% centroids,   104765 avg vectors): 0.9749 ± 0.0423
+Recall@ 368 ( 4.50% centroids,   110795 avg vectors): 0.9761 ± 0.0414
+Recall@ 389 ( 4.75% centroids,   117170 avg vectors): 0.9775 ± 0.0385
+Recall@ 409 ( 5.00% centroids,   123256 avg vectors): 0.9784 ± 0.0371
+Recall@ 819 (10.00% centroids,   246806 avg vectors): 0.9900 ± 0.0202
+RESULT algorithm=superemeans dataset=qwen2m n_clusters=8192 iterations=2 labels=assign train_s=43.8 wcss=1057051.44 recall100_1pct=0.9229 vectors_1pct=24138 recall100_090pct=0.9171 vectors_090pct=21753

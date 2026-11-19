@@ -1,0 +1,10 @@
+{"prune_dims":0,"rows":8840823,"lists":65536,"supers":256,"probes":16,"setup_s":1.38,"assign_s":54.24,"load_s":1.36}
+{"prune_dims":192,"rows":8840823,"lists":65536,"supers":256,"probes":16,"setup_s":2.16,"assign_s":37.67,"load_s":1.23}
+{"prune_dims":128,"rows":8840823,"lists":65536,"supers":256,"probes":16,"setup_s":2.09,"assign_s":52.01,"load_s":1.23}
+{"prune_dims":0,"rows":8840823,"lists":65536,"supers":256,"probes":16,"setup_s":1.39,"assign_s":54.41,"load_s":1.37}
+DONE
+{"prune_dims":224,"rows":8840823,"lists":65536,"supers":256,"probes":16,"setup_s":2.12,"assign_s":36.50,"load_s":1.21}
+{"prune_dims":256,"rows":8840823,"lists":65536,"supers":256,"probes":16,"setup_s":2.11,"assign_s":36.97,"load_s":1.24}
+{"prune_dims":160,"rows":8840823,"lists":65536,"supers":256,"probes":16,"setup_s":2.10,"assign_s":41.98,"load_s":1.21}
+{"prune_dims":192,"rows":8840823,"lists":65536,"supers":256,"probes":16,"setup_s":2.14,"assign_s":38.09,"load_s":1.21}
+DONE2
