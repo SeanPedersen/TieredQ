@@ -30,7 +30,8 @@ inline FastScanScalarQuery fast_scan_query_scalar(const FastScanCache& cache,con
 inline FastScanScalarQuery fast_scan_query_scalar(const FastScanCache& cache,const TieredQ& codec,const float* vector) {
   if (cache.code_lookup() || !cache.lookup) return fast_scan_query_scalar(cache,codec.model_query_weights(vector));
   FastScanScalarQuery result;
-  result.lookup=prepare_fast_lookup_query(*cache.lookup,vector,FastQueryBasis::from(codec));
+  result.lookup=codec.has_query_decoder() ? fast_lookup_query(*cache.lookup,codec.learned_query_output(vector))
+                                          : prepare_fast_lookup_query(*cache.lookup,vector,FastQueryBasis::from(codec));
   return result;
 }
 inline void scan_fast_scalar_tile(const FastScanCache& cache,const FastScanScalarQuery* queries,

@@ -46,6 +46,25 @@ inline QueryRows query_rows(const FloatArray& queries, size_t dimensions) {
   require_width(queries.shape(rank - 1), dimensions);
   return {rank == 1 ? 1 : queries.shape(0), rank == 1};
 }
+// Ranking-trained query projection. The codec checks shapes; stored rows are not touched.
+inline tq::TieredQ::QueryDecoder make_query_decoder(const Matrix& basis, const Matrix& centroids,
+                                                    const Matrix& corr_dirs, const FloatArray& scale,
+                                                    const FloatArray& offset) {
+  if (scale.ndim() != 1 || offset.ndim() != 1)
+    throw std::invalid_argument("scale and offset must be 1-D float32 arrays");
+  tq::TieredQ::QueryDecoder decoder;
+  decoder.basis.assign(basis.data(), basis.data() + basis.size());
+  decoder.centroids.assign(centroids.data(), centroids.data() + centroids.size());
+  decoder.corr_dirs.assign(corr_dirs.data(), corr_dirs.data() + corr_dirs.size());
+  decoder.scale.assign(scale.data(), scale.data() + scale.size());
+  decoder.offset.assign(offset.data(), offset.data() + offset.size());
+  return decoder;
+}
+inline constexpr char query_decoder_doc[] =
+    "Optional ranking-trained query projection (basis d x m, centroids and corr_dirs centroids x d,\n"
+    "scale and offset length m). Stored codes, lists and tier rows stay unchanged; clear_query_decoder()\n"
+    "restores the original projection. Not saved with the index. Helps at low bit budgets only.";
+
 inline SearchResult empty_result(QueryRows queries, size_t width) {
   const size_t elements = array_elements(queries.rows, width);
   return {std::vector<float>(elements, 0.0f), std::vector<uint32_t>(elements, 0),

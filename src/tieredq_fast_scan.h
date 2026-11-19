@@ -54,6 +54,12 @@ auto fast_search_queries(const FastScanCache& cache,const TieredQ& codec,const f
   if constexpr (requires (Prepared query) { query.lookup.tables; })
     if (cache.lookup) return prepare_search_tiles<Prepared>(queries,rows,codec.model_dimensions(),query_tile_height(rows,basis_query_tile),
         [&](const float* first,size_t count,Prepared* out) {
+          // A learned decoder replaces the baked basis. Its output matches project_fast_queries' layout.
+          if (codec.has_query_decoder()) {
+            for (size_t row=0;row<count;++row)
+              out[row].lookup=fast_lookup_query(*cache.lookup,codec.learned_query_output(first+row*codec.model_dimensions()));
+            return;
+          }
           const auto outputs=project_fast_queries(cache.lookup->projection,first,count,FastQueryBasis::from(codec));
           for (size_t row=0;row<count;++row) out[row].lookup=fast_lookup_query(*cache.lookup,outputs[row]);
         });

@@ -122,6 +122,25 @@ need rebuilding to recover that precision. Their fast storage keeps codes at tie
 width; files saved with the earlier one-byte-per-coordinate layout still load and are
 repacked. See the [high-bit investigation](docs/high-bit-recall.md).
 
+### Ranking query decoder
+
+`set_query_decoder(basis, centroids, corr_dirs, scale, offset)` on `TieredQIndex`, `TieredQIVFIndex` and
+`TieredQNestedIVFIndex` replaces the query projection only. Stored codes, inverted lists and SSD tier rows stay
+as they are, and every index that scores with that codec uses the new projection, including an IVF probe and a
+nested index's choice of which rows to read. `clear_query_decoder()` restores the original projection. The
+decoder is not part of the saved index; set it again after `load()`.
+
+`basis` is float32 of shape `(d, m)` with `m` the coded coordinates, `centroids` and `corr_dirs` are
+`(centroids, d)`, and `scale` and `offset` have length `m`. The scan still multiplies those query weights by
+the stored levels. Models that scan a fine-tier prefix reject the call. The flat index grows those prefixes
+by default when a rank is wider than the scan (`fine_tiers=True`). `TieredQIVFIndex` leaves `fine_tiers` off
+by default, and a nested index's in-RAM prefix is trained the same way: those are the codes this option matches.
+
+It helps at low bit budgets only. On DBpedia OpenAI-1536, 100k vectors, flat scan, one seed, exact rerank of
+the top 100 raised 10@100 from 0.875 to 0.926 at 22 bytes/vector and from 0.976 to 0.989 at 37 bytes/vector.
+At about 70 bytes/vector both sides were already 0.999. At a few bits per dimension, top-10 recall with no
+rerank can come out slightly worse. Training stays outside the codec: pass a projection you have already trained.
+
 ### IVF and nested search (Python)
 
 ```python

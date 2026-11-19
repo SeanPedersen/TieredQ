@@ -129,6 +129,14 @@ class PythonIndex {
   static std::unique_ptr<PythonIndex> load(const std::string& path) {
     return std::unique_ptr<PythonIndex>(new PythonIndex(tq::TieredQIndex::load(path)));
   }
+  void set_query_decoder(Matrix basis, Matrix centroids, Matrix corr_dirs, FloatArray scale, FloatArray offset) {
+    std::unique_lock lock(mutex_);
+    trained().codec().set_query_decoder(make_query_decoder(basis, centroids, corr_dirs, scale, offset));
+  }
+  void clear_query_decoder() {
+    std::unique_lock lock(mutex_);
+    trained().codec().clear_query_decoder();
+  }
 
  private:
   explicit PythonIndex(tq::TieredQIndex index)
@@ -204,6 +212,10 @@ void bind_index(nb::module_& module) {
         return search_result(self, queries, k, SearchMode::fast);
       }, "queries"_a.noconvert(), "k"_a = 10,
          "Approximate full scan; falls back to exact search when the cache is absent.")
+      .def("set_query_decoder", &PythonIndex::set_query_decoder, "basis"_a.noconvert(), "centroids"_a.noconvert(),
+           "corr_dirs"_a.noconvert(), "scale"_a.noconvert(), "offset"_a.noconvert(),
+           nb::call_guard<nb::gil_scoped_release>(), query_decoder_doc)
+      .def("clear_query_decoder", &PythonIndex::clear_query_decoder, nb::call_guard<nb::gil_scoped_release>())
       .def("save", &PythonIndex::save, "path"_a, nb::call_guard<nb::gil_scoped_release>())
       .def_static("load", [](const std::string& path) {
         std::unique_ptr<PythonIndex> index;

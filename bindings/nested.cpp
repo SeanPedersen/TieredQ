@@ -103,6 +103,14 @@ class PythonNestedIndex {
     std::shared_lock lock(mutex_);
     return index_.finals();
   }
+  void set_query_decoder(Matrix basis, Matrix centroids, Matrix corr_dirs, FloatArray scale, FloatArray offset) {
+    std::unique_lock lock(mutex_);
+    index_.index().codec().set_query_decoder(make_query_decoder(basis, centroids, corr_dirs, scale, offset));
+  }
+  void clear_query_decoder() {
+    std::unique_lock lock(mutex_);
+    index_.index().codec().clear_query_decoder();
+  }
   SearchResult search(FloatArray queries, size_t k, size_t nprobe, std::optional<size_t> candidates,
                       Pruning pruning) const {
     const auto shape = query_rows(queries, dimensions());
@@ -307,6 +315,10 @@ void bind_nested(nb::module_& module) {
         }
         writer.finish();
       }, "path"_a, "codes"_a.noconvert(), "Writes int8 SQ8 codes (rows x dimensions, in id order) as a row file for attach_exact(path).")
+      .def("set_query_decoder", &PythonNestedIndex::set_query_decoder, "basis"_a.noconvert(), "centroids"_a.noconvert(),
+           "corr_dirs"_a.noconvert(), "scale"_a.noconvert(), "offset"_a.noconvert(),
+           nb::call_guard<nb::gil_scoped_release>(), query_decoder_doc)
+      .def("clear_query_decoder", &PythonNestedIndex::clear_query_decoder, nb::call_guard<nb::gil_scoped_release>())
       .def("search", [](const PythonNestedIndex& self, FloatArray queries, size_t k, size_t nprobe,
                         std::optional<size_t> candidates, Pruning pruning) {
         return released([&] { return self.search(queries, k, nprobe, candidates, pruning); });

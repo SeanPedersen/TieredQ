@@ -279,7 +279,7 @@ void TieredQIndex::score_fine(const TieredQQuery& weights,TieredQHit* hits,size_
   }
 }
 std::vector<TieredQQuery> TieredQIndex::fine_query_weights(const float* queries,size_t rows) const {
-  if (!fast_->lookup) return codec_.model_query_weights(queries,rows);
+  if (!fast_->lookup || codec_.has_query_decoder()) return codec_.model_query_weights(queries,rows);
   // Lookup scans project with their own map (faster than model_query_weights for one row); its outputs
   // are the rank weights, then centroid scores and correction weights, which rescoring needs as well. Tiles of
   // queries project in parallel, as the scan's own preparation does.

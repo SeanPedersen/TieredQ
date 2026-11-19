@@ -113,6 +113,14 @@ class PythonIVFIndex {
     router_ = {false, {}};
     if (index_) index_->remove_router();
   }
+  void set_query_decoder(Matrix basis, Matrix centroids, Matrix corr_dirs, FloatArray scale, FloatArray offset) {
+    std::unique_lock lock(mutex_);
+    trained().codec().set_query_decoder(make_query_decoder(basis, centroids, corr_dirs, scale, offset));
+  }
+  void clear_query_decoder() {
+    std::unique_lock lock(mutex_);
+    trained().codec().clear_query_decoder();
+  }
   // The training the next list training uses: the one set, else the library's automatic choice for the lists.
   tq::TieredQCoarseTraining coarse_training() const {
     std::shared_lock lock(mutex_);
@@ -297,6 +305,10 @@ void bind_ivf(nb::module_& module) {
       .def("remove_router", &PythonIVFIndex::remove_router,
            "Drops the router (also the automatic one): searches rank every list exactly, later builds add none.",
            nb::call_guard<nb::gil_scoped_release>())
+      .def("set_query_decoder", &PythonIVFIndex::set_query_decoder, "basis"_a.noconvert(), "centroids"_a.noconvert(),
+           "corr_dirs"_a.noconvert(), "scale"_a.noconvert(), "offset"_a.noconvert(),
+           nb::call_guard<nb::gil_scoped_release>(), query_decoder_doc)
+      .def("clear_query_decoder", &PythonIVFIndex::clear_query_decoder, nb::call_guard<nb::gil_scoped_release>())
       .def_prop_ro("has_router", &PythonIVFIndex::has_router, nb::call_guard<nb::gil_scoped_release>())
       .def("probe_lists", [](const PythonIVFIndex& self, FloatArray query, size_t nprobe, const std::string& routing,
                              uint32_t super_probes) {

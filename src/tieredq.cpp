@@ -731,7 +731,48 @@ void centroid_dot_tile(const float* lanes,const float* centroids,size_t d,size_t
   }
 }
 } // namespace
+void TieredQ::set_query_decoder(QueryDecoder decoder) const {
+  if (fast_prefix_bits_)
+    bad("query decoder applies to the code the index scans; this model scans a fine-tier prefix");
+  const size_t m=coded_dimensions(),d=model_dimensions(),c=config_.num_centroids;
+  if (decoder.basis.size()!=d*m || decoder.centroids.size()!=c*d || decoder.corr_dirs.size()!=c*d ||
+      decoder.scale.size()!=m || decoder.offset.size()!=m)
+    bad("query decoder shape mismatch: expected basis ("+std::to_string(d)+", "+std::to_string(m)+
+        "), centroids ("+std::to_string(c)+", "+std::to_string(d)+"), corr_dirs ("+std::to_string(c)+", "+
+        std::to_string(d)+"), scale ("+std::to_string(m)+",), offset ("+std::to_string(m)+",)");
+  query_decoder_=std::make_shared<const QueryDecoder>(std::move(decoder));
+}
+// Learned query side: weights_r = (B'^T q)_r * scale_r * sigma_r multiply the stored levels (times the row
+// factor, as in score()); the constant sum_r (B'^T q)_r (scale_r * mean_r + offset_r) and <q, C'[id]> form the
+// centroid scores; <q, U'[id]> weights the stored correction. Scan kernels are unchanged.
+void TieredQ::project_query_tile_learned(const QueryDecoder& dec,const float* vectors,size_t rows,TieredQQuery* out) const {
+  const size_t m=coded_dimensions(),d=model_dimensions(),centroids=config_.num_centroids;
+  for (size_t row=0;row<rows;++row) {
+    const float* q=vectors+row*d;
+    std::vector<float> projected(m,0);
+    for (size_t i=0;i<d;++i) {
+      const float value=q[i]; const float* basis=dec.basis.data()+i*m;
+      for (size_t j=0;j<m;++j) projected[j]+=value*basis[j];
+    }
+    auto& t=out[row];
+    t.weights.resize(m);
+    double constant=0;
+    for (size_t r=0;r<m;++r) {
+      t.weights[r]=projected[r]*dec.scale[r]*sigma_[r];
+      constant+=double(projected[r])*(double(dec.scale[r])*mean_[r]+dec.offset[r]);
+    }
+    t.centroid_scores.assign(centroids,0); t.correction_weights.assign(centroids,0);
+    for (size_t id=0;id<centroids;++id) {
+      const float* cen=dec.centroids.data()+id*d; const float* dir=dec.corr_dirs.data()+id*d;
+      float dot=0,cdot=0;
+      for (size_t i=0;i<d;++i) { dot+=q[i]*cen[i]; cdot+=q[i]*dir[i]; }
+      t.centroid_scores[id]=float(dot+constant);
+      t.correction_weights[id]=cdot;
+    }
+  }
+}
 void TieredQ::project_query_tile(const float* vectors,size_t rows,TieredQQuery* out) const {
+  if (const auto decoder=query_decoder_) { project_query_tile_learned(*decoder,vectors,rows,out); return; }
   const size_t m=coded_dimensions(),d=model_dimensions(),centroids=config_.num_centroids;
   std::vector<float> transformed(rows*m,0);
   if (!basis_half_.empty())

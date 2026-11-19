@@ -155,6 +155,27 @@ class TieredQ {
   TieredQQuery model_query(const float* vector) const;
   TieredQQuery model_query_weights(const float* vector) const;
   std::vector<TieredQQuery> model_query_weights(const float* vectors, size_t rows) const;
+  // Optional ranking-trained query projection. Stored codes are untouched and this is not serialized.
+  // Query preparation scores them as <q, C'[id] + B' (scale * p + offset)> + <q, U'[id]> * corr.
+  // It pays off at low bit budgets (about 14–37 B/vector). Past about 70 B the shortlist is already ordered.
+  // A model that scans a fine-tier prefix rejects it: the projection has to match the code the index scans.
+  struct QueryDecoder {
+    std::vector<float> basis;      // model_dimensions() x coded_dimensions(), row-major
+    std::vector<float> centroids;  // num_centroids x model_dimensions()
+    std::vector<float> corr_dirs;  // num_centroids x model_dimensions()
+    std::vector<float> scale, offset;  // coded_dimensions()
+  };
+  void set_query_decoder(QueryDecoder decoder) const;
+  void clear_query_decoder() const { query_decoder_.reset(); }
+  bool has_query_decoder() const { return bool(query_decoder_); }
+  // Weights, centroid scores and correction weights of one model-space query, in fast-projection order.
+  std::vector<float> learned_query_output(const float* vector) const {
+    const auto q = model_query_weights(vector);
+    std::vector<float> out(q.weights);
+    out.insert(out.end(), q.centroid_scores.begin(), q.centroid_scores.end());
+    out.insert(out.end(), q.correction_weights.begin(), q.correction_weights.end());
+    return out;
+  }
   // Format 3 stores the PCA basis as IEEE binary16; format-2 files (FP32 basis) still load and serve unchanged.
   // Format 4 adds the metric and its lift; inner-product models keep writing format 3.
   static constexpr uint32_t metric_model_format = 4;
@@ -207,6 +228,9 @@ class TieredQ {
   std::vector<tieredq_detail::ScanGroupPlan> scan_plan_;
   // Encoder-only state (fused panels, FP64 centroid projections), built on first encode().
   std::shared_ptr<tieredq_detail::LazyEncoder> encoder_;
+  // Optional query projection. Not serialized. A copy shares the pointer until set_query_decoder replaces it.
+  mutable std::shared_ptr<const QueryDecoder> query_decoder_;
+  void project_query_tile_learned(const QueryDecoder& decoder, const float* vectors, size_t rows, TieredQQuery* out) const;
   void prepare_serving();
   tieredq_detail::EncoderData build_encoder() const;
   void encode_block(const float* rows, size_t count, uint8_t* out, float* corrections, tieredq_detail::StageProfile* profile = nullptr) const;
