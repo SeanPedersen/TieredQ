@@ -1,0 +1,1 @@
+{"method": "saq-prep", "kmeans": "fast", "kmeans_s": 3.8182409161236137, "assign_s": 3.565866712015122, "pca_s": 3.0054707238450646, "faiss": "1.16.0", "threads": 32}

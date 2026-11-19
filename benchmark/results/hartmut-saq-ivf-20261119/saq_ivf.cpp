@@ -1,7 +1,8 @@
 // SAQ (arxiv:2509.12086, upstream 2163ebc) IVF on the #55 arxiv partition, for faiss#5940.
 //   build DATA CENTROIDS ASSIGNMENT BITS OUT: full-corpus PCA (fp64 covariance, all dimensions kept, as upstream's
 //     pca.py), then SAQ's IVF on the given lists and row assignment (each row's list as uint32) at BITS per dimension.
-//     Writes OUT/saq.index, OUT/pca.f32 (d x d, column per component) and OUT/mean.f32.
+//     Writes OUT/saq.index, OUT/pca.f32 (d x d, column per component) and OUT/mean.f32. PCA_DIR (optional) holds a
+//     pca.f32 / mean.f32 trained elsewhere (full_build.py saq-prep), used instead of the PCA here.
 //   serve DATA OUT RESULT: loads the index in a fresh process; RAM is the RssAnon growth across load (after
 //     malloc_trim). Then one thread on QUERY_CORE: per nprobe, single-query QPS (best of 3 passes over every query,
 //     PCA of the query included), p50 and recall@k (id overlap with truth). Search is SAQ's own IVF::search (fp32 flat
@@ -83,16 +84,27 @@ int build(const std::string& data, const std::string& centroids_path, const std:
   if (assignment.size() != meta.rows) throw std::runtime_error("assignment does not cover every row");
 
   auto started = Clock::now();
-  const auto [basis, mean] = pca(base);
+  FloatRowMat basis;
+  FloatVec mean;
+  if (const char* given = std::getenv("PCA_DIR")) {  // a PCA trained elsewhere (Faiss PCAMatrix, as upstream pca.py)
+    const auto basis_values = read_file<float>(std::string(given) + "/pca.f32");
+    const auto mean_values = read_file<float>(std::string(given) + "/mean.f32");
+    basis = Eigen::Map<const FloatRowMat>(basis_values.data(), meta.d, meta.d);
+    mean = Eigen::Map<const FloatVec>(mean_values.data(), meta.d);
+  } else {
+    std::tie(basis, mean) = pca(base);
+  }
   const double pca_s = seconds_since(started);
   write_file(out + "/pca.f32", basis.data(), basis.size());
   write_file(out + "/mean.f32", mean.data(), mean.size());
 
+  started = Clock::now();
   FloatRowMat transformed = FloatRowMat::Zero(meta.rows, padded);
   transformed.leftCols(meta.d) = (base.rowwise() - mean) * basis;
   FloatRowMat centroids = FloatRowMat::Zero(lists, padded);
   centroids.leftCols(meta.d) =
       (Eigen::Map<const FloatRowMat>(centroid_values.data(), lists, meta.d).rowwise() - mean) * basis;
+  const double transform_s = seconds_since(started);
 
   QuantizeConfig config;
   config.avg_bits = bits;
@@ -102,7 +114,7 @@ int build(const std::string& data, const std::string& centroids_path, const std:
   const double construct_s = seconds_since(started);
   ivf.save((out + "/saq.index").c_str());
   std::ofstream(out + "/build.json") << "{\"bits\": " << bits << ", \"lists\": " << lists << ", \"pca_s\": " << pca_s
-                                     << ", \"construct_s\": " << construct_s << "}\n";
+                                     << ", \"transform_s\": " << transform_s << ", \"construct_s\": " << construct_s << "}\n";
   return 0;
 }
 

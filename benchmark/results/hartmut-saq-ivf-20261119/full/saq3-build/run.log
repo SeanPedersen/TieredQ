@@ -1,0 +1,6 @@
+WARNING: Logging before InitGoogleLogging() is written to STDERR
+I20261119 18:50:17.818186 140052641902400 ivf.hpp:134] Start IVF construction...
+I20261119 18:50:25.934377 140052641902400 ivf.hpp:112] Dynamic bits allocation plan:
+I20261119 18:50:25.934411 140052641902400 ivf.hpp:120] 3bits: | 0 -> 64 (64d 7b) | 64 -> 256 (192d 5b) | 256 -> 512 (256d 3b) | 512 -> 768 (256d 0b) 
+I20261119 18:50:26.120633 140052641902400 ivf.hpp:196] Initializing done... num_points: 1344643
+I20261119 18:50:47.184403 140052641902400 ivf.hpp:184] Quantization done. tm: 21.0612 S

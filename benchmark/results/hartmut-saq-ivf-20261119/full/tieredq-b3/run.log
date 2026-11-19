@@ -1,0 +1,1 @@
+{"method": "tieredq", "bits": 3.0, "code_bits": 2304, "lists": 2048, "total_s": 22.779663034016266, "stages": {"train_s": 4.906464562, "assign_s": 3.719120162, "encode_s": 13.19322368, "router_s": 3.11e-07}, "storage_bytes": 405309552, "points": [{"nprobe": 16, "recall": 0.88869}, {"nprobe": 64, "recall": 0.96005}, {"nprobe": 256, "recall": 0.9761700000000001}]}

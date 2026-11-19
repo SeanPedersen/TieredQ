@@ -1,0 +1,1 @@
+{"method": "saq-prep", "kmeans": "upstream", "kmeans_s": 15.295354870846495, "assign_s": 3.5636044659186155, "pca_s": 2.927176564000547, "faiss": "1.16.0", "threads": 32}
