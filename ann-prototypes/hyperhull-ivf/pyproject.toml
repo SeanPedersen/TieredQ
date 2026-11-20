@@ -1,0 +1,39 @@
+[project]
+name = "hyperhull-ivf"
+version = "0.1.0"
+description = "Add your description here"
+authors = [
+    { name = "Sean Pedersen", email = "seanpedersen96@protonmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=2.5.5",
+]
+
+[project.scripts]
+hyperhull-ivf = "hyperhull_ivf:main"
+hyperhull-bench = "hyperhull_ivf.bench:main"
+hyperhull-prune = "hyperhull_ivf.list_pruning:main"
+hyperhull-route = "hyperhull_ivf.hull_router:main"
+hyperhull-cluster = "hyperhull_ivf.hull_clustering:main"
+hyperhull-twostage = "hyperhull_ivf.two_stage:main"
+hyperhull-combined = "hyperhull_ivf.combined_router:main"
+hyperhull-faiss-full = "hyperhull_ivf.faiss_full:main"
+hyperhull-native-bench = "hyperhull_ivf.native_bench:main"
+
+[build-system]
+requires = ["uv_build>=0.13.9,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "faiss-cpu>=1.16.0",
+    "scipy>=1.18.1",
+    "hyperhull-native",
+]
+
+[tool.uv.workspace]
+members = ["native"]
+
+[tool.uv.sources]
+hyperhull-native = { workspace = true }

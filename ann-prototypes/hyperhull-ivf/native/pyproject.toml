@@ -1,0 +1,25 @@
+[project]
+name = "hyperhull-native"
+version = "0.1.0"
+description = "C++ search kernel for the combined hull router (nanobind)"
+requires-python = ">=3.12"
+dependencies = ["numpy>=2.5.5"]
+
+[build-system]
+requires = ["scikit-build-core>=0.11", "nanobind>=2.9"]
+build-backend = "scikit_build_core.build"
+
+[tool.scikit-build]
+minimum-version = "build-system.requires"
+build-dir = "build/{wheel_tag}"
+wheel.packages = ["src/hyperhull_native"]
+cmake.build-type = "Release"
+install.strip = false
+
+[tool.uv]
+cache-keys = [
+    { file = "pyproject.toml" },
+    { file = "CMakeLists.txt" },
+    { file = "cpp/**/*.cpp" },
+    { file = "cpp/**/*.hpp" },
+]
