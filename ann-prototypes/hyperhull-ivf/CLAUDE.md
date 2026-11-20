@@ -25,7 +25,15 @@ Optional k-NN graph (`build_graph` self-search + reverse edges, `refine_graph`, 
 `hops` rounds sketch-score the graph neighbours of the best `expand_from` and score the best `expand_exact` exactly.
 Sketch records: 64 B aligned prefix / suffix code rows + per-record aux [bias, o_P, o]; pass 1 = 4-record gather kernel. Layout: coarse cells / fine
 cells renumbered along nearest-neighbour chains of their centroids (cells picked together are contiguous).
-`cpp/bindings.cpp` `make_router(native_arrays(index, pca_dims=256), prefix_dims=128)`; `search(..., refine=R)`.
+`cpp/bindings.cpp` `make_router(native_arrays(index, pca_dims=256), prefix_dims=128)`; `search(..., refine=R)`;
+`set_graph(graph)` adopts an external graph.
+`cpp/partition.cpp` `Partition` (Python `hyperhull_native.Partition`): two-level partition trained with TieredQ e-means —
+coarse lists as `TieredQIVFFlatIndex` trains them (sample of 256 rows/list, 2.5 epochs, exact BLAS assignment to
+binary16-rounded centroids, no index / no FP32 copy), fine cells by e-means inside each list, one list per thread
+(OpenBLAS pinned to 1 thread). Links the TieredQ static library via `add_subdirectory` of the repo root
+(`TIEREDQ_ROOT`, default `../../..`); partition.cpp is compiled with TieredQ's flags (no -march, -ffp-contract=off).
+On hartmut sync the mirrored layout (TieredQ `CMakeLists.txt src include cmake` + this folder under
+`ann-prototypes/`, e.g. `~/projects/playground/tq-hh`).
 `native/bench/hullbench.cpp` standalone bench on an exported index (`T,F,V,R` args, env HH_PREFIX_DIMS).
 Rebuild after C++ edits: `uv sync` (cache-keys watch cpp/**). Exclude `native/build` when rsyncing.
 
@@ -38,7 +46,7 @@ GloVe-100k subset + ground truth cached in `.cache/glove100k.npz`.
 - `ivf.py` k-means + contiguous lists (chunked, memmap-friendly)
 - `routers.py`/`summaries.py` heuristic list ranking · `evaluate.py` cached top-K, curves, cost interpolation
 - `hulls.py` sound cell hulls (PCA box × ring × sphere; shared-subspace block hulls)
-- `two_stage.py` two-level k-means index (coarse-major, fine-minor) · `combined_router.py` cost-model sweep of the
+- `two_stage.py` two-level k-means index (coarse-major, fine-minor; `trainer="faiss"` Lloyd or `"tieredq"` native e-means) · `combined_router.py` cost-model sweep of the
   combined hull router · `faiss_full.py` FAISS PQ4fs baseline (cost model) · `native_router.py` export to C++
   arrays (4-bit packed codes) · `native_bench.py` wall-time C++ router vs FAISS
 - `bounded_search.py` two-level cell-hull search · `va_search.py` per-vector SQ-box hulls · `tightness.py` bound diagnostics
@@ -65,6 +73,22 @@ Python reference loops (va*, errball re-rank) are not speed-comparable with FAIS
 - FAISS IVF-PQ4 fast-scan + refine is the real bar (R≥0.99 at ~0.18 ms/query).
 - Error-ball hull on IVF-PQ4 (store ||x - x̂|| per vector): sound ball too loose (re-ranks ~95% of pool);
   probabilistic ball (τ σ, RaBitQ-style) at τ=4 keeps recall (0.999 vs 1.0) with 2.4× fewer re-ranks.
+
+## Build time (2026-11-20, `experiments/native/build_compare.py`, full DBpedia-1536 305k, 1024×32, 32 threads)
+hartmut was shared with another session: compare CPU seconds (process, all threads, `OMP_WAIT_POLICY=PASSIVE`),
+ABBA order. Wall s / CPU s:
+- PCA by SVD of the 50k sample was the largest stage: 57 s / ~1100 CPU-s → scatter GEMM + `eigh` (`pca_basis`):
+  3–4 s, identical recall.
+- Partition FAISS Lloyd 31 s / 519 CPU-s → TieredQ e-means 3–6 s / 66–73 CPU-s (coarse ~2.5–5 s, fine 0.4–0.8 s).
+- Total without graph: 37.7 s / 655 CPU-s (FAISS + eigh) → 8.8–15 s / 186–222 CPU-s (TieredQ + eigh); peak RSS 7.7–7.8 GB both.
+- Recall at the frontier configs (+16-NN graph, 500 test queries), FAISS 0.9006 / 0.9508 / 0.9900 vs TieredQ seeds
+  42 / 1 / 2: 0.9058 / 0.9052 / 0.9036 · 0.9512 / 0.9484 / 0.9530 · 0.9888 / 0.9904 / 0.9912 (means 0.9049 / 0.9509 /
+  0.9901): equal or better. Query CPU µs equal (same configs, same cell sizes).
+- Fine e-means one list after another: 136 s (1024 tiny parallel regions) → one list per thread: 0.4 s.
+- TieredQ IVF-Flat `knn_graph` as expansion graph loses: nprobe 8 / 16 / 32 → graph recall 0.879 / 0.925 / 0.956 in
+  10 / 15 / 25 s, +graph R@0.99 config 0.9858 / 0.9866 / 0.9872 vs self-search + reverse edges 0.934 in 2 s → 0.990
+  (scores fp32 1536-d rows; reverse edges matter more than graph recall). It also held a 1.17 GB FP32 copy.
+- Remaining build: graph 2.2 s, PCA 3–4 s, projection 1.3 s, quantize 0.7 s, coarse 2.5 s.
 
 ## Findings – DBpedia OpenAI-1536 100k (`hyperhull-bench --dataset dbpedia100k`, lab with HULL_LAB_DATA=dbpedia)
 - FAISS IVF-PQ4fs+refine dominates (R≥0.99: ~107 exact + 25.6k 4-bit codes). Our per-vector hulls lose here

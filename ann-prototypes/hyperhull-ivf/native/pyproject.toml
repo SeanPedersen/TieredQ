@@ -22,4 +22,7 @@ cache-keys = [
     { file = "CMakeLists.txt" },
     { file = "cpp/**/*.cpp" },
     { file = "cpp/**/*.hpp" },
+    { file = "../../../src/**" },
+    { file = "../../../include/**" },
+    { file = "../../../CMakeLists.txt" },
 ]

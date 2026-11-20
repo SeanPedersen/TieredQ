@@ -57,7 +57,9 @@ Python test yet):
 ## Next steps (in order)
 Done: graph in Python bindings (`HullRouter.build_graph`, `search(..., hops, expand_from, expand_k, expand_exact)`),
 parallel reverse-edge merge, graph checks in `check_router.py` (all pass), end-to-end bench above.
-1. **Build time** (38 s vs 7 s; now the weakest point): time two-level k-means, PCA SVD, projection, C++ layout.
+1. ~~Build time~~ done (CLAUDE.md "Build time"): eigh PCA + TieredQ e-means partition, 38 s → ~9 s wall on a
+   loaded host (186 CPU-s vs 655), equal recall. Next if needed: projection/quantize in C++, graph self-search
+   (2.2 s) params, then the TieredQ codec for the exact-rerank store (recall per RAM; full vectors on SSD).
 2. **Cheaper expansion**: exact distances dominate (E per hop × ~0.6 µs); try sketch-only first hop + one exact
    round, expand_exact adaptive (stop when sketch score > current kth bound).
 3. **Residual 2-bit PCA-256 sketch** (validated: 64 B, V@0.99 80 vs 200 for current pass 1) → likely drops
@@ -66,7 +68,5 @@ parallel reverse-edge merge, graph checks in `check_router.py` (all pass), end-t
 5. Memory: graph k=8 or delta-coded ids; sketch aux as fp16.
 
 ## Later
-- Build time (25 s vs 7 s): time the steps (two-level k-means, PCA SVD, projection, C++ layout) first.
 - Memory (46 MB vs 36 MB): sketch bias/residual as fp16, or PCA-192 sketch.
 - Repeat on GloVe / another dataset and a non-Skylake-X CPU (AVX-512 licence effects differ).
-- Nothing is committed yet (git repo has no commits) — ask before committing.

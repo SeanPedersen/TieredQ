@@ -119,7 +119,7 @@ def main() -> None:
 
     faiss.omp_set_num_threads(THREADS)
     t = time.perf_counter()
-    index = build_two_level(base, n_coarse, m)
+    index = build_two_level(base, n_coarse, m, trainer="tieredq")
     arrays = native_arrays(index, pca_dims=PCA_DIMS)
     router = make_router(arrays, prefix_dims=PREFIX_DIMS)
     router_build = time.perf_counter() - t

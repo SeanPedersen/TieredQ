@@ -6,6 +6,7 @@ codes (each with its own lo/step), packed for the AVX2 kernel: within each 64-di
 Per-vector terms: sketch_bias = ||ẑ_x||² + o_x², sketch_resid = o_x (exact residual norm outside the PCA).
 """
 
+import time
 from dataclasses import dataclass
 
 import numpy as np
@@ -60,22 +61,42 @@ def sq4(z: np.ndarray) -> SQ4:
     return SQ4(pack4(codes), lo.astype(np.float32), step.astype(np.float32), (deq * deq).sum(1).astype(np.float32))
 
 
+def pca_basis(centered: np.ndarray, dims: int) -> np.ndarray:
+    """Top `dims` principal directions (dims × D, by decreasing variance) of centered rows.
+
+    Eigenvectors of the D × D scatter matrix: one GEMM + eigh instead of an SVD of the full sample
+    (50k × 1536: SVD ~57 s wall on hartmut, dominating the whole build). Same subspace; signs may differ.
+    """
+    scatter = centered.T @ centered
+    _, vectors = np.linalg.eigh(scatter.astype(np.float64))
+    return np.ascontiguousarray(vectors[:, ::-1][:, :dims].T, dtype=np.float32)
+
+
 def native_arrays(index: TwoLevel, pca_dims: int = 128, coarse_dims: int = 64, fine_dims: int = 128,
-                  sketch_bits: int = 4, gamma: float = 0.5, seed: int = 0) -> dict:
+                  sketch_bits: int = 4, gamma: float = 0.5, seed: int = 0, timings: dict | None = None) -> dict:
+    """timings (optional) receives wall seconds of the stages: pca_s, project_s, quantize_s."""
+    clock = time.perf_counter()
     vectors = index.vectors
     rng = np.random.default_rng(seed)
     sample = vectors[rng.choice(len(vectors), size=min(PCA_SAMPLE, len(vectors)), replace=False)]
     mean = sample.mean(0).astype(np.float32)
-    proj = np.linalg.svd(sample - mean, full_matrices=False)[2][:pca_dims].astype(np.float32)
+    proj = pca_basis(sample - mean, pca_dims)
+    pca_s = time.perf_counter() - clock
 
+    clock = time.perf_counter()
     z = np.empty((len(vectors), pca_dims), dtype=np.float32)
     resid2 = np.empty(len(vectors), dtype=np.float32)
     for s in range(0, len(vectors), CHUNK):
         centered = vectors[s : s + CHUNK] - mean
         z[s : s + CHUNK] = centered @ proj.T
         resid2[s : s + CHUNK] = np.maximum((centered * centered).sum(1) - (z[s : s + CHUNK] ** 2).sum(1), 0)
+    project_s = time.perf_counter() - clock
+
+    clock = time.perf_counter()
     sketch = sq4(z) if sketch_bits == 4 else sq2(z)
     fine = sq4((index.fine_centroids - mean) @ proj[:fine_dims].T)
+    if timings is not None:
+        timings.update(pca_s=pca_s, project_s=project_s, quantize_s=time.perf_counter() - clock)
     return dict(
         mean=mean,
         proj=proj,

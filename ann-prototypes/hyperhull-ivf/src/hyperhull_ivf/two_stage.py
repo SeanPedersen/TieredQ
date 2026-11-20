@@ -55,7 +55,10 @@ def _kmeans(x: np.ndarray, k: int, niter: int = 20):
     return km.centroids, km.index.search(x, 1)[1][:, 0]
 
 
-def build_two_level(base: np.ndarray, n_coarse: int, m: int) -> TwoLevel:
+def build_two_level(base: np.ndarray, n_coarse: int, m: int, trainer: str = "faiss") -> TwoLevel:
+    """trainer 'faiss': FAISS Lloyd k-means at both levels; 'tieredq': see build_two_level_tieredq."""
+    if trainer == "tieredq":
+        return build_two_level_tieredq(base, n_coarse, m)[0]
     coarse_c, coarse_a = _kmeans(base, n_coarse)
     order_parts, fine_c, fine_sizes, coarse_sizes = [], [], [], []
     for l in range(n_coarse):
@@ -84,6 +87,25 @@ def build_two_level(base: np.ndarray, n_coarse: int, m: int) -> TwoLevel:
         fine_offsets=np.concatenate([[0], np.cumsum(fine_sizes)]),
         m=m,
     )
+
+
+def build_two_level_tieredq(base: np.ndarray, n_coarse: int, m: int, seed: int = 42, n_threads: int = 0):
+    """TieredQ e-means at both levels (native Partition). Returns (TwoLevel, build_stats)."""
+    from hyperhull_native import Partition
+
+    rows = np.ascontiguousarray(base, dtype=np.float32)
+    partition = Partition(rows, coarse_lists=n_coarse, fine_per_coarse=m, seed=seed, n_threads=n_threads)
+    order = partition.order
+    index = TwoLevel(
+        vectors=rows[order],
+        ids=order,
+        coarse_centroids=partition.coarse_centroids,
+        coarse_offsets=partition.coarse_offsets,
+        fine_centroids=partition.fine_centroids,
+        fine_offsets=partition.fine_offsets,
+        m=m,
+    )
+    return index, partition.build_stats
 
 
 def ground_truth(index: TwoLevel, queries: np.ndarray):
