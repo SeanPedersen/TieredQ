@@ -391,6 +391,7 @@ TieredQIVFFlatIndex::TieredQIVFFlatIndex(TieredQIVFFlatIndex&&) noexcept=default
 TieredQIVFFlatIndex& TieredQIVFFlatIndex::operator=(TieredQIVFFlatIndex&&) noexcept=default;
 
 void TieredQIVFFlatIndex::build(const float* input,size_t count) {
+  const tieredq_detail::BlasThreadCap blas_cap(int(state_->config.blas_threads));
   if (!input && count) bad("null vector data");
   RowReader rows{state_->dimensions,input};
   rows.unit_rows=state_->config.metric==TieredQMetric::cosine;
@@ -398,6 +399,7 @@ void TieredQIVFFlatIndex::build(const float* input,size_t count) {
 }
 
 void TieredQIVFFlatIndex::build(const int8_t* codes,size_t count,const float* scales,const float* offsets) {
+  const tieredq_detail::BlasThreadCap blas_cap(int(state_->config.blas_threads));
   if (!codes && count) bad("null code data");
   if (!scales || !offsets) bad("SQ8 build needs scales and offsets");
   const size_t d=state_->dimensions;
@@ -416,6 +418,7 @@ void TieredQIVFFlatIndex::clear_centroids() { state_->given_centroids=std::vecto
 
 void TieredQIVFFlatIndex::search(const float* queries,size_t rows,size_t k,size_t nprobe,float* scores,
                                  uint32_t* ids) const {
+  const tieredq_detail::BlasThreadCap blas_cap(int(state_->config.blas_threads));
   if (!queries && rows) bad("null query data");
   const size_t d=state_->dimensions;
   if (state_->config.metric!=TieredQMetric::cosine) {
@@ -428,6 +431,7 @@ void TieredQIVFFlatIndex::search(const float* queries,size_t rows,size_t k,size_
 }
 
 void TieredQIVFFlatIndex::knn_graph(size_t k,size_t nprobe,float* scores,uint32_t* ids) const {
+  const tieredq_detail::BlasThreadCap blas_cap(int(state_->config.blas_threads));
   // Stored rows are the queries; each excludes itself and answers its own row number.
   state_->join(state_->stored(),state_->size(),k,nprobe,state_->ids.data(),scores,ids);
 }

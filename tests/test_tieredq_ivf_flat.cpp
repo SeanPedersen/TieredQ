@@ -226,9 +226,25 @@ void given_centroids_test() {
   require(index.lists()==lists,"cleared centroids train k-means again");
   require(rejects([&] { TieredQIVFFlatIndex(dimensions).set_centroids(nullptr,1); }),"null centroids accepted");
 }
+// A single BLAS thread changes scheduling only: lists and graph equal the default build's.
+void blas_threads_cap_test() {
+  const auto data=gaussian_rows(rows,3);
+  const auto reference=built(TieredQMetric::l2,data);
+  TieredQIVFFlatConfig config; config.lists=lists; config.blas_threads=1;
+  TieredQIVFFlatIndex capped(dimensions,config);
+  capped.build(data.data(),rows);
+  require(capped.list_assignment()==reference.list_assignment(),"blas_threads=1 changed the list assignment");
+  std::vector<float> scores(rows*k); std::vector<uint32_t> ids(rows*k),reference_ids(rows*k);
+  capped.knn_graph(k,lists,scores.data(),ids.data());
+  reference.knn_graph(k,lists,scores.data(),reference_ids.data());
+  size_t matches=0;
+  for (size_t i=0;i<ids.size();++i) matches+=ids[i]==reference_ids[i];
+  require(matches>=ids.size()-ids.size()/100,"blas_threads=1 changed the knn graph");
+}
 } // namespace
 
 void tieredq_ivf_flat_tests() {
+  blas_threads_cap_test();
   for (auto metric:{TieredQMetric::l2,TieredQMetric::inner_product,TieredQMetric::cosine}) exhaustive_test(metric);
   graph_equals_search_test();
   probes_test();

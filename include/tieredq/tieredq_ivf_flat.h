@@ -39,6 +39,9 @@ struct TieredQIVFFlatConfig {
   double epochs = 2.5;       // emeans: passes over the sample, may be fractional
   uint32_t sample_rows_per_list = 256;
   uint64_t seed = 42;
+  // Threads for BLAS calls made outside TieredQ's own OpenMP loops (OpenBLAS only). 0: TIEREDQ_BLAS_THREADS, then
+  // OPENBLAS_NUM_THREADS, then the OpenMP thread count. 1 suits callers that run their own OpenMP pool.
+  uint32_t blas_threads = 0;
   void validate() const;
 };
 

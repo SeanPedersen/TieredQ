@@ -12,6 +12,7 @@
 #include "tieredq_ivf_bound.h"
 #include "tieredq_ivf_coarse.h"
 #include "tieredq_train_linalg.h"
+#include <cstdlib>
 #include <limits>
 #include <numeric>
 #include <optional>
@@ -20,11 +21,38 @@
 #endif
 
 namespace tq::tieredq_detail {
-// OpenBLAS sizes its own thread pool; within a call it uses the OpenMP thread count, so builds keep their thread budget.
-// BlasThreads(1) keeps each call on its caller's thread, for GEMMs issued from inside an OpenMP parallel region.
+// Thread cap for the calling thread's multi-threaded BLAS calls, set per index call from its config (0: unset).
+inline int& blas_thread_cap() {
+  static thread_local int cap=0;
+  return cap;
+}
+class BlasThreadCap {
+ public:
+  explicit BlasThreadCap(int cap): previous_(blas_thread_cap()) { if (cap>0) blas_thread_cap()=cap; }
+  ~BlasThreadCap() { blas_thread_cap()=previous_; }
+  BlasThreadCap(const BlasThreadCap&)=delete;
+  BlasThreadCap& operator=(const BlasThreadCap&)=delete;
+ private:
+  int previous_;
+};
+
+// Thread count for BLAS calls made outside an OpenMP region: the config cap, else TIEREDQ_BLAS_THREADS, else
+// OPENBLAS_NUM_THREADS, else the OpenMP thread count (so builds keep their thread budget).
+inline int default_blas_threads() {
+  if (blas_thread_cap()>0) return blas_thread_cap();
+  for (const char* name : {"TIEREDQ_BLAS_THREADS","OPENBLAS_NUM_THREADS"}) {
+    const char* value=std::getenv(name);
+    const long parsed=value ? std::strtol(value,nullptr,10) : 0;
+    if (parsed>0) return int(std::min<long>(parsed,std::numeric_limits<int>::max()));
+  }
+  return omp_get_max_threads();
+}
+
+// OpenBLAS sizes its own thread pool; BlasThreads sets it for one scope. BlasThreads(1) keeps each call on its
+// caller's thread, for GEMMs issued from inside an OpenMP parallel region.
 class BlasThreads {
  public:
-  explicit BlasThreads(int threads=omp_get_max_threads()) {
+  explicit BlasThreads(int threads=default_blas_threads()) {
 #if defined(__unix__) || defined(__APPLE__)
     set_=reinterpret_cast<void(*)(int)>(dlsym(RTLD_DEFAULT,"openblas_set_num_threads"));
     auto get=reinterpret_cast<int(*)()>(dlsym(RTLD_DEFAULT,"openblas_get_num_threads"));
